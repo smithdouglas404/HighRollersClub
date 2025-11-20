@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Seat } from "../components/poker/Seat";
 import { CommunityCards } from "../components/poker/CommunityCards";
 import { PokerControls } from "../components/poker/Controls";
@@ -6,11 +6,15 @@ import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
 import { MatrixOverlay } from "../components/MatrixOverlay";
 import { Player, GameState } from "../lib/poker-types";
 import { Button } from "@/components/ui/button";
-import { Menu, Settings, MessageSquare, History, ShieldCheck } from "lucide-react";
+import { Menu, Settings, MessageSquare, History, ShieldCheck, Trophy } from "lucide-react";
 
 // Assets
 import lionLogo from '@assets/generated_images/Golden_Lion_Logo_for_Poker_Table_961614b0.png';
-import feltTexture from '@assets/generated_images/Dark_Teal_Poker_Felt_Texture_83ec2760.png';
+import feltTexture from '@assets/generated_images/Luxury_Poker_Table_Surface_4657c1b6.png';
+import avatar1 from '@assets/generated_images/Cyberpunk_Poker_Player_Avatar_1_941e6d46.png';
+import avatar2 from '@assets/generated_images/Cyberpunk_Poker_Player_Avatar_2_568f8a66.png';
+import avatar3 from '@assets/generated_images/Cyberpunk_Poker_Player_Avatar_3_c865d62f.png';
+import avatar4 from '@assets/generated_images/Cyberpunk_Poker_Player_Avatar_4_0df60f9c.png';
 
 // Mock Data Setup
 const HERO_ID = "player-1";
@@ -29,7 +33,7 @@ const INITIAL_PLAYERS: Player[] = [
     currentBet: 0,
     status: "thinking",
     timeLeft: 70,
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hero"
+    avatar: avatar1
   },
   {
     id: "player-2",
@@ -40,7 +44,7 @@ const INITIAL_PLAYERS: Player[] = [
     currentBet: 0,
     status: "waiting",
     cards: [{ suit: "spades", rank: "A", hidden: true }, { suit: "spades", rank: "A", hidden: true }],
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=King"
+    avatar: avatar2
   },
   {
     id: "player-3",
@@ -51,7 +55,7 @@ const INITIAL_PLAYERS: Player[] = [
     currentBet: 50,
     status: "checked",
     cards: [{ suit: "spades", rank: "A", hidden: true }, { suit: "spades", rank: "A", hidden: true }],
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Satoshi"
+    avatar: avatar3
   },
   {
     id: "player-4",
@@ -62,7 +66,7 @@ const INITIAL_PLAYERS: Player[] = [
     currentBet: 50,
     status: "waiting",
     cards: [{ suit: "spades", rank: "A", hidden: true }, { suit: "spades", rank: "A", hidden: true }],
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Whale"
+    avatar: avatar4
   },
   {
     id: "player-5",
@@ -89,12 +93,12 @@ const INITIAL_PLAYERS: Player[] = [
 // 6-Max Table Positions (Percentage x, y) adjusted for 3D perspective view
 // Top players need to be "further back" in Y
 const SEAT_POSITIONS = [
-    { x: 50, y: 90 }, // Hero (Bottom)
-    { x: 10, y: 60 }, // Bottom Left
-    { x: 20, y: 20 }, // Top Left
-    { x: 50, y: 10 }, // Top
-    { x: 80, y: 20 }, // Top Right
-    { x: 90, y: 60 }, // Bottom Right
+    { x: 50, y: 88 }, // Hero (Bottom)
+    { x: 12, y: 65 }, // Bottom Left
+    { x: 20, y: 25 }, // Top Left
+    { x: 50, y: 15 }, // Top
+    { x: 80, y: 25 }, // Top Right
+    { x: 88, y: 65 }, // Bottom Right
 ];
 
 export default function Game() {
@@ -117,9 +121,12 @@ export default function Game() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden relative font-sans selection:bg-green-500 selection:text-white flex">
+    <div className="min-h-screen bg-[#050505] text-white overflow-hidden relative font-sans selection:bg-green-500 selection:text-white flex">
       
       <MatrixOverlay />
+
+      {/* Ambient Background Lighting */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#1a2e35_0%,#000000_80%)] opacity-50 pointer-events-none" />
 
       {/* Main Content Area */}
       <div className="flex-1 relative flex flex-col h-screen overflow-hidden">
@@ -127,14 +134,24 @@ export default function Game() {
         {/* Header Overlay */}
         <div className="absolute top-0 left-0 right-0 h-16 flex items-center justify-between px-6 z-50 pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-4">
-                <div className="font-bold text-xl tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-lg font-serif">
-                    HIGH ROLLERS CLUB
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-700 rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.3)]">
+                        <Trophy className="w-6 h-6 text-black" />
+                    </div>
+                    <div>
+                        <div className="font-bold text-xl tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-600 drop-shadow-lg font-serif">
+                            HIGH ROLLERS
+                        </div>
+                        <div className="text-[10px] text-yellow-500/70 tracking-[0.3em] font-bold uppercase">
+                            VIP Club • Table #802
+                        </div>
+                    </div>
                 </div>
             </div>
             <div className="pointer-events-auto flex gap-2">
                  <Button variant="outline" className="bg-black/50 border-green-500/30 text-green-400 backdrop-blur-md hover:bg-green-500/10" onClick={() => setShowProvablyFair(!showProvablyFair)}>
                     <ShieldCheck className="w-4 h-4 mr-2" />
-                    Verify
+                    Verified
                  </Button>
             </div>
         </div>
@@ -144,40 +161,43 @@ export default function Game() {
             
             {/* The Table Group - Rotated in 3D Space */}
             <div 
-                className="relative w-[95%] max-w-[1100px] aspect-[1.8/1] transition-transform duration-700 ease-out transform-style-3d"
+                className="relative w-[95%] max-w-[1200px] aspect-[1.9/1] transition-transform duration-700 ease-out transform-style-3d"
                 style={{ 
-                    transform: 'rotateX(25deg) translateY(40px)',
+                    transform: 'rotateX(30deg) translateY(50px) scale(0.9)',
                 }}
             >
+                {/* The Rail (Leather/Gold) */}
+                <div className="absolute -inset-[40px] rounded-[350px] bg-gradient-to-b from-[#2a2420] to-[#1a1614] shadow-[0_30px_60px_-10px_rgba(0,0,0,0.9),inset_0_2px_5px_rgba(255,255,255,0.1)] border-b-8 border-[#0a0806]">
+                    {/* Illuminated Edge Strip */}
+                    <div className="absolute inset-[10px] rounded-[320px] border-[2px] border-yellow-500/20 shadow-[0_0_30px_rgba(234,179,8,0.2)]" />
+                </div>
+
                 {/* The Felt Surface */}
-                <div className="absolute inset-0 rounded-[300px] shadow-[0_50px_80px_-20px_rgba(0,0,0,0.8)] border-[24px] border-[#2a2420] ring-1 ring-white/10 overflow-hidden">
+                <div className="absolute inset-0 rounded-[300px] overflow-hidden shadow-[inset_0_0_80px_rgba(0,0,0,0.8)]">
                     
                     {/* Felt Texture */}
                     <div 
-                        className="absolute inset-0 bg-felt bg-cover bg-center opacity-100"
-                        style={{ backgroundImage: `url(${feltTexture})` }}
+                        className="absolute inset-0 bg-cover bg-center opacity-100"
+                        style={{ 
+                            backgroundImage: `url(${feltTexture})`,
+                            backgroundSize: '100% 100%',
+                        }}
                     />
                     
                     {/* Vignette & Lighting */}
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)]" />
-
-                    {/* Gold Ring Decoration */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] h-[60%] rounded-[200px] border border-felt-accent/30" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[65%] h-[55%] rounded-[200px] border border-felt-accent/10" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(0,10,20,0.7)_100%)]" />
 
                     {/* Center Logo */}
-                    <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 opacity-90 mix-blend-overlay">
-                        <img src={lionLogo} alt="Lion Logo" className="w-full h-full object-contain opacity-60 drop-shadow-[0_2px_10px_rgba(207,181,59,0.3)]" />
+                    <div className="absolute top-[50%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 opacity-80 mix-blend-overlay pointer-events-none">
+                        <img src={lionLogo} alt="Lion Logo" className="w-full h-full object-contain opacity-50 drop-shadow-[0_2px_20px_rgba(207,181,59,0.2)]" />
                     </div>
-                    
-                    {/* Table Text */}
-                    <div className="absolute top-[60%] left-1/2 -translate-x-1/2 text-felt-accent/40 font-serif tracking-[0.3em] text-xs font-bold uppercase">
-                        High Rollers Club
-                    </div>
+
+                    {/* Betting Line */}
+                    <div className="absolute top-[50%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[65%] h-[55%] rounded-[200px] border border-white/5 shadow-[0_0_10px_rgba(255,255,255,0.05)] pointer-events-none" />
                 </div>
 
                 {/* Community Cards - "Floating" above table */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20" style={{ transform: 'translate(-50%, -50%) translateZ(20px)' }}>
+                <div className="absolute top-[46%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20" style={{ transform: 'translate(-50%, -50%) translateZ(20px)' }}>
                      <CommunityCards cards={gameState.communityCards} pot={gameState.pot} />
                 </div>
 
@@ -194,7 +214,9 @@ export default function Game() {
         </div>
 
         {/* Bottom Controls */}
-        <div className="z-50">
+        <div className="z-50 relative">
+            {/* Hero Hand Shadow/Reflection */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
             <PokerControls onAction={handleAction} minBet={20} maxBet={hero?.chips || 1000} />
         </div>
       </div>

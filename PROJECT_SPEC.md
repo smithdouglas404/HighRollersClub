@@ -34,8 +34,9 @@
     *   5.4 Database Schema & Data Integrity
 6.  **SECURITY, INTEGRITY & CRYPTOGRAPHY**
     *   6.1 Mental Poker Protocols (Zero-Knowledge Shuffling)
-    *   6.2 Bot Detection & Biometrics
-    *   6.3 Collusion Detection Algorithms
+    *   6.2 Deep Dive: True Random Card Shuffling
+    *   6.3 Bot Detection & Biometrics
+    *   6.4 Collusion Detection Algorithms
 7.  **ECONOMY & MONETIZATION**
     *   7.1 Rake Structure & Revenue Models
     *   7.2 The "Apex" Subscription
@@ -167,7 +168,46 @@ Legacy sites give a fixed time bank. We introduce a market-based approach.
     5.  Cards are dealt. To view a card, all other parties must provide their decryption keys for *that specific card*.
 *   **Result:** It is mathematically impossible for the server or any admin to know the hole cards or the coming board cards.
 
-### 6.2 "Mouse Biometrics" Bot Detection
+### 6.2 Deep Dive: True Random Card Shuffling
+This is the critical feature for trust. We implement a multi-source entropy system with independent verification.
+
+#### A. Core Principles
+*   **Cryptographically Secure Randomness:** Unpredictable, unbiased, immune to manipulation.
+*   **Transparency & Verifiability:** Independent verification post-hand.
+*   **Decentralized Entropy:** No single entity dictates the shuffle.
+
+#### B. Implementation Details
+1.  **Entropy Collection (The "Seed"):**
+    *   **Server Hardware RNG:** Thermal/Atmospheric noise.
+    *   **OS Entropy:** `/dev/random`.
+    *   **User Entropy:** Client mouse movements/timing data hashed into the pool.
+    *   **Blockchain Commitment:** Before the shuffle, the server commits a SHA256 hash of a random number to a public chain (Ethereum/Polygon).
+    *   **Chainlink VRF:** Integration with Chainlink Verifiable Random Function for on-chain auditability.
+    *   *Result:* A "Super Seed" combined via Blake3/SHA-512.
+
+2.  **The Algorithm:**
+    *   **Fisher-Yates / Knuth Shuffle:** The gold standard for unbiased permutations.
+    *   **CSPRNG:** The Super Seed initializes a CSPRNG (AES-CTR or ChaCha20) to drive the shuffle indices.
+
+3.  **Commitment (Pre-Reveal):**
+    *   Server generates the full shuffled deck.
+    *   Computes `SHA256(Deck)` = **Shuffle Commitment Hash**.
+    *   Displays this hash to all players *before* the first card is dealt.
+
+4.  **Verification (Post-Game):**
+    *   Server reveals the "Super Seed" and the initial Deck order.
+    *   Players can download a script to re-run the Fisher-Yates algorithm with the revealed seed.
+    *   If the output matches the pre-game Commitment Hash, the game was fair.
+
+#### C. User Interface for Verification
+*   **In-Game:** A subtle "Lock" icon next to the Pot. Hovering shows "Shuffle Verified".
+*   **Hand History:** Dedicated "Fairness" tab showing:
+    *   Commitment Hash
+    *   Reveal Seed
+    *   Link to Blockchain Transaction
+    *   "Re-verify Hand" button (downloads Python script).
+
+### 6.3 "Mouse Biometrics" Bot Detection
 *   **Data Collection:** We sample mouse position (x,y) at 100Hz.
 *   **Analysis:** Humans have micro-tremors, acceleration curves, and "overshoot" when clicking. Bots move in straight lines or perfect Bezier curves.
 *   **Machine Learning:** An LSTM model classifies "Human" vs "Bot" in real-time.

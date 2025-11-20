@@ -39,6 +39,10 @@
   
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'Roboto Mono', monospace;
+  
+  /* High Rollers Club Theme */
+  --color-felt: #0f2e35;
+  --color-felt-accent: #cfb53b;
 }
 
 /* Dark Mode by Default for Poker App */

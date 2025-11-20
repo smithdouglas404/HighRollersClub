@@ -1,93 +1,111 @@
-# High Rollers Club - Project Specification
+# High Rollers Club - The "Apex" Specification
+*Version 2.0 - Extreme Detail Edition*
 
-## 1. The "Mega Prompt"
-*Use this prompt to recreate or describe the vision of this project to an AI or development team.*
+## 1. The "God Mode" Mega Prompt
+*Use this prompt to command an AI or engineering team to build the absolute pinnacle of digital poker.*
 
-> **Act as a Senior Design Engineer and Frontend Architect.**
+> **Role:** Chief Product Officer & Lead Architect for a Tier-1 Gambling Tech Firm.
 > 
-> **Goal:** Build "High Rollers Club," the world's most immersive, high-fidelity online poker interface. The aesthetic must be a fusion of "Luxury Casino" and "Cyberpunk Future."
+> **Mission:** Architect "High Rollers Club" (HRC), the world's most advanced Texas Hold'em platform. This is not just a game; it is a **digital status ecosystem**. We are disrupting the stagnant duopoly of GG/PokerStars by fusing institutional-grade trading terminal reliability with the visual fidelity of a AAA cyberpunk RPG.
 > 
-> **Visual Direction:**
-> - **Atmosphere:** Dark, moody, high-contrast. Deep blacks, rich teals, and electric gold accents.
-> - **Table Design:** A photorealistic 3D perspective view of a premium oval poker table. Features include a deep leather rail with embedded LED lighting, a custom "Golden Lion" heraldic logo on a textured felt surface, and dynamic lighting effects.
-> - **Avatars:** No generic circles. Use high-resolution, generated 3D avatars with a cyberpunk aesthetic (neon visors, cybernetic implants, luxury fashion). Avatars must have animated status rings (timers) and "float" in 3D space around the table.
-> - **UI Elements:** Glassmorphism panels, holographic data overlays (Matrix rain effect), and crisp, monospace typography for data integrity.
+> **The "Innovative High" Core Philosophy:**
+> Every pixel and packet must serve the "High": High Stakes, High Fidelity, High Speed, and High Trust.
 > 
-> **Functional Requirements:**
-> - **Provably Fair Panel:** A slide-out dashboard showing real-time cryptographic hashes, seeds, and server RNG verification to appeal to crypto-native users.
-> - **Immersive Gameplay:** Cards must have 3D transforms when dealt. Chips should stack visually. The active player must have a spotlight effect.
-> - **Tech Stack:** React 19, Tailwind CSS v4 (using `@theme` blocks), Lucide React for icons, and Framer Motion for complex entrance/exit animations. Use CSS 3D transforms (`perspective`, `rotateX`, `transform-style: preserve-3d`) to achieve the tabletop depth without a heavy WebGL library.
+> **Visual & Sensory Immersion (The "Vibe"):**
+> - **Art Direction:** "Neo-Vegas 2077." A fusion of Art Deco luxury (gold, velvet, marble) and Brutalist Cyberpunk (exposed code, neon argon, dark aluminum).
+> - **The Table:** Not a static image. A fully interactive 3D environment rendered with CSS3D/WebGL.
+>   - *Detail:* The felt has dynamic fabric physics (grain visualization).
+>   - *Lighting:* Ray-traced style lighting that reflects off the plastic cards and ceramic chips.
+>   - *Haptics:* Screen shake on "All-in" moments; subtle vibration on turn notification.
+> - **The Cards:** "Riffle" animations, "Squeeze" mechanics (allowing players to peel up the corner of a card slowly using mouse/touch gestures).
+> 
+> **Revolutionary Mechanics (The Innovation):**
+> - **"The Time-Bank Auction":** Instead of a fixed time bank, players can bid small blind increments to buy extra thinking time in massive pots.
+> - **"Equity Insurance":** Real-time, AI-calculated offers to "cash out" your equity when all-in, reducing variance for pros.
+> - **"Smart HUD":** Built-in Heads-Up Display showing VPIP/PFR stats, but visualized as holographic projections from the opponent's avatar, not a spreadsheet overlay.
+> 
+> **Technical Non-Negotiables:**
+> - **Zero-Knowledge Shuffling:** Implement "Mental Poker" cryptographic protocols where the deck is encrypted by all players collectively. The server *cannot* rig the deck because it never sees the cards until showdown.
+> - **Latency Arbitration:** A bespoke lag-compensation engine that ensures a fair race condition for actions.
 
 ---
 
-## 2. Business Specification
+## 2. Business Specification: The "Whale Hunting" Strategy
 
-### **Executive Summary**
-**High Rollers Club** is a next-generation online poker platform designed for the Web3 and high-stakes community. It addresses the "boring, flat" UI of incumbent platforms (PokerStars, GG) by offering a cinematic, immersive experience that feels like a high-end video game.
+### **Market Gap Analysis**
+Current leaders (GG, Stars) suffer from "Feature Bloat" (too many cartoons, slots, and clutter) or "Legacy Rot" (Windows 95 aesthetics).
+**The Gap:** There is no home for the **modern digital native high-roller**—the crypto trader, the tech founder, the e-sports pro—who demands:
+1.  **Aesthetics:** UI that looks like a Bloomberg Terminal met Cyberpunk 2077.
+2.  **Speed:** Interactions faster than human reaction time.
+3.  **Trust:** Mathematical proof of fairness, not just a "trust us" license.
 
-### **Target Audience**
-- **Crypto Whales & Degen Traders:** Users who value aesthetics, status, and "provable fairness."
-- **Gen Z / Millennial Players:** Gamers accustomed to high-fidelity UI/UX in video games who find traditional poker software dated.
-- **Streamers & Content Creators:** The visually striking UI is designed to look incredible on Twitch/YouTube streams.
+### **Monetization: The "Ecosystem" Model**
+1.  **Rake (The Engine):** Standard 2-5% rake, capped.
+2.  **"Apex" Membership (Subscription):** $50/mo.
+    - Perks: Zero withdrawal fees, access to "Rabbit Hunting" (seeing the next card after folding), detailed hand analysis reports, and verified "Blue Check" status.
+3.  **The Staking Marketplace:** Built-in DeFi protocol allowing users to buy % action of high-stakes players. The platform takes a 1% transaction fee on staking contracts.
+4.  **Asset Trading:** Players own their Seat NFTs (cosmetic rail designs, chip textures) and can trade them on an internal secondary market.
 
-### **Unique Selling Propositions (USP)**
-1.  **"Cinema-Grade" Immersion:** Moving away from 2D top-down views to an angled, 3D perspective that mimics sitting at a real high-stakes table.
-2.  **Provably Fair Transparency:** Unlike black-box servers, every hand's RNG is verifiable client-side (mocked in prototype, planned for production).
-3.  **Digital Identity:** Players don't just have usernames; they have unique, generative 3D avatars that act as status symbols.
-
-### **Monetization Strategy**
-- **Rake:** Standard % taken from cash game pots.
-- **NFT Avatars:** Sale of exclusive "Cyberpunk" avatar collections that grant access to VIP tables.
-- **Table Skins:** Premium felt textures and rail designs purchasable as cosmetic upgrades.
+### **Target Persona: "The Quant Player"**
+- **Age:** 25-40
+- **Occupation:** Algo-trader, Software Engineer, Hedge Fund Manager.
+- **Behavior:** Plays 4 tables simultaneously on a 49" ultrawide monitor. Uses GTO solvers. Values data privacy and UI efficiency above all.
 
 ---
 
-## 3. Technical Specification
+## 3. Technical Specification: "Fortress" Architecture
 
-### **Frontend Architecture**
-- **Framework:** React 19 (Functional Components + Hooks).
-- **Build Tool:** Vite (for instant HMR and optimized bundling).
-- **Routing:** `wouter` (Lightweight, sufficient for SPA game apps).
-- **State Management:** React `useState`/`useReducer` for immediate game state; `TanStack Query` for server state synchronization.
+### **Frontend: The "React-Metal" Stack**
+- **Core:** React 19 (Concurrent Mode enabled for zero-jank rendering).
+- **State Sync:** `Zustand` with transient updates (bypassing React render cycle for 60fps animations like chip movements).
+- **3D Engine:** Hybrid Approach.
+    - *Table/UI:* CSS3D Transforms (Hardware accelerated, crisp text).
+    - *Particles/VFX:* `Three.js` overlay for "winning explosions," smoke, and rain effects.
+- **Data Stream:** `tRPC` over `WebSockets`. Binary serialization (MessagePack) instead of JSON for 40% smaller payloads.
 
-### **UI/UX System**
-- **Styling Engine:** Tailwind CSS v4.
-    - **Theme:** Custom configuration in `index.css` using CSS variables for "Felt Green," "Gold," and "Cyberpunk Neon."
-    - **3D Engine:** CSS3 `transform` properties (`perspective: 1200px`, `rotateX(30deg)`) are used to create the 3D table effect. This is lighter than Three.js for this specific use case but maintains high visual fidelity.
-    - **Animations:** `framer-motion` handles card dealing, chip movements, and UI panel slides.
+### **Backend: The "Zero-Trust" Server**
+- **Language:** Rust (Actix-web) or Go (Gin) for microsecond latency.
+- **Consensus Engine:** A lightweight side-chain (L2) to log every shuffle, deal, and action hash.
+- **RNG:** Hardware-based True Random Number Generator (TRNG) fed into a VRF (Verifiable Random Function).
 
-### **Key Components**
-1.  **`Game.tsx` (Container):** Manages the 3D scene context and camera perspective.
-2.  **`Seat.tsx`:** A complex component handling:
-    - Avatar rendering.
-    - Counter-rotation logic (to keep avatars facing the screen while the table is tilted).
-    - Status indicators (Timer ring, dealer button, action badges).
-3.  **`CommunityCards.tsx`:** Displays the Flop/Turn/River with "floating" 3D effects.
-4.  **`ProvablyFairPanel.tsx`:** A dedicated UI for displaying RNG verification data.
-5.  **`MatrixOverlay.tsx`:** Canvas-based background effect for the "hacker" aesthetic.
+### **Security & Integrity**
+- **Bot Detection:** "Mouse Movement Biometrics." The client tracks cursor acceleration/jitter to distinguish human biology from scripted movement.
+- **Collusion Detection:** Graph theory analysis of player relationships (do Player A and B never raise each other?).
 
-### **Data Structures (TypeScript Interfaces)**
-```typescript
-interface Player {
-  id: string;
-  name: string;
-  chips: number;
-  avatar: string;
-  cards: [Card, Card];
-  status: 'thinking' | 'folded' | 'all-in' | 'checked';
-  timeLeft: number; // 0-100 percentage for the ring
-}
+---
 
-interface GameState {
-  pot: number;
-  communityCards: Card[];
-  currentTurnPlayerId: string;
-  dealerId: string;
-}
-```
+## 4. Innovative High-Stakes Texas Hold'em Mechanics
 
-### **Future Roadmap (Post-Prototype)**
-1.  **Real Backend:** Node.js/Express + Socket.io for real-time multiplayer state.
-2.  **Database:** PostgreSQL for user accounts and hand history.
-3.  **Web3 Integration:** WalletConnect for login and crypto deposits.
-4.  **Sound Engine:** Spatial audio for chips clinking and card shuffles.
+### **A. The "Double-Board" Bomb Pot**
+*Trigger:* Once every orbit or randomly.
+*Mechanic:* Every player puts in 5bb pre-flop. No pre-flop betting. Two separate boards (Flop/Turn/River) are dealt. The pot is split between the winner of the top board and the bottom board. Creates massive action and variability.
+
+### **B. "Run It Three Times" (Ri3T)**
+*Innovation:* Standard sites offer Run it Twice. HRC offers "Run It Thrice" with a visual twist—the board physically splits into three holographic layers. This reduces variance to near zero for massive all-ins.
+
+### **C. "The Straddle War"**
+*Mechanic:* Allow uncapped straddles (UTG puts 2bb, UTG+1 puts 4bb, UTG+2 puts 8bb...).
+*UI Innovation:* Straddles are visualized as "stacking" chips on the table felt, physically pushing the betting line forward, visually intimidating opponents.
+
+### **D. "Show One Card"**
+*Mechanic:* After winning a pot without showdown, a player can drag *one* specific card to the center to reveal it, while keeping the other hidden. A massive psychological weapon in high-stakes play.
+
+### **E. "Squeeze" Mode (Mobile Specific)**
+*Innovation:* On mobile, players don't just see their cards. They must "rub" the screen corner to peel the card up. The pixel shader bends the card texture in real-time, simulating the physical tension of cardboard.
+
+### **F. The "Shot Clock" Extension**
+*Mechanic:* Players earn "Time Bank Chips" (physical 3D tokens on the rail) for playing fast. In a tough spot, they can physically drag a Time Chip into the pot to buy 30 more seconds.
+
+---
+
+## 5. UI/UX "God Details"
+
+- **The "Fold to Zoom" Transition:** When a player folds, the camera subtly dollies out. When they enter a pot, the camera zooms in and depth-of-field blurs the background/other players, focusing intensely on the action (Tunnel Vision effect).
+- **Dynamic Audio:**
+    - *Idle:* Low-pass filtered lounge jazz (Cyberpunk style).
+    - *In Pot:* Music fades, heartbeat bass-line rises as pot size grows.
+    - *All In:* Sound vacuum (silence) followed by a "drop" on the river card.
+- **Gesture Betting:**
+    - *Check:* Double tap table.
+    - *Fold:* Flick cards forward.
+    - *Bet:* Slide chips forward. The distance of the slide determines the bet size (haptic ticks feel like clicking a safe dial).

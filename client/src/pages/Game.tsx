@@ -10,11 +10,11 @@ import { Menu, Settings, MessageSquare, History, ShieldCheck, Trophy } from "luc
 
 // Assets
 import lionLogo from '@assets/generated_images/Golden_Lion_Logo_for_Poker_Table_961614b0.png';
-import feltTexture from '@assets/generated_images/Luxury_Poker_Table_Surface_4657c1b6.png';
-import avatar1 from '@assets/generated_images/Cyberpunk_Poker_Player_Avatar_1_941e6d46.png';
-import avatar2 from '@assets/generated_images/Cyberpunk_Poker_Player_Avatar_2_568f8a66.png';
-import avatar3 from '@assets/generated_images/Cyberpunk_Poker_Player_Avatar_3_c865d62f.png';
-import avatar4 from '@assets/generated_images/Cyberpunk_Poker_Player_Avatar_4_0df60f9c.png';
+import feltTexture from '@assets/generated_images/luxury_poker_table_surface.png';
+import avatar1 from '@assets/generated_images/cyberpunk_poker_player_avatar_1.png';
+import avatar2 from '@assets/generated_images/cyberpunk_poker_player_avatar_2.png';
+import avatar3 from '@assets/generated_images/cyberpunk_poker_player_avatar_3.png';
+import avatar4 from '@assets/generated_images/cyberpunk_poker_player_avatar_4.png';
 
 // Mock Data Setup
 const HERO_ID = "player-1";

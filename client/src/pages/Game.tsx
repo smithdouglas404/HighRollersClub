@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
 import { Seat } from "../components/poker/Seat";
 import { CommunityCards } from "../components/poker/CommunityCards";
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
 import { MatrixOverlay } from "../components/MatrixOverlay";
-import { Player, GameState } from "../lib/poker-types";
+import { Player } from "../lib/poker-types"; // GameState is now inferred from engine
 import { Button } from "@/components/ui/button";
-import { Menu, Settings, MessageSquare, History, ShieldCheck, Trophy } from "lucide-react";
+import { Trophy, ShieldCheck } from "lucide-react";
+import { useGameEngine } from "@/lib/game-engine";
+import { useState } from "react";
 
 // Assets
 import lionLogo from '@assets/generated_images/Golden_Lion_Logo_for_Poker_Table_961614b0.png';
@@ -24,15 +25,11 @@ const INITIAL_PLAYERS: Player[] = [
     id: "player-1",
     name: "Hero",
     chips: 1540,
-    cards: [
-        { suit: "spades", rank: "A" },
-        { suit: "hearts", rank: "K" }
-    ],
     isActive: true,
     isDealer: false,
     currentBet: 0,
-    status: "thinking",
-    timeLeft: 70,
+    status: "waiting",
+    timeLeft: 100,
     avatar: avatar1
   },
   {
@@ -43,7 +40,6 @@ const INITIAL_PLAYERS: Player[] = [
     isDealer: true,
     currentBet: 0,
     status: "waiting",
-    cards: [{ suit: "spades", rank: "A", hidden: true }, { suit: "spades", rank: "A", hidden: true }],
     avatar: avatar2
   },
   {
@@ -52,9 +48,8 @@ const INITIAL_PLAYERS: Player[] = [
     chips: 850,
     isActive: true,
     isDealer: false,
-    currentBet: 50,
-    status: "checked",
-    cards: [{ suit: "spades", rank: "A", hidden: true }, { suit: "spades", rank: "A", hidden: true }],
+    currentBet: 0,
+    status: "waiting",
     avatar: avatar3
   },
   {
@@ -63,9 +58,8 @@ const INITIAL_PLAYERS: Player[] = [
     chips: 5000,
     isActive: true,
     isDealer: false,
-    currentBet: 50,
+    currentBet: 0,
     status: "waiting",
-    cards: [{ suit: "spades", rank: "A", hidden: true }, { suit: "spades", rank: "A", hidden: true }],
     avatar: avatar4
   },
   {
@@ -75,7 +69,7 @@ const INITIAL_PLAYERS: Player[] = [
     isActive: true,
     isDealer: false,
     currentBet: 0,
-    status: "folded",
+    status: "waiting",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hodl"
   },
   {
@@ -85,13 +79,12 @@ const INITIAL_PLAYERS: Player[] = [
     isActive: true,
     isDealer: false,
     currentBet: 0,
-    status: "folded",
+    status: "waiting",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Degen"
   },
 ];
 
 // 6-Max Table Positions (Percentage x, y) adjusted for 3D perspective view
-// Top players need to be "further back" in Y
 const SEAT_POSITIONS = [
     { x: 50, y: 88 }, // Hero (Bottom)
     { x: 12, y: 65 }, // Bottom Left
@@ -102,23 +95,11 @@ const SEAT_POSITIONS = [
 ];
 
 export default function Game() {
-  const [players, setPlayers] = useState<Player[]>(INITIAL_PLAYERS);
-  const [gameState, setGameState] = useState<GameState>({
-    pot: 950,
-    communityCards: [
-        { suit: "spades", rank: "A" },
-        { suit: "clubs", rank: "A" },
-        { suit: "diamonds", rank: "A" }
-    ],
-    currentTurnPlayerId: HERO_ID,
-  });
-
-  const hero = players.find(p => p.id === HERO_ID);
+  const { players, gameState, handlePlayerAction } = useGameEngine(INITIAL_PLAYERS);
   const [showProvablyFair, setShowProvablyFair] = useState(true);
 
-  const handleAction = (action: string, amount?: number) => {
-    console.log(`Action: ${action}, Amount: ${amount}`);
-  };
+  const hero = players.find(p => p.id === HERO_ID);
+  const isHeroTurn = gameState.currentTurnPlayerId === HERO_ID;
 
   return (
     <div className="min-h-screen bg-[#050505] text-white overflow-hidden relative font-sans selection:bg-green-500 selection:text-white flex">
@@ -143,7 +124,7 @@ export default function Game() {
                             HIGH ROLLERS
                         </div>
                         <div className="text-[10px] text-yellow-500/70 tracking-[0.3em] font-bold uppercase">
-                            VIP Club • Table #802
+                            VIP Club • Table #802 • {gameState.phase.toUpperCase()}
                         </div>
                     </div>
                 </div>
@@ -217,7 +198,13 @@ export default function Game() {
         <div className="z-50 relative">
             {/* Hero Hand Shadow/Reflection */}
             <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
-            <PokerControls onAction={handleAction} minBet={20} maxBet={hero?.chips || 1000} />
+            <div className={`transition-all duration-300 ${!isHeroTurn ? 'opacity-50 grayscale pointer-events-none' : 'opacity-100'}`}>
+                <PokerControls 
+                    onAction={handlePlayerAction} 
+                    minBet={gameState.minBet} 
+                    maxBet={hero?.chips || 1000} 
+                />
+            </div>
         </div>
       </div>
 

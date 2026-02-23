@@ -3,6 +3,9 @@ import { cn } from "@/lib/utils";
 import { Player } from "@/lib/poker-types";
 import { Card } from "./Card";
 import { EmoteBubble } from "./EmoteSystem";
+import { useSoundEngine } from "@/lib/sound-context";
+import { useEffect, useRef } from "react";
+import { triggerChipFlight } from "./ChipAnimation";
 
 interface SeatProps {
   player: Player;
@@ -13,6 +16,10 @@ interface SeatProps {
 export function Seat({ player, position, isHero = false }: SeatProps) {
   const isTurn = player.status === "thinking";
   const isFolded = player.status === "folded";
+  const sound = useSoundEngine();
+  const prevBetRef = useRef(player.currentBet);
+  const timerTickRef = useRef<ReturnType<typeof setInterval>>();
+  const seatRef = useRef<HTMLDivElement>(null);
 
   const statusLabel: Record<string, string> = {
     folded: "FOLD",
@@ -22,8 +29,43 @@ export function Seat({ player, position, isHero = false }: SeatProps) {
     "all-in": "ALL IN",
   };
 
+  // Play chip sound and trigger chip flight when bet increases
+  useEffect(() => {
+    if (player.currentBet > prevBetRef.current && player.currentBet > 0) {
+      sound.playChipClink();
+      // Trigger chip flight animation to pot center
+      if (seatRef.current) {
+        const rect = seatRef.current.getBoundingClientRect();
+        const fromX = rect.left + rect.width / 2;
+        const fromY = rect.top + rect.height / 2;
+        // Pot center is roughly the center of the viewport
+        const toX = window.innerWidth / 2;
+        const toY = window.innerHeight * 0.38;
+        triggerChipFlight(fromX, fromY, toX, toY, player.currentBet - prevBetRef.current);
+      }
+    }
+    prevBetRef.current = player.currentBet;
+  }, [player.currentBet, sound]);
+
+  // Timer tick sound when it's this player's turn (hero only)
+  useEffect(() => {
+    if (isTurn && isHero) {
+      timerTickRef.current = setInterval(() => {
+        const urgency = 1 - (player.timeLeft || 100) / 100;
+        sound.playTimerTick(urgency);
+      }, 2000);
+    }
+    return () => {
+      if (timerTickRef.current) clearInterval(timerTickRef.current);
+    };
+  }, [isTurn, isHero, player.timeLeft, sound]);
+
+  // Deal-from position (top-center of table as "shoe")
+  const dealFrom = { x: 0, y: -120 };
+
   return (
     <div
+      ref={seatRef}
       className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500"
       style={{
         left: `${position.x}%`,
@@ -251,8 +293,22 @@ export function Seat({ player, position, isHero = false }: SeatProps) {
             perspective: "600px",
           }}
         >
-          <Card card={player.cards[0]} size={isHero ? "lg" : "sm"} delay={0} isHero={isHero} />
-          <Card card={player.cards[1]} size={isHero ? "lg" : "sm"} delay={0.1} isHero={isHero} />
+          <Card
+            card={player.cards[0]}
+            size={isHero ? "lg" : "sm"}
+            delay={0}
+            isHero={isHero}
+            dealFrom={dealFrom}
+            onDealt={() => sound.playCardDeal()}
+          />
+          <Card
+            card={player.cards[1]}
+            size={isHero ? "lg" : "sm"}
+            delay={0.1}
+            isHero={isHero}
+            dealFrom={dealFrom}
+            onDealt={() => sound.playCardDeal()}
+          />
         </div>
       )}
     </div>

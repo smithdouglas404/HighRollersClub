@@ -32,4 +32,5 @@ export interface GameState {
   phase: GamePhase;
   minBet: number;
   lastAggressorId?: string;
+  dealingPhase?: 'idle' | 'dealing' | 'dealt';
 }

@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
+import { useSoundEngine } from "@/lib/sound-context";
 
 interface ControlsProps {
   onAction: (action: string, amount?: number) => void;
@@ -88,6 +89,7 @@ function ActionButton({
 
 export function PokerControls({ onAction, minBet, maxBet }: ControlsProps) {
   const [betAmount, setBetAmount] = useState(minBet);
+  const sound = useSoundEngine();
 
   const presets = [
     { label: "Min", value: minBet },
@@ -100,6 +102,26 @@ export function PokerControls({ onAction, minBet, maxBet }: ControlsProps) {
   const handlePreset = useCallback((value: number) => {
     setBetAmount(value);
   }, []);
+
+  const handleFold = useCallback(() => {
+    sound.playFold();
+    onAction("fold");
+  }, [sound, onAction]);
+
+  const handleCheck = useCallback(() => {
+    sound.playCheck();
+    onAction("check");
+  }, [sound, onAction]);
+
+  const handleCall = useCallback(() => {
+    sound.playCall();
+    onAction("call");
+  }, [sound, onAction]);
+
+  const handleRaise = useCallback(() => {
+    sound.playRaise();
+    onAction("raise", betAmount);
+  }, [sound, onAction, betAmount]);
 
   return (
     <motion.div
@@ -156,14 +178,14 @@ export function PokerControls({ onAction, minBet, maxBet }: ControlsProps) {
 
           {/* Action buttons */}
           <div className="flex items-center justify-center gap-3">
-            <ActionButton label="Fold" variant="fold" onClick={() => onAction("fold")} />
-            <ActionButton label="Check" variant="check" onClick={() => onAction("check")} />
-            <ActionButton label="Call" subLabel={`${minBet}`} variant="call" onClick={() => onAction("call")} />
+            <ActionButton label="Fold" variant="fold" onClick={handleFold} />
+            <ActionButton label="Check" variant="check" onClick={handleCheck} />
+            <ActionButton label="Call" subLabel={`${minBet}`} variant="call" onClick={handleCall} />
             <ActionButton
               label="Raise"
               subLabel={`${betAmount}`}
               variant="raise"
-              onClick={() => onAction("raise", betAmount)}
+              onClick={handleRaise}
             />
           </div>
         </div>

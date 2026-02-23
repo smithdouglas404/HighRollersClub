@@ -8,6 +8,8 @@ interface CardProps {
   size?: "sm" | "md" | "lg";
   delay?: number;
   isHero?: boolean;
+  dealFrom?: { x: number; y: number };
+  onDealt?: () => void;
 }
 
 const suitSymbols: Record<Suit, string> = {
@@ -30,16 +32,34 @@ const sizeConfig = {
   lg: { w: "w-[72px]", h: "h-[102px]", rank: "text-lg", suit: "text-base", center: "text-3xl" },
 };
 
-export function Card({ card, className, size = "md", delay = 0, isHero = false }: CardProps) {
+export function Card({ card, className, size = "md", delay = 0, isHero = false, dealFrom, onDealt }: CardProps) {
   const s = sizeConfig[size];
+
+  // Deal-from animation (arc trajectory from shoe position)
+  const dealAnimation = dealFrom
+    ? {
+        initial: { x: dealFrom.x, y: dealFrom.y, scale: 0.3, opacity: 0, rotate: -15 },
+        animate: { x: 0, y: 0, scale: 1, opacity: 1, rotate: 0 },
+        transition: {
+          type: "spring" as const,
+          stiffness: 180,
+          damping: 22,
+          delay,
+          mass: 0.8,
+        },
+      }
+    : {
+        initial: { scale: 0.5, opacity: 0, y: -30 },
+        animate: { scale: 1, opacity: 1, y: 0 },
+        transition: { type: "spring" as const, stiffness: 300, damping: 20, delay },
+      };
 
   // Card Back
   if (!card || card.hidden) {
     return (
       <motion.div
-        initial={{ scale: 0.5, opacity: 0, y: -30 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20, delay }}
+        {...dealAnimation}
+        onAnimationComplete={() => onDealt?.()}
         className={cn(
           "relative rounded-lg overflow-hidden select-none",
           s.w, s.h,
@@ -80,16 +100,26 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false }
       initial={{ rotateY: 180, scale: 0.7, opacity: 0 }}
       animate={{ rotateY: 0, scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 200, damping: 18, delay }}
-      whileHover={isHero ? { y: -6, scale: 1.05, transition: { duration: 0.2 } } : undefined}
+      whileHover={isHero ? {
+        rotateY: -15,
+        rotateX: 8,
+        y: -10,
+        scale: 1.05,
+        transition: { duration: 0.25 },
+      } : undefined}
+      onAnimationComplete={() => onDealt?.()}
       className={cn(
         "relative rounded-lg overflow-hidden select-none cursor-default",
         s.w, s.h,
         isHero ? "card-shadow-hero" : "card-shadow",
         className
       )}
-      style={isHero ? {
-        boxShadow: `0 4px 12px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.3), 0 0 20px ${colors.glow}`
-      } : undefined}
+      style={{
+        ...(isHero ? {
+          boxShadow: `0 4px 12px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.3), 0 0 20px ${colors.glow}`,
+          transformOrigin: "left center",
+        } : {}),
+      }}
     >
       {/* Card face background */}
       <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-[#c9a84c] via-[#a08530] to-[#c9a84c] p-[1px]">

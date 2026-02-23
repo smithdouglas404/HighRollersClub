@@ -43,6 +43,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     dealerId: initialPlayers[1].id,
     phase: 'pre-flop',
     minBet: 20,
+    dealingPhase: 'idle',
   });
 
   const showdownTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -92,7 +93,13 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       phase: 'pre-flop',
       minBet: 20,
       lastAggressorId: undefined,
+      dealingPhase: 'dealing',
     }));
+
+    // Transition to 'dealt' after dealing animation completes
+    setTimeout(() => {
+      setGameState(prev => ({ ...prev, dealingPhase: 'dealt' }));
+    }, 1500);
   }, [players, gameState.dealerId, heroId]);
 
   // Advance Phase

@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "./Card";
 import { CardType } from "@/lib/poker-types";
+import { useSoundEngine } from "@/lib/sound-context";
+import { useState, useEffect, useRef } from "react";
 
 interface CommunityCardsProps {
   cards: CardType[];
@@ -8,6 +10,28 @@ interface CommunityCardsProps {
 }
 
 export function CommunityCards({ cards, pot }: CommunityCardsProps) {
+  const sound = useSoundEngine();
+  const prevCardCount = useRef(0);
+  const [burnCards, setBurnCards] = useState<number[]>([]);
+
+  // Detect new cards being dealt and trigger phase reveal + burn card
+  useEffect(() => {
+    const newCount = cards.length;
+    if (newCount > prevCardCount.current && prevCardCount.current >= 0) {
+      const isNewPhase = newCount === 3 || newCount === 4 || newCount === 5;
+      if (isNewPhase && prevCardCount.current < newCount) {
+        sound.playPhaseReveal();
+        // Show burn card
+        const burnId = Date.now();
+        setBurnCards(prev => [...prev, burnId]);
+        setTimeout(() => {
+          setBurnCards(prev => prev.filter(id => id !== burnId));
+        }, 600);
+      }
+    }
+    prevCardCount.current = newCount;
+  }, [cards.length, sound]);
+
   return (
     <div className="flex flex-col items-center gap-3 relative">
 
@@ -38,6 +62,29 @@ export function CommunityCards({ cards, pot }: CommunityCardsProps) {
         <div className="absolute -inset-3 rounded-2xl glass-light" />
 
         <div className="relative flex gap-2 p-2.5 rounded-xl">
+          {/* Burn card animation */}
+          <AnimatePresence>
+            {burnCards.map((id) => (
+              <motion.div
+                key={`burn-${id}`}
+                initial={{ opacity: 1, x: 0, scale: 1 }}
+                animate={{ opacity: 0, x: -60, scale: 0.8 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="absolute -left-2 top-2.5 z-30"
+              >
+                <div
+                  className="w-[52px] h-[74px] rounded-lg"
+                  style={{
+                    background: "linear-gradient(135deg, #1a1a2e, #16213e)",
+                    border: "1.5px solid rgba(201,168,76,0.4)",
+                    boxShadow: "0 0 12px rgba(255,165,0,0.3), 0 0 4px rgba(255,165,0,0.2)",
+                  }}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="relative">
               <AnimatePresence mode="wait">
@@ -46,7 +93,15 @@ export function CommunityCards({ cards, pot }: CommunityCardsProps) {
                     key={`card-${i}-${cards[i].rank}-${cards[i].suit}`}
                     initial={{ opacity: 0, y: -20, rotateY: 90 }}
                     animate={{ opacity: 1, y: 0, rotateY: 0 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 20, delay: i * 0.12 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 20,
+                      delay: i * 0.3,
+                    }}
+                    onAnimationComplete={() => {
+                      sound.playCardFlip();
+                    }}
                   >
                     <Card card={cards[i]} size="md" />
                   </motion.div>

@@ -4,6 +4,7 @@ import { PlayerResult } from "@/lib/hand-evaluator";
 import { Player } from "@/lib/poker-types";
 import { Card } from "./Card";
 import { useEffect, useRef } from "react";
+import { useSoundEngine } from "@/lib/sound-context";
 
 interface ShowdownOverlayProps {
   visible: boolean;
@@ -94,6 +95,23 @@ function Confetti({ active }: { active: boolean }) {
 export function ShowdownOverlay({ visible, results, players, pot }: ShowdownOverlayProps) {
   const winners = results.filter(r => r.isWinner);
   const winnerIds = winners.map(w => w.playerId);
+  const sound = useSoundEngine();
+  const soundPlayedRef = useRef(false);
+
+  // Play showdown fanfare on mount, then win celebration after delay
+  useEffect(() => {
+    if (visible && !soundPlayedRef.current) {
+      soundPlayedRef.current = true;
+      sound.playShowdownFanfare();
+      const timer = setTimeout(() => {
+        sound.playWinCelebration();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+    if (!visible) {
+      soundPlayedRef.current = false;
+    }
+  }, [visible, sound]);
 
   return (
     <AnimatePresence>

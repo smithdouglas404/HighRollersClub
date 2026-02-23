@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "./Card";
 import { CardType } from "@/lib/poker-types";
 
@@ -8,24 +9,68 @@ interface CommunityCardsProps {
 
 export function CommunityCards({ cards, pot }: CommunityCardsProps) {
   return (
-    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-4 z-10">
-        {/* Pot Display */}
-        <div className="bg-black/40 backdrop-blur-md rounded-full px-6 py-1.5 border border-white/10 text-green-400 font-mono font-bold shadow-lg mb-2">
-            POT: {pot.toLocaleString()}
-        </div>
+    <div className="flex flex-col items-center gap-3 relative">
 
-        {/* Cards Layout */}
-        <div className="flex gap-2 p-3 rounded-xl bg-black/20 border border-white/5 shadow-2xl backdrop-blur-sm">
-            {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="w-12 h-16 sm:w-14 sm:h-20">
-                    {cards[i] ? (
-                        <Card card={cards[i]} size="md" className="w-full h-full" />
-                    ) : (
-                        <div className="w-full h-full rounded-[4px] bg-white/5 border-2 border-dashed border-white/10" />
-                    )}
-                </div>
-            ))}
+      {/* Pot display */}
+      <motion.div
+        key={pot}
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        className="relative"
+      >
+        <div className="glass rounded-full px-5 py-1.5 flex items-center gap-2 neon-border-gold">
+          {/* Chip icon */}
+          <div className="w-4 h-4 rounded-full gold-gradient flex items-center justify-center shadow-[0_0_8px_rgba(201,168,76,0.3)]">
+            <span className="text-[7px] font-black text-black">$</span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-yellow-500/70 font-semibold">Pot</span>
+            <span className="text-sm font-mono font-bold neon-text-gold">
+              {pot.toLocaleString()}
+            </span>
+          </div>
         </div>
+      </motion.div>
+
+      {/* Community cards container */}
+      <div className="relative">
+        {/* Holographic backdrop */}
+        <div className="absolute -inset-3 rounded-2xl glass-light" />
+
+        <div className="relative flex gap-2 p-2.5 rounded-xl">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="relative">
+              <AnimatePresence mode="wait">
+                {cards[i] ? (
+                  <motion.div
+                    key={`card-${i}-${cards[i].rank}-${cards[i].suit}`}
+                    initial={{ opacity: 0, y: -20, rotateY: 90 }}
+                    animate={{ opacity: 1, y: 0, rotateY: 0 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 20, delay: i * 0.12 }}
+                  >
+                    <Card card={cards[i]} size="md" />
+                  </motion.div>
+                ) : (
+                  <div
+                    className="w-[52px] h-[74px] rounded-lg border border-dashed flex items-center justify-center"
+                    style={{
+                      borderColor: "rgba(255,255,255,0.06)",
+                      background: "rgba(255,255,255,0.02)",
+                    }}
+                  >
+                    {/* Phase indicator dots */}
+                    <div className="flex gap-0.5">
+                      {i < 3 && <div className="w-1 h-1 rounded-full bg-cyan-500/20" />}
+                      {i === 3 && <div className="w-1 h-1 rounded-full bg-yellow-500/20" />}
+                      {i === 4 && <div className="w-1 h-1 rounded-full bg-red-500/20" />}
+                    </div>
+                  </div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

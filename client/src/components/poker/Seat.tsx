@@ -1,148 +1,255 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Player } from "@/lib/poker-types";
 import { Card } from "./Card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SeatProps {
   player: Player;
-  position: { x: number; y: number }; // Percentage positions
+  position: { x: number; y: number };
   isHero?: boolean;
 }
 
 export function Seat({ player, position, isHero = false }: SeatProps) {
-  const isTurn = player.status === 'thinking';
-  
+  const isTurn = player.status === "thinking";
+  const isFolded = player.status === "folded";
+
+  const statusLabel: Record<string, string> = {
+    folded: "FOLD",
+    checked: "CHECK",
+    called: "CALL",
+    raised: "RAISE",
+    "all-in": "ALL IN",
+  };
+
   return (
     <div
-      className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 transition-all duration-500"
-      style={{ 
-          left: `${position.x}%`, 
-          top: `${position.y}%`,
-          transform: 'translate(-50%, -50%) rotateX(-30deg)', // Counter-rotate to face camera
-          zIndex: position.y < 50 ? 10 : 30 // Top players behind, bottom players in front
+      className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500"
+      style={{
+        left: `${position.x}%`,
+        top: `${position.y}%`,
+        transform: "translate(-50%, -50%) rotateX(-30deg)",
+        zIndex: isHero ? 40 : position.y < 50 ? 10 : 30,
       }}
-      data-testid={`seat-${player.id}`}
     >
-      {/* Character/Avatar Container */}
-      <div className="relative group">
-        
-        {/* Glow Effect for Active Player */}
+      {/* Player seat group */}
+      <div className="relative group flex flex-col items-center">
+
+        {/* Active turn outer glow ring */}
         {isTurn && (
-            <div className="absolute -inset-8 bg-yellow-500/10 rounded-full blur-2xl animate-pulse pointer-events-none" />
+          <div className="absolute -inset-6 z-0">
+            <div className="w-full h-full rounded-full"
+              style={{
+                background: isHero
+                  ? "radial-gradient(circle, rgba(0,240,255,0.15) 0%, transparent 70%)"
+                  : "radial-gradient(circle, rgba(255,215,0,0.12) 0%, transparent 70%)",
+                animation: "neonPulse 2s ease-in-out infinite",
+              }}
+            />
+          </div>
         )}
 
-        <div className="relative">
-            {/* Dealer Button */}
-            {player.isDealer && (
-                <div className="absolute -right-2 top-0 w-7 h-7 bg-gradient-to-b from-white to-gray-200 rounded-full border-2 border-gray-300 flex items-center justify-center text-[10px] font-black z-20 shadow-[0_2px_5px_rgba(0,0,0,0.3)] text-black">
-                    D
+        {/* Avatar container */}
+        <div className={cn(
+          "relative z-10 transition-transform duration-300",
+          isTurn && "scale-110",
+          isFolded && "opacity-40 grayscale"
+        )}>
+
+          {/* Dealer button */}
+          {player.isDealer && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -right-1 -top-1 z-30 w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black text-black gold-gradient shadow-[0_0_10px_rgba(201,168,76,0.5)]"
+            >
+              D
+            </motion.div>
+          )}
+
+          {/* Hexagonal avatar frame with SVG */}
+          <div className={cn("relative", isHero ? "w-[88px] h-[88px]" : "w-[72px] h-[72px]")}>
+            <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full overflow-visible" style={{ filter: isTurn ? `drop-shadow(0 0 8px ${isHero ? "rgba(0,240,255,0.5)" : "rgba(255,215,0,0.4)"})` : "drop-shadow(0 0 4px rgba(0,0,0,0.5))" }}>
+              <defs>
+                <clipPath id={`hex-${player.id}`}>
+                  <polygon points="50,2 93,25 93,75 50,98 7,75 7,25" />
+                </clipPath>
+                <linearGradient id={`frame-grad-${player.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                  {isTurn ? (
+                    <>
+                      <stop offset="0%" stopColor={isHero ? "#00f0ff" : "#ffd700"} />
+                      <stop offset="50%" stopColor={isHero ? "#00ff9d" : "#c9a84c"} />
+                      <stop offset="100%" stopColor={isHero ? "#00f0ff" : "#ffd700"} />
+                    </>
+                  ) : (
+                    <>
+                      <stop offset="0%" stopColor="#3a3a4a" />
+                      <stop offset="100%" stopColor="#1a1a2a" />
+                    </>
+                  )}
+                </linearGradient>
+              </defs>
+
+              {/* Outer hex frame */}
+              <polygon
+                points="50,0 95,24 95,76 50,100 5,76 5,24"
+                fill="none"
+                stroke={`url(#frame-grad-${player.id})`}
+                strokeWidth="3"
+              />
+
+              {/* Inner hex frame */}
+              <polygon
+                points="50,4 91,26 91,74 50,96 9,74 9,26"
+                fill="none"
+                stroke={isTurn ? (isHero ? "rgba(0,240,255,0.3)" : "rgba(255,215,0,0.3)") : "rgba(255,255,255,0.05)"}
+                strokeWidth="1"
+              />
+
+              {/* Avatar image */}
+              <image
+                href={player.avatar}
+                x="6" y="6" width="88" height="88"
+                clipPath={`url(#hex-${player.id})`}
+                preserveAspectRatio="xMidYMid slice"
+              />
+
+              {/* Timer ring (animated) */}
+              {isTurn && (
+                <polygon
+                  points="50,2 93,25 93,75 50,98 7,75 7,25"
+                  fill="none"
+                  stroke={isHero ? "#00f0ff" : "#ffd700"}
+                  strokeWidth="2.5"
+                  strokeDasharray="340"
+                  strokeDashoffset={340 - (340 * (player.timeLeft || 100)) / 100}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000 ease-linear"
+                  style={{ filter: `drop-shadow(0 0 4px ${isHero ? "rgba(0,240,255,0.6)" : "rgba(255,215,0,0.6)"})` }}
+                />
+              )}
+            </svg>
+
+            {/* Folded overlay */}
+            {isFolded && (
+              <div className="absolute inset-0 flex items-center justify-center z-20">
+                <div className="bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                  Fold
                 </div>
+              </div>
             )}
+          </div>
+        </div>
 
-            {/* Avatar Frame */}
-            <div className={cn(
-                "w-24 h-24 relative z-10 transition-transform duration-300 group-hover:scale-105",
-                isTurn ? "scale-110" : "scale-100"
+        {/* Name plate */}
+        <div className={cn(
+          "mt-1 px-3 py-1.5 rounded-md flex flex-col items-center min-w-[90px] relative overflow-hidden",
+          "glass",
+          isTurn && (isHero ? "neon-border-cyan" : "neon-border-gold"),
+        )}>
+          {/* Shimmer on active */}
+          {isTurn && (
+            <div className="absolute inset-0 opacity-30"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${isHero ? "rgba(0,240,255,0.15)" : "rgba(255,215,0,0.15)"}, transparent)`,
+                backgroundSize: "200% 100%",
+                animation: "shimmer 2s ease infinite",
+              }}
+            />
+          )}
+          <span className={cn(
+            "text-[9px] uppercase tracking-[0.15em] font-semibold relative z-10",
+            isTurn ? (isHero ? "text-cyan-300" : "text-yellow-300") : "text-gray-400"
+          )}>
+            {player.name}
+          </span>
+          <div className="flex items-center gap-0.5 relative z-10">
+            <span className="text-[10px] text-yellow-500/80">$</span>
+            <span className={cn(
+              "text-xs font-mono font-bold leading-none tracking-tight",
+              isHero ? "neon-text-gold" : "text-yellow-400"
             )}>
-                {/* Sci-Fi Border/Ring */}
-                <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-visible">
-                    <defs>
-                        <linearGradient id={`grad-${player.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#fbbf24" />
-                            <stop offset="100%" stopColor="#d97706" />
-                        </linearGradient>
-                    </defs>
-                    
-                    {/* Background Ring */}
-                    <circle cx="50%" cy="50%" r="46%" fill="#000000" fillOpacity="0.8" stroke="#1f2937" strokeWidth="6" />
-                    
-                    {/* Timer Ring */}
-                    {isTurn && (
-                        <circle
-                            cx="50%" cy="50%" r="46%"
-                            fill="none"
-                            stroke={`url(#grad-${player.id})`}
-                            strokeWidth="4"
-                            strokeDasharray="100"
-                            strokeDashoffset={100 - (player.timeLeft || 100)}
-                            strokeLinecap="round"
-                            className="transition-all duration-1000 ease-linear filter drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]"
-                        />
-                    )}
-                </svg>
-                
-                <Avatar className="w-full h-full p-2 bg-transparent">
-                    <AvatarImage src={player.avatar} className="rounded-full object-cover border-2 border-white/10" />
-                    <AvatarFallback className="bg-gray-900 text-white border-2 border-gray-700">
-                        {player.name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                </Avatar>
-
-                {/* Status Badge (Folded/All-in) */}
-                {player.status === 'folded' && (
-                    <div className="absolute inset-0 bg-black/60 rounded-full backdrop-blur-sm flex items-center justify-center">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Folded</span>
-                    </div>
-                )}
-            </div>
-        </div>
-        
-        {/* Player Name Plate */}
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-[#0a0a0a] border border-white/10 px-4 py-1.5 rounded-lg flex flex-col items-center min-w-[100px] shadow-xl z-20 before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/5 before:to-transparent before:rounded-lg">
-            <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-0.5">{player.name}</span>
-            <div className="flex items-center gap-1 text-yellow-500">
-                <span className="text-xs">$</span>
-                <span className="text-sm font-mono font-bold leading-none tracking-tight">{player.chips.toLocaleString()}</span>
-            </div>
+              {player.chips.toLocaleString()}
+            </span>
+          </div>
         </div>
 
+        {/* Action status label */}
+        <AnimatePresence>
+          {statusLabel[player.status] && !isFolded && (
+            <motion.div
+              initial={{ opacity: 0, y: 5, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -5, scale: 0.8 }}
+              className={cn(
+                "absolute -bottom-7 glass px-3 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider z-30",
+                player.status === "raised" && "text-cyan-400 neon-border-cyan",
+                player.status === "called" && "text-green-400 neon-border-green",
+                player.status === "checked" && "text-gray-300 border-gray-600",
+                player.status === "all-in" && "text-red-400 border-red-500/40",
+              )}
+            >
+              {statusLabel[player.status]}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bet chips */}
+        <AnimatePresence>
+          {player.currentBet > 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.5, y: -10 }}
+              className="absolute z-30 flex flex-col items-center gap-0.5"
+              style={{
+                top: isHero ? "-40%" : "120%",
+              }}
+            >
+              {/* Chip stack */}
+              <div className="relative w-7 h-5">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="absolute left-0 w-7 h-7 rounded-full"
+                    style={{
+                      bottom: `${i * 3}px`,
+                      background: i === 2
+                        ? "linear-gradient(135deg, #ffd700, #c9a84c)"
+                        : i === 1
+                        ? "linear-gradient(135deg, #e74c3c, #c0392b)"
+                        : "linear-gradient(135deg, #2ecc71, #27ae60)",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                      border: "2px dashed rgba(255,255,255,0.25)",
+                      transform: "rotateX(55deg)",
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="glass px-2 py-0.5 rounded text-[10px] font-mono font-bold text-white neon-border-gold">
+                {player.currentBet.toLocaleString()}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Cards - Positioned relative to the avatar but "on" the table */}
-      {player.cards && player.status !== 'folded' && (
-        <div 
-            className={cn(
-                "flex gap-1 absolute transition-all duration-500 perspective-[500px]",
-                isHero 
-                    ? "-top-28 scale-125 z-50" // Hero cards floating up clearly
-                    : "top-[85%] scale-75 z-0 opacity-90" // Opponent cards tucked in
-            )}
-            style={{
-                transform: isHero ? 'translateY(0px) rotateX(10deg)' : 'translateY(0px)' 
-            }}
+      {/* Hole cards */}
+      {player.cards && !isFolded && (
+        <div
+          className={cn(
+            "flex absolute transition-all duration-500",
+            isHero
+              ? "-top-[110px] gap-1.5 z-50"
+              : "top-[80%] gap-0.5 z-0 opacity-80 scale-75"
+          )}
+          style={{
+            transform: isHero ? "rotateX(5deg)" : undefined,
+            perspective: "600px",
+          }}
         >
-          <Card card={player.cards[0]} />
-          <Card card={player.cards[1]} />
+          <Card card={player.cards[0]} size={isHero ? "lg" : "sm"} delay={0} isHero={isHero} />
+          <Card card={player.cards[1]} size={isHero ? "lg" : "sm"} delay={0.1} isHero={isHero} />
         </div>
-      )}
-      
-      {/* Bet Chips */}
-      {player.currentBet > 0 && (
-          <div className="absolute top-[150%] flex flex-col items-center gap-1 z-30">
-             <div className="bg-black/80 px-2 py-0.5 rounded text-xs font-mono text-white border border-yellow-500/30 shadow-lg backdrop-blur-md">
-                 {player.currentBet.toLocaleString()}
-             </div>
-             {/* 3D Chip Stack Simulation */}
-             <div className="relative h-8 w-8 group perspective-[500px]">
-                 {[...Array(3)].map((_, i) => (
-                     <div 
-                        key={i}
-                        className="absolute bottom-0 w-full h-full rounded-full bg-gradient-to-b from-red-500 to-red-700 border-[3px] border-dashed border-white/40 shadow-lg"
-                        style={{ 
-                            transform: `translateY(-${i * 4}px) rotateX(40deg)`,
-                            boxShadow: '0 4px 6px rgba(0,0,0,0.5)'
-                        }} 
-                     />
-                 ))}
-             </div>
-          </div>
-      )}
-      
-       {player.status === 'checked' && (
-          <div className="absolute top-[130%] bg-black/60 rounded px-3 py-1 text-[10px] text-gray-300 font-bold uppercase tracking-wider border border-white/10 shadow-lg backdrop-blur-md">
-             Check
-          </div>
       )}
     </div>
   );

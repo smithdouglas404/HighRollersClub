@@ -77,7 +77,7 @@ function evaluate5(cards: CardType[]): EvaluatedHand {
   let straightHigh = 0;
 
   // Normal straight check
-  const uniqueVals = [...new Set(values)].sort((a, b) => b - a);
+  const uniqueVals = Array.from(new Set(values)).sort((a, b) => b - a);
   if (uniqueVals.length >= 5) {
     for (let i = 0; i <= uniqueVals.length - 5; i++) {
       if (uniqueVals[i] - uniqueVals[i + 4] === 4) {

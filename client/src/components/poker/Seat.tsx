@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Player } from "@/lib/poker-types";
 import { Card } from "./Card";
+import { EmoteBubble } from "./EmoteSystem";
 
 interface SeatProps {
   player: Player;
@@ -33,6 +34,9 @@ export function Seat({ player, position, isHero = false }: SeatProps) {
     >
       {/* Player seat group */}
       <div className="relative group flex flex-col items-center">
+
+        {/* Emote bubble */}
+        <EmoteBubble playerId={player.id} />
 
         {/* Active turn outer glow ring */}
         {isTurn && (

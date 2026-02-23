@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Seat } from "../components/poker/Seat";
 import { CommunityCards } from "../components/poker/CommunityCards";
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
 import { AmbientParticles } from "../components/AmbientParticles";
+import { AvatarSelect, AVATAR_OPTIONS, AvatarOption } from "../components/poker/AvatarSelect";
+import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
+import { EmotePicker } from "../components/poker/EmoteSystem";
+import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { Player } from "../lib/poker-types";
 import { useGameEngine } from "@/lib/game-engine";
 import { ShieldCheck, Volume2, Settings, Trophy } from "lucide-react";
@@ -20,14 +24,10 @@ import avatar4 from "@assets/generated_images/cyberpunk_poker_player_avatar_4.pn
 
 const HERO_ID = "player-1";
 
-const INITIAL_PLAYERS: Player[] = [
-  { id: "player-1", name: "Hero", chips: 1540, isActive: true, isDealer: false, currentBet: 0, status: "waiting", timeLeft: 100, avatar: avatar1 },
-  { id: "player-2", name: "CryptoKing", chips: 3200, isActive: true, isDealer: true, currentBet: 0, status: "waiting", avatar: avatar2 },
-  { id: "player-3", name: "Satoshi", chips: 850, isActive: true, isDealer: false, currentBet: 0, status: "waiting", avatar: avatar3 },
-  { id: "player-4", name: "Whale_0x", chips: 5000, isActive: true, isDealer: false, currentBet: 0, status: "waiting", avatar: avatar4 },
-  { id: "player-5", name: "HODLer", chips: 1200, isActive: true, isDealer: false, currentBet: 0, status: "waiting", avatar: avatar3 },
-  { id: "player-6", name: "Degen", chips: 2100, isActive: true, isDealer: false, currentBet: 0, status: "waiting", avatar: avatar4 },
-];
+// Bot avatars - each is unique
+const BOT_AVATARS = [avatar2, avatar3, avatar4, avatar1, avatar2];
+const BOT_NAMES = ["CryptoKing", "Satoshi", "Whale_0x", "HODLer", "Degen"];
+const BOT_CHIPS = [3200, 850, 5000, 1200, 2100];
 
 const SEAT_POSITIONS = [
   { x: 50, y: 88 },  // Hero (Bottom center)
@@ -46,12 +46,46 @@ const phaseLabels: Record<string, string> = {
   showdown: "SHOWDOWN",
 };
 
-export default function Game() {
-  const { players, gameState, handlePlayerAction } = useGameEngine(INITIAL_PLAYERS);
+function buildPlayers(heroAvatar: AvatarOption, heroName: string): Player[] {
+  return [
+    {
+      id: HERO_ID,
+      name: heroName,
+      chips: 1540,
+      isActive: true,
+      isDealer: false,
+      currentBet: 0,
+      status: "waiting",
+      timeLeft: 100,
+      avatar: heroAvatar.image || undefined,
+    },
+    ...BOT_NAMES.map((name, i) => ({
+      id: `player-${i + 2}`,
+      name,
+      chips: BOT_CHIPS[i],
+      isActive: true,
+      isDealer: i === 0,
+      currentBet: 0,
+      status: "waiting" as const,
+      avatar: BOT_AVATARS[i],
+    })),
+  ];
+}
+
+// The game table component (shown after avatar selection)
+function GameTable({ initialPlayers }: { initialPlayers: Player[] }) {
+  const { players, gameState, handlePlayerAction, showdown } = useGameEngine(initialPlayers, HERO_ID);
   const [showProvablyFair, setShowProvablyFair] = useState(false);
 
   const hero = players.find((p) => p.id === HERO_ID);
   const isHeroTurn = gameState.currentTurnPlayerId === HERO_ID;
+  const heroCards = hero?.cards;
+
+  // Get unhidden hero cards for hand strength calc
+  const heroHoleCards = useMemo(() => {
+    if (!heroCards) return undefined;
+    return heroCards.map(c => ({ ...c, hidden: false })) as [typeof heroCards[0], typeof heroCards[1]];
+  }, [heroCards]);
 
   return (
     <div className="min-h-screen bg-[#030508] text-white overflow-hidden relative font-sans flex">
@@ -61,6 +95,16 @@ export default function Game() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,30,40,0.5)_0%,rgba(0,0,0,0.95)_70%)]" />
         <AmbientParticles />
       </div>
+
+      {/* Showdown overlay */}
+      {showdown && (
+        <ShowdownOverlay
+          visible={!!showdown}
+          results={showdown.results}
+          players={players}
+          pot={showdown.pot}
+        />
+      )}
 
       {/* Main game area */}
       <div className="flex-1 relative flex flex-col h-screen overflow-hidden">
@@ -72,7 +116,6 @@ export default function Game() {
           transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 25 }}
           className="absolute top-0 left-0 right-0 h-14 flex items-center justify-between px-5 z-50"
         >
-          {/* Left: Branding */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg gold-gradient flex items-center justify-center shadow-[0_0_15px_rgba(201,168,76,0.3)]">
               <Trophy className="w-5 h-5 text-black" />
@@ -91,7 +134,6 @@ export default function Game() {
             </div>
           </div>
 
-          {/* Right: Controls */}
           <div className="flex items-center gap-2">
             <button className="glass rounded-lg p-2 hover:bg-white/5 transition-colors" title="Sound">
               <Volume2 className="w-4 h-4 text-gray-500" />
@@ -129,82 +171,49 @@ export default function Game() {
               transformStyle: "preserve-3d",
             }}
           >
-            {/* Table rail (outer) - gold/leather */}
+            {/* Table rail (outer) */}
             <div
               className="absolute -inset-[45px] rounded-[55%] overflow-hidden"
               style={{
                 boxShadow: "0 40px 80px -10px rgba(0,0,0,0.9), 0 0 120px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.08)",
               }}
             >
-              {/* Rail texture */}
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundImage: `url(${luxuryRail})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
+              <div className="absolute inset-0"
+                style={{ backgroundImage: `url(${luxuryRail})`, backgroundSize: "cover", backgroundPosition: "center" }}
               />
-              {/* Dark overlay on rail */}
               <div className="absolute inset-0 bg-gradient-to-b from-[rgba(30,25,18,0.6)] to-[rgba(10,8,5,0.8)]" />
-              {/* Gold edge strip */}
-              <div
-                className="absolute inset-[8px] rounded-[53%] pointer-events-none"
-                style={{
-                  border: "1.5px solid rgba(201,168,76,0.25)",
-                  boxShadow: "0 0 20px rgba(201,168,76,0.08), inset 0 0 20px rgba(201,168,76,0.05)",
-                }}
+              <div className="absolute inset-[8px] rounded-[53%] pointer-events-none"
+                style={{ border: "1.5px solid rgba(201,168,76,0.25)", boxShadow: "0 0 20px rgba(201,168,76,0.08), inset 0 0 20px rgba(201,168,76,0.05)" }}
               />
             </div>
 
             {/* Felt surface */}
             <div
               className="absolute inset-0 rounded-[50%] overflow-hidden"
-              style={{
-                boxShadow: "inset 0 0 100px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.5)",
-              }}
+              style={{ boxShadow: "inset 0 0 100px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.5)" }}
             >
-              {/* Felt texture image */}
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundImage: `url(${feltTexture})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
+              <div className="absolute inset-0"
+                style={{ backgroundImage: `url(${feltTexture})`, backgroundSize: "cover", backgroundPosition: "center" }}
               />
-              {/* Vignette */}
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,10,15,0.6)_100%)]" />
-              {/* Spotlight from above */}
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(255,255,255,0.04)_0%,transparent_60%)]" />
 
               {/* Center logo */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 pointer-events-none">
-                <img
-                  src={lionLogo}
-                  alt="High Rollers Club"
+                <img src={lionLogo} alt="High Rollers Club"
                   className="w-full h-full object-contain"
-                  style={{
-                    opacity: 0.12,
-                    filter: "grayscale(30%) brightness(1.2)",
-                    mixBlendMode: "overlay",
-                  }}
+                  style={{ opacity: 0.12, filter: "grayscale(30%) brightness(1.2)", mixBlendMode: "overlay" }}
                 />
               </div>
 
-              {/* Betting line (inner oval) */}
-              <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[50%] rounded-[50%] pointer-events-none"
-                style={{
-                  border: "1px solid rgba(255,255,255,0.04)",
-                  boxShadow: "0 0 8px rgba(255,255,255,0.02)",
-                }}
+              {/* Betting line */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[50%] rounded-[50%] pointer-events-none"
+                style={{ border: "1px solid rgba(255,255,255,0.04)", boxShadow: "0 0 8px rgba(255,255,255,0.02)" }}
               />
             </div>
 
-            {/* Community Cards - floating above table */}
-            <div
-              className="absolute top-[44%] left-1/2 z-20"
+            {/* Community Cards */}
+            <div className="absolute top-[44%] left-1/2 z-20"
               style={{ transform: "translate(-50%, -50%) translateZ(25px)" }}
             >
               <CommunityCards cards={gameState.communityCards} pot={gameState.pot} />
@@ -222,9 +231,19 @@ export default function Game() {
           </motion.div>
         </div>
 
+        {/* Emote picker */}
+        <EmotePicker heroId={HERO_ID} />
+
+        {/* Hand strength meter */}
+        <HandStrengthMeter
+          holeCards={heroHoleCards}
+          communityCards={gameState.communityCards}
+          visible={gameState.phase !== "showdown" && !!heroCards}
+        />
+
         {/* Bottom controls */}
         <div className="z-50 relative">
-          <div className={`transition-all duration-300 ${!isHeroTurn ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
+          <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
             <PokerControls
               onAction={handlePlayerAction}
               minBet={gameState.minBet}
@@ -240,4 +259,22 @@ export default function Game() {
       </AnimatePresence>
     </div>
   );
+}
+
+// Main Game page with lobby flow
+export default function Game() {
+  const [gameStarted, setGameStarted] = useState(false);
+  const [initialPlayers, setInitialPlayers] = useState<Player[]>([]);
+
+  const handleAvatarSelect = (avatar: AvatarOption, playerName: string) => {
+    const players = buildPlayers(avatar, playerName);
+    setInitialPlayers(players);
+    setGameStarted(true);
+  };
+
+  if (!gameStarted) {
+    return <AvatarSelect onSelect={handleAvatarSelect} />;
+  }
+
+  return <GameTable initialPlayers={initialPlayers} />;
 }

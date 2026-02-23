@@ -44,7 +44,7 @@ export default function Landing() {
             <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold hidden md:block">Clubs</span>
             <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold hidden md:block">Leagues</span>
             <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold hidden md:block">Provably Fair</span>
-            <Link href="/game">
+            <Link href="/lobby">
               <button className="glass rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-cyan-400 neon-border-cyan hover:bg-cyan-500/10 transition-all">
                 Launch App
               </button>
@@ -97,7 +97,7 @@ export default function Landing() {
                   transition={{ duration: 0.6, delay: 0.6 }}
                   className="flex items-center gap-4 pt-2"
                 >
-                  <Link href="/game">
+                  <Link href="/lobby">
                     <button className="group relative overflow-hidden rounded-xl px-8 py-3.5 font-bold text-base uppercase tracking-wider text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
                       style={{
                         background: "linear-gradient(135deg, #00ff9d, #00d4aa, #00f0ff)",

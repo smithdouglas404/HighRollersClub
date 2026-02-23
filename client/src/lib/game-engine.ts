@@ -46,7 +46,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     dealingPhase: 'idle',
   });
 
-  const showdownTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const showdownTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Initialize Game
   const startGame = useCallback(() => {

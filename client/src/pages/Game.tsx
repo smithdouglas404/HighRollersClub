@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Seat } from "../components/poker/Seat";
 import { CommunityCards } from "../components/poker/CommunityCards";
@@ -9,9 +9,12 @@ import { AvatarSelect, AVATAR_OPTIONS, AvatarOption } from "../components/poker/
 import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
 import { EmotePicker } from "../components/poker/EmoteSystem";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
+import { ChipAnimation } from "../components/poker/ChipAnimation";
 import { Player } from "../lib/poker-types";
 import { useGameEngine } from "@/lib/game-engine";
-import { ShieldCheck, Volume2, Settings, Trophy } from "lucide-react";
+import { SoundProvider, useSoundEngine } from "@/lib/sound-context";
+import { soundEngine } from "@/lib/sound-engine";
+import { ShieldCheck, Volume2, VolumeX, Settings, Trophy } from "lucide-react";
 
 // Assets
 import lionLogo from "@assets/generated_images/Golden_Lion_Logo_for_Poker_Table_961614b0.png";
@@ -76,6 +79,10 @@ function buildPlayers(heroAvatar: AvatarOption, heroName: string): Player[] {
 function GameTable({ initialPlayers }: { initialPlayers: Player[] }) {
   const { players, gameState, handlePlayerAction, showdown } = useGameEngine(initialPlayers, HERO_ID);
   const [showProvablyFair, setShowProvablyFair] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
+  const sound = useSoundEngine();
+  const tableRef = useRef<HTMLDivElement>(null);
+  const prevHeroTurn = useRef(false);
 
   const hero = players.find((p) => p.id === HERO_ID);
   const isHeroTurn = gameState.currentTurnPlayerId === HERO_ID;
@@ -87,6 +94,25 @@ function GameTable({ initialPlayers }: { initialPlayers: Player[] }) {
     return heroCards.map(c => ({ ...c, hidden: false })) as [typeof heroCards[0], typeof heroCards[1]];
   }, [heroCards]);
 
+  // Start ambient music on mount, stop on unmount
+  useEffect(() => {
+    sound.startAmbient();
+    return () => sound.stopAmbient();
+  }, [sound]);
+
+  // Play turn notification when it becomes hero's turn
+  useEffect(() => {
+    if (isHeroTurn && !prevHeroTurn.current) {
+      sound.playTurnNotify();
+    }
+    prevHeroTurn.current = isHeroTurn;
+  }, [isHeroTurn, sound]);
+
+  const handleMuteToggle = () => {
+    const nowMuted = sound.toggleMute();
+    setIsMuted(nowMuted);
+  };
+
   return (
     <div className="min-h-screen bg-[#030508] text-white overflow-hidden relative font-sans flex">
 
@@ -95,6 +121,9 @@ function GameTable({ initialPlayers }: { initialPlayers: Player[] }) {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,30,40,0.5)_0%,rgba(0,0,0,0.95)_70%)]" />
         <AmbientParticles />
       </div>
+
+      {/* Chip animation overlay */}
+      <ChipAnimation containerRef={tableRef} />
 
       {/* Showdown overlay */}
       {showdown && (
@@ -135,8 +164,16 @@ function GameTable({ initialPlayers }: { initialPlayers: Player[] }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="glass rounded-lg p-2 hover:bg-white/5 transition-colors" title="Sound">
-              <Volume2 className="w-4 h-4 text-gray-500" />
+            <button
+              onClick={handleMuteToggle}
+              className="glass rounded-lg p-2 hover:bg-white/5 transition-colors"
+              title={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted ? (
+                <VolumeX className="w-4 h-4 text-red-400" />
+              ) : (
+                <Volume2 className="w-4 h-4 text-gray-500" />
+              )}
             </button>
             <button className="glass rounded-lg p-2 hover:bg-white/5 transition-colors" title="Settings">
               <Settings className="w-4 h-4 text-gray-500" />
@@ -162,6 +199,7 @@ function GameTable({ initialPlayers }: { initialPlayers: Player[] }) {
         <div className="flex-1 relative flex items-center justify-center overflow-hidden" style={{ perspective: "1200px" }}>
 
           <motion.div
+            ref={tableRef}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
@@ -267,6 +305,8 @@ export default function Game() {
   const [initialPlayers, setInitialPlayers] = useState<Player[]>([]);
 
   const handleAvatarSelect = (avatar: AvatarOption, playerName: string) => {
+    // Initialize AudioContext from user gesture
+    soundEngine.init();
     const players = buildPlayers(avatar, playerName);
     setInitialPlayers(players);
     setGameStarted(true);
@@ -276,5 +316,9 @@ export default function Game() {
     return <AvatarSelect onSelect={handleAvatarSelect} />;
   }
 
-  return <GameTable initialPlayers={initialPlayers} />;
+  return (
+    <SoundProvider>
+      <GameTable initialPlayers={initialPlayers} />
+    </SoundProvider>
+  );
 }

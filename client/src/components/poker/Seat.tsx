@@ -18,7 +18,7 @@ export function Seat({ player, position, isHero = false }: SeatProps) {
   const isFolded = player.status === "folded";
   const sound = useSoundEngine();
   const prevBetRef = useRef(player.currentBet);
-  const timerTickRef = useRef<ReturnType<typeof setInterval>>();
+  const timerTickRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const seatRef = useRef<HTMLDivElement>(null);
 
   const statusLabel: Record<string, string> = {

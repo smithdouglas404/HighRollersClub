@@ -43,6 +43,7 @@ function serverToClientGameState(serverState: any): GameState {
 }
 
 export type VerificationStatus = "pending" | "verifying" | "verified" | "failed" | null;
+export type PlayerSeedStatus = "idle" | "committed" | "revealed";
 
 export function useMultiplayerGame(tableId: string, userId: string) {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -62,7 +63,11 @@ export function useMultiplayerGame(tableId: string, userId: string) {
   const [commitmentHash, setCommitmentHash] = useState<string | null>(null);
   const [shuffleProof, setShuffleProof] = useState<any>(null);
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>(null);
+  const [playerSeedStatus, setPlayerSeedStatus] = useState<PlayerSeedStatus>("idle");
+  const [onChainCommitTx, setOnChainCommitTx] = useState<string | null>(null);
+  const [onChainRevealTx, setOnChainRevealTx] = useState<string | null>(null);
   const joinedRef = useRef(false);
+  const localSeedRef = useRef<string | null>(null);
 
   // Connect WebSocket and set up handlers
   useEffect(() => {
@@ -90,7 +95,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
         setPlayers(serverToClientPlayers(state.players || []));
         setGameState(serverToClientGameState(state));
-        setWaiting(state.phase === "waiting");
+        setWaiting(state.phase === "waiting" || state.phase === "collecting-seeds");
 
         // Capture commitment hash
         if (state.commitmentHash) {
@@ -110,6 +115,13 @@ export function useMultiplayerGame(tableId: string, userId: string) {
           if (state.shuffleProof) {
             setShuffleProof(state.shuffleProof);
             setVerificationStatus("verifying");
+
+            // Send seed reveal if we committed one
+            if (localSeedRef.current) {
+              wsClient.send({ type: "seed_reveal", seed: localSeedRef.current });
+              setPlayerSeedStatus("revealed");
+            }
+
             import("@shared/crypto-verify").then(({ verifyShuffleProof }) => {
               verifyShuffleProof(state.shuffleProof).then((result) => {
                 setVerificationStatus(result.valid ? "verified" : "failed");
@@ -124,12 +136,42 @@ export function useMultiplayerGame(tableId: string, userId: string) {
           setShowdown(null);
           if (state.phase !== "showdown") {
             // Reset proof on new hand, keep commitment
-            if (state.phase === "pre-flop" && state.commitmentHash) {
+            if (state.phase === "pre-flop" || state.phase === "collecting-seeds") {
               setShuffleProof(null);
               setVerificationStatus("pending");
+              setPlayerSeedStatus("idle");
+              setOnChainCommitTx(null);
+              setOnChainRevealTx(null);
+              localSeedRef.current = null;
             }
           }
         }
+      })
+    );
+
+    // Handle seed request — auto-generate and commit
+    unsubs.push(
+      wsClient.on("seed_request", (_msg: any) => {
+        // Generate 32-byte random seed
+        const seedBytes = new Uint8Array(32);
+        crypto.getRandomValues(seedBytes);
+        const seedHex = Array.from(seedBytes).map(b => b.toString(16).padStart(2, "0")).join("");
+        localSeedRef.current = seedHex;
+
+        // Compute SHA-256 commitment hash
+        crypto.subtle.digest("SHA-256", new TextEncoder().encode(seedHex)).then(hashBuf => {
+          const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+          wsClient.send({ type: "seed_commit", commitmentHash: hashHex });
+          setPlayerSeedStatus("committed");
+        }).catch(() => {});
+      })
+    );
+
+    // Handle on-chain proof TX hashes
+    unsubs.push(
+      wsClient.on("onchain_proof", (msg: any) => {
+        if (msg.commitTx) setOnChainCommitTx(msg.commitTx);
+        if (msg.revealTx) setOnChainRevealTx(msg.revealTx);
       })
     );
 
@@ -204,5 +246,8 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     commitmentHash,
     shuffleProof,
     verificationStatus,
+    playerSeedStatus,
+    onChainCommitTx,
+    onChainRevealTx,
   };
 }

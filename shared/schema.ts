@@ -132,6 +132,11 @@ export const gameHands = pgTable("game_hands", {
   serverSeed: text("server_seed"),
   commitmentHash: text("commitment_hash"),
   deckOrder: text("deck_order"),
+  playerSeeds: jsonb("player_seeds"), // multi-party entropy seeds
+  vrfRequestId: text("vrf_request_id"),
+  vrfRandomWord: text("vrf_random_word"),
+  onChainCommitTx: text("on_chain_commit_tx"),
+  onChainRevealTx: text("on_chain_reveal_tx"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   index("game_hands_table_idx").on(table.tableId),

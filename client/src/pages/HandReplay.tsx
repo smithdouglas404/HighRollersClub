@@ -199,24 +199,13 @@ export default function HandReplay({ handId }: { handId: string }) {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/hands/${handId}/verify`);
+        const res = await fetch(`/api/hands/${handId}`);
         if (!res.ok) {
           setError("Hand not found");
           setLoading(false);
           return;
         }
-        const proofData = await res.json();
-
-        // Also fetch the full hand record
-        // The verify endpoint returns proof data; we need the hand record too
-        const handRes = await fetch(`/api/hands/${handId}`);
-        if (handRes.ok) {
-          const handData = await handRes.json();
-          setHand({ ...handData, ...proofData });
-        } else {
-          // If we only have proof data, use what we have
-          setHand(proofData);
-        }
+        setHand(await res.json());
       } catch {
         setError("Failed to load hand");
       } finally {

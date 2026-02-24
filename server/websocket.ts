@@ -23,7 +23,9 @@ export type ClientMessage =
   | { type: "add_chips"; amount: number }
   | { type: "add_bots" }
   | { type: "chat"; message: string }
-  | { type: "emote"; emoteId: string };
+  | { type: "emote"; emoteId: string }
+  | { type: "seed_commit"; commitmentHash: string }
+  | { type: "seed_reveal"; seed: string };
 
 // Message types: Server → Client
 export type ServerMessage =
@@ -40,7 +42,10 @@ export type ServerMessage =
   | { type: "table_info"; table: any }
   | { type: "shuffle_commitment"; commitmentHash: string; handNumber: number }
   | { type: "shuffle_reveal"; proof: any }
-  | { type: "emote"; userId: string; displayName: string; emoteId: string };
+  | { type: "emote"; userId: string; displayName: string; emoteId: string }
+  | { type: "seed_request"; handNumber: number; deadline: number }
+  | { type: "seeds_collected"; count: number }
+  | { type: "onchain_proof"; commitTx: string | null; revealTx: string | null };
 
 // Global map of connected clients
 const clients = new Map<string, WsClient>();
@@ -243,6 +248,22 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         displayName: client.displayName,
         emoteId,
       });
+      break;
+    }
+
+    case "seed_commit": {
+      if (!client.tableId) return;
+      const hash = msg.commitmentHash?.slice(0, 128);
+      if (!hash) return;
+      tableManager.handleSeedCommit(client.tableId, client.userId, hash);
+      break;
+    }
+
+    case "seed_reveal": {
+      if (!client.tableId) return;
+      const seed = msg.seed?.slice(0, 128);
+      if (!seed) return;
+      tableManager.handleSeedReveal(client.tableId, client.userId, seed);
       break;
     }
   }

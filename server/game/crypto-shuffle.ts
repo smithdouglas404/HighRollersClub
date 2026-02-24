@@ -2,6 +2,12 @@ import { randomBytes, randomUUID, createHash, createHmac } from "crypto";
 import type { CardType, Suit, Rank } from "./hand-evaluator";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+export interface PlayerSeedData {
+  playerId: string;
+  seed: string;
+  commitmentHash: string;
+}
+
 export interface ShuffleProof {
   serverSeed: string;
   timestamp: number;
@@ -10,6 +16,10 @@ export interface ShuffleProof {
   deckOrder: string;
   handNumber: number;
   tableId: string;
+  shuffleVersion: 1 | 2;
+  playerSeeds?: PlayerSeedData[];
+  vrfRequestId?: string;
+  vrfRandomWord?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -48,16 +58,42 @@ function createCanonicalDeck(): CardType[] {
   return deck;
 }
 
-export function deterministicShuffle(seed: string): CardType[] {
+// v1 shuffle (legacy, no rejection sampling — kept for old proof verification)
+export function deterministicShuffleV1(seed: string): CardType[] {
   const deck = createCanonicalDeck();
 
-  // Fisher-Yates with HMAC-SHA256 for each swap index
   for (let i = deck.length - 1; i > 0; i--) {
     const hmac = createHmac("sha256", seed);
     hmac.update(`shuffle-index-${i}`);
     const hash = hmac.digest();
     const rand = hash.readUInt32BE(0);
     const j = rand % (i + 1);
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+
+  return deck;
+}
+
+// v2 shuffle with rejection sampling to eliminate modulo bias
+export function deterministicShuffle(seed: string): CardType[] {
+  const deck = createCanonicalDeck();
+
+  for (let i = deck.length - 1; i > 0; i--) {
+    const range = i + 1;
+    // max is the largest multiple of range that fits in uint32
+    const max = Math.floor(0x100000000 / range) * range;
+    let attempt = 0;
+    let rand: number;
+
+    do {
+      const hmac = createHmac("sha256", seed);
+      hmac.update(`shuffle-index-${i}-${attempt}`);
+      const hash = hmac.digest();
+      rand = hash.readUInt32BE(0);
+      attempt++;
+    } while (rand >= max);
+
+    const j = rand % range;
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 
@@ -73,6 +109,33 @@ export function deckToCanonicalString(deck: CardType[]): string {
 export function commitDeck(deck: CardType[]): string {
   const canonical = deckToCanonicalString(deck);
   return createHash("sha256").update(canonical).digest("hex");
+}
+
+// ─── Combined Seed (multi-party entropy) ────────────────────────────────────
+export function createCombinedSeed(serverSeed: string, playerSeeds: string[]): string {
+  const hash = createHash("sha512");
+  hash.update(serverSeed);
+  // Sort player seeds for deterministic ordering
+  const sorted = [...playerSeeds].sort();
+  for (const ps of sorted) {
+    hash.update(ps);
+  }
+  return hash.digest("hex");
+}
+
+// ─── Super Seed with VRF ────────────────────────────────────────────────────
+export function createSuperSeedWithVRF(
+  osRandom: Buffer,
+  nonce: string,
+  timestamp: number,
+  vrfRandomWord: string
+): string {
+  const hash = createHash("sha512");
+  hash.update(osRandom);
+  hash.update(nonce);
+  hash.update(timestamp.toString());
+  hash.update(vrfRandomWord);
+  return hash.digest("hex");
 }
 
 // ─── Create Provably Fair Shuffle ────────────────────────────────────────────
@@ -96,14 +159,58 @@ export function createProvablyFairShuffle(
       deckOrder,
       handNumber,
       tableId,
+      shuffleVersion: 2,
+    },
+  };
+}
+
+// ─── Create Multi-Party Provably Fair Shuffle ────────────────────────────────
+export function createProvablyFairShuffleMultiParty(
+  tableId: string,
+  handNumber: number,
+  playerSeedData: PlayerSeedData[],
+  vrfRandomWord?: string
+): { deck: CardType[]; proof: ShuffleProof } {
+  const { osRandom, nonce, timestamp } = generateEntropy();
+
+  // Create server seed (optionally with VRF)
+  const baseSeed = vrfRandomWord
+    ? createSuperSeedWithVRF(osRandom, nonce, timestamp, vrfRandomWord)
+    : createSuperSeed(osRandom, nonce, timestamp);
+
+  // Mix in player seeds if any
+  const playerSeedValues = playerSeedData.map(ps => ps.seed);
+  const finalSeed = playerSeedValues.length > 0
+    ? createCombinedSeed(baseSeed, playerSeedValues)
+    : baseSeed;
+
+  const deck = deterministicShuffle(finalSeed);
+  const commitmentHash = commitDeck(deck);
+  const deckOrder = deckToCanonicalString(deck);
+
+  return {
+    deck,
+    proof: {
+      serverSeed: finalSeed,
+      timestamp,
+      nonce,
+      commitmentHash,
+      deckOrder,
+      handNumber,
+      tableId,
+      shuffleVersion: 2,
+      playerSeeds: playerSeedData.length > 0 ? playerSeedData : undefined,
+      vrfRequestId: undefined,
+      vrfRandomWord: vrfRandomWord || undefined,
     },
   };
 }
 
 // ─── Verify ──────────────────────────────────────────────────────────────────
 export function verifyShuffle(proof: ShuffleProof): boolean {
-  // Re-run deterministic shuffle with the same seed
-  const deck = deterministicShuffle(proof.serverSeed);
+  // Choose shuffle version
+  const shuffleFn = proof.shuffleVersion === 1 ? deterministicShuffleV1 : deterministicShuffle;
+  const deck = shuffleFn(proof.serverSeed);
   const computedOrder = deckToCanonicalString(deck);
   const computedHash = createHash("sha256").update(computedOrder).digest("hex");
 

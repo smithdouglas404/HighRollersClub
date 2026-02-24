@@ -103,7 +103,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                 hands.map((hand) => {
                   const winners = hand.summary?.winners || [];
                   const players = hand.summary?.players || [];
-                  const playerMap = new Map(players.map((p: any) => [p.id, p]));
+                  const playerMap = new Map<string, any>(players.map((p: any) => [p.id, p]));
 
                   return (
                     <motion.div

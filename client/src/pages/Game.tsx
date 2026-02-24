@@ -90,6 +90,7 @@ function GameTable({
   players, gameState, handlePlayerAction, showdown, heroId, tableName, tableId,
   onBack, isMultiplayer, connected, waiting, addBots, leaveTable,
   commitmentHash, shuffleProof, verificationStatus, sendChat,
+  playerSeedStatus, onChainCommitTx, onChainRevealTx,
 }: {
   players: Player[];
   gameState: any;
@@ -108,6 +109,9 @@ function GameTable({
   shuffleProof?: any | null;
   verificationStatus?: VerificationStatus;
   sendChat?: (message: string) => void;
+  playerSeedStatus?: import("@/lib/multiplayer-engine").PlayerSeedStatus;
+  onChainCommitTx?: string | null;
+  onChainRevealTx?: string | null;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
@@ -398,6 +402,9 @@ function GameTable({
             commitmentHash={commitmentHash}
             shuffleProof={shuffleProof}
             verificationStatus={verificationStatus}
+            playerSeedStatus={playerSeedStatus}
+            onChainCommitTx={onChainCommitTx}
+            onChainRevealTx={onChainRevealTx}
           />
         )}
       </AnimatePresence>
@@ -416,7 +423,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
   const {
     players, gameState, handlePlayerAction, showdown,
     connected, waiting, joinTable, leaveTable, addBots, sendChat,
-    commitmentHash, shuffleProof, verificationStatus,
+    commitmentHash, shuffleProof, verificationStatus, playerSeedStatus,
+    onChainCommitTx, onChainRevealTx,
   } = useMultiplayerGame(tableId, user?.id || "");
 
   // Fetch table info
@@ -530,6 +538,9 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         shuffleProof={shuffleProof}
         verificationStatus={verificationStatus}
         sendChat={sendChat}
+        playerSeedStatus={playerSeedStatus}
+        onChainCommitTx={onChainCommitTx}
+        onChainRevealTx={onChainRevealTx}
       />
     </SoundProvider>
   );

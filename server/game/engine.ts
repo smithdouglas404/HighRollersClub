@@ -1,8 +1,9 @@
 import { type CardType, type Suit, type Rank, determineWinners, type PlayerResult } from "./hand-evaluator";
-import { createProvablyFairShuffle, type ShuffleProof } from "./crypto-shuffle";
+import { createProvablyFairShuffle, createProvablyFairShuffleMultiParty, type ShuffleProof, type PlayerSeedData } from "./crypto-shuffle";
+import type { VRFClient } from "../blockchain/vrf-client";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-export type GamePhase = "waiting" | "pre-flop" | "flop" | "turn" | "river" | "showdown";
+export type GamePhase = "waiting" | "collecting-seeds" | "pre-flop" | "flop" | "turn" | "river" | "showdown";
 export type PlayerStatus = "waiting" | "thinking" | "folded" | "all-in" | "checked" | "called" | "raised" | "sitting-out";
 
 export interface SeatPlayer {
@@ -66,6 +67,17 @@ export class GameEngine {
   private bigBlind: number;
   private timeBankSeconds: number;
   private actedThisRound: Set<string> = new Set();
+
+  // Seed collection for multi-party entropy
+  private seedCommitments = new Map<string, string>();
+  private revealedSeeds = new Map<string, string>();
+  private collectedSeeds = new Map<string, string>(); // playerId -> plaintext seed (collected at commit time for multi-party)
+  private seedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // VRF integration
+  public vrfClient: VRFClient | null = null;
+  private currentVRFRequestId: string | null = null;
+  private currentVRFRandomWord: string | null = null;
 
   constructor(
     public tableId: string,
@@ -146,6 +158,106 @@ export class GameEngine {
 
     this.clearTimers();
     this.state.handNumber++;
+
+    // Check if there are human players for seed collection
+    const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0);
+    const humanPlayers = eligible.filter(p => !p.isBot);
+
+    if (humanPlayers.length > 0) {
+      this.beginSeedCollection();
+    } else {
+      // Bot-only game: skip seed collection
+      this.startHandWithSeeds([]);
+    }
+  }
+
+  // ─── Seed Collection ────────────────────────────────────────────────────
+  private beginSeedCollection() {
+    this.state.phase = "collecting-seeds";
+    this.seedCommitments.clear();
+    this.revealedSeeds.clear();
+    this.collectedSeeds.clear();
+    this.currentVRFRequestId = null;
+    this.currentVRFRandomWord = null;
+
+    // Fire VRF request in background if enabled
+    if (this.vrfClient) {
+      this.vrfClient.requestRandomness(this.tableId, this.state.handNumber)
+        .then(result => {
+          if (result) {
+            this.currentVRFRequestId = result.requestId;
+            result.randomWordPromise.then(word => {
+              if (word) this.currentVRFRandomWord = word;
+            }).catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }
+
+    this.emitState();
+
+    // 5-second timeout: proceed with whatever seeds we have
+    this.seedTimer = setTimeout(() => {
+      this.finalizeSeedCollection();
+    }, 5000);
+  }
+
+  submitSeedCommitment(playerId: string, commitmentHash: string): boolean {
+    if (this.state.phase !== "collecting-seeds") return false;
+    const player = this.getPlayer(playerId);
+    if (!player || player.isBot) return false;
+
+    this.seedCommitments.set(playerId, commitmentHash);
+    this.emitState();
+
+    // Check if all human players have committed
+    const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0 && !p.isBot);
+    if (eligible.every(p => this.seedCommitments.has(p.id))) {
+      this.clearSeedTimer();
+      this.finalizeSeedCollection();
+    }
+
+    return true;
+  }
+
+  // Seed reveal happens at showdown — clients send plaintext seed
+  submitSeedReveal(playerId: string, seed: string): boolean {
+    if (!this.seedCommitments.has(playerId)) return false;
+    this.revealedSeeds.set(playerId, seed);
+    return true;
+  }
+
+  private finalizeSeedCollection() {
+    this.clearSeedTimer();
+
+    // Build player seed data from commitments
+    // At this point we don't have plaintext seeds yet (those come at reveal)
+    // The commitment hashes are stored; actual seed mixing uses a placeholder
+    // that will be verified post-showdown via seed reveals
+    const playerSeedData: PlayerSeedData[] = [];
+    this.seedCommitments.forEach((hash, playerId) => {
+      playerSeedData.push({ playerId, seed: "", commitmentHash: hash });
+    });
+
+    this.startHandWithSeeds(playerSeedData);
+  }
+
+  private clearSeedTimer() {
+    if (this.seedTimer) {
+      clearTimeout(this.seedTimer);
+      this.seedTimer = null;
+    }
+  }
+
+  getSeedCommitmentCount(): number {
+    return this.seedCommitments.size;
+  }
+
+  getExpectedSeedCount(): number {
+    return this.state.players.filter(p => !p.isSittingOut && p.chips > 0 && !p.isBot).length;
+  }
+
+  private startHandWithSeeds(playerSeedData: PlayerSeedData[]) {
     this.state.phase = "pre-flop";
     this.state.pot = 0;
     this.state.communityCards = [];
@@ -178,7 +290,6 @@ export class GameEngine {
 
     // Post blinds
     if (eligible.length === 2) {
-      // Heads-up: dealer is SB
       this.state.smallBlindSeat = this.state.dealerSeat;
       this.state.bigBlindSeat = this.nextEligibleSeat(this.state.dealerSeat);
     } else {
@@ -194,12 +305,31 @@ export class GameEngine {
     this.state.minBet = this.bigBlind;
     this.state.minRaise = this.bigBlind * 2;
 
-    // Deal cards — provably fair shuffle
-    const { deck, proof } = createProvablyFairShuffle(this.tableId, this.state.handNumber);
+    // Deal cards — provably fair shuffle (multi-party if seeds available)
+    let deck: CardType[];
+    let proof: ShuffleProof;
+
+    if (playerSeedData.length > 0 || this.currentVRFRandomWord) {
+      const result = createProvablyFairShuffleMultiParty(
+        this.tableId,
+        this.state.handNumber,
+        playerSeedData,
+        this.currentVRFRandomWord || undefined
+      );
+      deck = result.deck;
+      proof = result.proof;
+      if (this.currentVRFRequestId) {
+        proof.vrfRequestId = this.currentVRFRequestId;
+      }
+    } else {
+      const result = createProvablyFairShuffle(this.tableId, this.state.handNumber);
+      deck = result.deck;
+      proof = result.proof;
+    }
+
     this.deck = deck;
     this.currentShuffleProof = proof;
     this.handProofs.set(this.state.handNumber, proof);
-    // Evict old proofs (keep last 10)
     if (this.handProofs.size > 10) {
       const oldest = Math.min(...this.handProofs.keys());
       this.handProofs.delete(oldest);
@@ -230,7 +360,7 @@ export class GameEngine {
   handleAction(playerId: string, action: string, amount?: number): { ok: boolean; error?: string } {
     const player = this.getPlayer(playerId);
     if (!player) return { ok: false, error: "Player not found" };
-    if (this.state.phase === "waiting" || this.state.phase === "showdown") {
+    if (this.state.phase === "waiting" || this.state.phase === "showdown" || this.state.phase === "collecting-seeds") {
       return { ok: false, error: "No active hand" };
     }
     if (player.seatIndex !== this.state.currentTurnSeat) {
@@ -613,6 +743,7 @@ export class GameEngine {
 
   cleanup() {
     this.clearTimers();
+    this.clearSeedTimer();
     if (this.showdownTimer) { clearTimeout(this.showdownTimer); this.showdownTimer = null; }
   }
 

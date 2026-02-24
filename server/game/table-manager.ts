@@ -3,6 +3,9 @@ import { BotPlayer } from "./bot-player";
 import { storage } from "../storage";
 import { sendGameStateToTable, broadcastToTable } from "../websocket";
 import type { ShuffleProof } from "./crypto-shuffle";
+import { blockchainConfig } from "../blockchain/config";
+import { VRFClient } from "../blockchain/vrf-client";
+import { ContractClient } from "../blockchain/contract-client";
 
 export interface TableInstance {
   engine: GameEngine;
@@ -21,6 +24,19 @@ export interface TableInstance {
 
 class TableManager {
   private tables = new Map<string, TableInstance>();
+  private vrfClient: VRFClient | null = null;
+  private contractClient: ContractClient | null = null;
+
+  constructor() {
+    if (blockchainConfig.enabled) {
+      try {
+        this.vrfClient = new VRFClient();
+        this.contractClient = new ContractClient();
+      } catch {
+        console.warn("Blockchain clients failed to initialize, running without blockchain");
+      }
+    }
+  }
 
   getTable(tableId: string): TableInstance | undefined {
     return this.tables.get(tableId);
@@ -40,11 +56,25 @@ class TableManager {
       timeBankSeconds: tableRow.timeBankSeconds,
     });
 
+    // Pass VRF client if available
+    if (this.vrfClient) {
+      engine.vrfClient = this.vrfClient;
+    }
+
     // Track phase for commitment broadcasts
     let lastPhase = "waiting";
 
     // When state changes, broadcast to all connected clients
     engine.onStateChange = () => {
+      // Broadcast seed request when collecting seeds
+      if (engine.state.phase === "collecting-seeds" && lastPhase !== "collecting-seeds") {
+        broadcastToTable(tableId, {
+          type: "seed_request",
+          handNumber: engine.state.handNumber,
+          deadline: Date.now() + 5000,
+        } as any);
+      }
+
       // Broadcast commitment hash when a new hand starts
       if (engine.state.phase === "pre-flop" && lastPhase !== "pre-flop") {
         const commitment = engine.getCurrentCommitment();
@@ -54,6 +84,24 @@ class TableManager {
             commitmentHash: commitment,
             handNumber: engine.state.handNumber,
           } as any);
+
+          // Fire blockchain commitment in background and broadcast TX hash
+          if (this.contractClient) {
+            this.contractClient.commitHand(
+              tableId,
+              engine.state.handNumber,
+              commitment,
+              undefined
+            ).then((result) => {
+              if (result?.txHash) {
+                broadcastToTable(tableId, {
+                  type: "onchain_proof",
+                  commitTx: result.txHash,
+                  revealTx: null,
+                } as any);
+              }
+            }).catch(() => {});
+          }
         }
       }
       lastPhase = engine.state.phase;
@@ -76,7 +124,32 @@ class TableManager {
         serverSeed: proof.serverSeed,
         commitmentHash: proof.commitmentHash,
         deckOrder: proof.deckOrder,
+        playerSeeds: proof.playerSeeds || null,
+        vrfRequestId: proof.vrfRequestId || null,
+        vrfRandomWord: proof.vrfRandomWord || null,
+        onChainCommitTx: null,
+        onChainRevealTx: null,
       }).catch(() => {});
+
+      // Fire blockchain reveal in background and broadcast TX hash
+      if (this.contractClient) {
+        const playerSeedStrings = (proof.playerSeeds || []).map(ps => ps.seed);
+        this.contractClient.revealHand(
+          tableId,
+          proof.handNumber,
+          proof.serverSeed,
+          playerSeedStrings,
+          proof.deckOrder
+        ).then((result) => {
+          if (result?.txHash) {
+            broadcastToTable(tableId, {
+              type: "onchain_proof",
+              commitTx: null,
+              revealTx: result.txHash,
+            } as any);
+          }
+        }).catch(() => {});
+      }
 
       // Update player stats for missions (non-bot players only)
       for (const p of summary.players) {
@@ -316,6 +389,18 @@ class TableManager {
     if (engine.state.phase === "waiting" && engine.canStartHand()) {
       setTimeout(() => engine.startHand(), 1000);
     }
+  }
+
+  handleSeedCommit(tableId: string, userId: string, commitmentHash: string) {
+    const instance = this.tables.get(tableId);
+    if (!instance) return;
+    instance.engine.submitSeedCommitment(userId, commitmentHash);
+  }
+
+  handleSeedReveal(tableId: string, userId: string, seed: string) {
+    const instance = this.tables.get(tableId);
+    if (!instance) return;
+    instance.engine.submitSeedReveal(userId, seed);
   }
 
   // Get all active table IDs

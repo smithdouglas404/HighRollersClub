@@ -4,14 +4,18 @@ import {
   ShieldCheck, CheckCircle, Copy, Eye, EyeOff,
   Download, Server, Smartphone, Link2, X,
   Clock, Loader2, AlertTriangle, ChevronDown, ChevronUp,
+  Users, ExternalLink, Blocks,
 } from "lucide-react";
-import type { VerificationStatus } from "@/lib/multiplayer-engine";
+import type { VerificationStatus, PlayerSeedStatus } from "@/lib/multiplayer-engine";
 
 interface ProvablyFairPanelProps {
   onClose?: () => void;
   commitmentHash?: string | null;
   shuffleProof?: any | null;
   verificationStatus?: VerificationStatus;
+  playerSeedStatus?: PlayerSeedStatus;
+  onChainCommitTx?: string | null;
+  onChainRevealTx?: string | null;
 }
 
 const STATUS_CONFIG = {
@@ -26,10 +30,14 @@ export function ProvablyFairPanel({
   commitmentHash,
   shuffleProof,
   verificationStatus,
+  playerSeedStatus,
+  onChainCommitTx,
+  onChainRevealTx,
 }: ProvablyFairPanelProps) {
   const [seedRevealed, setSeedRevealed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showDeckOrder, setShowDeckOrder] = useState(false);
+  const [showPlayerSeeds, setShowPlayerSeeds] = useState(false);
 
   const status = verificationStatus && STATUS_CONFIG[verificationStatus]
     ? STATUS_CONFIG[verificationStatus]
@@ -50,21 +58,40 @@ export function ProvablyFairPanel({
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const hasPlayerSeeds = shuffleProof?.playerSeeds && shuffleProof.playerSeeds.length > 0;
+  const hasVRF = !!shuffleProof?.vrfRequestId;
+  const hasOnChainProof = !!onChainCommitTx || !!onChainRevealTx;
+
   const handleDownload = () => {
     if (!shuffleProof) return;
+    const version = shuffleProof.shuffleVersion || 1;
+    // v2 uses rejection sampling with attempt counter in HMAC input
+    const shuffleCode = version === 2
+      ? `for(let i=deck.length-1;i>0;i--){const range=i+1;const max=Math.floor(0x100000000/range)*range;let attempt=0;let rand;do{const h=await hmacSha256(seed,"shuffle-index-"+i+"-"+attempt);rand=(h[0]<<24|h[1]<<16|h[2]<<8|h[3])>>>0;attempt++}while(rand>=max);const j=rand%range;[deck[i],deck[j]]=[deck[j],deck[i]]}`
+      : `for(let i=deck.length-1;i>0;i--){const h=await hmacSha256(seed,"shuffle-index-"+i);const rand=(h[0]<<24|h[1]<<16|h[2]<<8|h[3])>>>0;const j=rand%(i+1);[deck[i],deck[j]]=[deck[j],deck[i]]}`;
+
+    const onChainInfo = hasOnChainProof
+      ? `\n<h3>On-Chain Proof</h3>\n<pre>Commitment TX: ${onChainCommitTx || "N/A"}\nReveal TX: ${onChainRevealTx || "N/A"}\nVerify on Polygonscan: https://amoy.polygonscan.com/tx/${onChainCommitTx || ""}</pre>`
+      : "";
+
+    const playerSeedInfo = hasPlayerSeeds
+      ? `\n<h3>Player Seeds (${shuffleProof.playerSeeds.length})</h3>\n<pre>${shuffleProof.playerSeeds.map((ps: any) => `Player ${ps.playerId}: seed=${ps.seed || "hidden"} commit=${ps.commitmentHash}`).join("\n")}</pre>`
+      : "";
+
     const html = `<!DOCTYPE html>
 <html><head><title>Poker Hand Verification - Hand #${shuffleProof.handNumber}</title>
 <style>body{font-family:monospace;background:#0a0a0a;color:#e0e0e0;padding:2rem;max-width:800px;margin:0 auto}
 h1{color:#00f0ff}pre{background:#111;padding:1rem;border-radius:8px;overflow-x:auto;border:1px solid #222}
 .pass{color:#22c55e;font-weight:bold}.fail{color:#ef4444;font-weight:bold}button{background:#00f0ff;color:#000;border:none;padding:0.75rem 1.5rem;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1rem}button:hover{opacity:0.9}</style></head>
-<body><h1>Provably Fair Verification</h1>
+<body><h1>Provably Fair Verification (v${version})</h1>
 <p>Hand #${shuffleProof.handNumber} | Table: ${shuffleProof.tableId}</p>
 <h3>Proof Data</h3>
 <pre>Server Seed: ${shuffleProof.serverSeed}
 Commitment Hash: ${shuffleProof.commitmentHash}
 Deck Order: ${shuffleProof.deckOrder}
 Nonce: ${shuffleProof.nonce}
-Timestamp: ${shuffleProof.timestamp}</pre>
+Timestamp: ${shuffleProof.timestamp}
+Shuffle Version: ${version}${shuffleProof.vrfRandomWord ? `\nVRF Random Word: ${shuffleProof.vrfRandomWord}` : ""}</pre>${playerSeedInfo}${onChainInfo}
 <button onclick="verify()">Run Verification</button>
 <pre id="result"></pre>
 <script>
@@ -75,11 +102,11 @@ const suits=["hearts","diamonds","clubs","spades"];const ranks=["2","3","4","5",
 const sh={hearts:"h",diamonds:"d",clubs:"c",spades:"s"};
 const deck=[];for(const s of suits)for(const r of ranks)deck.push({suit:s,rank:r});
 const seed="${shuffleProof.serverSeed}";
-for(let i=deck.length-1;i>0;i--){const h=await hmacSha256(seed,"shuffle-index-"+i);const rand=(h[0]<<24|h[1]<<16|h[2]<<8|h[3])>>>0;const j=rand%(i+1);[deck[i],deck[j]]=[deck[j],deck[i]]}
+${shuffleCode}
 const order=deck.map(c=>c.rank+sh[c.suit]).join(",");const hash=await sha256Hex(order);
 const expected="${shuffleProof.commitmentHash}";
 const valid=hash===expected;
-el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order: "+order+"\\n\\nResult: "+(valid?'<span class="pass">VERIFIED</span>':'<span class="fail">FAILED</span>')}</script></body></html>`;
+el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order: "+order+"\\n\\nResult: "+(valid?'<span class="pass">VERIFIED \\u2713</span>':'<span class="fail">FAILED \\u2717</span>')}</script></body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -125,7 +152,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
               <span className={`${sc.text} ml-1.5`}>{status.label}</span>
             </div>
             <div className="text-[9px] text-gray-600 font-mono mt-0.5">
-              v1.0 | HMAC-SHA256 Fisher-Yates
+              v2.0 | Casino-Grade Rejection Sampling
             </div>
           </div>
         </div>
@@ -144,7 +171,22 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
               {[
                 { icon: Server, label: "Server CSPRNG", active: true, detail: "crypto.randomBytes(32)" },
                 { icon: Smartphone, label: "UUID Nonce", active: true, detail: "crypto.randomUUID()" },
-                { icon: Link2, label: "Chainlink VRF", active: false, detail: "Coming Soon" },
+                {
+                  icon: Users,
+                  label: "Player Seeds",
+                  active: hasPlayerSeeds || playerSeedStatus === "committed",
+                  detail: hasPlayerSeeds
+                    ? `${shuffleProof.playerSeeds.length} seed(s) verified`
+                    : playerSeedStatus === "committed"
+                      ? "Seed committed"
+                      : "Multi-party entropy"
+                },
+                {
+                  icon: Link2,
+                  label: "Chainlink VRF",
+                  active: hasVRF,
+                  detail: hasVRF ? `RequestId: ${shuffleProof.vrfRequestId?.slice(0, 8)}...` : "Polygon blockchain"
+                },
               ].map((source, i) => (
                 <div key={i} className="flex items-center gap-2.5 group">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
@@ -164,6 +206,85 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
               ))}
             </div>
           </div>
+
+          {/* Player Seeds (collapsible, after showdown) */}
+          {hasPlayerSeeds && shuffleProof && (
+            <div>
+              <button
+                onClick={() => setShowPlayerSeeds(!showPlayerSeeds)}
+                className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-white mb-2"
+              >
+                <span>Player Seeds ({shuffleProof.playerSeeds.length})</span>
+                {showPlayerSeeds ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+              </button>
+              {showPlayerSeeds && (
+                <div className="space-y-1.5">
+                  {shuffleProof.playerSeeds.map((ps: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="rounded-lg px-3 py-2 text-[8px] font-mono"
+                      style={{
+                        background: "rgba(168,85,247,0.03)",
+                        border: "1px solid rgba(168,85,247,0.08)",
+                      }}
+                    >
+                      <div className="text-purple-400/70 truncate">
+                        Player: {ps.playerId?.slice(0, 12)}...
+                      </div>
+                      <div className="text-gray-500 truncate mt-0.5">
+                        Commit: {ps.commitmentHash?.slice(0, 20)}...
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* On-Chain Proof */}
+          {hasOnChainProof && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-2">
+                On-Chain Proof
+              </div>
+              <div className="space-y-1.5">
+                {onChainCommitTx && (
+                  <div className="flex items-center gap-2">
+                    <Blocks className="w-3 h-3 text-indigo-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[9px] text-gray-500">Commitment TX</div>
+                      <div className="text-[8px] font-mono text-indigo-400/70 truncate">{onChainCommitTx}</div>
+                    </div>
+                    <a
+                      href={`https://amoy.polygonscan.com/tx/${onChainCommitTx}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 p-1 rounded hover:bg-white/5"
+                    >
+                      <ExternalLink className="w-3 h-3 text-indigo-400" />
+                    </a>
+                  </div>
+                )}
+                {onChainRevealTx && (
+                  <div className="flex items-center gap-2">
+                    <Blocks className="w-3 h-3 text-indigo-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[9px] text-gray-500">Reveal TX</div>
+                      <div className="text-[8px] font-mono text-indigo-400/70 truncate">{onChainRevealTx}</div>
+                    </div>
+                    <a
+                      href={`https://amoy.polygonscan.com/tx/${onChainRevealTx}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 p-1 rounded hover:bg-white/5"
+                    >
+                      <ExternalLink className="w-3 h-3 text-indigo-400" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Commitment Hash */}
           <div>
@@ -364,6 +485,8 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
           <span className="text-cyan-500/60">HMAC-SHA256 Fisher-Yates</span>
           <span className="mx-1.5 text-gray-700">+</span>
           <span className="text-cyan-500/60">SHA-512 Entropy</span>
+          <span className="mx-1.5 text-gray-700">+</span>
+          <span className="text-cyan-500/60">Polygon</span>
         </div>
       </div>
     </motion.div>

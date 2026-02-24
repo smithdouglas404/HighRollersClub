@@ -80,6 +80,12 @@ export interface TournamentCompleteInfo {
   prizePool: number;
 }
 
+export interface TableNotification {
+  id: number;
+  message: string;
+  type: "join" | "leave" | "info";
+}
+
 export function useMultiplayerGame(tableId: string, userId: string) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameState, setGameState] = useState<GameState>({
@@ -114,6 +120,10 @@ export function useMultiplayerGame(tableId: string, userId: string) {
   const [elimination, setElimination] = useState<EliminationInfo | null>(null);
   const [tournamentComplete, setTournamentComplete] = useState<TournamentCompleteInfo | null>(null);
   const [bombPotActive, setBombPotActive] = useState(false);
+
+  // Join/leave notifications
+  const [notifications, setNotifications] = useState<TableNotification[]>([]);
+  const notifIdRef = useRef(0);
 
   const joinedRef = useRef(false);
   const localSeedRef = useRef<string | null>(null);
@@ -293,6 +303,25 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       })
     );
 
+    // Player join/leave notifications
+    unsubs.push(
+      wsClient.on("player_joined", (msg: any) => {
+        const name = msg.player?.displayName || "A player";
+        const id = ++notifIdRef.current;
+        setNotifications(prev => [...prev, { id, message: `${name} joined the table`, type: "join" }]);
+        setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
+      })
+    );
+
+    unsubs.push(
+      wsClient.on("player_left", (msg: any) => {
+        const name = msg.displayName || "A player";
+        const id = ++notifIdRef.current;
+        setNotifications(prev => [...prev, { id, message: `${name} left the table`, type: "leave" }]);
+        setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
+      })
+    );
+
     unsubs.push(
       wsClient.on("error", (msg: any) => {
         setError(msg.message);
@@ -375,5 +404,6 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     tournamentComplete,
     dismissTournamentComplete: () => setTournamentComplete(null),
     bombPotActive,
+    notifications,
   };
 }

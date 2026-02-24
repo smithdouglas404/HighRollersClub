@@ -15,6 +15,7 @@ import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { ChipAnimation } from "../components/poker/ChipAnimation";
 import { Table3D, type QualityLevel, type PlayerData3D } from "../components/poker/Table3D";
+import { ImageTable, TABLE_SEATS } from "../components/poker/ImageTable";
 import { Player } from "../lib/poker-types";
 import { useGameEngine } from "@/lib/game-engine";
 import { useMultiplayerGame } from "@/lib/multiplayer-engine";
@@ -139,6 +140,9 @@ function GameTable({
     return (localStorage.getItem("poker-quality") as QualityLevel) || "high";
   });
   const [enableOrbit, setEnableOrbit] = useState(false);
+  const [tableMode, setTableMode] = useState<"image" | "3d">(() => {
+    return (localStorage.getItem("poker-table-mode") as "image" | "3d") || "image";
+  });
   const sound = useSoundEngine();
   const tableRef = useRef<HTMLDivElement>(null);
   const prevHeroTurn = useRef(false);
@@ -315,12 +319,29 @@ function GameTable({
                 {quality.toUpperCase()}
               </span>
             </button>
+            {tableMode === "3d" && (
+              <button
+                onClick={() => setEnableOrbit(!enableOrbit)}
+                className={`glass rounded-lg p-2 transition-colors ${enableOrbit ? "bg-cyan-500/10 text-cyan-400" : "hover:bg-white/5 text-gray-500"}`}
+                title={enableOrbit ? "Disable orbit" : "Enable orbit camera"}
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
             <button
-              onClick={() => setEnableOrbit(!enableOrbit)}
-              className={`glass rounded-lg p-2 transition-colors ${enableOrbit ? "bg-cyan-500/10 text-cyan-400" : "hover:bg-white/5 text-gray-500"}`}
-              title={enableOrbit ? "Disable orbit" : "Enable orbit camera"}
+              onClick={() => {
+                const next = tableMode === "image" ? "3d" : "image";
+                setTableMode(next);
+                localStorage.setItem("poker-table-mode", next);
+              }}
+              className={`glass rounded-lg px-2.5 py-1.5 hover:bg-white/5 transition-colors flex items-center gap-1.5`}
+              title={tableMode === "image" ? "Switch to 3D table" : "Switch to Image table"}
             >
-              <Settings className="w-4 h-4" />
+              <span className={`text-[9px] font-bold tracking-wider ${
+                tableMode === "3d" ? "text-purple-400" : "text-cyan-400"
+              }`}>
+                {tableMode === "3d" ? "3D" : "2D"}
+              </span>
             </button>
             <button
               onClick={() => setShowProvablyFair(!showProvablyFair)}
@@ -349,111 +370,179 @@ function GameTable({
           </div>
         </motion.div>
 
-        {/* 3D WebGL Table + HTML Overlay */}
+        {/* Table Area — Image mode or 3D mode */}
         <div className="flex-1 relative flex items-center justify-center overflow-hidden">
-          {/* Three.js 3D Table (full scene — cards, chips, avatars all in 3D) */}
-          <div className="absolute inset-0 z-0">
-            <Table3D
-              quality={quality}
-              enableOrbit={enableOrbit}
-              communityCards={gameState.communityCards}
-              pot={gameState.pot}
-              isHeroTurn={isHeroTurn}
-              heroPosition={(() => {
-                const pos = seatPositions[0] || SEAT_POSITIONS[0];
-                const x = ((pos.x - 50) / 50) * 5.5;
-                const z = ((pos.y - 50) / 50) * 3.5;
-                return [x, 0.15, z] as [number, number, number];
-              })()}
-              playerAvatars={players.map((p, i) => {
-                const pos = seatPositions[i] || SEAT_POSITIONS[i % SEAT_POSITIONS.length];
-                const x = ((pos.x - 50) / 50) * 5.5;
-                const z = ((pos.y - 50) / 50) * 3.5;
-                return {
-                  position: [x, 0.15, z] as [number, number, number],
-                  avatarUrl: p.avatar,
-                  isActive: p.status === "thinking",
-                  glowColor: p.id === heroId ? "#00f0ff" : "#ffd700",
-                  cards: p.cards,
-                  isHero: p.id === heroId,
-                };
-              })}
-              chipPositions={players
-                .filter(p => p.currentBet > 0)
-                .map((p) => {
-                  const pos = seatPositions[players.indexOf(p)] || SEAT_POSITIONS[0];
-                  const x = ((pos.x - 50) / 50) * 4;
-                  const z = ((pos.y - 50) / 50) * 2.5;
-                  return [x * 0.6, 0.2, z * 0.6] as [number, number, number];
-                })}
-            />
-          </div>
+          {tableMode === "image" ? (
+            <>
+              {/* Image-based table (lightweight, no WebGL) */}
+              <ImageTable
+                communityCards={gameState.communityCards}
+                pot={gameState.pot}
+                playerCount={players.length}
+              />
 
-          {/* HTML Overlay (player names/chips HUD + waiting overlay) */}
-          <motion.div
-            ref={tableRef}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="absolute inset-0 z-10 pointer-events-none"
-          >
-            {/* Waiting overlay */}
-            {isMultiplayer && waiting && players.length < 2 && (
-              <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-auto">
-                <div className="glass rounded-xl px-6 py-4 text-center border border-white/10">
-                  <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
-                  <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
-                </div>
-              </div>
-            )}
-
-            {/* Central pot display */}
-            {gameState.pot > 0 && (
+              {/* HTML Overlay for seats */}
               <motion.div
+                ref={tableRef}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center"
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="absolute inset-0 z-10 pointer-events-none"
               >
-                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-0.5">POT</div>
-                <div className="px-4 py-1.5 rounded-lg backdrop-blur-md bg-black/50 border border-amber-500/20"
-                  style={{ boxShadow: "0 0 20px rgba(255,215,0,0.1)" }}>
-                  <span className="text-lg font-mono font-bold text-amber-400">${gameState.pot.toLocaleString()}</span>
-                </div>
+                {/* Waiting overlay */}
+                {isMultiplayer && waiting && players.length < 2 && (
+                  <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-auto">
+                    <div className="glass rounded-xl px-6 py-4 text-center border border-white/10">
+                      <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
+                      <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Player seats */}
+                {players.map((player, index) => {
+                  const imgSeat = TABLE_SEATS[index] || TABLE_SEATS[index % TABLE_SEATS.length];
+                  return (
+                    <Seat
+                      key={player.id}
+                      player={player}
+                      position={{ x: imgSeat.x, y: imgSeat.y }}
+                      isHero={player.id === heroId}
+                      isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
+                      seatIndex={index}
+                    />
+                  );
+                })}
               </motion.div>
-            )}
 
-            {/* Player seats (name, chips, timer HUD only — cards rendered in 3D) */}
-            {players.map((player, index) => (
-              <Seat
-                key={player.id}
-                player={player}
-                position={seatPositions[index] || SEAT_POSITIONS[index % SEAT_POSITIONS.length]}
-                isHero={player.id === heroId}
-                isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
-                seatIndex={index}
-              />
-            ))}
-          </motion.div>
-
-          {/* Hero hole cards - large display at bottom */}
-          {heroCards && gameState.phase !== "waiting" && (
-            <motion.div
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5, type: "spring" }}
-              className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 flex gap-2"
-            >
-              {heroCards.map((card, i) => (
-                <Card
-                  key={`hero-${i}`}
-                  card={{ ...card, hidden: false }}
-                  size="lg"
-                  isHero={true}
-                  delay={0.3 + i * 0.15}
+              {/* Hero hole cards */}
+              {heroCards && gameState.phase !== "waiting" && (
+                <motion.div
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5, type: "spring" }}
+                  className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 flex gap-2"
+                >
+                  {heroCards.map((card, i) => (
+                    <Card
+                      key={`hero-${i}`}
+                      card={{ ...card, hidden: false }}
+                      size="lg"
+                      isHero={true}
+                      delay={0.3 + i * 0.15}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Three.js 3D Table (full scene — cards, chips, avatars all in 3D) */}
+              <div className="absolute inset-0 z-0">
+                <Table3D
+                  quality={quality}
+                  enableOrbit={enableOrbit}
+                  communityCards={gameState.communityCards}
+                  pot={gameState.pot}
+                  isHeroTurn={isHeroTurn}
+                  heroPosition={(() => {
+                    const pos = seatPositions[0] || SEAT_POSITIONS[0];
+                    const x = ((pos.x - 50) / 50) * 5.5;
+                    const z = ((pos.y - 50) / 50) * 3.5;
+                    return [x, 0.15, z] as [number, number, number];
+                  })()}
+                  playerAvatars={players.map((p, i) => {
+                    const pos = seatPositions[i] || SEAT_POSITIONS[i % SEAT_POSITIONS.length];
+                    const x = ((pos.x - 50) / 50) * 5.5;
+                    const z = ((pos.y - 50) / 50) * 3.5;
+                    return {
+                      position: [x, 0.15, z] as [number, number, number],
+                      avatarUrl: p.avatar,
+                      isActive: p.status === "thinking",
+                      glowColor: p.id === heroId ? "#00f0ff" : "#ffd700",
+                      cards: p.cards,
+                      isHero: p.id === heroId,
+                    };
+                  })}
+                  chipPositions={players
+                    .filter(p => p.currentBet > 0)
+                    .map((p) => {
+                      const pos = seatPositions[players.indexOf(p)] || SEAT_POSITIONS[0];
+                      const x = ((pos.x - 50) / 50) * 4;
+                      const z = ((pos.y - 50) / 50) * 2.5;
+                      return [x * 0.6, 0.2, z * 0.6] as [number, number, number];
+                    })}
                 />
-              ))}
-            </motion.div>
+              </div>
+
+              {/* HTML Overlay (player names/chips HUD + waiting overlay) */}
+              <motion.div
+                ref={tableRef}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="absolute inset-0 z-10 pointer-events-none"
+              >
+                {/* Waiting overlay */}
+                {isMultiplayer && waiting && players.length < 2 && (
+                  <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-auto">
+                    <div className="glass rounded-xl px-6 py-4 text-center border border-white/10">
+                      <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
+                      <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Central pot display */}
+                {gameState.pot > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center"
+                  >
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-0.5">POT</div>
+                    <div className="px-4 py-1.5 rounded-lg backdrop-blur-md bg-black/50 border border-amber-500/20"
+                      style={{ boxShadow: "0 0 20px rgba(255,215,0,0.1)" }}>
+                      <span className="text-lg font-mono font-bold text-amber-400">${gameState.pot.toLocaleString()}</span>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Player seats (name, chips, timer HUD only — cards rendered in 3D) */}
+                {players.map((player, index) => (
+                  <Seat
+                    key={player.id}
+                    player={player}
+                    position={seatPositions[index] || SEAT_POSITIONS[index % SEAT_POSITIONS.length]}
+                    isHero={player.id === heroId}
+                    isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
+                    seatIndex={index}
+                  />
+                ))}
+              </motion.div>
+
+              {/* Hero hole cards - large display at bottom */}
+              {heroCards && gameState.phase !== "waiting" && (
+                <motion.div
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5, type: "spring" }}
+                  className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 flex gap-2"
+                >
+                  {heroCards.map((card, i) => (
+                    <Card
+                      key={`hero-${i}`}
+                      card={{ ...card, hidden: false }}
+                      size="lg"
+                      isHero={true}
+                      delay={0.3 + i * 0.15}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </>
           )}
         </div>
 
@@ -607,7 +696,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
     commitmentHash, shuffleProof, verificationStatus, playerSeedStatus,
     onChainCommitTx, onChainRevealTx,
     formatInfo, blindIncrease, elimination, tournamentComplete,
-    dismissTournamentComplete, bombPotActive,
+    dismissTournamentComplete, bombPotActive, notifications,
   } = useMultiplayerGame(tableId, user?.id || "");
 
   // Fetch table info
@@ -763,6 +852,28 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         blindIncrease={blindIncrease}
         elimination={elimination}
       />
+      {/* Join/Leave Notifications */}
+      <div className="fixed top-16 right-4 z-[60] flex flex-col gap-2 pointer-events-none">
+        <AnimatePresence>
+          {notifications.map((n) => (
+            <motion.div
+              key={n.id}
+              initial={{ x: 100, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 100, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className={`px-4 py-2 rounded-lg backdrop-blur-md text-xs font-bold uppercase tracking-wider border ${
+                n.type === "join"
+                  ? "bg-green-500/15 text-green-400 border-green-500/20"
+                  : "bg-red-500/15 text-red-400 border-red-500/20"
+              }`}
+              style={{ boxShadow: n.type === "join" ? "0 0 15px rgba(34,197,94,0.1)" : "0 0 15px rgba(239,68,68,0.1)" }}
+            >
+              {n.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </SoundProvider>
   );
 }

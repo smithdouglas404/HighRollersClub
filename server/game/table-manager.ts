@@ -631,7 +631,7 @@ class TableManager {
         instance.engine.forceRemovePlayer(userId);
         instance.avatarMap.delete(userId);
         await storage.removeTablePlayer(tableId, userId);
-        broadcastToTable(tableId, { type: "player_left", userId, seatIndex: player.seatIndex });
+        broadcastToTable(tableId, { type: "player_left", userId, displayName: player.displayName, seatIndex: player.seatIndex });
 
         if (instance.lifecycle.isComplete()) {
           this.handleSNGComplete(tableId, instance.lifecycle);
@@ -664,7 +664,7 @@ class TableManager {
 
     await storage.removeTablePlayer(tableId, userId);
 
-    broadcastToTable(tableId, { type: "player_left", userId, seatIndex });
+    broadcastToTable(tableId, { type: "player_left", userId, displayName: player?.displayName || "Player", seatIndex });
 
     // Clean up empty table
     if (instance.engine.state.players.length === 0) {
@@ -750,6 +750,7 @@ class TableManager {
       broadcastToTable(tableId, {
         type: "player_left",
         userId,
+        displayName: p.displayName,
         seatIndex: p.seatIndex,
       });
       sendGameStateToTable(tableId);

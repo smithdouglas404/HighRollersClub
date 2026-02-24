@@ -22,7 +22,8 @@
       "Bash(curl -s http://localhost:5000/ | head -20)",
       "Bash(npx tsc --noEmit --project client/tsconfig.json 2>&1 | head -30)",
       "Bash(npx tsc --noEmit --pretty 2>&1 | head -50)",
-      "Bash(npx tsc --noEmit 2>&1 | head -60)"
+      "Bash(npx tsc --noEmit 2>&1 | head -60)",
+      "Bash(fuser -k 5000/tcp 2>/dev/null; sleep 1)"
     ]
   }
 }

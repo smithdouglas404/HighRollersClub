@@ -57,6 +57,8 @@ export interface FormatInfo {
   nextLevelIn: number;
   playersRemaining: number;
   isBombPot: boolean;
+  smallBlind?: number;
+  bigBlind?: number;
 }
 
 export interface BlindIncreaseInfo {
@@ -158,6 +160,8 @@ export function useMultiplayerGame(tableId: string, userId: string) {
             nextLevelIn: state.nextLevelIn || 0,
             playersRemaining: state.playersRemaining || 0,
             isBombPot: state.isBombPot || false,
+            smallBlind: state.smallBlind,
+            bigBlind: state.bigBlind,
           });
         }
 
@@ -248,6 +252,8 @@ export function useMultiplayerGame(tableId: string, userId: string) {
           nextLevelIn: msg.nextLevelIn,
           playersRemaining: msg.playersRemaining,
           isBombPot: msg.isBombPot,
+          smallBlind: msg.smallBlind,
+          bigBlind: msg.bigBlind,
         });
       })
     );

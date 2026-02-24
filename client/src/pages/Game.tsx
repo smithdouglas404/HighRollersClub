@@ -249,8 +249,8 @@ function GameTable({
                 <span className="mx-1.5 text-gray-700">|</span>
                 <span className="text-cyan-500/70">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
                 <span className="mx-1.5 text-gray-700">|</span>
-                {gameState.handNumber
-                  ? <span className="text-gray-400">Hand #{gameState.handNumber}</span>
+                {(gameState as any).handNumber
+                  ? <span className="text-gray-400">Hand #{(gameState as any).handNumber}</span>
                   : <>{tableId ? `TABLE #${tableId.slice(0, 6).toUpperCase()}` : "TABLE #802"}</>
                 }
                 {formatInfo && formatInfo.gameFormat !== "cash" && (

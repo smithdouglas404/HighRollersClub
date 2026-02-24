@@ -6,8 +6,10 @@ import { useAuth } from "@/lib/auth-context";
 import { CreateTableModal } from "@/components/lobby/CreateTable";
 import {
   Plus, Users, Coins, ChevronRight,
-  Bot, Lock, Zap, Clock
+  Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid
 } from "lucide-react";
+
+type GameFormat = "all" | "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
 
 interface TableInfo {
   id: string;
@@ -21,7 +23,37 @@ interface TableInfo {
   playerCount: number;
   isPrivate: boolean;
   allowBots: boolean;
+  gameFormat: string;
+  buyInAmount: number;
+  startingChips: number;
   createdAt: string;
+}
+
+const FORMAT_TABS: { key: GameFormat; label: string; icon: any }[] = [
+  { key: "all", label: "All", icon: LayoutGrid },
+  { key: "cash", label: "Cash", icon: Coins },
+  { key: "sng", label: "Sit & Go", icon: Clock },
+  { key: "heads_up", label: "Heads Up", icon: Swords },
+  { key: "tournament", label: "Tournament", icon: Trophy },
+  { key: "bomb_pot", label: "Bomb Pot", icon: Bomb },
+];
+
+function FormatBadge({ format }: { format: string }) {
+  const colors: Record<string, string> = {
+    cash: "bg-green-500/20 text-green-400 border-green-500/20",
+    sng: "bg-amber-500/20 text-amber-400 border-amber-500/20",
+    heads_up: "bg-purple-500/20 text-purple-400 border-purple-500/20",
+    tournament: "bg-cyan-500/20 text-cyan-400 border-cyan-500/20",
+    bomb_pot: "bg-red-500/20 text-red-400 border-red-500/20",
+  };
+  const labels: Record<string, string> = {
+    cash: "CASH", sng: "SNG", heads_up: "H/U", tournament: "MTT", bomb_pot: "BOMB",
+  };
+  return (
+    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${colors[format] || colors.cash}`}>
+      {labels[format] || "CASH"}
+    </span>
+  );
 }
 
 function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }) {
@@ -47,9 +79,13 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
 
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="font-bold text-sm text-white tracking-wide">{table.name}</h3>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-bold text-sm text-white tracking-wide">{table.name}</h3>
+            <FormatBadge format={table.gameFormat} />
+          </div>
           <p className="text-[10px] text-gray-500 font-mono mt-0.5">
             {table.smallBlind}/{table.bigBlind} NLH
+            {table.gameFormat === "sng" && ` | Buy-in: ${table.buyInAmount}`}
           </p>
         </div>
         <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
@@ -70,7 +106,7 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
           </span>
           <span className="flex items-center gap-1">
             <Coins className="w-3 h-3" />
-            {table.minBuyIn}-{table.maxBuyIn}
+            {table.gameFormat === "sng" ? table.buyInAmount : `${table.minBuyIn}-${table.maxBuyIn}`}
           </span>
           {table.allowBots && (
             <span className="flex items-center gap-1 text-gray-500">
@@ -91,6 +127,7 @@ export default function Lobby() {
   const [loading, setLoading] = useState(true);
   const [showCreateTable, setShowCreateTable] = useState(false);
   const [defaultPrivate, setDefaultPrivate] = useState(false);
+  const [activeFormat, setActiveFormat] = useState<GameFormat>("all");
 
   const fetchTables = async () => {
     try {
@@ -110,6 +147,10 @@ export default function Lobby() {
     const interval = setInterval(fetchTables, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const filteredTables = activeFormat === "all"
+    ? tables
+    : tables.filter(t => (t.gameFormat || "cash") === activeFormat);
 
   const handleTableClick = (table: TableInfo) => {
     navigate(`/game/${table.id}`);
@@ -139,12 +180,12 @@ export default function Lobby() {
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="flex items-center justify-between mb-6"
+          className="flex items-center justify-between mb-4"
         >
           <div className="flex items-center gap-4">
             <h2 className="text-sm font-bold tracking-wider text-gray-400 uppercase">
               Open Tables
-              <span className="ml-2 text-cyan-500">{tables.length}</span>
+              <span className="ml-2 text-cyan-500">{filteredTables.length}</span>
             </h2>
           </div>
 
@@ -175,6 +216,34 @@ export default function Lobby() {
           </div>
         </motion.div>
 
+        {/* Format tab bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-1 mb-5 p-1 glass rounded-xl border border-white/5 w-fit"
+        >
+          {FORMAT_TABS.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeFormat === tab.key;
+            const count = tab.key === "all" ? tables.length : tables.filter(t => (t.gameFormat || "cash") === tab.key).length;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveFormat(tab.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                  isActive
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
+                    : "text-gray-500 hover:text-gray-300 border border-transparent"
+                }`}
+              >
+                <Icon className="w-3 h-3" />
+                {tab.label}
+                {count > 0 && <span className={`ml-0.5 ${isActive ? "text-cyan-300" : "text-gray-600"}`}>({count})</span>}
+              </button>
+            );
+          })}
+        </motion.div>
+
         {/* Quick play cards */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <motion.div
@@ -182,7 +251,6 @@ export default function Lobby() {
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => {
-              // Auto-join first non-full table, or go offline
               const openTable = tables.find(t => t.playerCount < t.maxPlayers);
               if (openTable) {
                 navigate(`/game/${openTable.id}`);
@@ -209,7 +277,6 @@ export default function Lobby() {
             transition={{ delay: 0.05 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => {
-              // Quick-create a Sit & Go style table
               handleCreateTable({
                 name: "Sit & Go",
                 maxPlayers: 6,
@@ -221,6 +288,9 @@ export default function Lobby() {
                 timeBankSeconds: 20,
                 isPrivate: false,
                 allowBots: true,
+                gameFormat: "sng",
+                buyInAmount: 500,
+                startingChips: 1500,
               });
             }}
             className="glass rounded-xl p-4 border border-amber-500/10 hover:border-amber-500/25 cursor-pointer transition-all"
@@ -262,7 +332,7 @@ export default function Lobby() {
             <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
             <p className="text-sm text-gray-500">Loading tables...</p>
           </div>
-        ) : tables.length === 0 ? (
+        ) : filteredTables.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -271,7 +341,9 @@ export default function Lobby() {
             <div className="w-16 h-16 rounded-full bg-white/[0.03] flex items-center justify-center mx-auto mb-4 border border-white/5">
               <Users className="w-8 h-8 text-gray-600" />
             </div>
-            <p className="text-sm text-gray-400 mb-2">No tables yet</p>
+            <p className="text-sm text-gray-400 mb-2">
+              {activeFormat === "all" ? "No tables yet" : `No ${activeFormat.replace("_", " ")} tables`}
+            </p>
             <p className="text-xs text-gray-600 mb-6">Create the first table or play offline vs bots</p>
             <div className="flex items-center gap-3 justify-center">
               <motion.button
@@ -305,7 +377,7 @@ export default function Lobby() {
             transition={{ delay: 0.2 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
           >
-            {tables.map((table, i) => (
+            {filteredTables.map((table, i) => (
               <motion.div key={table.id} transition={{ delay: i * 0.05 }}>
                 <TableCard table={table} onClick={() => handleTableClick(table)} />
               </motion.div>

@@ -66,6 +66,51 @@ export const clubMembers = pgTable("club_members", {
 
 export type ClubMember = typeof clubMembers.$inferSelect;
 
+// ─── Club Invitations ────────────────────────────────────────────────────────
+export const clubInvitations = pgTable("club_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clubId: varchar("club_id").notNull().references(() => clubs.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: text("type").notNull().default("invite"), // invite | request
+  status: text("status").notNull().default("pending"), // pending | accepted | declined
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("club_invitations_club_idx").on(table.clubId),
+]);
+
+export type ClubInvitation = typeof clubInvitations.$inferSelect;
+
+// ─── Club Announcements ─────────────────────────────────────────────────────
+export const clubAnnouncements = pgTable("club_announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clubId: varchar("club_id").notNull().references(() => clubs.id),
+  authorId: varchar("author_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  pinned: boolean("pinned").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("club_announcements_club_idx").on(table.clubId),
+]);
+
+export type ClubAnnouncement = typeof clubAnnouncements.$inferSelect;
+
+// ─── Club Events ─────────────────────────────────────────────────────────────
+export const clubEvents = pgTable("club_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clubId: varchar("club_id").notNull().references(() => clubs.id),
+  eventType: text("event_type").notNull(), // tournament | cash_game | special
+  tableId: varchar("table_id"),
+  name: text("name").notNull(),
+  description: text("description"),
+  startTime: timestamp("start_time"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("club_events_club_idx").on(table.clubId),
+]);
+
+export type ClubEvent = typeof clubEvents.$inferSelect;
+
 // ─── Tables ──────────────────────────────────────────────────────────────────
 export const tables = pgTable("tables", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -83,6 +128,15 @@ export const tables = pgTable("tables", {
   status: text("status").notNull().default("waiting"), // waiting | playing
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   allowBots: boolean("allow_bots").notNull().default(true),
+  // Game format fields
+  gameFormat: text("game_format").notNull().default("cash"), // cash | sng | heads_up | tournament | bomb_pot
+  blindSchedule: jsonb("blind_schedule"), // JSON array of {level, sb, bb, ante, durationSeconds}
+  bombPotFrequency: integer("bomb_pot_frequency").default(0), // every Nth hand, 0 = disabled
+  bombPotAnte: integer("bomb_pot_ante").default(0),
+  buyInAmount: integer("buy_in_amount").default(0), // fixed buy-in for SNG/tournament
+  startingChips: integer("starting_chips").default(1500),
+  payoutStructure: jsonb("payout_structure"), // JSON array of {place, percentage}
+  tournamentId: varchar("tournament_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -99,6 +153,22 @@ export const insertTableSchema = z.object({
   password: z.string().optional(),
   clubId: z.string().optional(),
   allowBots: z.boolean().default(true),
+  gameFormat: z.enum(["cash", "sng", "heads_up", "tournament", "bomb_pot"]).default("cash"),
+  blindSchedule: z.array(z.object({
+    level: z.number(),
+    sb: z.number(),
+    bb: z.number(),
+    ante: z.number().default(0),
+    durationSeconds: z.number(),
+  })).optional(),
+  bombPotFrequency: z.number().int().min(0).default(0),
+  bombPotAnte: z.number().int().min(0).default(0),
+  buyInAmount: z.number().int().min(0).default(0),
+  startingChips: z.number().int().min(100).default(1500),
+  payoutStructure: z.array(z.object({
+    place: z.number(),
+    percentage: z.number(),
+  })).optional(),
 });
 
 export type TableRow = typeof tables.$inferSelect;
@@ -148,7 +218,7 @@ export type GameHand = typeof gameHands.$inferSelect;
 export const transactions = pgTable("transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
-  type: text("type").notNull(), // deposit | withdraw | buyin | cashout | bonus | rake
+  type: text("type").notNull(), // deposit | withdraw | buyin | cashout | bonus | rake | prize
   amount: integer("amount").notNull(),
   balanceBefore: integer("balance_before").notNull(),
   balanceAfter: integer("balance_after").notNull(),
@@ -168,7 +238,7 @@ export const tournaments = pgTable("tournaments", {
   name: text("name").notNull(),
   buyIn: integer("buy_in").notNull().default(100),
   startingChips: integer("starting_chips").notNull().default(1500),
-  blindSchedule: jsonb("blind_schedule"), // JSON array of {level, sb, bb, ante, duration}
+  blindSchedule: jsonb("blind_schedule"), // JSON array of {level, sb, bb, ante, durationSeconds}
   maxPlayers: integer("max_players").notNull().default(50),
   status: text("status").notNull().default("registering"), // registering | running | final_table | complete
   prizePool: integer("prize_pool").notNull().default(0),
@@ -179,6 +249,22 @@ export const tournaments = pgTable("tournaments", {
 
 export type Tournament = typeof tournaments.$inferSelect;
 
+// ─── Tournament Registrations ───────────────────────────────────────────────
+export const tournamentRegistrations = pgTable("tournament_registrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tournamentId: varchar("tournament_id").notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("registered"), // registered | playing | eliminated | winner
+  finishPlace: integer("finish_place"),
+  prizeAmount: integer("prize_amount").default(0),
+  registeredAt: timestamp("registered_at").notNull().defaultNow(),
+}, (table) => [
+  index("tournament_reg_tournament_idx").on(table.tournamentId),
+  index("tournament_reg_user_idx").on(table.userId),
+]);
+
+export type TournamentRegistration = typeof tournamentRegistrations.$inferSelect;
+
 // ─── Player Stats (for missions tracking) ────────────────────────────────────
 export const playerStats = pgTable("player_stats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -188,6 +274,9 @@ export const playerStats = pgTable("player_stats", {
   bestWinStreak: integer("best_win_streak").notNull().default(0),
   currentWinStreak: integer("current_win_streak").notNull().default(0),
   totalWinnings: integer("total_winnings").notNull().default(0),
+  vpip: integer("vpip").notNull().default(0), // voluntarily put in pot count
+  pfr: integer("pfr").notNull().default(0), // pre-flop raise count
+  showdownCount: integer("showdown_count").notNull().default(0),
   lastResetAt: timestamp("last_reset_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
@@ -195,3 +284,101 @@ export const playerStats = pgTable("player_stats", {
 ]);
 
 export type PlayerStat = typeof playerStats.$inferSelect;
+
+// ─── Missions ────────────────────────────────────────────────────────────────
+export const missions = pgTable("missions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // hands_played | pots_won | win_streak | sng_win | bomb_pot | heads_up_win | consecutive_wins
+  label: text("label").notNull(),
+  description: text("description"),
+  target: integer("target").notNull(),
+  reward: integer("reward").notNull(),
+  periodType: text("period_type").notNull().default("daily"), // daily | weekly
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type Mission = typeof missions.$inferSelect;
+
+// ─── User Missions ──────────────────────────────────────────────────────────
+export const userMissions = pgTable("user_missions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  missionId: varchar("mission_id").notNull().references(() => missions.id),
+  progress: integer("progress").notNull().default(0),
+  completedAt: timestamp("completed_at"),
+  claimedAt: timestamp("claimed_at"),
+  periodStart: timestamp("period_start").notNull().defaultNow(),
+}, (table) => [
+  index("user_missions_user_idx").on(table.userId),
+]);
+
+export type UserMission = typeof userMissions.$inferSelect;
+
+// ─── Hand Analyses ──────────────────────────────────────────────────────────
+export const handAnalyses = pgTable("hand_analyses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  handId: varchar("hand_id"),
+  holeCards: jsonb("hole_cards").notNull(),
+  communityCards: jsonb("community_cards"),
+  pot: integer("pot").notNull().default(0),
+  position: text("position"),
+  analysis: jsonb("analysis"), // {rating, ev, leaks, recommendations}
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("hand_analyses_user_idx").on(table.userId),
+]);
+
+export type HandAnalysis = typeof handAnalyses.$inferSelect;
+
+// ─── Shop Items ─────────────────────────────────────────────────────────────
+export const shopItems = pgTable("shop_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // avatar | table_theme | emote | premium
+  rarity: text("rarity").notNull().default("common"), // common | uncommon | rare | epic | legendary
+  price: integer("price").notNull(),
+  currency: text("currency").notNull().default("chips"), // chips | premium
+  imageUrl: text("image_url"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ShopItem = typeof shopItems.$inferSelect;
+
+// ─── User Inventory ─────────────────────────────────────────────────────────
+export const userInventory = pgTable("user_inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  itemId: varchar("item_id").notNull().references(() => shopItems.id),
+  equippedAt: timestamp("equipped_at"),
+  purchasedAt: timestamp("purchased_at").notNull().defaultNow(),
+}, (table) => [
+  index("user_inventory_user_idx").on(table.userId),
+]);
+
+export type UserInventoryItem = typeof userInventory.$inferSelect;
+
+// ─── Club Alliances ─────────────────────────────────────────────────────────
+export const clubAlliances = pgTable("club_alliances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  clubIds: jsonb("club_ids").notNull(), // string[]
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ClubAlliance = typeof clubAlliances.$inferSelect;
+
+// ─── League Seasons ─────────────────────────────────────────────────────────
+export const leagueSeasons = pgTable("league_seasons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  standings: jsonb("standings"), // {clubId, points, wins, losses}[]
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type LeagueSeason = typeof leagueSeasons.$inferSelect;

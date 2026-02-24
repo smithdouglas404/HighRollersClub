@@ -45,7 +45,14 @@ export type ServerMessage =
   | { type: "emote"; userId: string; displayName: string; emoteId: string }
   | { type: "seed_request"; handNumber: number; deadline: number }
   | { type: "seeds_collected"; count: number }
-  | { type: "onchain_proof"; commitTx: string | null; revealTx: string | null };
+  | { type: "onchain_proof"; commitTx: string | null; revealTx: string | null }
+  // New format-related messages
+  | { type: "blind_increase"; level: number; sb: number; bb: number; ante: number }
+  | { type: "player_eliminated"; playerId: string; displayName: string; finishPlace: number; prizeAmount: number }
+  | { type: "tournament_complete"; results: any[]; prizePool: number }
+  | { type: "bomb_pot_starting" }
+  | { type: "tournament_status"; status: string; prizePool: number }
+  | { type: "format_info"; gameFormat: string; currentBlindLevel: number; nextLevelIn: number; playersRemaining: number; isBombPot: boolean };
 
 // Global map of connected clients
 const clients = new Map<string, WsClient>();

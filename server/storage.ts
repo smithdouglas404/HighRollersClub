@@ -4,9 +4,17 @@ import {
   type TableRow, type InsertTable,
   type TablePlayer, type ClubMember,
   type Transaction, type GameHand, type Tournament, type PlayerStat,
+  type ClubInvitation, type ClubAnnouncement, type ClubEvent,
+  type Mission, type UserMission, type HandAnalysis,
+  type ShopItem, type UserInventoryItem,
+  type ClubAlliance, type LeagueSeason,
   users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, playerStats,
+  clubInvitations, clubAnnouncements, clubEvents,
+  missions, userMissions, handAnalyses,
+  shopItems, userInventory,
+  clubAlliances, leagueSeasons,
 } from "@shared/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { hasDatabase, getDb } from "./db";
 
@@ -21,9 +29,24 @@ export interface IStorage {
   getClub(id: string): Promise<Club | undefined>;
   getClubs(): Promise<Club[]>;
   createClub(club: InsertClub & { ownerId: string }): Promise<Club>;
+  updateClub(id: string, data: Partial<Club>): Promise<Club | undefined>;
   getClubMembers(clubId: string): Promise<(ClubMember & { user?: User })[]>;
   addClubMember(clubId: string, userId: string, role?: string): Promise<ClubMember>;
   removeClubMember(clubId: string, userId: string): Promise<void>;
+  updateClubMemberRole(clubId: string, userId: string, role: string): Promise<void>;
+
+  // Club Invitations
+  getClubInvitations(clubId: string): Promise<ClubInvitation[]>;
+  createClubInvitation(data: Omit<ClubInvitation, "id" | "createdAt">): Promise<ClubInvitation>;
+  updateClubInvitation(id: string, data: Partial<ClubInvitation>): Promise<ClubInvitation | undefined>;
+
+  // Club Announcements
+  getClubAnnouncements(clubId: string): Promise<ClubAnnouncement[]>;
+  createClubAnnouncement(data: Omit<ClubAnnouncement, "id" | "createdAt">): Promise<ClubAnnouncement>;
+
+  // Club Events
+  getClubEvents(clubId: string): Promise<ClubEvent[]>;
+  createClubEvent(data: Omit<ClubEvent, "id" | "createdAt">): Promise<ClubEvent>;
 
   // Tables
   getTable(id: string): Promise<TableRow | undefined>;
@@ -49,8 +72,35 @@ export interface IStorage {
 
   // Player Stats
   getPlayerStats(userId: string): Promise<PlayerStat | undefined>;
+  getPlayerStatsBatch(userIds: string[]): Promise<Map<string, PlayerStat>>;
   incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number): Promise<void>;
   resetDailyStats(userId: string): Promise<void>;
+
+  // Missions
+  getMissions(): Promise<Mission[]>;
+  createMission(data: Omit<Mission, "id" | "createdAt">): Promise<Mission>;
+  getUserMissions(userId: string): Promise<UserMission[]>;
+  createUserMission(data: Omit<UserMission, "id">): Promise<UserMission>;
+  updateUserMission(id: string, data: Partial<UserMission>): Promise<UserMission | undefined>;
+
+  // Hand Analyses
+  createHandAnalysis(data: Omit<HandAnalysis, "id" | "createdAt">): Promise<HandAnalysis>;
+  getUserHandAnalyses(userId: string, limit?: number): Promise<HandAnalysis[]>;
+
+  // Shop
+  getShopItems(category?: string): Promise<ShopItem[]>;
+  getShopItem(id: string): Promise<ShopItem | undefined>;
+  createShopItem(data: Omit<ShopItem, "id" | "createdAt">): Promise<ShopItem>;
+  getUserInventory(userId: string): Promise<UserInventoryItem[]>;
+  addToInventory(userId: string, itemId: string): Promise<UserInventoryItem>;
+  equipItem(id: string): Promise<void>;
+  unequipItem(id: string): Promise<void>;
+
+  // Alliances & Leagues
+  getClubAlliances(): Promise<ClubAlliance[]>;
+  createClubAlliance(data: Omit<ClubAlliance, "id" | "createdAt">): Promise<ClubAlliance>;
+  getLeagueSeasons(): Promise<LeagueSeason[]>;
+  createLeagueSeason(data: Omit<LeagueSeason, "id" | "createdAt">): Promise<LeagueSeason>;
 }
 
 // ─── In-Memory Storage (fallback when no DATABASE_URL) ───────────────────────
@@ -58,11 +108,21 @@ export class MemStorage implements IStorage {
   private users: Map<string, User> = new Map();
   private clubs: Map<string, Club> = new Map();
   private clubMembersList: ClubMember[] = [];
+  private clubInvitationsList: ClubInvitation[] = [];
+  private clubAnnouncementsList: ClubAnnouncement[] = [];
+  private clubEventsList: ClubEvent[] = [];
   private tablesList: Map<string, TableRow> = new Map();
   private tablePlayersList: TablePlayer[] = [];
   private transactionsList: Transaction[] = [];
   private gameHandsList: GameHand[] = [];
   private playerStatsList: Map<string, PlayerStat> = new Map();
+  private missionsList: Mission[] = [];
+  private userMissionsList: UserMission[] = [];
+  private handAnalysesList: HandAnalysis[] = [];
+  private shopItemsList: ShopItem[] = [];
+  private userInventoryList: UserInventoryItem[] = [];
+  private clubAlliancesList: ClubAlliance[] = [];
+  private leagueSeasonsList: LeagueSeason[] = [];
 
   // Users
   async getUser(id: string) { return this.users.get(id); }
@@ -113,6 +173,13 @@ export class MemStorage implements IStorage {
     await this.addClubMember(id, data.ownerId, "owner");
     return club;
   }
+  async updateClub(id: string, data: Partial<Club>) {
+    const club = this.clubs.get(id);
+    if (!club) return undefined;
+    const updated = { ...club, ...data };
+    this.clubs.set(id, updated);
+    return updated;
+  }
   async getClubMembers(clubId: string) {
     return this.clubMembersList.filter(m => m.clubId === clubId);
   }
@@ -129,6 +196,48 @@ export class MemStorage implements IStorage {
     this.clubMembersList = this.clubMembersList.filter(
       m => !(m.clubId === clubId && m.userId === userId)
     );
+  }
+  async updateClubMemberRole(clubId: string, userId: string, role: string) {
+    const member = this.clubMembersList.find(m => m.clubId === clubId && m.userId === userId);
+    if (member) member.role = role;
+  }
+
+  // Club Invitations
+  async getClubInvitations(clubId: string) {
+    return this.clubInvitationsList.filter(i => i.clubId === clubId);
+  }
+  async createClubInvitation(data: Omit<ClubInvitation, "id" | "createdAt">): Promise<ClubInvitation> {
+    const inv: ClubInvitation = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.clubInvitationsList.push(inv);
+    return inv;
+  }
+  async updateClubInvitation(id: string, data: Partial<ClubInvitation>) {
+    const idx = this.clubInvitationsList.findIndex(i => i.id === id);
+    if (idx === -1) return undefined;
+    this.clubInvitationsList[idx] = { ...this.clubInvitationsList[idx], ...data };
+    return this.clubInvitationsList[idx];
+  }
+
+  // Club Announcements
+  async getClubAnnouncements(clubId: string) {
+    return this.clubAnnouncementsList.filter(a => a.clubId === clubId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  async createClubAnnouncement(data: Omit<ClubAnnouncement, "id" | "createdAt">): Promise<ClubAnnouncement> {
+    const ann: ClubAnnouncement = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.clubAnnouncementsList.push(ann);
+    return ann;
+  }
+
+  // Club Events
+  async getClubEvents(clubId: string) {
+    return this.clubEventsList.filter(e => e.clubId === clubId)
+      .sort((a, b) => (b.startTime?.getTime() || 0) - (a.startTime?.getTime() || 0));
+  }
+  async createClubEvent(data: Omit<ClubEvent, "id" | "createdAt">): Promise<ClubEvent> {
+    const ev: ClubEvent = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.clubEventsList.push(ev);
+    return ev;
   }
 
   // Tables
@@ -152,6 +261,14 @@ export class MemStorage implements IStorage {
       status: "waiting",
       createdById: data.createdById,
       allowBots: data.allowBots ?? true,
+      gameFormat: data.gameFormat || "cash",
+      blindSchedule: data.blindSchedule || null,
+      bombPotFrequency: data.bombPotFrequency ?? 0,
+      bombPotAnte: data.bombPotAnte ?? 0,
+      buyInAmount: data.buyInAmount ?? 0,
+      startingChips: data.startingChips ?? 1500,
+      payoutStructure: data.payoutStructure || null,
+      tournamentId: null,
       createdAt: new Date(),
     };
     this.tablesList.set(id, table);
@@ -239,6 +356,14 @@ export class MemStorage implements IStorage {
   async getPlayerStats(userId: string) {
     return this.playerStatsList.get(userId);
   }
+  async getPlayerStatsBatch(userIds: string[]) {
+    const result = new Map<string, PlayerStat>();
+    for (const uid of userIds) {
+      const stats = this.playerStatsList.get(uid);
+      if (stats) result.set(uid, stats);
+    }
+    return result;
+  }
   async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number) {
     let stats = this.playerStatsList.get(userId);
     if (!stats) {
@@ -246,6 +371,7 @@ export class MemStorage implements IStorage {
         id: randomUUID(), userId,
         handsPlayed: 0, potsWon: 0,
         bestWinStreak: 0, currentWinStreak: 0, totalWinnings: 0,
+        vpip: 0, pfr: 0, showdownCount: 0,
         lastResetAt: new Date(), updatedAt: new Date(),
       };
       this.playerStatsList.set(userId, stats);
@@ -268,6 +394,84 @@ export class MemStorage implements IStorage {
       stats.lastResetAt = new Date();
       stats.updatedAt = new Date();
     }
+  }
+
+  // Missions
+  async getMissions() { return this.missionsList.filter(m => m.isActive); }
+  async createMission(data: Omit<Mission, "id" | "createdAt">): Promise<Mission> {
+    const mission: Mission = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.missionsList.push(mission);
+    return mission;
+  }
+  async getUserMissions(userId: string) {
+    return this.userMissionsList.filter(m => m.userId === userId);
+  }
+  async createUserMission(data: Omit<UserMission, "id">): Promise<UserMission> {
+    const um: UserMission = { ...data, id: randomUUID() };
+    this.userMissionsList.push(um);
+    return um;
+  }
+  async updateUserMission(id: string, data: Partial<UserMission>) {
+    const idx = this.userMissionsList.findIndex(m => m.id === id);
+    if (idx === -1) return undefined;
+    this.userMissionsList[idx] = { ...this.userMissionsList[idx], ...data };
+    return this.userMissionsList[idx];
+  }
+
+  // Hand Analyses
+  async createHandAnalysis(data: Omit<HandAnalysis, "id" | "createdAt">): Promise<HandAnalysis> {
+    const ha: HandAnalysis = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.handAnalysesList.push(ha);
+    return ha;
+  }
+  async getUserHandAnalyses(userId: string, limit = 20) {
+    return this.handAnalysesList
+      .filter(h => h.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  }
+
+  // Shop
+  async getShopItems(category?: string) {
+    return this.shopItemsList.filter(i => i.isActive && (!category || i.category === category));
+  }
+  async getShopItem(id: string) {
+    return this.shopItemsList.find(i => i.id === id);
+  }
+  async createShopItem(data: Omit<ShopItem, "id" | "createdAt">): Promise<ShopItem> {
+    const item: ShopItem = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.shopItemsList.push(item);
+    return item;
+  }
+  async getUserInventory(userId: string) {
+    return this.userInventoryList.filter(i => i.userId === userId);
+  }
+  async addToInventory(userId: string, itemId: string): Promise<UserInventoryItem> {
+    const inv: UserInventoryItem = { id: randomUUID(), userId, itemId, equippedAt: null, purchasedAt: new Date() };
+    this.userInventoryList.push(inv);
+    return inv;
+  }
+  async equipItem(id: string) {
+    const item = this.userInventoryList.find(i => i.id === id);
+    if (item) item.equippedAt = new Date();
+  }
+  async unequipItem(id: string) {
+    const item = this.userInventoryList.find(i => i.id === id);
+    if (item) item.equippedAt = null;
+  }
+
+  // Alliances & Leagues
+  async getClubAlliances() { return this.clubAlliancesList; }
+  async createClubAlliance(data: Omit<ClubAlliance, "id" | "createdAt">): Promise<ClubAlliance> {
+    const a: ClubAlliance = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.clubAlliancesList.push(a);
+    return a;
+  }
+  async getLeagueSeasons() { return this.leagueSeasonsList; }
+  async createLeagueSeason(data: Omit<LeagueSeason, "id" | "createdAt">): Promise<LeagueSeason> {
+    const s: LeagueSeason = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.leagueSeasonsList.push(s);
+    return s;
   }
 }
 
@@ -320,6 +524,10 @@ export class DatabaseStorage implements IStorage {
     await this.addClubMember(club.id, data.ownerId, "owner");
     return club;
   }
+  async updateClub(id: string, data: Partial<Club>) {
+    const [club] = await this.db.update(clubs).set(data).where(eq(clubs.id, id)).returning();
+    return club;
+  }
   async getClubMembers(clubId: string) {
     return this.db.select().from(clubMembers).where(eq(clubMembers.clubId, clubId));
   }
@@ -331,6 +539,45 @@ export class DatabaseStorage implements IStorage {
     await this.db.delete(clubMembers).where(
       and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, userId))
     );
+  }
+  async updateClubMemberRole(clubId: string, userId: string, role: string) {
+    await this.db.update(clubMembers).set({ role }).where(
+      and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, userId))
+    );
+  }
+
+  // Club Invitations
+  async getClubInvitations(clubId: string) {
+    return this.db.select().from(clubInvitations).where(eq(clubInvitations.clubId, clubId))
+      .orderBy(desc(clubInvitations.createdAt));
+  }
+  async createClubInvitation(data: Omit<ClubInvitation, "id" | "createdAt">): Promise<ClubInvitation> {
+    const [inv] = await this.db.insert(clubInvitations).values(data).returning();
+    return inv;
+  }
+  async updateClubInvitation(id: string, data: Partial<ClubInvitation>) {
+    const [inv] = await this.db.update(clubInvitations).set(data).where(eq(clubInvitations.id, id)).returning();
+    return inv;
+  }
+
+  // Club Announcements
+  async getClubAnnouncements(clubId: string) {
+    return this.db.select().from(clubAnnouncements).where(eq(clubAnnouncements.clubId, clubId))
+      .orderBy(desc(clubAnnouncements.createdAt));
+  }
+  async createClubAnnouncement(data: Omit<ClubAnnouncement, "id" | "createdAt">): Promise<ClubAnnouncement> {
+    const [ann] = await this.db.insert(clubAnnouncements).values(data).returning();
+    return ann;
+  }
+
+  // Club Events
+  async getClubEvents(clubId: string) {
+    return this.db.select().from(clubEvents).where(eq(clubEvents.clubId, clubId))
+      .orderBy(desc(clubEvents.createdAt));
+  }
+  async createClubEvent(data: Omit<ClubEvent, "id" | "createdAt">): Promise<ClubEvent> {
+    const [ev] = await this.db.insert(clubEvents).values(data).returning();
+    return ev;
   }
 
   // Tables
@@ -357,6 +604,13 @@ export class DatabaseStorage implements IStorage {
       status: "waiting",
       createdById: data.createdById,
       allowBots: data.allowBots ?? true,
+      gameFormat: data.gameFormat || "cash",
+      blindSchedule: data.blindSchedule || null,
+      bombPotFrequency: data.bombPotFrequency ?? 0,
+      bombPotAnte: data.bombPotAnte ?? 0,
+      buyInAmount: data.buyInAmount ?? 0,
+      startingChips: data.startingChips ?? 1500,
+      payoutStructure: data.payoutStructure || null,
     }).returning();
     return table;
   }
@@ -423,6 +677,15 @@ export class DatabaseStorage implements IStorage {
     const [stats] = await this.db.select().from(playerStats).where(eq(playerStats.userId, userId));
     return stats;
   }
+  async getPlayerStatsBatch(userIds: string[]) {
+    const result = new Map<string, PlayerStat>();
+    if (userIds.length === 0) return result;
+    const rows = await this.db.select().from(playerStats).where(inArray(playerStats.userId, userIds));
+    for (const row of rows) {
+      result.set(row.userId, row);
+    }
+    return result;
+  }
   async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number) {
     const existing = await this.getPlayerStats(userId);
     if (!existing) {
@@ -450,6 +713,84 @@ export class DatabaseStorage implements IStorage {
         lastResetAt: new Date(), updatedAt: new Date(),
       }).where(eq(playerStats.id, existing.id));
     }
+  }
+
+  // Missions
+  async getMissions() {
+    return this.db.select().from(missions).where(eq(missions.isActive, true));
+  }
+  async createMission(data: Omit<Mission, "id" | "createdAt">): Promise<Mission> {
+    const [mission] = await this.db.insert(missions).values(data).returning();
+    return mission;
+  }
+  async getUserMissions(userId: string) {
+    return this.db.select().from(userMissions).where(eq(userMissions.userId, userId));
+  }
+  async createUserMission(data: Omit<UserMission, "id">): Promise<UserMission> {
+    const [um] = await this.db.insert(userMissions).values(data).returning();
+    return um;
+  }
+  async updateUserMission(id: string, data: Partial<UserMission>) {
+    const [um] = await this.db.update(userMissions).set(data).where(eq(userMissions.id, id)).returning();
+    return um;
+  }
+
+  // Hand Analyses
+  async createHandAnalysis(data: Omit<HandAnalysis, "id" | "createdAt">): Promise<HandAnalysis> {
+    const [ha] = await this.db.insert(handAnalyses).values(data).returning();
+    return ha;
+  }
+  async getUserHandAnalyses(userId: string, limit = 20) {
+    return this.db.select().from(handAnalyses)
+      .where(eq(handAnalyses.userId, userId))
+      .orderBy(desc(handAnalyses.createdAt))
+      .limit(limit);
+  }
+
+  // Shop
+  async getShopItems(category?: string) {
+    if (category) {
+      return this.db.select().from(shopItems)
+        .where(and(eq(shopItems.isActive, true), eq(shopItems.category, category)));
+    }
+    return this.db.select().from(shopItems).where(eq(shopItems.isActive, true));
+  }
+  async getShopItem(id: string) {
+    const [item] = await this.db.select().from(shopItems).where(eq(shopItems.id, id));
+    return item;
+  }
+  async createShopItem(data: Omit<ShopItem, "id" | "createdAt">): Promise<ShopItem> {
+    const [item] = await this.db.insert(shopItems).values(data).returning();
+    return item;
+  }
+  async getUserInventory(userId: string) {
+    return this.db.select().from(userInventory).where(eq(userInventory.userId, userId));
+  }
+  async addToInventory(userId: string, itemId: string): Promise<UserInventoryItem> {
+    const [inv] = await this.db.insert(userInventory).values({ userId, itemId }).returning();
+    return inv;
+  }
+  async equipItem(id: string) {
+    await this.db.update(userInventory).set({ equippedAt: new Date() }).where(eq(userInventory.id, id));
+  }
+  async unequipItem(id: string) {
+    await this.db.update(userInventory).set({ equippedAt: null }).where(eq(userInventory.id, id));
+  }
+
+  // Alliances & Leagues
+  async getClubAlliances() {
+    return this.db.select().from(clubAlliances);
+  }
+  async createClubAlliance(data: Omit<ClubAlliance, "id" | "createdAt">): Promise<ClubAlliance> {
+    const [a] = await this.db.insert(clubAlliances).values(data).returning();
+    return a;
+  }
+  async getLeagueSeasons() {
+    return this.db.select().from(leagueSeasons).orderBy(desc(leagueSeasons.startDate));
+  }
+  async createLeagueSeason(data: Omit<LeagueSeason, "id" | "createdAt">): Promise<LeagueSeason> {
+    const [s] = await this.db.insert(leagueSeasons).values(data).returning();
+    return s;
   }
 }
 

@@ -1,28 +1,42 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import {
   Sparkles, Star, Crown, Wallet, Gift,
-  Tag, Zap, Gem, Coins, Clock, Loader2, ArrowUpRight, ArrowDownRight
+  Tag, Zap, Gem, Coins, Clock, Loader2, ArrowUpRight, ArrowDownRight,
+  Package, Check, ShoppingCart, X, Shield
 } from "lucide-react";
 
-import avatar1 from "@assets/generated_images/player_seated_cyberpunk_1.png";
-import avatar2 from "@assets/generated_images/player_seated_cyberpunk_2.png";
-import avatar3 from "@assets/generated_images/player_seated_cyberpunk_3.png";
-import avatar4 from "@assets/generated_images/player_seated_cyberpunk_4.png";
-import entropyHud from "@assets/generated_images/holographic_hud_overlay.png";
-import allianceHud from "@assets/generated_images/marketplace_item_armor.png";
-import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
+const TABS = ["Avatars", "Table Themes", "Emotes", "Premium", "Inventory"];
 
-const TABS = ["Avatars", "Table Themes", "Emotes", "Premium"];
+const TAB_CATEGORY_MAP: Record<string, string> = {
+  Avatars: "avatar",
+  "Table Themes": "table_theme",
+  Emotes: "emote",
+  Premium: "premium",
+};
 
 interface ShopItem {
   id: string;
   name: string;
-  subtitle: string;
-  image: string;
-  rarity: "Legendary" | "Epic" | "Rare" | "Mythic";
+  description: string | null;
+  category: string;
+  rarity: string;
+  price: number;
+  currency: string;
+  imageUrl: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+interface InventoryEntry {
+  id: string;
+  userId: string;
+  itemId: string;
+  equippedAt: string | null;
+  purchasedAt: string;
+  item: ShopItem | null;
 }
 
 interface Transaction {
@@ -35,48 +49,296 @@ interface Transaction {
   createdAt: string;
 }
 
-const FEATURED_ITEMS: ShopItem[] = [
-  { id: "1", name: "The Cyber Source", subtitle: "Animated Mythic", image: avatar1, rarity: "Mythic" },
-  { id: "2", name: "Deep Space Odyssey", subtitle: "Legendary Avatar", image: avatar2, rarity: "Legendary" },
-  { id: "3", name: "Demonic Odyssey", subtitle: "Legendary Theme", image: entropyHud, rarity: "Legendary" },
-];
-
-const NEW_ARRIVALS: ShopItem[] = [
-  { id: "n1", name: "Neon Wolf", subtitle: "Avatar", image: avatar3, rarity: "Epic" },
-  { id: "n2", name: "Dark Felt", subtitle: "Theme", image: feltTexture, rarity: "Rare" },
-  { id: "n3", name: "Gold Crown", subtitle: "Emote", image: avatar4, rarity: "Epic" },
-  { id: "n4", name: "Alliance", subtitle: "Theme", image: allianceHud, rarity: "Rare" },
-  { id: "n5", name: "Cyber Eye", subtitle: "Avatar", image: avatar1, rarity: "Legendary" },
-  { id: "n6", name: "Fire Table", subtitle: "Theme", image: entropyHud, rarity: "Epic" },
-];
-
 const RARITY_COLORS: Record<string, string> = {
+  mythic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+  legendary: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+  rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+  uncommon: "text-green-400 bg-green-500/10 border-green-500/20",
+  common: "text-gray-400 bg-gray-500/10 border-gray-500/20",
+  // Also support capitalized keys for backward compatibility
   Mythic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
   Legendary: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   Epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
   Rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
 };
 
-function FeaturedCard({ item }: { item: ShopItem }) {
+const RARITY_GRADIENTS: Record<string, string> = {
+  mythic: "from-purple-600/40 via-pink-500/30 to-purple-800/40",
+  legendary: "from-amber-500/40 via-orange-500/30 to-amber-700/40",
+  epic: "from-purple-500/40 via-indigo-500/30 to-purple-700/40",
+  rare: "from-cyan-500/40 via-blue-500/30 to-cyan-700/40",
+  uncommon: "from-green-500/40 via-emerald-500/30 to-green-700/40",
+  common: "from-gray-500/40 via-slate-500/30 to-gray-700/40",
+};
+
+function getRarityColor(rarity: string): string {
+  return RARITY_COLORS[rarity] || RARITY_COLORS[rarity.toLowerCase()] || RARITY_COLORS.common;
+}
+
+function getRarityGradient(rarity: string): string {
+  return RARITY_GRADIENTS[rarity.toLowerCase()] || RARITY_GRADIENTS.common;
+}
+
+function ItemImage({ item, className = "" }: { item: ShopItem; className?: string }) {
+  if (item.imageUrl) {
+    return (
+      <img
+        src={item.imageUrl}
+        alt={item.name}
+        className={`w-full h-full object-cover ${className}`}
+      />
+    );
+  }
+  return (
+    <div className={`w-full h-full bg-gradient-to-br ${getRarityGradient(item.rarity)} flex items-center justify-center ${className}`}>
+      <Gem className="w-8 h-8 text-white/30" />
+    </div>
+  );
+}
+
+function PurchaseModal({
+  item,
+  balance,
+  onConfirm,
+  onClose,
+  purchasing,
+}: {
+  item: ShopItem;
+  balance: number;
+  onConfirm: () => void;
+  onClose: () => void;
+  purchasing: boolean;
+}) {
+  const canAfford = balance >= item.price;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass rounded-2xl border border-white/10 overflow-hidden w-full max-w-md mx-4"
+        style={{ boxShadow: "0 25px 60px rgba(0,0,0,0.5)" }}
+      >
+        {/* Item Preview */}
+        <div className="aspect-video relative overflow-hidden">
+          <ItemImage item={item} className="group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+          <div className="absolute bottom-4 left-4 right-4">
+            <div className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border mb-2 ${getRarityColor(item.rarity)}`}>
+              {item.rarity}
+            </div>
+            <h3 className="text-xl font-black text-white">{item.name}</h3>
+            {item.description && (
+              <p className="text-xs text-gray-400 mt-1">{item.description}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Purchase Details */}
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Price</div>
+              <div className="text-lg font-black text-amber-400 flex items-center gap-1.5">
+                <Coins className="w-4 h-4" />
+                {item.price.toLocaleString()} {item.currency}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Your Balance</div>
+              <div className={`text-lg font-black ${canAfford ? "text-green-400" : "text-red-400"}`}>
+                {balance.toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          {!canAfford && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-xs text-red-400">
+              Insufficient chips. You need {(item.price - balance).toLocaleString()} more.
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 border border-white/10 hover:border-white/20 hover:text-white transition-all"
+            >
+              Cancel
+            </button>
+            <motion.button
+              whileHover={canAfford ? { scale: 1.02 } : {}}
+              whileTap={canAfford ? { scale: 0.98 } : {}}
+              onClick={onConfirm}
+              disabled={!canAfford || purchasing}
+              className="flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{
+                background: canAfford
+                  ? "linear-gradient(135deg, #00ff9d, #00d4aa)"
+                  : "linear-gradient(135deg, #666, #555)",
+                boxShadow: canAfford ? "0 0 20px rgba(0,255,157,0.2)" : "none",
+              }}
+            >
+              {purchasing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <ShoppingCart className="w-3.5 h-3.5" />
+              )}
+              {purchasing ? "Processing..." : "Confirm Purchase"}
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function SuccessToast({ message }: { message: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+      className="fixed bottom-6 right-6 z-50 glass rounded-xl border border-green-500/20 px-5 py-3 flex items-center gap-3"
+      style={{ boxShadow: "0 10px 40px rgba(0,255,157,0.15)" }}
+    >
+      <div className="w-8 h-8 rounded-full bg-green-500/15 border border-green-500/20 flex items-center justify-center">
+        <Check className="w-4 h-4 text-green-400" />
+      </div>
+      <span className="text-sm font-bold text-green-400">{message}</span>
+    </motion.div>
+  );
+}
+
+function ShopItemCard({
+  item,
+  onPurchase,
+  owned,
+}: {
+  item: ShopItem;
+  onPurchase: (item: ShopItem) => void;
+  owned: boolean;
+}) {
   return (
     <motion.div
       whileHover={{ scale: 1.03, y: -4 }}
       className="glass rounded-xl overflow-hidden border border-white/5 hover:border-amber-500/20 transition-all cursor-pointer group"
       style={{ boxShadow: "0 10px 40px rgba(0,0,0,0.3)" }}
+      onClick={() => !owned && onPurchase(item)}
     >
       <div className="aspect-square relative overflow-hidden">
-        <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+        <ItemImage item={item} className="group-hover:scale-110 transition-transform duration-500" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${RARITY_COLORS[item.rarity]}`}>
+        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
           {item.rarity}
         </div>
+        {owned && (
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border bg-green-500/15 border-green-500/30 text-green-400">
+            Owned
+          </div>
+        )}
       </div>
       <div className="p-3">
-        <div className="text-[9px] text-gray-500 uppercase tracking-wider">{item.subtitle}</div>
+        <div className="text-[9px] text-gray-500 uppercase tracking-wider">{item.category.replace("_", " ")}</div>
         <div className="text-sm font-bold text-white truncate">{item.name}</div>
+        {item.description && (
+          <div className="text-[9px] text-gray-600 truncate mt-0.5">{item.description}</div>
+        )}
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[10px] font-bold text-amber-400/60 uppercase tracking-wider">Coming Soon</span>
+          {owned ? (
+            <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider flex items-center gap-1">
+              <Check className="w-3 h-3" /> Purchased
+            </span>
+          ) : (
+            <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
+              <Coins className="w-3 h-3" /> {item.price.toLocaleString()}
+            </span>
+          )}
         </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function InventoryItemCard({
+  entry,
+  onEquip,
+  equipping,
+}: {
+  entry: InventoryEntry;
+  onEquip: (inventoryId: string) => void;
+  equipping: string | null;
+}) {
+  const item = entry.item;
+  if (!item) return null;
+
+  const isEquipped = !!entry.equippedAt;
+  const isEquipping = equipping === entry.id;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`glass rounded-xl overflow-hidden border transition-all ${
+        isEquipped ? "border-cyan-500/30" : "border-white/5 hover:border-white/10"
+      }`}
+      style={{ boxShadow: isEquipped ? "0 0 25px rgba(0,200,255,0.08)" : "0 10px 40px rgba(0,0,0,0.3)" }}
+    >
+      <div className="aspect-square relative overflow-hidden">
+        <ItemImage item={item} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
+          {item.rarity}
+        </div>
+        {isEquipped && (
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center gap-1">
+            <Shield className="w-2.5 h-2.5" /> Equipped
+          </div>
+        )}
+      </div>
+      <div className="p-3">
+        <div className="text-[9px] text-gray-500 uppercase tracking-wider">{item.category.replace("_", " ")}</div>
+        <div className="text-sm font-bold text-white truncate">{item.name}</div>
+        <div className="text-[9px] text-gray-600 mt-0.5">
+          Purchased {new Date(entry.purchasedAt).toLocaleDateString()}
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onEquip(entry.id)}
+          disabled={isEquipped || isEquipping}
+          className={`w-full mt-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+            isEquipped
+              ? "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 cursor-default"
+              : "bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          {isEquipping ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : isEquipped ? (
+            <>
+              <Check className="w-3 h-3" /> Equipped
+            </>
+          ) : (
+            <>
+              <Zap className="w-3 h-3" /> Equip
+            </>
+          )}
+        </motion.button>
       </div>
     </motion.div>
   );
@@ -90,6 +352,21 @@ export default function Shop() {
   const [claiming, setClaiming] = useState(false);
   const [claimResult, setClaimResult] = useState<{ bonus: number } | null>(null);
   const [loadingTx, setLoadingTx] = useState(true);
+
+  // Shop state
+  const [shopItems, setShopItems] = useState<ShopItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+  const [inventory, setInventory] = useState<InventoryEntry[]>([]);
+  const [loadingInventory, setLoadingInventory] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const [equipping, setEquipping] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  }, []);
 
   // Fetch real balance
   useEffect(() => {
@@ -108,6 +385,120 @@ export default function Shop() {
       .finally(() => setLoadingTx(false));
   }, []);
 
+  // Fetch shop items
+  const fetchShopItems = useCallback(async () => {
+    setLoadingItems(true);
+    try {
+      const res = await fetch("/api/shop/items");
+      if (res.ok) {
+        const data = await res.json();
+        setShopItems(data);
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoadingItems(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchShopItems();
+  }, [fetchShopItems]);
+
+  // Fetch inventory
+  const fetchInventory = useCallback(async () => {
+    setLoadingInventory(true);
+    try {
+      const res = await fetch("/api/shop/inventory");
+      if (res.ok) {
+        const data = await res.json();
+        setInventory(data);
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoadingInventory(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchInventory();
+  }, [fetchInventory]);
+
+  // Refresh balance helper
+  const refreshBalance = useCallback(async () => {
+    try {
+      const res = await fetch("/api/wallet/balance");
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.balance != null) setBalance(data.balance);
+      }
+    } catch {
+      // silent
+    }
+  }, []);
+
+  // Refresh transactions helper
+  const refreshTransactions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/wallet/transactions");
+      if (res.ok) {
+        const data = await res.json();
+        setTransactions(data);
+      }
+    } catch {
+      // silent
+    }
+  }, []);
+
+  // Purchase handler
+  const handlePurchase = async () => {
+    if (!selectedItem || purchasing) return;
+    setPurchasing(true);
+    try {
+      const res = await fetch("/api/shop/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: selectedItem.id }),
+      });
+      if (res.ok) {
+        showToast(`Successfully purchased ${selectedItem.name}!`);
+        setSelectedItem(null);
+        await Promise.all([refreshBalance(), refreshUser(), fetchInventory(), refreshTransactions()]);
+      } else {
+        const err = await res.json().catch(() => ({ message: "Purchase failed" }));
+        showToast(err.message || "Purchase failed");
+      }
+    } catch {
+      showToast("Network error. Please try again.");
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  // Equip handler
+  const handleEquip = async (inventoryId: string) => {
+    setEquipping(inventoryId);
+    try {
+      const res = await fetch("/api/shop/equip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inventoryId }),
+      });
+      if (res.ok) {
+        showToast("Item equipped!");
+        await fetchInventory();
+      } else {
+        const err = await res.json().catch(() => ({ message: "Equip failed" }));
+        showToast(err.message || "Equip failed");
+      }
+    } catch {
+      showToast("Network error. Please try again.");
+    } finally {
+      setEquipping(null);
+    }
+  };
+
   const handleClaimDaily = async () => {
     if (claiming) return;
     setClaiming(true);
@@ -119,9 +510,7 @@ export default function Shop() {
         setBalance(data.balance);
         setClaimResult({ bonus: data.bonus });
         await refreshUser();
-        // Refresh transactions
-        const txRes = await fetch("/api/wallet/transactions");
-        if (txRes.ok) setTransactions(await txRes.json());
+        await refreshTransactions();
         setTimeout(() => setClaimResult(null), 3000);
       }
     } catch {} finally {
@@ -130,6 +519,17 @@ export default function Shop() {
   };
 
   const displayBalance = balance ?? user?.chipBalance ?? 0;
+
+  // Owned item IDs for quick lookup
+  const ownedItemIds = new Set(inventory.map((inv) => inv.itemId));
+
+  // Filter items by active tab category
+  const activeCategory = TAB_CATEGORY_MAP[activeTab];
+  const filteredItems = activeCategory
+    ? shopItems.filter((item) => item.category === activeCategory)
+    : shopItems;
+
+  const isInventoryTab = activeTab === "Inventory";
 
   return (
     <DashboardLayout>
@@ -140,71 +540,170 @@ export default function Shop() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                 activeTab === tab
                   ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20"
                   : "text-gray-500 hover:text-gray-300 border border-transparent"
               }`}
             >
+              {tab === "Inventory" && <Package className="w-3.5 h-3.5" />}
               {tab}
+              {tab === "Inventory" && inventory.length > 0 && (
+                <span className="ml-1 text-[9px] bg-cyan-500/15 text-cyan-400 px-1.5 py-0.5 rounded-full">
+                  {inventory.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* ─── Main Content (3 cols) ─────────────────────── */}
+          {/* Main Content (3 cols) */}
           <div className="lg:col-span-3 space-y-6">
             {/* Header */}
             <div>
               <h2 className="text-lg font-black uppercase tracking-wider text-white flex items-center gap-2">
-                <Gem className="w-5 h-5 text-purple-400" />
-                Ultra-Rare Customization Marketplace
+                {isInventoryTab ? (
+                  <>
+                    <Package className="w-5 h-5 text-cyan-400" />
+                    Your Collection
+                  </>
+                ) : (
+                  <>
+                    <Gem className="w-5 h-5 text-purple-400" />
+                    Ultra-Rare Customization Marketplace
+                  </>
+                )}
               </h2>
+              {!isInventoryTab && (
+                <p className="text-xs text-gray-600 mt-1">
+                  {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""} available
+                </p>
+              )}
             </div>
 
-            {/* Featured Items */}
-            <div className="grid grid-cols-3 gap-4">
-              {FEATURED_ITEMS.map((item, i) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <FeaturedCard item={item} />
-                </motion.div>
-              ))}
-            </div>
-
-            {/* New Arrivals */}
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-cyan-400" />
-                New Arrivals
-                <span className="text-[8px] font-bold text-amber-400/60 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 ml-2">Coming Soon</span>
-              </h3>
-              <div className="grid grid-cols-6 gap-3">
-                {NEW_ARRIVALS.map((item, i) => (
+            {/* Inventory Tab */}
+            {isInventoryTab && (
+              <>
+                {loadingInventory ? (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                  </div>
+                ) : inventory.length === 0 ? (
                   <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 + i * 0.05 }}
-                    whileHover={{ scale: 1.08 }}
-                    className="glass rounded-lg overflow-hidden border border-white/5 hover:border-cyan-500/20 transition-all cursor-pointer"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass rounded-xl border border-white/5 py-16 text-center"
                   >
-                    <div className="aspect-square relative overflow-hidden">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                      <div className="absolute bottom-1 left-1 right-1">
-                        <div className="text-[8px] font-bold text-white truncate">{item.name}</div>
-                        <div className="text-[7px] text-amber-400/60">Coming Soon</div>
+                    <Package className="w-10 h-10 text-gray-700 mx-auto mb-3" />
+                    <p className="text-sm font-bold text-gray-500">Your inventory is empty</p>
+                    <p className="text-xs text-gray-600 mt-1">Purchase items from the shop to see them here.</p>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setActiveTab("Avatars")}
+                      className="mt-4 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
+                      style={{
+                        background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
+                        boxShadow: "0 0 20px rgba(0,255,157,0.15)",
+                      }}
+                    >
+                      Browse Shop
+                    </motion.button>
+                  </motion.div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {inventory.map((entry, i) => (
+                      <motion.div
+                        key={entry.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                      >
+                        <InventoryItemCard
+                          entry={entry}
+                          onEquip={handleEquip}
+                          equipping={equipping}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Shop Items Grid */}
+            {!isInventoryTab && (
+              <>
+                {loadingItems ? (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+                  </div>
+                ) : filteredItems.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass rounded-xl border border-white/5 py-16 text-center"
+                  >
+                    <Tag className="w-10 h-10 text-gray-700 mx-auto mb-3" />
+                    <p className="text-sm font-bold text-gray-500">No items available yet</p>
+                    <p className="text-xs text-gray-600 mt-1">Check back soon for new {activeTab.toLowerCase()}!</p>
+                  </motion.div>
+                ) : (
+                  <>
+                    {/* Featured (first 3 items) */}
+                    {filteredItems.length >= 3 && (
+                      <div>
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-amber-400" />
+                          Featured
+                        </h3>
+                        <div className="grid grid-cols-3 gap-4">
+                          {filteredItems.slice(0, 3).map((item, i) => (
+                            <motion.div
+                              key={item.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.1 }}
+                            >
+                              <ShopItemCard
+                                item={item}
+                                onPurchase={setSelectedItem}
+                                owned={ownedItemIds.has(item.id)}
+                              />
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* All Items */}
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-cyan-400" />
+                        {filteredItems.length >= 3 ? "All Items" : activeTab}
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {(filteredItems.length >= 3 ? filteredItems.slice(3) : filteredItems).map((item, i) => (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.3 + i * 0.05 }}
+                          >
+                            <ShopItemCard
+                              item={item}
+                              onPurchase={setSelectedItem}
+                              owned={ownedItemIds.has(item.id)}
+                            />
+                          </motion.div>
+                        ))}
                       </div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+                  </>
+                )}
+              </>
+            )}
 
             {/* Transaction History */}
             <motion.div
@@ -260,7 +759,7 @@ export default function Shop() {
             </motion.div>
           </div>
 
-          {/* ─── Right Sidebar ─────────────────────────────── */}
+          {/* Right Sidebar */}
           <div className="space-y-4">
             {/* Real Balance Display */}
             <motion.div
@@ -367,6 +866,24 @@ export default function Shop() {
           </div>
         </div>
       </div>
+
+      {/* Purchase Confirmation Modal */}
+      <AnimatePresence>
+        {selectedItem && (
+          <PurchaseModal
+            item={selectedItem}
+            balance={displayBalance}
+            onConfirm={handlePurchase}
+            onClose={() => !purchasing && setSelectedItem(null)}
+            purchasing={purchasing}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Success Toast */}
+      <AnimatePresence>
+        {toast && <SuccessToast message={toast} />}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

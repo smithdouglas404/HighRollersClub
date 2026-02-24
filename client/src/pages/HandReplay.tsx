@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import {
   ArrowLeft, ShieldCheck, Download, Copy, Check,
-  ChevronDown, ChevronUp, Clock, Coins, Trophy, User, Users
+  ChevronDown, ChevronUp, Clock, Coins, Trophy, User, Users, FileText
 } from "lucide-react";
 
 interface CardType {
@@ -223,7 +223,7 @@ export default function HandReplay({ handId }: { handId: string }) {
     }
   };
 
-  const exportHand = () => {
+  const exportJSON = () => {
     if (!hand) return;
     const blob = new Blob([JSON.stringify(hand, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -232,6 +232,86 @@ export default function HandReplay({ handId }: { handId: string }) {
     a.download = `hand-${hand.handNumber || handId}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = async () => {
+    if (!hand) return;
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF();
+    const summary = hand.summary;
+    const players = summary?.players || [];
+    const actions = summary?.actions || [];
+    const communityCards = summary?.communityCards || hand.communityCards || [];
+    const winners = summary?.winners || [];
+
+    let y = 20;
+    const addLine = (text: string, size = 10, bold = false) => {
+      doc.setFontSize(size);
+      if (bold) doc.setFont("helvetica", "bold");
+      else doc.setFont("helvetica", "normal");
+      doc.text(text, 15, y);
+      y += size * 0.5 + 2;
+      if (y > 275) { doc.addPage(); y = 20; }
+    };
+
+    // Header
+    addLine("HIGH ROLLERS CLUB - HAND HISTORY", 16, true);
+    addLine(`Hand #${hand.handNumber || "?"}`, 12, true);
+    addLine(`Date: ${hand.createdAt ? new Date(hand.createdAt).toLocaleString() : "Unknown"}`, 10);
+    addLine(`Players: ${players.length}`, 10);
+    addLine(`Pot: ${(summary?.pot || hand.potTotal || 0).toLocaleString()} chips`, 10);
+    y += 4;
+
+    // Players
+    addLine("PLAYERS", 12, true);
+    players.forEach(p => {
+      addLine(`  Seat ${p.seatIndex + 1}: ${p.displayName} (${p.startChips.toLocaleString()} chips)`, 10);
+    });
+    y += 4;
+
+    // Community Cards
+    if (communityCards.length > 0) {
+      addLine("BOARD", 12, true);
+      const cardStr = (communityCards as CardType[]).map(c => `${c.rank}${SUIT_SYMBOLS[c.suit] || c.suit}`).join("  ");
+      addLine(`  ${cardStr}`, 10);
+      y += 4;
+    }
+
+    // Actions by street
+    addLine("ACTION LOG", 12, true);
+    const playerMap = new Map(players.map(p => [p.id, p]));
+    for (const phase of PHASE_ORDER) {
+      const phaseActions = actions.filter(a => (a.phase || "pre-flop") === phase);
+      if (phaseActions.length === 0) continue;
+      addLine(`  --- ${PHASE_LABELS[phase] || phase} ---`, 10, true);
+      phaseActions.forEach(a => {
+        const name = playerMap.get(a.playerId)?.displayName || a.playerId.slice(0, 8);
+        const amt = a.amount ? ` ${a.amount.toLocaleString()}` : "";
+        addLine(`    ${name}: ${a.action.toUpperCase()}${amt}`, 9);
+      });
+    }
+    y += 4;
+
+    // Winners
+    if (winners.length > 0) {
+      addLine("WINNERS", 12, true);
+      winners.forEach(w => {
+        const name = playerMap.get(w.playerId)?.displayName || w.playerId.slice(0, 8);
+        addLine(`  ${name}: +${w.amount.toLocaleString()} chips`, 10);
+      });
+      y += 4;
+    }
+
+    // Verification
+    if (hand.commitmentHash) {
+      addLine("PROVABLY FAIR VERIFICATION", 12, true);
+      addLine(`  Commitment Hash: ${hand.commitmentHash}`, 8);
+      if (hand.serverSeed) addLine(`  Server Seed: ${hand.serverSeed}`, 8);
+      if (hand.deckOrder) addLine(`  Deck Order: ${hand.deckOrder.slice(0, 100)}...`, 8);
+      addLine("  Algorithm: HMAC-SHA256 Fisher-Yates + SHA-512 Entropy", 8);
+    }
+
+    doc.save(`hand-${hand.handNumber || handId}.pdf`);
   };
 
   const summary = hand?.summary;
@@ -319,9 +399,16 @@ export default function HandReplay({ handId }: { handId: string }) {
                       </div>
                     )}
                     <button
-                      onClick={exportHand}
+                      onClick={exportPDF}
                       className="glass rounded-lg p-2 hover:bg-white/5 transition-colors"
-                      title="Export hand"
+                      title="Export PDF"
+                    >
+                      <FileText className="w-4 h-4 text-gray-500" />
+                    </button>
+                    <button
+                      onClick={exportJSON}
+                      className="glass rounded-lg p-2 hover:bg-white/5 transition-colors"
+                      title="Export JSON"
                     >
                       <Download className="w-4 h-4 text-gray-500" />
                     </button>

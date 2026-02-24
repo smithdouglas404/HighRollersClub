@@ -6,7 +6,8 @@ import { useAuth } from "@/lib/auth-context";
 import {
   Trophy, Brain, TrendingUp, CheckCircle,
   AlertTriangle, Play, Clock, Users, Zap,
-  Target, Gamepad2, Coins, ChevronRight, X, Plus, Loader2
+  Target, Gamepad2, Coins, ChevronRight, X, Plus, Loader2,
+  Settings, Bell, CalendarDays, MessageSquare, Megaphone
 } from "lucide-react";
 
 import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
@@ -42,6 +43,25 @@ interface ClubMember {
   avatarId: string | null;
   role: string;
   joinedAt: string;
+}
+
+interface Announcement {
+  id: string;
+  authorId: string;
+  title: string;
+  content: string;
+  pinned: boolean;
+  createdAt: string;
+}
+
+interface ClubEvent {
+  id: string;
+  eventType: string;
+  tableId: string | null;
+  name: string;
+  description: string | null;
+  startTime: string;
+  createdAt: string;
 }
 
 // AI Analysis Modal
@@ -155,6 +175,8 @@ export default function ClubDashboard() {
   const [loading, setLoading] = useState(true);
   const [creatingTable, setCreatingTable] = useState(false);
   const [stats, setStats] = useState<PlayerStats | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [events, setEvents] = useState<ClubEvent[]>([]);
 
   // Fetch first club the user might belong to (or first club available)
   useEffect(() => {
@@ -178,10 +200,20 @@ export default function ClubDashboard() {
         const myClub = clubs[0]; // Use first club
         setClub(myClub);
 
-        // Fetch members
-        const membersRes = await fetch(`/api/clubs/${myClub.id}/members`);
+        // Fetch members, announcements, events in parallel
+        const [membersRes, announcementsRes, eventsRes] = await Promise.all([
+          fetch(`/api/clubs/${myClub.id}/members`),
+          fetch(`/api/clubs/${myClub.id}/announcements`).catch(() => null),
+          fetch(`/api/clubs/${myClub.id}/events`).catch(() => null),
+        ]);
         if (membersRes.ok) {
           setMembers(await membersRes.json());
+        }
+        if (announcementsRes?.ok) {
+          setAnnouncements(await announcementsRes.json());
+        }
+        if (eventsRes?.ok) {
+          setEvents(await eventsRes.json());
         }
       } catch {} finally {
         setLoading(false);
@@ -261,20 +293,38 @@ export default function ClubDashboard() {
                   </div>
                   <div className="flex flex-col gap-2 shrink-0">
                     {club && (
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleCreateTable}
-                        disabled={creatingTable}
-                        className="px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black flex items-center gap-1.5 disabled:opacity-50"
-                        style={{
-                          background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                          boxShadow: "0 0 15px rgba(0,255,157,0.2)",
-                        }}
-                      >
-                        {creatingTable ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                        Create Table
-                      </motion.button>
+                      <>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleCreateTable}
+                          disabled={creatingTable}
+                          className="px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black flex items-center gap-1.5 disabled:opacity-50"
+                          style={{
+                            background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
+                            boxShadow: "0 0 15px rgba(0,255,157,0.2)",
+                          }}
+                        >
+                          {creatingTable ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                          Create Table
+                        </motion.button>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => navigate("/club/settings")}
+                            className="flex-1 glass rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-white border border-white/5 hover:border-white/15 transition-all flex items-center justify-center gap-1"
+                          >
+                            <Settings className="w-3 h-3" />
+                            Settings
+                          </button>
+                          <button
+                            onClick={() => navigate("/club/invitations")}
+                            className="flex-1 glass rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-white border border-white/5 hover:border-white/15 transition-all flex items-center justify-center gap-1"
+                          >
+                            <Bell className="w-3 h-3" />
+                            Invites
+                          </button>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -325,6 +375,78 @@ export default function ClubDashboard() {
                   </div>
                 </div>
               </motion.div>
+
+              {/* Club & Alliance News */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="glass rounded-xl border border-white/5 overflow-hidden"
+              >
+                <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                    <Megaphone className="w-3.5 h-3.5 text-cyan-400" />
+                    Club News
+                  </h3>
+                  <span className="text-[9px] text-gray-600">{announcements.length} posts</span>
+                </div>
+                {announcements.length === 0 ? (
+                  <div className="py-6 text-center">
+                    <MessageSquare className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                    <p className="text-[11px] text-gray-600">No announcements yet</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-white/[0.03]">
+                    {announcements.slice(0, 5).map((a) => (
+                      <div key={a.id} className="px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                        <div className="flex items-center gap-2 mb-1">
+                          {a.pinned && <span className="text-[8px] text-amber-400 font-bold uppercase">Pinned</span>}
+                          <span className="text-xs font-bold text-white">{a.title}</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 line-clamp-2">{a.content}</p>
+                        <span className="text-[9px] text-gray-600 mt-1 block">
+                          {new Date(a.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+
+              {/* Upcoming Events */}
+              {events.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                  className="glass rounded-xl border border-white/5 overflow-hidden"
+                >
+                  <div className="px-5 py-3 border-b border-white/5">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                      <CalendarDays className="w-3.5 h-3.5 text-amber-400" />
+                      Upcoming Events
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-white/[0.03]">
+                    {events.slice(0, 4).map((ev) => (
+                      <div key={ev.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                        <div>
+                          <div className="text-xs font-bold text-white">{ev.name}</div>
+                          <div className="text-[10px] text-gray-500">{ev.description || ev.eventType}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[10px] font-mono text-cyan-400">
+                            {new Date(ev.startTime).toLocaleDateString()}
+                          </div>
+                          <div className="text-[9px] text-gray-600">
+                            {new Date(ev.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
 
               {/* Daily Missions */}
               <motion.div
@@ -438,7 +560,7 @@ export default function ClubDashboard() {
                 </motion.button>
               </div>
 
-              {/* Tournaments — Coming Soon */}
+              {/* Tournaments */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -449,13 +571,37 @@ export default function ClubDashboard() {
                   <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
                     Tournaments
                   </h3>
-                  <span className="text-[8px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                    Coming Soon
+                  <span className="text-[8px] font-bold uppercase tracking-wider text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
+                    Live
                   </span>
                 </div>
-                <div className="px-4 py-6 text-center">
-                  <Trophy className="w-8 h-8 text-gray-700 mx-auto mb-2" />
-                  <p className="text-[11px] text-gray-600">Tournament support is being built.</p>
+                <div className="px-4 py-3 space-y-2">
+                  <button
+                    onClick={() => navigate("/lobby")}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors text-left"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <Clock className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-bold text-white">Sit & Go</div>
+                      <div className="text-[9px] text-gray-500">6-max, 500 buy-in</div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => navigate("/lobby")}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors text-left"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center shrink-0">
+                      <Trophy className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-bold text-white">Heads Up</div>
+                      <div className="text-[9px] text-gray-500">1v1 duel</div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+                  </button>
                 </div>
               </motion.div>
 

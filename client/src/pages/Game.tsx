@@ -21,9 +21,14 @@ import { useAuth } from "@/lib/auth-context";
 import { MatrixRain } from "@/components/MatrixRain";
 import { SoundProvider, useSoundEngine } from "@/lib/sound-context";
 import { soundEngine } from "@/lib/sound-engine";
-import type { VerificationStatus } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Settings, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users } from "lucide-react";
+import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
+import { ShieldCheck, Volume2, VolumeX, Settings, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle } from "lucide-react";
 import { WalletBar } from "@/components/wallet/WalletBar";
+import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
+import { TournamentResults } from "@/components/game/TournamentResults";
+import { BombPotIndicator } from "@/components/game/BombPotIndicator";
+import { TournamentStatsPanel } from "@/components/game/TournamentStatsPanel";
+import { PlayerAnalyticsPanel } from "@/components/game/PlayerAnalyticsPanel";
 
 // Cinematic DALL-E 3 assets
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
@@ -91,6 +96,8 @@ function GameTable({
   onBack, isMultiplayer, connected, waiting, addBots, leaveTable,
   commitmentHash, shuffleProof, verificationStatus, sendChat,
   playerSeedStatus, onChainCommitTx, onChainRevealTx,
+  formatInfo, bombPotActive, tournamentComplete, dismissTournamentComplete,
+  blindIncrease, elimination,
 }: {
   players: Player[];
   gameState: any;
@@ -112,6 +119,13 @@ function GameTable({
   playerSeedStatus?: import("@/lib/multiplayer-engine").PlayerSeedStatus;
   onChainCommitTx?: string | null;
   onChainRevealTx?: string | null;
+  // Format extensions
+  formatInfo?: FormatInfo;
+  bombPotActive?: boolean;
+  tournamentComplete?: import("@/lib/multiplayer-engine").TournamentCompleteInfo | null;
+  dismissTournamentComplete?: () => void;
+  blindIncrease?: import("@/lib/multiplayer-engine").BlindIncreaseInfo | null;
+  elimination?: import("@/lib/multiplayer-engine").EliminationInfo | null;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
@@ -217,6 +231,17 @@ function GameTable({
                 <span className="text-cyan-500/70">{phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
                 <span className="mx-1.5 text-gray-700">|</span>
                 {players.length}-MAX NLH
+                {formatInfo && formatInfo.gameFormat !== "cash" && (
+                  <>
+                    <span className="mx-1.5 text-gray-700">|</span>
+                    <span className="text-amber-400/70">
+                      {formatInfo.gameFormat === "sng" ? "SIT & GO" :
+                       formatInfo.gameFormat === "heads_up" ? "HEADS UP" :
+                       formatInfo.gameFormat === "tournament" ? "MTT" :
+                       formatInfo.gameFormat === "bomb_pot" ? "BOMB POT" : ""}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -377,6 +402,98 @@ function GameTable({
         <ChatPanel isMultiplayer={isMultiplayer} sendChat={sendChat} />
         {isMultiplayer && tableId && <HandHistoryDrawer tableId={tableId} />}
 
+        {/* Format-aware HUD overlays */}
+        {formatInfo && (formatInfo.gameFormat === "sng" || formatInfo.gameFormat === "tournament") && (
+          <BlindLevelIndicator
+            currentLevel={formatInfo.currentBlindLevel}
+            sb={gameState.minBet ? Math.floor(gameState.minBet / 2) : 10}
+            bb={gameState.minBet || 20}
+            ante={0}
+            nextLevelIn={formatInfo.nextLevelIn}
+          />
+        )}
+
+        {formatInfo && (formatInfo.gameFormat === "sng" || formatInfo.gameFormat === "tournament") && hero && (
+          <TournamentStatsPanel
+            chips={hero.chips}
+            playersRemaining={formatInfo.playersRemaining || players.length}
+            currentBlindLevel={formatInfo.currentBlindLevel}
+            sb={gameState.minBet ? Math.floor(gameState.minBet / 2) : 10}
+            bb={gameState.minBet || 20}
+            ante={0}
+            totalPlayers={players.length}
+          />
+        )}
+
+        {isMultiplayer && hero && (
+          <PlayerAnalyticsPanel
+            stats={{
+              handsPlayed: 0,
+              potsWon: 0,
+              vpip: 0,
+              pfr: 0,
+              showdownCount: 0,
+            }}
+          />
+        )}
+
+        <AnimatePresence>
+          {bombPotActive && <BombPotIndicator visible={bombPotActive} />}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {blindIncrease && (
+            <motion.div
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -50, opacity: 0 }}
+              className="fixed top-20 left-1/2 -translate-x-1/2 z-50 glass rounded-xl px-6 py-3 border border-amber-500/30"
+              style={{ boxShadow: "0 0 20px rgba(245,158,11,0.2)" }}
+            >
+              <div className="text-center">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1">Blinds Increased</div>
+                <div className="text-sm font-bold text-white font-mono">
+                  Level {blindIncrease.level}: {blindIncrease.sb}/{blindIncrease.bb}
+                  {blindIncrease.ante > 0 && <span className="text-gray-400 ml-1">(ante {blindIncrease.ante})</span>}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {elimination && (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="fixed top-1/3 left-1/2 -translate-x-1/2 z-50 glass rounded-xl px-8 py-4 border border-red-500/30"
+              style={{ boxShadow: "0 0 30px rgba(239,68,68,0.2)" }}
+            >
+              <div className="text-center">
+                <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                <div className="text-sm font-bold text-white mb-1">{elimination.displayName} Eliminated</div>
+                <div className="text-xs text-gray-400">
+                  Finished #{elimination.finishPlace}
+                  {elimination.prizeAmount > 0 && (
+                    <span className="text-amber-400 ml-2">Won {elimination.prizeAmount} chips</span>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {tournamentComplete && dismissTournamentComplete && (
+            <TournamentResults
+              results={tournamentComplete.results}
+              prizePool={tournamentComplete.prizePool}
+              onClose={dismissTournamentComplete}
+            />
+          )}
+        </AnimatePresence>
+
         <HandStrengthMeter
           holeCards={heroHoleCards}
           communityCards={gameState.communityCards}
@@ -425,6 +542,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
     connected, waiting, joinTable, leaveTable, addBots, sendChat,
     commitmentHash, shuffleProof, verificationStatus, playerSeedStatus,
     onChainCommitTx, onChainRevealTx,
+    formatInfo, blindIncrease, elimination, tournamentComplete,
+    dismissTournamentComplete, bombPotActive,
   } = useMultiplayerGame(tableId, user?.id || "");
 
   // Fetch table info
@@ -435,13 +554,19 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
       .catch(() => {});
   }, [tableId]);
 
+  const isSNG = tableInfo?.gameFormat === "sng" || tableInfo?.gameFormat === "tournament";
+
   const handleJoin = () => {
-    joinTable(buyIn);
+    const amount = isSNG ? (tableInfo?.buyInAmount || buyIn) : buyIn;
+    joinTable(amount);
     setJoined(true);
     soundEngine.init();
   };
 
   const handleLeave = () => {
+    if (isSNG) {
+      if (!confirm("Leaving a Sit & Go will forfeit your buy-in. Are you sure?")) return;
+    }
     leaveTable();
     navigate("/lobby");
   };
@@ -466,31 +591,57 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
             {tableInfo && (
               <p className="text-xs text-gray-500 font-mono">
                 {tableInfo.smallBlind}/{tableInfo.bigBlind} NLH &middot; {tableInfo.maxPlayers} seats
+                {isSNG && (
+                  <span className="ml-2 text-amber-400">
+                    &middot; {tableInfo.gameFormat === "sng" ? "Sit & Go" : "Tournament"}
+                  </span>
+                )}
               </p>
             )}
           </div>
 
-          <div className="mb-6">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-2">
-              Buy-In Amount
-            </label>
-            <input
-              type="range"
-              min={tableInfo?.minBuyIn || 200}
-              max={Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}
-              value={buyIn}
-              onChange={(e) => setBuyIn(parseInt(e.target.value))}
-              className="w-full mb-2"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>{tableInfo?.minBuyIn || 200}</span>
-              <span className="text-lg font-bold text-amber-400">{buyIn}</span>
-              <span>{Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}</span>
+          {isSNG ? (
+            /* SNG: Fixed buy-in display */
+            <div className="mb-6">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-2">
+                Fixed Buy-In
+              </label>
+              <div className="glass rounded-lg p-4 border border-amber-500/20 text-center">
+                <div className="text-2xl font-bold text-amber-400 font-mono">
+                  {(tableInfo?.buyInAmount || 500).toLocaleString()}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-1">
+                  Starting chips: {(tableInfo?.startingChips || 1500).toLocaleString()}
+                </div>
+              </div>
+              <p className="text-center text-[10px] text-gray-600 mt-2">
+                Balance: {user?.chipBalance?.toLocaleString()} chips
+              </p>
             </div>
-            <p className="text-center text-[10px] text-gray-600 mt-1">
-              Balance: {user?.chipBalance?.toLocaleString()} chips
-            </p>
-          </div>
+          ) : (
+            /* Cash game: Buy-in slider */
+            <div className="mb-6">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-2">
+                Buy-In Amount
+              </label>
+              <input
+                type="range"
+                min={tableInfo?.minBuyIn || 200}
+                max={Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}
+                value={buyIn}
+                onChange={(e) => setBuyIn(parseInt(e.target.value))}
+                className="w-full mb-2"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>{tableInfo?.minBuyIn || 200}</span>
+                <span className="text-lg font-bold text-amber-400">{buyIn}</span>
+                <span>{Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}</span>
+              </div>
+              <p className="text-center text-[10px] text-gray-600 mt-1">
+                Balance: {user?.chipBalance?.toLocaleString()} chips
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button
@@ -503,10 +654,10 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleJoin}
-              disabled={!connected || buyIn > (user?.chipBalance || 0)}
+              disabled={!connected || (isSNG ? (tableInfo?.buyInAmount || 500) : buyIn) > (user?.chipBalance || 0)}
               className="flex-1 gold-gradient rounded-lg py-3 text-sm font-bold tracking-wider text-black disabled:opacity-50"
             >
-              SIT DOWN
+              {isSNG ? "REGISTER" : "SIT DOWN"}
             </motion.button>
           </div>
 
@@ -541,6 +692,12 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         playerSeedStatus={playerSeedStatus}
         onChainCommitTx={onChainCommitTx}
         onChainRevealTx={onChainRevealTx}
+        formatInfo={formatInfo}
+        bombPotActive={bombPotActive}
+        tournamentComplete={tournamentComplete}
+        dismissTournamentComplete={dismissTournamentComplete}
+        blindIncrease={blindIncrease}
+        elimination={elimination}
       />
     </SoundProvider>
   );

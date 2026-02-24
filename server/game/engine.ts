@@ -1,10 +1,12 @@
 import { type CardType, type Suit, type Rank, determineWinners, type PlayerResult } from "./hand-evaluator";
 import { createProvablyFairShuffle, createProvablyFairShuffleMultiParty, type ShuffleProof, type PlayerSeedData } from "./crypto-shuffle";
 import type { VRFClient } from "../blockchain/vrf-client";
+import type { BlindLevel } from "./blind-presets";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export type GamePhase = "waiting" | "collecting-seeds" | "pre-flop" | "flop" | "turn" | "river" | "showdown";
 export type PlayerStatus = "waiting" | "thinking" | "folded" | "all-in" | "checked" | "called" | "raised" | "sitting-out";
+export type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
 
 export interface SeatPlayer {
   id: string;
@@ -36,6 +38,12 @@ export interface GameEngineState {
   lastAction?: { playerId: string; action: string; amount?: number };
   showdownResults?: PlayerResult[];
   commitmentHash?: string;
+  // Format extensions
+  gameFormat: GameFormat;
+  currentBlindLevel: number;
+  nextLevelIn: number; // seconds until next blind level
+  isBombPot: boolean;
+  playersRemaining: number;
 }
 
 export interface HandSummary {
@@ -48,15 +56,29 @@ export interface HandSummary {
   showdownResults?: PlayerResult[];
 }
 
+export interface GameEngineOpts {
+  smallBlind: number;
+  bigBlind: number;
+  timeBankSeconds: number;
+  gameFormat?: GameFormat;
+  blindSchedule?: BlindLevel[];
+  bombPotFrequency?: number;
+  bombPotAnte?: number;
+  ante?: number;
+}
+
 // ─── Game Engine ─────────────────────────────────────────────────────────────
 export class GameEngine {
   private deck: CardType[] = [];
   public state: GameEngineState;
   private turnTimer: ReturnType<typeof setTimeout> | null = null;
   private showdownTimer: ReturnType<typeof setTimeout> | null = null;
+  private blindLevelTimer: ReturnType<typeof setTimeout> | null = null;
   public onStateChange: (() => void) | null = null;
   public onBotTurn: ((playerId: string) => void) | null = null;
   public onHandComplete: ((proof: ShuffleProof, summary: HandSummary) => void) | null = null;
+  public onBlindIncrease: ((level: BlindLevel) => void) | null = null;
+  public onPlayerEliminated: ((playerId: string, displayName: string) => void) | null = null;
 
   private currentShuffleProof: ShuffleProof | null = null;
   private handProofs = new Map<number, ShuffleProof>();
@@ -68,10 +90,19 @@ export class GameEngine {
   private timeBankSeconds: number;
   private actedThisRound: Set<string> = new Set();
 
+  // Format options
+  private gameFormat: GameFormat;
+  private blindSchedule: BlindLevel[];
+  private currentBlindLevel = 0;
+  private bombPotFrequency: number;
+  private bombPotAnte: number;
+  private baseAnte: number;
+  private blindLevelStartTime = 0;
+
   // Seed collection for multi-party entropy
   private seedCommitments = new Map<string, string>();
   private revealedSeeds = new Map<string, string>();
-  private collectedSeeds = new Map<string, string>(); // playerId -> plaintext seed (collected at commit time for multi-party)
+  private collectedSeeds = new Map<string, string>();
   private seedTimer: ReturnType<typeof setTimeout> | null = null;
 
   // VRF integration
@@ -81,11 +112,17 @@ export class GameEngine {
 
   constructor(
     public tableId: string,
-    opts: { smallBlind: number; bigBlind: number; timeBankSeconds: number }
+    opts: GameEngineOpts
   ) {
     this.smallBlind = opts.smallBlind;
     this.bigBlind = opts.bigBlind;
     this.timeBankSeconds = opts.timeBankSeconds;
+    this.gameFormat = opts.gameFormat || "cash";
+    this.blindSchedule = opts.blindSchedule || [];
+    this.bombPotFrequency = opts.bombPotFrequency || 0;
+    this.bombPotAnte = opts.bombPotAnte || 0;
+    this.baseAnte = opts.ante || 0;
+
     this.state = {
       phase: "waiting",
       pot: 0,
@@ -99,7 +136,53 @@ export class GameEngine {
       handNumber: 0,
       players: [],
       sidePots: [],
+      gameFormat: this.gameFormat,
+      currentBlindLevel: 0,
+      nextLevelIn: 0,
+      isBombPot: false,
+      playersRemaining: 0,
     };
+  }
+
+  // ─── Blind Schedule Management ──────────────────────────────────────────
+  startBlindSchedule() {
+    if (this.blindSchedule.length === 0) return;
+    this.currentBlindLevel = 0;
+    this.applyBlindLevel(0);
+    this.scheduleNextLevel();
+  }
+
+  private applyBlindLevel(levelIndex: number) {
+    if (levelIndex >= this.blindSchedule.length) return;
+    const level = this.blindSchedule[levelIndex];
+    this.currentBlindLevel = levelIndex;
+    this.smallBlind = level.sb;
+    this.bigBlind = level.bb;
+    this.baseAnte = level.ante;
+    this.state.currentBlindLevel = levelIndex;
+    this.blindLevelStartTime = Date.now();
+    this.onBlindIncrease?.(level);
+  }
+
+  private scheduleNextLevel() {
+    if (this.currentBlindLevel >= this.blindSchedule.length - 1) return;
+    const currentLevel = this.blindSchedule[this.currentBlindLevel];
+    if (!currentLevel) return;
+
+    this.blindLevelTimer = setTimeout(() => {
+      this.currentBlindLevel++;
+      this.applyBlindLevel(this.currentBlindLevel);
+      this.emitState();
+      this.scheduleNextLevel();
+    }, currentLevel.durationSeconds * 1000);
+  }
+
+  getSecondsUntilNextLevel(): number {
+    if (this.blindSchedule.length === 0 || this.currentBlindLevel >= this.blindSchedule.length - 1) return 0;
+    const currentLevel = this.blindSchedule[this.currentBlindLevel];
+    if (!currentLevel) return 0;
+    const elapsed = (Date.now() - this.blindLevelStartTime) / 1000;
+    return Math.max(0, currentLevel.durationSeconds - elapsed);
   }
 
   // ─── Player Management ─────────────────────────────────────────────────
@@ -116,6 +199,7 @@ export class GameEngine {
     };
     this.state.players.push(player);
     this.state.players.sort((a, b) => a.seatIndex - b.seatIndex);
+    this.state.playersRemaining = this.state.players.filter(p => !p.isSittingOut).length;
     return player;
   }
 
@@ -125,12 +209,23 @@ export class GameEngine {
     const seat = this.state.players[idx].seatIndex;
     const player = this.state.players[idx];
 
+    // SNG/tournament: sit out instead of removing (unless explicitly called from lifecycle)
+    if ((this.gameFormat === "sng" || this.gameFormat === "tournament") && player.chips > 0) {
+      player.isSittingOut = true;
+      player.status = "sitting-out";
+      if (this.state.phase !== "waiting" && this.state.phase !== "showdown" && player.status !== "folded") {
+        player.status = "folded";
+      }
+      return seat;
+    }
+
     // If in middle of hand, fold first
     if (this.state.phase !== "waiting" && this.state.phase !== "showdown" && player.status !== "folded") {
       player.status = "folded";
     }
 
     this.state.players.splice(idx, 1);
+    this.state.playersRemaining = this.state.players.filter(p => !p.isSittingOut).length;
 
     // Check if hand should end
     if (this.state.phase !== "waiting" && this.state.phase !== "showdown") {
@@ -140,6 +235,16 @@ export class GameEngine {
       }
     }
 
+    return seat;
+  }
+
+  // Force remove (for SNG elimination after chips reach 0)
+  forceRemovePlayer(id: string): number | undefined {
+    const idx = this.state.players.findIndex(p => p.id === id);
+    if (idx === -1) return undefined;
+    const seat = this.state.players[idx].seatIndex;
+    this.state.players.splice(idx, 1);
+    this.state.playersRemaining = this.state.players.filter(p => !p.isSittingOut).length;
     return seat;
   }
 
@@ -158,6 +263,15 @@ export class GameEngine {
 
     this.clearTimers();
     this.state.handNumber++;
+
+    // Update nextLevelIn
+    this.state.nextLevelIn = Math.round(this.getSecondsUntilNextLevel());
+
+    // Determine if this is a bomb pot hand
+    this.state.isBombPot = false;
+    if (this.bombPotFrequency > 0 && this.state.handNumber % this.bombPotFrequency === 0) {
+      this.state.isBombPot = true;
+    }
 
     // Check if there are human players for seed collection
     const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0);
@@ -230,10 +344,6 @@ export class GameEngine {
   private finalizeSeedCollection() {
     this.clearSeedTimer();
 
-    // Build player seed data from commitments
-    // At this point we don't have plaintext seeds yet (those come at reveal)
-    // The commitment hashes are stored; actual seed mixing uses a placeholder
-    // that will be verified post-showdown via seed reveals
     const playerSeedData: PlayerSeedData[] = [];
     this.seedCommitments.forEach((hash, playerId) => {
       playerSeedData.push({ playerId, seed: "", commitmentHash: hash });
@@ -258,7 +368,9 @@ export class GameEngine {
   }
 
   private startHandWithSeeds(playerSeedData: PlayerSeedData[]) {
-    this.state.phase = "pre-flop";
+    const isBombPot = this.state.isBombPot;
+
+    this.state.phase = isBombPot ? "flop" : "pre-flop";
     this.state.pot = 0;
     this.state.communityCards = [];
     this.state.sidePots = [];
@@ -288,24 +400,52 @@ export class GameEngine {
       this.state.dealerSeat = eligible[0].seatIndex;
     }
 
-    // Post blinds
-    if (eligible.length === 2) {
-      this.state.smallBlindSeat = this.state.dealerSeat;
-      this.state.bigBlindSeat = this.nextEligibleSeat(this.state.dealerSeat);
+    if (isBombPot) {
+      // Bomb pot: everyone antes, skip pre-flop
+      const anteAmount = this.bombPotAnte || this.bigBlind;
+      for (const p of eligible) {
+        const actual = Math.min(anteAmount, p.chips);
+        p.chips -= actual;
+        p.currentBet = actual;
+        p.totalBetThisHand = actual;
+        this.state.pot += actual;
+        if (p.chips === 0) p.status = "all-in";
+      }
+      this.state.smallBlindSeat = -1;
+      this.state.bigBlindSeat = -1;
     } else {
-      this.state.smallBlindSeat = this.nextEligibleSeat(this.state.dealerSeat);
-      this.state.bigBlindSeat = this.nextEligibleSeat(this.state.smallBlindSeat);
+      // Normal blinds
+      if (eligible.length === 2) {
+        this.state.smallBlindSeat = this.state.dealerSeat;
+        this.state.bigBlindSeat = this.nextEligibleSeat(this.state.dealerSeat);
+      } else {
+        this.state.smallBlindSeat = this.nextEligibleSeat(this.state.dealerSeat);
+        this.state.bigBlindSeat = this.nextEligibleSeat(this.state.smallBlindSeat);
+      }
+
+      const sb = this.getPlayerBySeat(this.state.smallBlindSeat);
+      const bb = this.getPlayerBySeat(this.state.bigBlindSeat);
+      if (sb) this.postBlind(sb, this.smallBlind);
+      if (bb) this.postBlind(bb, this.bigBlind);
+
+      // Post antes from blind schedule or base ante
+      const currentAnte = this.baseAnte;
+      if (currentAnte > 0) {
+        for (const p of eligible) {
+          if (p.seatIndex === this.state.smallBlindSeat || p.seatIndex === this.state.bigBlindSeat) continue;
+          const actual = Math.min(currentAnte, p.chips);
+          p.chips -= actual;
+          p.totalBetThisHand += actual;
+          this.state.pot += actual;
+          if (p.chips === 0) p.status = "all-in";
+        }
+      }
     }
 
-    const sb = this.getPlayerBySeat(this.state.smallBlindSeat);
-    const bb = this.getPlayerBySeat(this.state.bigBlindSeat);
-    if (sb) this.postBlind(sb, this.smallBlind);
-    if (bb) this.postBlind(bb, this.bigBlind);
-
-    this.state.minBet = this.bigBlind;
+    this.state.minBet = isBombPot ? 0 : this.bigBlind;
     this.state.minRaise = this.bigBlind * 2;
 
-    // Deal cards — provably fair shuffle (multi-party if seeds available)
+    // Deal cards — provably fair shuffle
     let deck: CardType[];
     let proof: ShuffleProof;
 
@@ -340,9 +480,32 @@ export class GameEngine {
       p.cards = [this.deck.pop()!, this.deck.pop()!];
     }
 
-    // UTG acts first pre-flop
-    const firstToAct = this.nextEligibleSeat(this.state.bigBlindSeat);
-    this.startTurn(firstToAct);
+    if (isBombPot) {
+      // Deal flop immediately for bomb pot
+      this.deck.pop(); // burn
+      this.state.communityCards.push(this.deck.pop()!, this.deck.pop()!, this.deck.pop()!);
+
+      // Reset bets for flop betting round
+      for (const p of this.state.players) {
+        p.currentBet = 0;
+      }
+      this.state.minBet = 0;
+      this.state.minRaise = this.bigBlind;
+
+      const active = this.state.players.filter(
+        p => p.status !== "folded" && p.status !== "sitting-out" && p.status !== "all-in"
+      );
+      if (active.length === 0) {
+        this.runOutBoard();
+      } else {
+        const firstSeat = this.nextActiveSeat(this.state.dealerSeat);
+        this.startTurn(firstSeat);
+      }
+    } else {
+      // UTG acts first pre-flop
+      const firstToAct = this.nextEligibleSeat(this.state.bigBlindSeat);
+      this.startTurn(firstToAct);
+    }
 
     this.emitState();
   }
@@ -354,6 +517,18 @@ export class GameEngine {
     player.totalBetThisHand = actual;
     this.state.pot += actual;
     if (player.chips === 0) player.status = "all-in";
+  }
+
+  // ─── Elimination Detection ──────────────────────────────────────────────
+  checkEliminations(): string[] {
+    const eliminated: string[] = [];
+    for (const p of this.state.players) {
+      if (p.chips <= 0 && !p.isSittingOut && p.status !== "sitting-out") {
+        eliminated.push(p.id);
+        this.onPlayerEliminated?.(p.id, p.displayName);
+      }
+    }
+    return eliminated;
   }
 
   // ─── Actions ───────────────────────────────────────────────────────────
@@ -546,7 +721,7 @@ export class GameEngine {
     const results = determineWinners(playerHands, this.state.communityCards);
     this.state.showdownResults = results;
 
-    // Calculate pot distribution (simplified - no side pots for now)
+    // Calculate pot distribution
     this.distributePot(results);
 
     // Calculate winners for summary
@@ -560,6 +735,11 @@ export class GameEngine {
     // Fire hand complete callback with proof and summary
     if (this.currentShuffleProof) {
       this.onHandComplete?.(this.currentShuffleProof, this.buildHandSummary(winnerAmounts));
+    }
+
+    // Check for eliminations after pot distribution (SNG/tournament)
+    if (this.gameFormat === "sng" || this.gameFormat === "tournament") {
+      this.checkEliminations();
     }
 
     this.emitState();
@@ -657,6 +837,11 @@ export class GameEngine {
       this.onHandComplete?.(this.currentShuffleProof, this.buildHandSummary(winnerAmounts));
     }
 
+    // Check for eliminations after pot distribution (SNG/tournament)
+    if (this.gameFormat === "sng" || this.gameFormat === "tournament") {
+      this.checkEliminations();
+    }
+
     this.state.phase = "showdown";
     this.state.showdownResults = undefined;
     this.emitState();
@@ -745,9 +930,12 @@ export class GameEngine {
     this.clearTimers();
     this.clearSeedTimer();
     if (this.showdownTimer) { clearTimeout(this.showdownTimer); this.showdownTimer = null; }
+    if (this.blindLevelTimer) { clearTimeout(this.blindLevelTimer); this.blindLevelTimer = null; }
   }
 
   private emitState() {
+    this.state.nextLevelIn = Math.round(this.getSecondsUntilNextLevel());
+    this.state.playersRemaining = this.state.players.filter(p => !p.isSittingOut && p.chips > 0).length;
     this.onStateChange?.();
   }
 
@@ -791,6 +979,12 @@ export class GameEngine {
       shuffleProof: state.phase === "showdown" && this.currentShuffleProof
         ? this.currentShuffleProof
         : undefined,
+      // Format extensions
+      gameFormat: state.gameFormat,
+      currentBlindLevel: state.currentBlindLevel,
+      nextLevelIn: state.nextLevelIn,
+      isBombPot: state.isBombPot,
+      playersRemaining: state.playersRemaining,
       players: state.players.map(p => ({
         id: p.id,
         displayName: p.displayName,

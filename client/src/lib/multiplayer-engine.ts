@@ -44,6 +44,34 @@ function serverToClientGameState(serverState: any): GameState {
 
 export type VerificationStatus = "pending" | "verifying" | "verified" | "failed" | null;
 export type PlayerSeedStatus = "idle" | "committed" | "revealed";
+export type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
+
+export interface FormatInfo {
+  gameFormat: GameFormat;
+  currentBlindLevel: number;
+  nextLevelIn: number;
+  playersRemaining: number;
+  isBombPot: boolean;
+}
+
+export interface BlindIncreaseInfo {
+  level: number;
+  sb: number;
+  bb: number;
+  ante: number;
+}
+
+export interface EliminationInfo {
+  playerId: string;
+  displayName: string;
+  finishPlace: number;
+  prizeAmount: number;
+}
+
+export interface TournamentCompleteInfo {
+  results: EliminationInfo[];
+  prizePool: number;
+}
 
 export function useMultiplayerGame(tableId: string, userId: string) {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -66,6 +94,20 @@ export function useMultiplayerGame(tableId: string, userId: string) {
   const [playerSeedStatus, setPlayerSeedStatus] = useState<PlayerSeedStatus>("idle");
   const [onChainCommitTx, setOnChainCommitTx] = useState<string | null>(null);
   const [onChainRevealTx, setOnChainRevealTx] = useState<string | null>(null);
+
+  // Format-related state
+  const [formatInfo, setFormatInfo] = useState<FormatInfo>({
+    gameFormat: "cash",
+    currentBlindLevel: 0,
+    nextLevelIn: 0,
+    playersRemaining: 0,
+    isBombPot: false,
+  });
+  const [blindIncrease, setBlindIncrease] = useState<BlindIncreaseInfo | null>(null);
+  const [elimination, setElimination] = useState<EliminationInfo | null>(null);
+  const [tournamentComplete, setTournamentComplete] = useState<TournamentCompleteInfo | null>(null);
+  const [bombPotActive, setBombPotActive] = useState(false);
+
   const joinedRef = useRef(false);
   const localSeedRef = useRef<string | null>(null);
 
@@ -96,6 +138,17 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         setPlayers(serverToClientPlayers(state.players || []));
         setGameState(serverToClientGameState(state));
         setWaiting(state.phase === "waiting" || state.phase === "collecting-seeds");
+
+        // Update format info from game state
+        if (state.gameFormat) {
+          setFormatInfo({
+            gameFormat: state.gameFormat,
+            currentBlindLevel: state.currentBlindLevel || 0,
+            nextLevelIn: state.nextLevelIn || 0,
+            playersRemaining: state.playersRemaining || 0,
+            isBombPot: state.isBombPot || false,
+          });
+        }
 
         // Capture commitment hash
         if (state.commitmentHash) {
@@ -175,6 +228,54 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       })
     );
 
+    // Handle format-specific messages
+    unsubs.push(
+      wsClient.on("format_info", (msg: any) => {
+        setFormatInfo({
+          gameFormat: msg.gameFormat,
+          currentBlindLevel: msg.currentBlindLevel,
+          nextLevelIn: msg.nextLevelIn,
+          playersRemaining: msg.playersRemaining,
+          isBombPot: msg.isBombPot,
+        });
+      })
+    );
+
+    unsubs.push(
+      wsClient.on("blind_increase", (msg: any) => {
+        setBlindIncrease({ level: msg.level, sb: msg.sb, bb: msg.bb, ante: msg.ante });
+        setTimeout(() => setBlindIncrease(null), 5000);
+      })
+    );
+
+    unsubs.push(
+      wsClient.on("player_eliminated", (msg: any) => {
+        setElimination({
+          playerId: msg.playerId,
+          displayName: msg.displayName,
+          finishPlace: msg.finishPlace,
+          prizeAmount: msg.prizeAmount,
+        });
+        setTimeout(() => setElimination(null), 5000);
+      })
+    );
+
+    unsubs.push(
+      wsClient.on("tournament_complete", (msg: any) => {
+        setTournamentComplete({
+          results: msg.results,
+          prizePool: msg.prizePool,
+        });
+      })
+    );
+
+    unsubs.push(
+      wsClient.on("bomb_pot_starting", () => {
+        setBombPotActive(true);
+        setTimeout(() => setBombPotActive(false), 3000);
+      })
+    );
+
     unsubs.push(
       wsClient.on("error", (msg: any) => {
         setError(msg.message);
@@ -249,5 +350,12 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     playerSeedStatus,
     onChainCommitTx,
     onChainRevealTx,
+    // Format extensions
+    formatInfo,
+    blindIncrease,
+    elimination,
+    tournamentComplete,
+    dismissTournamentComplete: () => setTournamentComplete(null),
+    bombPotActive,
   };
 }

@@ -1,4 +1,4 @@
-import { GameEngine, type HandSummary } from "./engine";
+import { GameEngine, type HandSummary, type GameFormat } from "./engine";
 import { BotPlayer } from "./bot-player";
 import { storage } from "../storage";
 import { sendGameStateToTable, broadcastToTable } from "../websocket";
@@ -6,10 +6,13 @@ import type { ShuffleProof } from "./crypto-shuffle";
 import { blockchainConfig } from "../blockchain/config";
 import { VRFClient } from "../blockchain/vrf-client";
 import { ContractClient } from "../blockchain/contract-client";
+import { SNGLifecycle, type EliminationInfo } from "./format-lifecycle";
+import { STANDARD_SNG_SCHEDULE, getDefaultPayouts, type BlindLevel, type PayoutEntry } from "./blind-presets";
 
 export interface TableInstance {
   engine: GameEngine;
   bots: BotPlayer[];
+  lifecycle: SNGLifecycle | null;
   config: {
     maxPlayers: number;
     smallBlind: number;
@@ -18,6 +21,9 @@ export interface TableInstance {
     maxBuyIn: number;
     timeBankSeconds: number;
     allowBots: boolean;
+    gameFormat: GameFormat;
+    buyInAmount: number;
+    startingChips: number;
   };
   getStateForPlayer(playerId: string): any;
 }
@@ -50,15 +56,35 @@ class TableManager {
     const tableRow = await storage.getTable(tableId);
     if (!tableRow) throw new Error("Table not found");
 
+    const gameFormat = (tableRow.gameFormat || "cash") as GameFormat;
+    const blindSchedule = (tableRow.blindSchedule as BlindLevel[]) || [];
+
     const engine = new GameEngine(tableId, {
       smallBlind: tableRow.smallBlind,
       bigBlind: tableRow.bigBlind,
       timeBankSeconds: tableRow.timeBankSeconds,
+      gameFormat,
+      blindSchedule,
+      bombPotFrequency: tableRow.bombPotFrequency || 0,
+      bombPotAnte: tableRow.bombPotAnte || 0,
+      ante: tableRow.ante,
     });
 
     // Pass VRF client if available
     if (this.vrfClient) {
       engine.vrfClient = this.vrfClient;
+    }
+
+    // Create lifecycle for SNG
+    let lifecycle: SNGLifecycle | null = null;
+    if (gameFormat === "sng") {
+      lifecycle = new SNGLifecycle(
+        tableRow.maxPlayers,
+        tableRow.buyInAmount || tableRow.minBuyIn,
+        tableRow.startingChips || 1500,
+        (tableRow.payoutStructure as PayoutEntry[]) || null,
+        blindSchedule.length > 0 ? blindSchedule : STANDARD_SNG_SCHEDULE,
+      );
     }
 
     // Track phase for commitment broadcasts
@@ -75,8 +101,15 @@ class TableManager {
         } as any);
       }
 
+      // Broadcast bomb pot starting
+      if (engine.state.isBombPot && engine.state.phase === "flop" && lastPhase !== "flop") {
+        broadcastToTable(tableId, {
+          type: "bomb_pot_starting",
+        } as any);
+      }
+
       // Broadcast commitment hash when a new hand starts
-      if (engine.state.phase === "pre-flop" && lastPhase !== "pre-flop") {
+      if ((engine.state.phase === "pre-flop" || (engine.state.isBombPot && engine.state.phase === "flop")) && lastPhase !== engine.state.phase) {
         const commitment = engine.getCurrentCommitment();
         if (commitment) {
           broadcastToTable(tableId, {
@@ -85,7 +118,7 @@ class TableManager {
             handNumber: engine.state.handNumber,
           } as any);
 
-          // Fire blockchain commitment in background and broadcast TX hash
+          // Fire blockchain commitment in background
           if (this.contractClient) {
             this.contractClient.commitHand(
               tableId,
@@ -105,6 +138,18 @@ class TableManager {
         }
       }
       lastPhase = engine.state.phase;
+
+      // Broadcast format info
+      if (gameFormat !== "cash") {
+        broadcastToTable(tableId, {
+          type: "format_info",
+          gameFormat,
+          currentBlindLevel: engine.state.currentBlindLevel,
+          nextLevelIn: engine.state.nextLevelIn,
+          playersRemaining: engine.state.playersRemaining,
+          isBombPot: engine.state.isBombPot,
+        } as any);
+      }
 
       sendGameStateToTable(tableId);
     };
@@ -131,7 +176,7 @@ class TableManager {
         onChainRevealTx: null,
       }).catch(() => {});
 
-      // Fire blockchain reveal in background and broadcast TX hash
+      // Fire blockchain reveal in background
       if (this.contractClient) {
         const playerSeedStrings = (proof.playerSeeds || []).map(ps => ps.seed);
         this.contractClient.revealHand(
@@ -170,6 +215,46 @@ class TableManager {
       } as any);
     };
 
+    // Blind level increase callback
+    engine.onBlindIncrease = (level: BlindLevel) => {
+      broadcastToTable(tableId, {
+        type: "blind_increase",
+        level: level.level,
+        sb: level.sb,
+        bb: level.bb,
+        ante: level.ante,
+      } as any);
+    };
+
+    // Player eliminated callback (SNG/tournament)
+    engine.onPlayerEliminated = (playerId: string, displayName: string) => {
+      if (lifecycle) {
+        const info = lifecycle.handleElimination(playerId, displayName);
+        if (info) {
+          broadcastToTable(tableId, {
+            type: "player_eliminated",
+            playerId: info.playerId,
+            displayName: info.displayName,
+            finishPlace: info.finishPlace,
+            prizeAmount: info.prizeAmount,
+          } as any);
+
+          // Credit prize to user balance
+          if (info.prizeAmount > 0 && !playerId.startsWith("bot-")) {
+            this.creditPrize(playerId, info.prizeAmount, tableId).catch(() => {});
+          }
+
+          // Remove eliminated player from engine
+          engine.forceRemovePlayer(playerId);
+
+          // Check if SNG is complete
+          if (lifecycle.isComplete()) {
+            this.handleSNGComplete(tableId, lifecycle);
+          }
+        }
+      }
+    };
+
     // When a bot needs to act
     engine.onBotTurn = (botId: string) => {
       const inst = this.tables.get(tableId);
@@ -185,6 +270,7 @@ class TableManager {
     instance = {
       engine,
       bots: [],
+      lifecycle,
       config: {
         maxPlayers: tableRow.maxPlayers,
         smallBlind: tableRow.smallBlind,
@@ -193,12 +279,49 @@ class TableManager {
         maxBuyIn: tableRow.maxBuyIn,
         timeBankSeconds: tableRow.timeBankSeconds,
         allowBots: tableRow.allowBots,
+        gameFormat,
+        buyInAmount: tableRow.buyInAmount || tableRow.minBuyIn,
+        startingChips: tableRow.startingChips || 1500,
       },
       getStateForPlayer: (playerId: string) => engine.getStateForPlayer(playerId),
     };
 
     this.tables.set(tableId, instance);
     return instance;
+  }
+
+  private async creditPrize(userId: string, amount: number, tableId: string) {
+    const user = await storage.getUser(userId);
+    if (!user) return;
+    await storage.updateUser(userId, { chipBalance: user.chipBalance + amount });
+    await storage.createTransaction({
+      userId,
+      type: "prize",
+      amount,
+      balanceBefore: user.chipBalance,
+      balanceAfter: user.chipBalance + amount,
+      tableId,
+      description: `Tournament prize (${amount} chips)`,
+    });
+  }
+
+  private handleSNGComplete(tableId: string, lifecycle: SNGLifecycle) {
+    const results = lifecycle.getResults();
+    broadcastToTable(tableId, {
+      type: "tournament_complete",
+      results,
+      prizePool: lifecycle.prizePool,
+    } as any);
+
+    // Clean up table after delay
+    setTimeout(() => {
+      const instance = this.tables.get(tableId);
+      if (instance) {
+        instance.engine.cleanup();
+        instance.bots.forEach(b => b.cleanup());
+        this.tables.delete(tableId);
+      }
+    }, 10000);
   }
 
   async joinTable(
@@ -209,9 +332,76 @@ class TableManager {
     requestedSeat?: number
   ): Promise<{ ok: boolean; error?: string }> {
     const instance = await this.ensureTable(tableId);
-    const { engine, config } = instance;
+    const { engine, config, lifecycle } = instance;
 
-    // Validate buy-in
+    // SNG path: fixed buy-in
+    if (config.gameFormat === "sng" && lifecycle) {
+      const fixedBuyIn = config.buyInAmount;
+
+      // Check if player already registered
+      if (lifecycle.registeredPlayers.has(userId)) {
+        return { ok: false, error: "Already registered" };
+      }
+      if (lifecycle.status !== "registering") {
+        return { ok: false, error: "Tournament already started" };
+      }
+
+      // Deduct fixed buy-in from user balance
+      const user = await storage.getUser(userId);
+      if (!user) return { ok: false, error: "User not found" };
+      if (user.chipBalance < fixedBuyIn) {
+        return { ok: false, error: "Insufficient chips for buy-in" };
+      }
+
+      await storage.updateUser(userId, { chipBalance: user.chipBalance - fixedBuyIn });
+      await storage.createTransaction({
+        userId,
+        type: "buyin",
+        amount: -fixedBuyIn,
+        balanceBefore: user.chipBalance,
+        balanceAfter: user.chipBalance - fixedBuyIn,
+        tableId,
+        description: `SNG buy-in`,
+      });
+
+      // Register in lifecycle
+      lifecycle.register(userId, displayName, fixedBuyIn);
+
+      // Find available seat
+      const occupiedSeats = new Set(engine.state.players.map(p => p.seatIndex));
+      let seat = requestedSeat;
+      if (seat === undefined || occupiedSeats.has(seat)) {
+        for (let i = 0; i < config.maxPlayers; i++) {
+          if (!occupiedSeats.has(i)) { seat = i; break; }
+        }
+      }
+      if (seat === undefined) return { ok: false, error: "No seats available" };
+
+      // Add with starting chips (not buy-in amount)
+      engine.addPlayer(userId, displayName, seat, config.startingChips, false);
+      await storage.addTablePlayer(tableId, userId, seat, config.startingChips);
+
+      broadcastToTable(tableId, {
+        type: "player_joined",
+        player: { id: userId, displayName, seatIndex: seat, chips: config.startingChips },
+      }, userId);
+
+      // Auto-start when full
+      if (lifecycle.canStart()) {
+        lifecycle.start();
+        engine.startBlindSchedule();
+        broadcastToTable(tableId, {
+          type: "tournament_status",
+          status: "playing",
+          prizePool: lifecycle.prizePool,
+        } as any);
+        setTimeout(() => engine.startHand(), 2000);
+      }
+
+      return { ok: true };
+    }
+
+    // Normal cash game path
     if (buyIn < config.minBuyIn || buyIn > config.maxBuyIn) {
       return { ok: false, error: `Buy-in must be between ${config.minBuyIn} and ${config.maxBuyIn}` };
     }
@@ -279,6 +469,33 @@ class TableManager {
 
     const player = instance.engine.getPlayer(userId);
     if (!player) return;
+
+    // SNG: forfeit (eliminate with last place)
+    if (instance.config.gameFormat === "sng" && instance.lifecycle && instance.lifecycle.status === "playing") {
+      const info = instance.lifecycle.forfeit(userId, player.displayName);
+      if (info) {
+        broadcastToTable(tableId, {
+          type: "player_eliminated",
+          playerId: info.playerId,
+          displayName: info.displayName,
+          finishPlace: info.finishPlace,
+          prizeAmount: info.prizeAmount,
+        } as any);
+
+        if (info.prizeAmount > 0) {
+          await this.creditPrize(userId, info.prizeAmount, tableId);
+        }
+
+        instance.engine.forceRemovePlayer(userId);
+        await storage.removeTablePlayer(tableId, userId);
+        broadcastToTable(tableId, { type: "player_left", userId, seatIndex: player.seatIndex });
+
+        if (instance.lifecycle.isComplete()) {
+          this.handleSNGComplete(tableId, instance.lifecycle);
+        }
+        return;
+      }
+    }
 
     const cashOut = player.chips;
     const seatIndex = player.seatIndex;
@@ -377,12 +594,35 @@ class TableManager {
 
       const botId = `bot-${tableId}-${botIndex}`;
       const botName = BOT_NAMES[botIndex];
-      const botChips = config.minBuyIn + Math.floor(Math.random() * (config.maxBuyIn - config.minBuyIn));
+
+      // SNG bots get starting chips, cash bots get random buy-in
+      const botChips = config.gameFormat === "sng"
+        ? config.startingChips
+        : config.minBuyIn + Math.floor(Math.random() * (config.maxBuyIn - config.minBuyIn));
 
       engine.addPlayer(botId, botName, seat, botChips, true);
       const bot = new BotPlayer(botId, botName);
       instance.bots.push(bot);
+
+      // Register bot in SNG lifecycle
+      if (instance.lifecycle && config.gameFormat === "sng") {
+        instance.lifecycle.register(botId, botName, config.buyInAmount);
+      }
+
       botIndex++;
+    }
+
+    // SNG auto-start when full
+    if (config.gameFormat === "sng" && instance.lifecycle && instance.lifecycle.canStart()) {
+      instance.lifecycle.start();
+      engine.startBlindSchedule();
+      broadcastToTable(tableId, {
+        type: "tournament_status",
+        status: "playing",
+        prizePool: instance.lifecycle.prizePool,
+      } as any);
+      setTimeout(() => engine.startHand(), 1000);
+      return;
     }
 
     // Start hand if enough players

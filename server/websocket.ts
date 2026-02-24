@@ -32,7 +32,7 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "game_state"; state: any }
   | { type: "player_joined"; player: any }
-  | { type: "player_left"; userId: string; seatIndex: number }
+  | { type: "player_left"; userId: string; seatIndex: number; displayName?: string }
   | { type: "action_performed"; userId: string; action: string; amount?: number }
   | { type: "new_hand"; handNumber: number; dealerSeat: number }
   | { type: "community_cards"; cards: any[]; phase: string }

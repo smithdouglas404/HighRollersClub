@@ -604,22 +604,14 @@ function PostProcessing({ quality }: { quality: QualityLevel }) {
 
   return (
     <EffectComposer multisampling={0}>
-      {cfg.bloom && (
-        <Bloom
-          intensity={0.35}
-          luminanceThreshold={0.6}
-          luminanceSmoothing={0.4}
-          mipmapBlur
-        />
-      )}
-      {cfg.ao && (
-        <N8AO
-          aoRadius={0.8}
-          intensity={1.5}
-          distanceFalloff={0.5}
-        />
-      )}
-      <Vignette eskil={false} offset={0.15} darkness={0.6} />
+      <Bloom
+        intensity={quality === "high" ? 0.35 : 0.3}
+        luminanceThreshold={quality === "high" ? 0.6 : 0.65}
+        luminanceSmoothing={0.4}
+        mipmapBlur
+      />
+      {cfg.ao ? <N8AO aoRadius={0.8} intensity={1.5} distanceFalloff={0.5} /> : <></>}
+      <Vignette eskil={false} offset={0.15} darkness={quality === "high" ? 0.6 : 0.5} />
     </EffectComposer>
   );
 }

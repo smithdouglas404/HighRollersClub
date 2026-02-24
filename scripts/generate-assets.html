@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Asset Generator</title>
+  <script src="https://js.puter.com/v2/"></script>
+  <style>
+    body { background: #111; color: #eee; font-family: monospace; padding: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { background: #222; border-radius: 8px; padding: 12px; }
+    .card img { width: 100%; border-radius: 4px; }
+    .card h3 { font-size: 12px; margin: 8px 0 4px; color: #0ff; }
+    .card p { font-size: 10px; color: #666; }
+    button { background: #0ff; color: #000; border: none; padding: 12px 24px; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 14px; }
+    button:disabled { opacity: 0.5; }
+    #status { margin: 16px 0; color: #0f0; }
+    a { color: #0ff; }
+  </style>
+</head>
+<body>
+  <h1>Poker Asset Generator</h1>
+  <p>Uses Puter.js (free, no API key) to generate cinematic game assets</p>
+  <button onclick="generateAll()" id="btn">Generate All Assets</button>
+  <button onclick="downloadAll()" id="dlbtn" disabled>Download All</button>
+  <div id="status"></div>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const assets = [
+      {
+        name: "player_seated_1",
+        prompt: "3D rendered cyberpunk male poker player seated at dark poker table, muscular build, dark tactical vest with glowing cyan accents, short dark hair, dramatic rim lighting from above, dark moody atmosphere, cinematic quality, photorealistic, dark teal and black color scheme, facing camera, upper body visible, 4k quality"
+      },
+      {
+        name: "player_seated_2",
+        prompt: "3D rendered cyberpunk female poker player seated at dark poker table, sleek armored jacket with neon teal highlights, silver hair pulled back, confident expression, dramatic rim lighting, dark moody cinematic atmosphere, photorealistic, dark teal and black color scheme, facing camera, upper body visible, 4k quality"
+      },
+      {
+        name: "player_seated_3",
+        prompt: "3D rendered cyberpunk male poker player seated at dark poker table, hooded figure with glowing green visor, mysterious dark outfit, mechanical arm visible, dramatic backlighting, dark moody cinematic atmosphere, photorealistic, dark teal and black color scheme, facing camera, upper body visible, 4k quality"
+      },
+      {
+        name: "player_seated_4",
+        prompt: "3D rendered cyberpunk poker player seated at dark poker table, bald head with facial tattoos and cybernetic eye implant glowing amber, leather jacket, intimidating presence, dramatic rim lighting from above, dark moody cinematic atmosphere, photorealistic, dark teal and black color scheme, facing camera, upper body visible, 4k quality"
+      },
+      {
+        name: "player_seated_5",
+        prompt: "3D rendered cyberpunk female poker player seated at dark poker table, elegant dark dress with holographic patterns, long dark hair, jewelry with glowing gems, sophisticated and dangerous look, dramatic rim lighting, dark moody cinematic atmosphere, photorealistic, dark teal and black color scheme, facing camera, upper body visible, 4k quality"
+      },
+      {
+        name: "player_seated_6",
+        prompt: "3D rendered cyberpunk male poker player seated at dark poker table, heavy combat armor with scratches and battle damage, full face helmet with glowing red visor, imposing military figure, dramatic rim lighting, dark moody cinematic atmosphere, photorealistic, dark teal and black color scheme, facing camera, upper body visible, 4k quality"
+      },
+      {
+        name: "server_room_bg",
+        prompt: "Cinematic server room interior, rows of illuminated server racks with blue and teal LED lights, depth of field blur, dark atmospheric lighting, volumetric light rays, cable management visible, industrial cyberpunk aesthetic, photorealistic, 4k, ultra wide angle, dark teal and deep blue color palette"
+      },
+      {
+        name: "lion_shield_logo",
+        prompt: "Golden lion head logo with royal crown on ornate shield emblem, dark background, dramatic golden glow and light rays emanating from behind, highly detailed metallic texture, heraldic style, premium luxury brand logo, centered composition, 4k quality, isolated on pure black background"
+      },
+      {
+        name: "premium_felt_texture",
+        prompt: "Top-down view of premium dark teal poker table felt texture, subtle fabric weave pattern visible, even lighting, seamless tileable texture, rich deep teal green color, slight vignette at edges, photorealistic fabric texture, 4k quality"
+      },
+      {
+        name: "chip_stack_render",
+        prompt: "3D rendered stack of premium poker chips on dark surface, black and gold and teal colored chips, dramatic side lighting, cinematic depth of field, photorealistic, dark background, casino atmosphere, 4k quality, isolated"
+      },
+      {
+        name: "card_back_design",
+        prompt: "Premium playing card back design, dark navy and gold color scheme, intricate geometric pattern with lion emblem in center, luxury feel, ornate border, symmetrical design, dark background, flat 2D design, 4k quality"
+      },
+      {
+        name: "marketplace_avatar_mythic",
+        prompt: "Animated mythic cyberpunk character portrait, 'The Cyber Source', glowing blue energy emanating from face and eyes, dark hood, cybernetic enhancements, electrical sparks, dramatic blue and teal lighting, dark background, fantasy game character art style, 4k quality"
+      },
+      {
+        name: "marketplace_theme_space",
+        prompt: "Deep space poker table theme, cosmic nebula and stars visible through transparent table surface, purple and blue galaxy colors, floating asteroids, science fiction atmosphere, game UI preview, dark dramatic lighting, 4k quality"
+      },
+      {
+        name: "marketplace_theme_demonic",
+        prompt: "Demonic dark poker table theme, hellfire and lava visible beneath table surface, red and orange ember particles, dark gothic frame, skull decorations, sinister atmosphere, game UI preview, dramatic red and black lighting, 4k quality"
+      },
+      {
+        name: "member_portrait_1",
+        prompt: "Detailed cyberpunk character portrait for poker game, female warrior with red mohawk and cybernetic eye, battle scars, confident smirk, dark background with teal rim lighting, circular crop friendly, game avatar style, 4k quality"
+      },
+      {
+        name: "member_portrait_2",
+        prompt: "Detailed cyberpunk character portrait for poker game, male aristocrat with silver beard and monocle augmented reality display, dark suit, distinguished look, dark background with golden rim lighting, circular crop friendly, game avatar style, 4k quality"
+      },
+      {
+        name: "member_portrait_3",
+        prompt: "Detailed cyberpunk character portrait for poker game, young hacker with neon green hair and holographic glasses, hoodie, mischievous expression, dark background with green rim lighting, circular crop friendly, game avatar style, 4k quality"
+      }
+    ];
+
+    const generated = {};
+    let completed = 0;
+
+    function log(msg) {
+      document.getElementById('status').innerHTML += msg + '<br>';
+    }
+
+    async function generateOne(asset, index) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = 'card-' + index;
+      card.innerHTML = `<h3>${asset.name}</h3><p>Generating...</p>`;
+      document.getElementById('grid').appendChild(card);
+
+      try {
+        const img = await puter.ai.txt2img(asset.prompt, { model: 'dall-e-3', quality: 'hd' });
+        card.innerHTML = `<h3>${asset.name}</h3>`;
+        card.appendChild(img);
+
+        // Store the image src for download
+        generated[asset.name] = img.src;
+        completed++;
+        log(`[${completed}/${assets.length}] ${asset.name} generated`);
+
+        if (completed === assets.length) {
+          document.getElementById('dlbtn').disabled = false;
+          log('<strong>ALL ASSETS GENERATED! Click Download All.</strong>');
+        }
+      } catch (err) {
+        card.innerHTML = `<h3>${asset.name}</h3><p style="color:red">Error: ${err.message}</p>`;
+        log(`ERROR: ${asset.name} - ${err.message}`);
+
+        // Retry with flux model
+        try {
+          log(`Retrying ${asset.name} with flux model...`);
+          const img2 = await puter.ai.txt2img(asset.prompt, { model: 'black-forest-labs/FLUX.1-schnell' });
+          card.innerHTML = `<h3>${asset.name}</h3>`;
+          card.appendChild(img2);
+          generated[asset.name] = img2.src;
+          completed++;
+          log(`[${completed}/${assets.length}] ${asset.name} generated (flux fallback)`);
+        } catch (err2) {
+          log(`FAILED: ${asset.name} - ${err2.message}`);
+          completed++;
+        }
+
+        if (completed === assets.length) {
+          document.getElementById('dlbtn').disabled = false;
+          log('<strong>Generation complete. Click Download All.</strong>');
+        }
+      }
+    }
+
+    async function generateAll() {
+      document.getElementById('btn').disabled = true;
+      document.getElementById('grid').innerHTML = '';
+      completed = 0;
+      log('Starting generation of ' + assets.length + ' assets...');
+
+      // Generate in batches of 3 to avoid rate limits
+      for (let i = 0; i < assets.length; i += 3) {
+        const batch = assets.slice(i, i + 3);
+        await Promise.all(batch.map((asset, j) => generateOne(asset, i + j)));
+        if (i + 3 < assets.length) {
+          log('Waiting 2s before next batch...');
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    }
+
+    function downloadAll() {
+      for (const [name, src] of Object.entries(generated)) {
+        const a = document.createElement('a');
+        a.href = src;
+        a.download = name + '.png';
+        a.click();
+      }
+    }
+  </script>
+</body>
+</html>

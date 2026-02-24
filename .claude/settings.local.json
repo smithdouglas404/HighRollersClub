@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:developer.puter.com)",
+      "Bash(node scripts/generate-assets.mjs 2>&1)",
+      "Bash(kill %1 2>/dev/null; pkill -f \"generate-assets\" 2>/dev/null; echo \"stopped\")",
+      "WebFetch(domain:enter.pollinations.ai)"
+    ]
+  }
+}

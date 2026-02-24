@@ -293,6 +293,8 @@ export class MemStorage implements IStorage {
       startingChips: data.startingChips ?? 1500,
       payoutStructure: data.payoutStructure || null,
       tournamentId: null,
+      rakePercent: data.rakePercent ?? 0,
+      rakeCap: data.rakeCap ?? 0,
       createdAt: new Date(),
     };
     this.tablesList.set(id, table);

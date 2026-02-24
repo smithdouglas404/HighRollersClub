@@ -234,11 +234,11 @@ export class GameEngine {
 
     // SNG/tournament: sit out instead of removing (unless explicitly called from lifecycle)
     if ((this.gameFormat === "sng" || this.gameFormat === "tournament") && player.chips > 0) {
-      player.isSittingOut = true;
-      player.status = "sitting-out";
       if (this.state.phase !== "waiting" && this.state.phase !== "showdown" && player.status !== "folded") {
         player.status = "folded";
       }
+      player.isSittingOut = true;
+      player.status = "sitting-out";
       return seat;
     }
 

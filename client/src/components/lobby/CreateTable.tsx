@@ -119,7 +119,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                     onClick={() => {
                       setGameFormat(opt.key);
                       if (opt.key === "heads_up") setMaxPlayers(2);
-                      else if (maxPlayers === 2 && opt.key !== "heads_up") setMaxPlayers(6);
+                      else if (maxPlayers === 2) setMaxPlayers(6);
                     }}
                     className={`p-2.5 rounded-lg border text-center transition-all ${
                       isSelected

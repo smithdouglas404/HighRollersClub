@@ -17,7 +17,7 @@ export interface WsClient {
 export type ClientMessage =
   | { type: "join_table"; tableId: string; seatIndex?: number; buyIn: number }
   | { type: "leave_table" }
-  | { type: "player_action"; action: "fold" | "check" | "call" | "raise"; amount?: number }
+  | { type: "player_action"; action: "fold" | "check" | "call" | "raise"; amount?: number; actionNumber?: number }
   | { type: "sit_out" }
   | { type: "sit_in" }
   | { type: "add_chips"; amount: number }
@@ -137,12 +137,22 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
       tableId: null,
     };
 
-    // Replace any existing connection for this user
+    // Replace any existing connection for this user (reconnection)
     const existing = clients.get(user.id);
     if (existing) {
+      // Reconnection: transfer table context and notify table manager
+      if (existing.tableId) {
+        client.tableId = existing.tableId;
+        tableManager.handleReconnect(existing.tableId, user.id);
+      }
       existing.ws.close(1000, "Replaced by new connection");
     }
     clients.set(user.id, client);
+
+    // If reconnecting to a table, send current game state
+    if (client.tableId) {
+      sendGameStateToTable(client.tableId);
+    }
 
     ws.on("message", async (data) => {
       try {
@@ -154,7 +164,7 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
     });
 
     ws.on("close", () => {
-      // Handle disconnect
+      // Handle disconnect — grace period handled by table manager
       if (client.tableId) {
         tableManager.handleDisconnect(client.tableId, client.userId);
       }
@@ -162,6 +172,9 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
     });
 
     ws.on("error", () => {
+      if (client.tableId) {
+        tableManager.handleDisconnect(client.tableId, client.userId);
+      }
       clients.delete(user.id);
     });
   });
@@ -201,12 +214,20 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         client.tableId,
         client.userId,
         msg.action,
-        msg.amount
+        msg.amount,
+        msg.actionNumber
       );
       if (!result.ok) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
       }
+      // Broadcast specific action performed (lightweight update)
+      broadcastToTable(client.tableId, {
+        type: "action_performed",
+        userId: client.userId,
+        action: msg.action,
+        amount: msg.amount,
+      });
       sendGameStateToTable(client.tableId);
       break;
     }

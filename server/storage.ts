@@ -687,23 +687,28 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
   async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number) {
-    const existing = await this.getPlayerStats(userId);
-    if (!existing) {
-      await this.db.insert(playerStats).values({
-        userId,
-        [field]: amount,
-      });
-      return;
-    }
-    const update: any = { updatedAt: new Date() };
-    update[field] = existing[field] + amount;
+    // Use raw SQL upsert to avoid race conditions when two concurrent
+    // increments (handsPlayed + potsWon) fire for the same user
+    const colName = field === "handsPlayed" ? "hands_played" : "pots_won";
     if (field === "potsWon") {
-      update.currentWinStreak = existing.currentWinStreak + amount;
-      if (update.currentWinStreak > existing.bestWinStreak) {
-        update.bestWinStreak = update.currentWinStreak;
-      }
+      await this.db.execute(sql`
+        INSERT INTO player_stats (id, user_id, ${sql.raw(colName)}, current_win_streak, best_win_streak)
+        VALUES (gen_random_uuid(), ${userId}, ${amount}, ${amount}, ${amount})
+        ON CONFLICT (user_id) DO UPDATE SET
+          ${sql.raw(colName)} = player_stats.${sql.raw(colName)} + ${amount},
+          current_win_streak = player_stats.current_win_streak + ${amount},
+          best_win_streak = GREATEST(player_stats.best_win_streak, player_stats.current_win_streak + ${amount}),
+          updated_at = NOW()
+      `);
+    } else {
+      await this.db.execute(sql`
+        INSERT INTO player_stats (id, user_id, ${sql.raw(colName)})
+        VALUES (gen_random_uuid(), ${userId}, ${amount})
+        ON CONFLICT (user_id) DO UPDATE SET
+          ${sql.raw(colName)} = player_stats.${sql.raw(colName)} + ${amount},
+          updated_at = NOW()
+      `);
     }
-    await this.db.update(playerStats).set(update).where(eq(playerStats.id, existing.id));
   }
   async resetDailyStats(userId: string) {
     const existing = await this.getPlayerStats(userId);

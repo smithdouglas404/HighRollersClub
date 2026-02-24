@@ -534,11 +534,17 @@ class TableManager {
     tableId: string,
     userId: string,
     action: string,
-    amount?: number
+    amount?: number,
+    actionNumber?: number
   ): { ok: boolean; error?: string } {
     const instance = this.tables.get(tableId);
     if (!instance) return { ok: false, error: "Table not found" };
-    return instance.engine.handleAction(userId, action, amount);
+
+    // Verify player is actually seated at this table (seat ownership check)
+    const player = instance.engine.getPlayer(userId);
+    if (!player) return { ok: false, error: "Not seated at this table" };
+
+    return instance.engine.handleAction(userId, action, amount, actionNumber);
   }
 
   setSitOut(tableId: string, userId: string, sitOut: boolean) {
@@ -551,30 +557,86 @@ class TableManager {
     }
   }
 
+  // Track disconnect grace timers for reconnection
+  private disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
   handleDisconnect(tableId: string, userId: string) {
     const instance = this.tables.get(tableId);
     if (!instance) return;
     const player = instance.engine.getPlayer(userId);
-    if (player) {
-      player.isConnected = false;
-      // Auto fold after a short timeout if disconnected during their turn
-      if (player.seatIndex === instance.engine.state.currentTurnSeat) {
-        setTimeout(() => {
-          if (!player.isConnected) {
-            instance.engine.handleAction(userId, "fold");
-          }
-        }, 10000);
-      }
+    if (!player) return;
+
+    player.isConnected = false;
+
+    // If it's their turn, auto-fold after a short timeout
+    if (player.seatIndex === instance.engine.state.currentTurnSeat) {
+      setTimeout(() => {
+        if (!player.isConnected) {
+          instance.engine.handleAction(userId, "fold");
+          sendGameStateToTable(tableId);
+        }
+      }, 10000);
     }
+
+    // Start reconnection grace period (60 seconds)
+    // If player doesn't reconnect, mark them as sitting-out
+    const timerKey = `${tableId}:${userId}`;
+    // Clear any existing timer
+    const existingTimer = this.disconnectTimers.get(timerKey);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    const graceTimer = setTimeout(() => {
+      this.disconnectTimers.delete(timerKey);
+      const inst = this.tables.get(tableId);
+      if (!inst) return;
+      const p = inst.engine.getPlayer(userId);
+      if (!p || p.isConnected) return;
+
+      // Grace period expired — mark sitting out
+      p.isSittingOut = true;
+      if (p.status !== "folded") {
+        p.status = "sitting-out";
+      }
+
+      // If it's somehow their turn, force fold
+      if (p.seatIndex === inst.engine.state.currentTurnSeat) {
+        inst.engine.handleAction(userId, "fold");
+      }
+
+      broadcastToTable(tableId, {
+        type: "player_left",
+        userId,
+        seatIndex: p.seatIndex,
+      });
+      sendGameStateToTable(tableId);
+    }, 60000);
+
+    this.disconnectTimers.set(timerKey, graceTimer);
   }
 
   handleReconnect(tableId: string, userId: string) {
     const instance = this.tables.get(tableId);
     if (!instance) return;
     const player = instance.engine.getPlayer(userId);
-    if (player) {
-      player.isConnected = true;
+    if (!player) return;
+
+    player.isConnected = true;
+
+    // Cancel disconnect grace timer
+    const timerKey = `${tableId}:${userId}`;
+    const timer = this.disconnectTimers.get(timerKey);
+    if (timer) {
+      clearTimeout(timer);
+      this.disconnectTimers.delete(timerKey);
     }
+
+    // If player was marked sitting out from disconnect, restore them
+    if (player.isSittingOut && player.chips > 0) {
+      player.isSittingOut = false;
+      player.status = "waiting";
+    }
+
+    sendGameStateToTable(tableId);
   }
 
   async addBots(tableId: string): Promise<void> {

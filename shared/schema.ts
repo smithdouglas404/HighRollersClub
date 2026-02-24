@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -280,7 +280,7 @@ export const playerStats = pgTable("player_stats", {
   lastResetAt: timestamp("last_reset_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
-  index("player_stats_user_idx").on(table.userId),
+  uniqueIndex("player_stats_user_idx").on(table.userId),
 ]);
 
 export type PlayerStat = typeof playerStats.$inferSelect;

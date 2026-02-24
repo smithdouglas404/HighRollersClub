@@ -20,6 +20,7 @@ export interface SeatPlayer {
   isConnected: boolean;
   isSittingOut: boolean;
   totalBetThisHand: number;
+  timeBank: number; // remaining time bank seconds
 }
 
 export interface GameEngineState {
@@ -33,11 +34,15 @@ export interface GameEngineState {
   minBet: number;
   minRaise: number;
   handNumber: number;
+  actionNumber: number; // incrementing counter for stale action rejection
   players: SeatPlayer[];
   sidePots: { amount: number; eligible: string[] }[];
   lastAction?: { playerId: string; action: string; amount?: number };
   showdownResults?: PlayerResult[];
   commitmentHash?: string;
+  // Turn timer state
+  turnDeadline: number; // timestamp when current turn expires
+  turnTimerDuration: number; // seconds for current turn
   // Format extensions
   gameFormat: GameFormat;
   currentBlindLevel: number;
@@ -134,8 +139,11 @@ export class GameEngine {
       minBet: opts.bigBlind,
       minRaise: opts.bigBlind,
       handNumber: 0,
+      actionNumber: 0,
       players: [],
       sidePots: [],
+      turnDeadline: 0,
+      turnTimerDuration: opts.timeBankSeconds,
       gameFormat: this.gameFormat,
       currentBlindLevel: 0,
       nextLevelIn: 0,
@@ -196,6 +204,7 @@ export class GameEngine {
       isConnected: true,
       isSittingOut: false,
       totalBetThisHand: 0,
+      timeBank: 30, // 30 seconds of time bank per player
     };
     this.state.players.push(player);
     this.state.players.sort((a, b) => a.seatIndex - b.seatIndex);
@@ -376,6 +385,8 @@ export class GameEngine {
     this.state.sidePots = [];
     this.state.showdownResults = undefined;
     this.state.lastAction = undefined;
+    this.state.actionNumber = 0;
+    this.state.turnDeadline = 0;
     this.actedThisRound.clear();
     this.actionLog = [];
 
@@ -444,6 +455,9 @@ export class GameEngine {
 
     this.state.minBet = isBombPot ? 0 : this.bigBlind;
     this.state.minRaise = this.bigBlind * 2;
+
+    // Snapshot chip total after blinds/antes for integrity verification
+    this.snapshotChipTotal();
 
     // Deal cards — provably fair shuffle
     let deck: CardType[];
@@ -531,18 +545,71 @@ export class GameEngine {
     return eliminated;
   }
 
+  // ─── Chip Integrity Verification ──────────────────────────────────────
+  private handStartTotalChips = 0;
+
+  private snapshotChipTotal() {
+    // Invariant: pot + sum(all player chips) + sum(all currentBets not yet in pot) = constant
+    // But pot already includes currentBets that were posted, so the true invariant is:
+    // sum(all player total chip stacks at hand start) = pot + sum(all player remaining chips)
+    // Simplest: total chips in play = pot + sum(player.chips) at any point
+    // because currentBet chips have already been subtracted from player.chips and added to pot
+    this.handStartTotalChips = this.state.pot;
+    for (const p of this.state.players) {
+      this.handStartTotalChips += p.chips;
+    }
+  }
+
+  private verifyChipIntegrity(): boolean {
+    if (this.handStartTotalChips === 0) return true;
+    let currentTotal = this.state.pot;
+    for (const p of this.state.players) {
+      currentTotal += p.chips;
+    }
+    if (currentTotal !== this.handStartTotalChips) {
+      console.error(
+        `[CHIP INTEGRITY VIOLATION] table=${this.tableId} hand=${this.state.handNumber} ` +
+        `expected=${this.handStartTotalChips} actual=${currentTotal} delta=${currentTotal - this.handStartTotalChips}`
+      );
+      return false;
+    }
+    return true;
+  }
+
   // ─── Actions ───────────────────────────────────────────────────────────
-  handleAction(playerId: string, action: string, amount?: number): { ok: boolean; error?: string } {
+  handleAction(playerId: string, action: string, amount?: number, actionNumber?: number): { ok: boolean; error?: string } {
     const player = this.getPlayer(playerId);
     if (!player) return { ok: false, error: "Player not found" };
+
+    // Phase check
     if (this.state.phase === "waiting" || this.state.phase === "showdown" || this.state.phase === "collecting-seeds") {
       return { ok: false, error: "No active hand" };
     }
+
+    // Seat ownership + turn check
     if (player.seatIndex !== this.state.currentTurnSeat) {
       return { ok: false, error: "Not your turn" };
     }
     if (player.status === "folded" || player.status === "all-in") {
       return { ok: false, error: "Cannot act" };
+    }
+
+    // Stale action rejection
+    if (actionNumber !== undefined && actionNumber !== this.state.actionNumber) {
+      return { ok: false, error: "Stale action" };
+    }
+
+    // Temporal validation: check turn deadline (human players only)
+    if (this.state.turnDeadline > 0 && !player.isBot) {
+      const now = Date.now();
+      if (now > this.state.turnDeadline) {
+        const overageSec = Math.ceil((now - this.state.turnDeadline) / 1000);
+        if (player.timeBank >= overageSec) {
+          player.timeBank -= overageSec;
+        } else {
+          return { ok: false, error: "Turn timer expired" };
+        }
+      }
     }
 
     this.clearTimers();
@@ -561,7 +628,13 @@ export class GameEngine {
       }
 
       case "call": {
-        const callAmount = Math.min(this.state.minBet - player.currentBet, player.chips);
+        const callNeeded = this.state.minBet - player.currentBet;
+        if (callNeeded <= 0) {
+          // Nothing to call — treat as check
+          player.status = "checked";
+          break;
+        }
+        const callAmount = Math.min(callNeeded, player.chips);
         player.chips -= callAmount;
         player.currentBet += callAmount;
         player.totalBetThisHand += callAmount;
@@ -572,22 +645,22 @@ export class GameEngine {
 
       case "raise": {
         if (!amount || amount < this.state.minRaise) {
-          // Allow all-in even if less than min raise
           if (amount && amount >= player.chips + player.currentBet) {
-            // All-in
+            // All-in is always allowed
           } else {
             return { ok: false, error: `Minimum raise is ${this.state.minRaise}` };
           }
         }
         const raiseTotal = amount || this.state.minRaise;
         const toAdd = Math.min(raiseTotal - player.currentBet, player.chips);
+        const previousMinBet = this.state.minBet;
         player.chips -= toAdd;
         player.currentBet += toAdd;
         player.totalBetThisHand += toAdd;
         this.state.pot += toAdd;
         this.state.minBet = player.currentBet;
-        this.state.minRaise = player.currentBet + (player.currentBet - (this.state.minBet - toAdd + player.currentBet - toAdd > 0 ? this.bigBlind : this.bigBlind));
-        this.state.minRaise = Math.max(player.currentBet + this.bigBlind, this.state.minRaise);
+        const raiseIncrement = Math.max(player.currentBet - previousMinBet, this.bigBlind);
+        this.state.minRaise = player.currentBet + raiseIncrement;
         player.status = player.chips === 0 ? "all-in" : "raised";
 
         // Reset acted set since a raise reopens action
@@ -600,11 +673,17 @@ export class GameEngine {
         return { ok: false, error: "Unknown action" };
     }
 
+    // Increment action number
+    this.state.actionNumber++;
+
     this.state.lastAction = { playerId, action, amount };
     this.actionLog.push({ playerId, action, amount, phase: this.state.phase });
     if (action !== "raise") {
       this.actedThisRound.add(playerId);
     }
+
+    // Chip integrity check after every mutation
+    this.verifyChipIntegrity();
 
     // Check if only one player left
     const active = this.activePlayers();
@@ -721,15 +800,21 @@ export class GameEngine {
     const results = determineWinners(playerHands, this.state.communityCards);
     this.state.showdownResults = results;
 
+    // Snapshot chip counts before distribution to calculate actual winnings
+    const chipsBefore = new Map<string, number>();
+    for (const p of this.state.players) chipsBefore.set(p.id, p.chips);
+
     // Calculate pot distribution
     this.distributePot(results);
 
-    // Calculate winners for summary
+    // Calculate actual amounts each player won
     const winnerAmounts: { playerId: string; amount: number }[] = [];
-    const winnerResults = results.filter(r => r.isWinner);
-    const share = Math.floor(this.state.pot / winnerResults.length);
-    for (const w of winnerResults) {
-      winnerAmounts.push({ playerId: w.playerId, amount: share });
+    for (const p of this.state.players) {
+      const before = chipsBefore.get(p.id) || 0;
+      const gained = p.chips - before;
+      if (gained > 0) {
+        winnerAmounts.push({ playerId: p.id, amount: gained });
+      }
     }
 
     // Fire hand complete callback with proof and summary
@@ -756,67 +841,93 @@ export class GameEngine {
   }
 
   private distributePot(results: PlayerResult[]) {
-    // Build side pots
+    // All players who contributed (not sitting-out, even if folded)
+    const contributors = this.state.players.filter(p => p.totalBetThisHand > 0 && p.status !== "sitting-out");
     const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out");
-    const allBets = active.map(p => p.totalBetThisHand).sort((a, b) => a - b);
-    const uniqueBets = Array.from(new Set(allBets));
 
-    if (uniqueBets.length <= 1 || active.every(p => p.totalBetThisHand === active[0].totalBetThisHand)) {
-      // Simple pot - no side pots needed
+    if (contributors.length === 0) return;
+
+    // Get unique bet levels sorted ascending for side pot calculation
+    const betLevels = Array.from(new Set(contributors.map(p => p.totalBetThisHand))).sort((a, b) => a - b);
+
+    if (betLevels.length <= 1) {
+      // Simple pot — all bets equal, no side pots
       const winners = results.filter(r => r.isWinner);
+      if (winners.length === 0) return;
       const share = Math.floor(this.state.pot / winners.length);
       for (const w of winners) {
         const player = this.getPlayer(w.playerId);
         if (player) player.chips += share;
       }
-      // Remainder goes to first winner (closest to dealer)
       const remainder = this.state.pot - share * winners.length;
       if (remainder > 0) {
-        const first = winners[0];
-        const player = this.getPlayer(first.playerId);
-        if (player) player.chips += remainder;
+        const first = this.getPlayer(winners[0].playerId);
+        if (first) first.chips += remainder;
       }
       return;
     }
 
-    // Side pot calculation
-    let remainingPot = this.state.pot;
+    // Multi-level side pot calculation
     let prevLevel = 0;
+    let totalDistributed = 0;
 
-    for (const level of uniqueBets) {
-      const contribution = level - prevLevel;
-      const contributors = this.state.players.filter(
-        p => p.totalBetThisHand >= level && p.status !== "sitting-out"
-      );
-      const potSize = contribution * contributors.length;
-      remainingPot -= potSize;
+    for (const level of betLevels) {
+      const increment = level - prevLevel;
+      if (increment <= 0) continue;
 
-      // Eligible winners for this pot
-      const eligibleResults = results.filter(
-        r => contributors.some(c => c.id === r.playerId) && active.some(a => a.id === r.playerId)
-      );
+      // Everyone who bet at least this level contributes to this pot
+      const potContributors = contributors.filter(p => p.totalBetThisHand >= level);
+      const potSize = increment * potContributors.length;
 
-      // Find best hand among eligible
-      let best = eligibleResults[0];
-      for (const r of eligibleResults) {
-        if (r.hand.rankValue > best.hand.rankValue ||
-          (r.hand.rankValue === best.hand.rankValue &&
-            r.hand.kickers.join(",") > best.hand.kickers.join(","))) {
-          best = r;
+      // Only non-folded players are eligible to win
+      const eligibleIds = new Set(potContributors.filter(p => active.some(a => a.id === p.id)).map(p => p.id));
+      const eligibleResults = results.filter(r => eligibleIds.has(r.playerId));
+
+      if (eligibleResults.length > 0) {
+        // Find best hand among eligible
+        let bestRankValue = -1;
+        let bestKickers = "";
+        for (const r of eligibleResults) {
+          const kStr = r.hand.kickers.join(",");
+          if (r.hand.rankValue > bestRankValue || (r.hand.rankValue === bestRankValue && kStr > bestKickers)) {
+            bestRankValue = r.hand.rankValue;
+            bestKickers = kStr;
+          }
         }
+
+        const potWinners = eligibleResults.filter(
+          r => r.hand.rankValue === bestRankValue && r.hand.kickers.join(",") === bestKickers
+        );
+
+        const share = Math.floor(potSize / potWinners.length);
+        for (const w of potWinners) {
+          const player = this.getPlayer(w.playerId);
+          if (player) player.chips += share;
+        }
+        // Remainder to first winner (positional advantage)
+        const leftover = potSize - share * potWinners.length;
+        if (leftover > 0) {
+          const first = this.getPlayer(potWinners[0].playerId);
+          if (first) first.chips += leftover;
+        }
+        totalDistributed += potSize;
       }
 
-      const potWinners = eligibleResults.filter(
-        r => r.hand.rankValue === best.hand.rankValue &&
-          r.hand.kickers.join(",") === best.hand.kickers.join(",")
-      );
+      prevLevel = level;
+    }
 
-      const share = Math.floor(potSize / potWinners.length);
-      for (const w of potWinners) {
-        const player = this.getPlayer(w.playerId);
-        if (player) player.chips += share;
-      }
-
+    // Track side pots in state for UI display
+    this.state.sidePots = [];
+    prevLevel = 0;
+    for (const level of betLevels) {
+      const increment = level - prevLevel;
+      if (increment <= 0) continue;
+      const potContributors = contributors.filter(p => p.totalBetThisHand >= level);
+      const eligible = potContributors.filter(p => active.some(a => a.id === p.id)).map(p => p.id);
+      this.state.sidePots.push({
+        amount: increment * potContributors.length,
+        eligible,
+      });
       prevLevel = level;
     }
   }
@@ -864,15 +975,27 @@ export class GameEngine {
     this.state.currentTurnSeat = seatIndex;
     player.status = "thinking";
 
-    // Set turn timer
+    // Set turn deadline for temporal validation
+    const turnDuration = this.timeBankSeconds;
+    this.state.turnDeadline = Date.now() + turnDuration * 1000;
+    this.state.turnTimerDuration = turnDuration;
+
+    // Set turn timer: main timer + time bank grace period
+    const totalTimeout = (turnDuration + player.timeBank) * 1000;
     this.turnTimer = setTimeout(() => {
-      // Auto-fold on timeout
+      // Timer exhausted (main + time bank) — auto-action
+      player.timeBank = 0; // bank fully consumed
       if (player.currentBet < this.state.minBet) {
         this.handleAction(player.id, "fold");
       } else {
         this.handleAction(player.id, "check");
       }
-    }, this.timeBankSeconds * 1000);
+      // Mark player as sitting out after timeout
+      if (!player.isBot) {
+        player.isSittingOut = true;
+        player.status = "sitting-out";
+      }
+    }, totalTimeout);
 
     // Notify bot to act
     if (player.isBot) {
@@ -973,12 +1096,16 @@ export class GameEngine {
       minBet: state.minBet,
       minRaise: state.minRaise,
       handNumber: state.handNumber,
+      actionNumber: state.actionNumber,
       lastAction: state.lastAction,
       showdownResults: state.phase === "showdown" ? state.showdownResults : undefined,
       commitmentHash: state.commitmentHash,
       shuffleProof: state.phase === "showdown" && this.currentShuffleProof
         ? this.currentShuffleProof
         : undefined,
+      // Turn timer
+      turnDeadline: state.turnDeadline,
+      turnTimerDuration: state.turnTimerDuration,
       // Format extensions
       gameFormat: state.gameFormat,
       currentBlindLevel: state.currentBlindLevel,
@@ -995,6 +1122,7 @@ export class GameEngine {
         isBot: p.isBot,
         isConnected: p.isConnected,
         isSittingOut: p.isSittingOut,
+        timeBank: p.timeBank,
         // Only show own cards, or all cards at showdown
         cards: p.id === playerId
           ? p.cards

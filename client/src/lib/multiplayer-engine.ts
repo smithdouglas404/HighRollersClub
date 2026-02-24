@@ -22,7 +22,8 @@ function serverToClientPlayers(serverPlayers: any[]): Player[] {
     isBigBlind: p.isBigBlind || false,
     currentBet: p.currentBet || 0,
     status: p.status || "waiting",
-    timeLeft: p.status === "thinking" ? 100 : undefined,
+    timeLeft: p.status === "thinking" ? Math.max(0, Math.round((p.timeBank || 30) * 100 / 30)) : undefined,
+    timeBank: p.timeBank ?? 30,
   }));
 }
 
@@ -110,6 +111,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
   const joinedRef = useRef(false);
   const localSeedRef = useRef<string | null>(null);
+  const actionNumberRef = useRef<number>(0);
 
   // Connect WebSocket and set up handlers
   useEffect(() => {
@@ -138,6 +140,11 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         setPlayers(serverToClientPlayers(state.players || []));
         setGameState(serverToClientGameState(state));
         setWaiting(state.phase === "waiting" || state.phase === "collecting-seeds");
+
+        // Track action number for stale action prevention
+        if (state.actionNumber !== undefined) {
+          actionNumberRef.current = state.actionNumber;
+        }
 
         // Update format info from game state
         if (state.gameFormat) {
@@ -295,6 +302,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         type: "player_action",
         action,
         amount,
+        actionNumber: actionNumberRef.current,
       });
     },
     []

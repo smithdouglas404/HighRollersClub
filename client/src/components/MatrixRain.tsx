@@ -20,11 +20,11 @@ export function MatrixRain({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const cvs = canvasRef.current;
+    if (!cvs) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const c = cvs.getContext("2d");
+    if (!c) return;
 
     let animId: number;
     let columns: number[] = [];
@@ -32,32 +32,29 @@ export function MatrixRain({
     const chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF{}[]<>=/\\|";
     const fontSize = 14;
 
-    function resize() {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      const colCount = Math.floor(canvas.width / fontSize);
+    const resize = () => {
+      cvs.width = cvs.offsetWidth;
+      cvs.height = cvs.offsetHeight;
+      const colCount = Math.floor(cvs.width / fontSize);
       columns = Array.from({ length: colCount }, () =>
-        Math.random() * canvas.height / fontSize
+        Math.random() * cvs.height / fontSize
       );
-    }
+    };
 
-    function draw() {
-      // Semi-transparent black to create fade trail
-      ctx.fillStyle = `rgba(0, 0, 0, 0.05)`;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const draw = () => {
+      c.fillStyle = "rgba(0, 0, 0, 0.05)";
+      c.fillRect(0, 0, cvs.width, cvs.height);
 
-      ctx.font = `${fontSize}px monospace`;
+      c.font = `${fontSize}px monospace`;
 
       for (let i = 0; i < columns.length; i++) {
-        // Apply side masking
         const x = i * fontSize;
-        const relX = x / canvas.width;
+        const relX = x / cvs.width;
 
         if (side === "left" && relX > 0.15) continue;
         if (side === "right" && relX < 0.85) continue;
         if (side === "both" && relX > 0.12 && relX < 0.88) continue;
 
-        // Skip columns based on density
         if (Math.random() > density) {
           columns[i]++;
           continue;
@@ -66,43 +63,39 @@ export function MatrixRain({
         const y = columns[i] * fontSize;
         const char = chars[Math.floor(Math.random() * chars.length)];
 
-        // Brighter head character
         const headAlpha = 0.9 + Math.random() * 0.1;
-        ctx.fillStyle = `rgba(255, 255, 255, ${headAlpha})`;
-        ctx.fillText(char, x, y);
+        c.fillStyle = `rgba(255, 255, 255, ${headAlpha})`;
+        c.fillText(char, x, y);
 
-        // Trail characters above with fading color
         if (Math.random() > 0.7) {
           const trailY = y - fontSize;
           const trailChar = chars[Math.floor(Math.random() * chars.length)];
-          ctx.fillStyle = color;
-          ctx.globalAlpha = 0.6;
-          ctx.fillText(trailChar, x, trailY);
-          ctx.globalAlpha = 1;
+          c.fillStyle = color;
+          c.globalAlpha = 0.6;
+          c.fillText(trailChar, x, trailY);
+          c.globalAlpha = 1;
         }
 
-        // Main colored character
-        ctx.fillStyle = color;
-        ctx.globalAlpha = 0.3 + Math.random() * 0.4;
-        ctx.fillText(char, x, y - fontSize * 2);
-        ctx.globalAlpha = 1;
+        c.fillStyle = color;
+        c.globalAlpha = 0.3 + Math.random() * 0.4;
+        c.fillText(char, x, y - fontSize * 2);
+        c.globalAlpha = 1;
 
         columns[i] += speed;
 
-        // Reset column when it goes off screen
-        if (y > canvas.height && Math.random() > 0.975) {
+        if (y > cvs.height && Math.random() > 0.975) {
           columns[i] = 0;
         }
       }
 
       animId = requestAnimationFrame(draw);
-    }
+    };
 
     resize();
     draw();
 
     const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
+    ro.observe(cvs);
 
     return () => {
       cancelAnimationFrame(animId);

@@ -7,11 +7,26 @@ import { AuthProvider, useAuth } from "@/lib/auth-context";
 import Game from "@/pages/Game";
 import Landing from "@/pages/Landing";
 import Lobby from "@/pages/Lobby";
+import Members from "@/pages/Members";
+import Shop from "@/pages/Shop";
+import ClubDashboard from "@/pages/ClubDashboard";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 
 function ProtectedLobby() {
   return <AuthGate><Lobby /></AuthGate>;
+}
+
+function ProtectedMembers() {
+  return <AuthGate><Members /></AuthGate>;
+}
+
+function ProtectedShop() {
+  return <AuthGate><Shop /></AuthGate>;
+}
+
+function ProtectedClub() {
+  return <AuthGate><ClubDashboard /></AuthGate>;
 }
 
 function GameWithTable({ params }: { params: { tableId: string } }) {
@@ -25,6 +40,11 @@ function Router() {
       <Route path="/game">{() => <Game />}</Route>
       <Route path="/game/:tableId">{(params) => <GameWithTable params={params} />}</Route>
       <Route path="/lobby" component={ProtectedLobby} />
+      <Route path="/members" component={ProtectedMembers} />
+      <Route path="/shop" component={ProtectedShop} />
+      <Route path="/club" component={ProtectedClub} />
+      <Route path="/leagues" component={ProtectedClub} />
+      <Route path="/analytics" component={ProtectedClub} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,158 +1,207 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, CheckCircle, Lock, Terminal, Download, Eye, Activity, Cpu } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import entropyHud from "@assets/generated_images/holographic_entropy_network_hud.png";
+import {
+  ShieldCheck, CheckCircle, Copy, Eye, EyeOff,
+  Download, Server, Smartphone, Link2, X
+} from "lucide-react";
 
-export function ProvablyFairPanel() {
+const MOCK_HASH = "0x7a3f92c1d8e4b6a5f0c2d9e8b7a6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8";
+const MOCK_SEED = "f29a3c4d...e8b7 (hidden until showdown)";
+
+export function ProvablyFairPanel({ onClose }: { onClose?: () => void }) {
+  const [seedRevealed, setSeedRevealed] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(MOCK_HASH).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <motion.div
       initial={{ x: 320, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 320, opacity: 0 }}
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
-      className="w-80 h-full flex flex-col font-mono text-xs z-40 pointer-events-auto relative overflow-hidden scanlines"
+      className="w-[320px] h-full flex flex-col z-40 pointer-events-auto relative overflow-hidden"
       style={{
-        background: "linear-gradient(180deg, rgba(0,15,20,0.95) 0%, rgba(0,10,15,0.98) 100%)",
-        borderLeft: "1px solid rgba(0,240,255,0.15)",
+        background: "linear-gradient(180deg, rgba(8,16,24,0.97) 0%, rgba(4,10,16,0.99) 100%)",
+        borderLeft: "1px solid rgba(0,240,255,0.12)",
+        boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
       }}
     >
-      {/* Header */}
-      <div className="p-4 flex items-center justify-between relative"
-        style={{ borderBottom: "1px solid rgba(0,240,255,0.1)" }}
-      >
-        <div className="flex items-center gap-2.5 z-10">
-          <div className="relative">
-            <div className="absolute inset-0 bg-green-500 blur-md opacity-30 animate-pulse" />
-            <CheckCircle className="w-5 h-5 text-green-400 relative z-10" />
+      {/* ─── Header: Shuffle Verified ─────────────────────────── */}
+      <div className="p-5 relative" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 p-1 rounded hover:bg-white/5 transition-colors"
+          >
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        )}
+
+        <div className="flex items-start gap-3">
+          <div className="relative mt-0.5 shrink-0">
+            <div className="absolute inset-0 bg-green-500 blur-lg opacity-30 animate-pulse" />
+            <div className="w-10 h-10 rounded-lg bg-green-500/15 border border-green-500/25 flex items-center justify-center relative">
+              <ShieldCheck className="w-5 h-5 text-green-400" />
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-sm text-white tracking-wide">VERIFIED FAIR</span>
-            <span className="text-[9px] text-cyan-500/60 font-mono">0x7a3f...c2d9 | SHA-256</span>
+          <div>
+            <div className="text-xs font-bold text-gray-400 tracking-wider uppercase">
+              Shuffle Verified:
+              <span className="text-green-400 ml-1.5">True</span>
+            </div>
+            <div className="text-[9px] text-gray-600 font-mono mt-0.5">
+              v0.1 | SHA-256
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 z-10">
-          <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_6px_rgba(0,255,157,0.5)]" style={{ animation: "neonPulse 2s ease-in-out infinite" }} />
-          <span className="text-[9px] text-green-400/70 uppercase">Live</span>
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-5">
+      {/* ─── Scrollable Content ────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="p-5 space-y-5">
 
-          {/* Entropy visualization */}
-          <div className="relative rounded-lg overflow-hidden" style={{ border: "1px solid rgba(0,240,255,0.15)" }}>
-            <div className="aspect-[16/10] relative bg-black">
-              {/* Scanline overlay on image */}
-              <div className="absolute inset-0 z-10 pointer-events-none"
-                style={{
-                  background: "repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,240,255,0.03) 1px, rgba(0,240,255,0.03) 2px)",
-                }}
-              />
-              <img src={entropyHud} className="w-full h-full object-cover opacity-80 mix-blend-screen" alt="Entropy Network" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/30" />
-
-              {/* Overlay data */}
-              <div className="absolute bottom-2 left-2 right-2 flex justify-between items-end z-20">
-                <div>
-                  <div className="text-[8px] text-cyan-400/50 uppercase">Entropy Score</div>
-                  <div className="text-sm font-bold neon-text-green">98.7%</div>
-                </div>
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded border border-green-500/30 bg-green-500/10">
-                  <Activity className="w-2.5 h-2.5 text-green-400" />
-                  <span className="text-[8px] text-green-400 font-bold">QUANTUM SEEDED</span>
-                </div>
-              </div>
+          {/* ─── Entropy Source (Checkmarks) ──────────────────── */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-3">
+              Entropy Source
             </div>
-          </div>
-
-          {/* Entropy Sources */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-white font-bold text-xs">
-              <Lock className="w-3 h-3 text-cyan-400" />
-              <span>ENTROPY SOURCES</span>
-            </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {[
-                { icon: Shield, label: "Hardware RNG (Server)", status: "active", color: "green" },
-                { icon: Cpu, label: "User Device Input", status: "seeding", color: "cyan" },
-                { icon: Shield, label: "Chainlink VRF v2", status: "verified", color: "green" },
+                { icon: Server, label: "Server Hardware RNG", active: true },
+                { icon: Smartphone, label: "User Device Input", active: true },
+                { icon: Link2, label: "Chainlink VRF", active: true },
               ].map((source, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between p-2 rounded-md transition-colors hover:bg-cyan-500/5"
-                  style={{
-                    background: "rgba(0,240,255,0.02)",
-                    border: "1px solid rgba(0,240,255,0.08)",
-                  }}
+                  className="flex items-center gap-2.5 group"
                 >
-                  <div className="flex items-center gap-2 text-gray-300">
-                    <source.icon className="w-3 h-3 text-cyan-500/60" />
-                    <span className="text-[10px]">{source.label}</span>
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+                    source.active
+                      ? "bg-green-500/20 border border-green-500/30"
+                      : "bg-gray-800 border border-gray-700"
+                  }`}>
+                    <CheckCircle className={`w-3 h-3 ${
+                      source.active ? "text-green-400" : "text-gray-600"
+                    }`} />
                   </div>
-                  <span className={`text-[8px] font-bold uppercase ${source.color === "green" ? "text-green-400" : "text-cyan-400"}`}>
-                    {source.status}
+                  <span className="text-[11px] text-gray-300 font-medium">
+                    {source.label}
                   </span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Verification Data */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-white font-bold text-xs">
-              <Terminal className="w-3 h-3 text-cyan-400" />
-              <span>VERIFICATION</span>
+          {/* ─── Entropy Source Hash ──────────────────────────── */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-2">
+              Entropy Source
             </div>
-            <div className="space-y-1.5">
-              {[
-                { icon: CheckCircle, label: "Commitment Hash", detail: "Pre-deal locked" },
-                { icon: Eye, label: "Reveal Seed", detail: "Post-showdown" },
-                { icon: Download, label: "Audit Script", detail: "Python / JS" },
-              ].map((item, i) => (
-                <button
-                  key={i}
-                  className="w-full flex items-center justify-between p-2 rounded-md text-left transition-all hover:bg-cyan-500/5 group"
-                  style={{
-                    background: "rgba(0,240,255,0.02)",
-                    border: "1px solid rgba(0,240,255,0.08)",
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-gray-300">
-                    <item.icon className="w-3 h-3 text-cyan-500/60 group-hover:text-cyan-400 transition-colors" />
-                    <span className="text-[10px]">{item.label}</span>
-                  </div>
-                  <span className="text-[8px] text-gray-600 group-hover:text-gray-400 transition-colors">{item.detail}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Live log */}
-          <div className="space-y-1.5"
-            style={{ borderTop: "1px solid rgba(0,240,255,0.08)", paddingTop: "12px" }}
-          >
-            <div className="text-[9px] text-gray-600 uppercase tracking-wider font-bold mb-2">Shuffle Log</div>
-            {[
-              { text: "Initializing Fisher-Yates...", color: "text-gray-500" },
-              { text: "Entropy pool: 3 sources merged", color: "text-gray-500" },
-              { text: "Seed: 0x7a3f...c2d9", color: "text-cyan-500/60" },
-              { text: "Deck sliced [0..52]", color: "text-gray-500" },
-              { text: "Commitment hash locked", color: "text-green-500/70" },
-              { text: "Block #892,102 confirmed", color: "text-green-400" },
-            ].map((log, i) => (
-              <div key={i} className={`text-[9px] font-mono ${log.color} flex items-start gap-1.5`}>
-                <span className="text-gray-700 select-none">&gt;</span>
-                <span>{log.text}</span>
+            <div className="flex items-center gap-2">
+              <div
+                className="flex-1 rounded-lg px-3 py-2.5 text-[9px] font-mono text-cyan-400/80 truncate"
+                style={{
+                  background: "rgba(0,240,255,0.04)",
+                  border: "1px solid rgba(0,240,255,0.1)",
+                }}
+              >
+                {MOCK_HASH.slice(0, 24)}...{MOCK_HASH.slice(-8)}
               </div>
-            ))}
+              <button
+                onClick={handleCopy}
+                className="shrink-0 px-3 py-2.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all"
+                style={{
+                  background: copied ? "rgba(0,255,157,0.15)" : "rgba(0,240,255,0.08)",
+                  border: `1px solid ${copied ? "rgba(0,255,157,0.3)" : "rgba(0,240,255,0.15)"}`,
+                  color: copied ? "#00ff9d" : "#8ecae6",
+                }}
+              >
+                {copied ? "COPIED" : "COPY"}
+              </button>
+            </div>
           </div>
-        </div>
-      </ScrollArea>
 
-      {/* Footer */}
-      <div className="p-2.5 text-center relative" style={{ borderTop: "1px solid rgba(0,240,255,0.1)" }}>
-        <div className="text-[9px] text-gray-600">
-          Algorithm: <span className="text-cyan-500/50">Fisher-Yates + QuadResidue</span>
+          {/* ─── Verification Actions ────────────────────────── */}
+          <div className="space-y-2">
+            {/* Commitment Hash */}
+            <button
+              className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-white/[0.02] group"
+              style={{
+                background: "rgba(255,255,255,0.01)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center shrink-0">
+                <CheckCircle className="w-4 h-4 text-cyan-400" />
+              </div>
+              <div className="text-left">
+                <div className="text-[11px] font-semibold text-white group-hover:text-cyan-300 transition-colors">
+                  Commitment Hash
+                </div>
+                <div className="text-[9px] text-gray-600">Pre-deal locked hash</div>
+              </div>
+            </button>
+
+            {/* Reveal Seed */}
+            <button
+              onClick={() => setSeedRevealed(!seedRevealed)}
+              className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-white/[0.02] group"
+              style={{
+                background: "rgba(255,255,255,0.01)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/15 flex items-center justify-center shrink-0">
+                {seedRevealed ? (
+                  <EyeOff className="w-4 h-4 text-purple-400" />
+                ) : (
+                  <Eye className="w-4 h-4 text-purple-400" />
+                )}
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <div className="text-[11px] font-semibold text-white group-hover:text-purple-300 transition-colors">
+                  Reveal Seed
+                </div>
+                <div className="text-[9px] text-gray-600 truncate">
+                  {seedRevealed ? MOCK_SEED : "Available after showdown"}
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* ─── Download Verification Script ────────────────── */}
+          <button
+            className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-green-500/[0.03] group"
+            style={{
+              background: "rgba(0,255,157,0.02)",
+              border: "1px solid rgba(0,255,157,0.1)",
+            }}
+          >
+            <div className="w-8 h-8 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0">
+              <Download className="w-4 h-4 text-green-400" />
+            </div>
+            <div className="text-left">
+              <div className="text-[11px] font-semibold text-green-300 group-hover:text-green-200 transition-colors">
+                Download Verification Script
+              </div>
+              <div className="text-[9px] text-gray-600">Python / JavaScript</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Footer: Algorithm ─────────────────────────────────── */}
+      <div
+        className="px-5 py-3 text-center"
+        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+      >
+        <div className="text-[9px] text-gray-600 font-mono">
+          Algorithm: <span className="text-cyan-500/60">Fisher-Yates + (Quadruple)</span>
         </div>
       </div>
     </motion.div>

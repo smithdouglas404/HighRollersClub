@@ -15,6 +15,7 @@ import { Player } from "../lib/poker-types";
 import { useGameEngine } from "@/lib/game-engine";
 import { useMultiplayerGame } from "@/lib/multiplayer-engine";
 import { useAuth } from "@/lib/auth-context";
+import { MatrixRain } from "@/components/MatrixRain";
 import { SoundProvider, useSoundEngine } from "@/lib/sound-context";
 import { soundEngine } from "@/lib/sound-engine";
 import { ShieldCheck, Volume2, VolumeX, Settings, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users } from "lucide-react";
@@ -133,11 +134,20 @@ function GameTable({
   const seatPositions = SEAT_POSITIONS.slice(0, Math.max(players.length, 2));
 
   return (
-    <div className="min-h-screen bg-[#030508] text-white overflow-hidden relative font-sans flex">
+    <div className="min-h-screen bg-[#020508] text-white overflow-hidden relative font-sans flex">
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,30,40,0.5)_0%,rgba(0,0,0,0.95)_70%)]" />
         <AmbientParticles />
       </div>
+
+      {/* Matrix rain on edges */}
+      <MatrixRain
+        side="both"
+        color="#00ff9d"
+        opacity={0.08}
+        density={0.25}
+        className="absolute inset-0 z-[1]"
+      />
 
       <ChipAnimation containerRef={tableRef} />
 
@@ -342,7 +352,7 @@ function GameTable({
       </div>
 
       <AnimatePresence>
-        {showProvablyFair && <ProvablyFairPanel />}
+        {showProvablyFair && <ProvablyFairPanel onClose={() => setShowProvablyFair(false)} />}
       </AnimatePresence>
     </div>
   );

@@ -42,17 +42,29 @@ export function CommunityCards({ cards, pot }: CommunityCardsProps) {
         animate={{ scale: 1 }}
         className="relative"
       >
-        <div className="glass rounded-full px-5 py-1.5 flex items-center gap-2 neon-border-gold">
-          {/* Chip icon */}
-          <div className="w-4 h-4 rounded-full gold-gradient flex items-center justify-center shadow-[0_0_8px_rgba(201,168,76,0.3)]">
-            <span className="text-[7px] font-black text-black">$</span>
+        <div
+          className="rounded-full px-5 py-2 flex items-center gap-2.5"
+          style={{
+            background: "linear-gradient(135deg, rgba(10,15,25,0.9) 0%, rgba(5,10,18,0.95) 100%)",
+            border: "1px solid rgba(201,168,76,0.2)",
+            boxShadow: "0 0 20px rgba(201,168,76,0.08), inset 0 1px 0 rgba(255,255,255,0.04)",
+          }}
+        >
+          {/* Chip stack icon */}
+          <div className="relative w-5 h-5">
+            <div className="absolute bottom-0 left-0 w-5 h-5 rounded-full" style={{ background: "linear-gradient(135deg, #ffd700, #c9a84c)", boxShadow: "0 0 6px rgba(201,168,76,0.4)" }} />
+            <div className="absolute bottom-[3px] left-0 w-5 h-5 rounded-full" style={{ background: "linear-gradient(135deg, #e74c3c, #c0392b)", boxShadow: "0 1px 2px rgba(0,0,0,0.3)" }} />
+            <div className="absolute bottom-[6px] left-0 w-5 h-5 rounded-full" style={{ background: "linear-gradient(135deg, #2ecc71, #27ae60)", boxShadow: "0 1px 2px rgba(0,0,0,0.3)" }} />
           </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-[10px] uppercase tracking-wider text-yellow-500/70 font-semibold">Pot</span>
-            <span className="text-sm font-mono font-bold neon-text-gold">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[10px] uppercase tracking-[0.15em] text-amber-500/80 font-bold">POT</span>
+            <span className="text-base font-mono font-black text-amber-300" style={{ textShadow: "0 0 8px rgba(201,168,76,0.4)" }}>
               {pot.toLocaleString()}
             </span>
+            <span className="text-[9px] text-amber-600/60 uppercase tracking-wider font-medium">chips</span>
           </div>
+          {/* Decorative arrow */}
+          <div className="text-amber-500/40 text-xs ml-0.5">&#x2794;</div>
         </div>
       </motion.div>
 

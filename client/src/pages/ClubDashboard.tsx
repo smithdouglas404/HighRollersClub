@@ -367,7 +367,7 @@ export default function ClubDashboard() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Club Dashboard">
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -394,7 +394,7 @@ export default function ClubDashboard() {
                     <Trophy className="w-7 h-7 text-amber-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-base font-bold text-white tracking-wide">
+                    <h2 className="text-base font-bold tracking-wide gold-text">
                       {club?.name || "No Club Yet"}
                     </h2>
                     {club ? (
@@ -419,8 +419,8 @@ export default function ClubDashboard() {
                           disabled={creatingTable}
                           className="px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black flex items-center gap-1.5 disabled:opacity-50"
                           style={{
-                            background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                            boxShadow: "0 0 15px rgba(0,255,157,0.2)",
+                            background: "linear-gradient(135deg, #c9a84c, #f0d078)",
+                            boxShadow: "0 0 20px rgba(201,168,76,0.3)",
                           }}
                         >
                           {creatingTable ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}

@@ -126,10 +126,14 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                         ? `bg-${opt.color}-500/15 border-${opt.color}-500/30 text-${opt.color}-400`
                         : "bg-white/5 border-white/10 text-gray-500 hover:border-white/20"
                     }`}
-                    style={isSelected ? {
-                      backgroundColor: `rgba(${opt.color === "cyan" ? "34,211,238" : opt.color === "amber" ? "245,158,11" : opt.color === "emerald" ? "52,211,153" : opt.color === "purple" ? "168,85,247" : "239,68,68"},0.1)`,
-                      borderColor: `rgba(${opt.color === "cyan" ? "34,211,238" : opt.color === "amber" ? "245,158,11" : opt.color === "emerald" ? "52,211,153" : opt.color === "purple" ? "168,85,247" : "239,68,68"},0.3)`,
-                    } : {}}
+                    style={isSelected ? (() => {
+                      const colorValues = opt.color === "cyan" ? "34,211,238" : opt.color === "amber" ? "245,158,11" : opt.color === "emerald" ? "52,211,153" : opt.color === "purple" ? "168,85,247" : "239,68,68";
+                      return {
+                        backgroundColor: `rgba(${colorValues},0.1)`,
+                        borderColor: `rgba(${colorValues},0.3)`,
+                        boxShadow: `0 0 15px rgba(${colorValues},0.2)`,
+                      };
+                    })() : {}}
                   >
                     <Icon className="w-4 h-4 mx-auto mb-1" />
                     <div className="text-[9px] font-bold uppercase tracking-wider">{opt.label}</div>
@@ -149,7 +153,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={gameFormat === "sng" ? "Turbo SNG" : "High Stakes Showdown"}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)] transition-colors"
               maxLength={50}
               required
             />
@@ -165,7 +169,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 value={gameFormat === "heads_up" ? 2 : maxPlayers}
                 onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
                 disabled={gameFormat === "heads_up"}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 disabled:opacity-50"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)] disabled:opacity-50"
               >
                 {[2, 3, 4, 5, 6].map((n) => (
                   <option key={n} value={n} className="bg-gray-900">{n} Players</option>
@@ -179,7 +183,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
               <select
                 value={timeBankSeconds}
                 onChange={(e) => setTimeBankSeconds(parseInt(e.target.value))}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)]"
               >
                 {[10, 15, 20, 30, 45, 60, 90, 120].map((n) => (
                   <option key={n} value={n} className="bg-gray-900">{n}s</option>
@@ -203,7 +207,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                   setBigBlind(sb * 2);
                 }}
                 min={1}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)]"
               />
             </div>
             <div>
@@ -215,7 +219,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 value={bigBlind}
                 onChange={(e) => setBigBlind(parseInt(e.target.value) || 2)}
                 min={2}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)]"
               />
             </div>
             <div>
@@ -227,7 +231,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 value={ante}
                 onChange={(e) => setAnte(parseInt(e.target.value) || 0)}
                 min={0}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)]"
               />
             </div>
           </div>
@@ -246,7 +250,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                     value={buyInAmount}
                     onChange={(e) => setBuyInAmount(parseInt(e.target.value) || 100)}
                     min={100}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)]"
                   />
                 </div>
                 <div>
@@ -256,7 +260,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                     value={startingChips}
                     onChange={(e) => setStartingChips(parseInt(e.target.value) || 1500)}
                     min={100}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)]"
                   />
                 </div>
                 <div>
@@ -264,7 +268,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                   <select
                     value={blindPreset}
                     onChange={(e) => setBlindPreset(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)]"
                   >
                     <option value="standard" className="bg-gray-900">Standard (5min)</option>
                     <option value="turbo" className="bg-gray-900">Turbo (3min)</option>
@@ -285,7 +289,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                   <select
                     value={bombPotFrequency}
                     onChange={(e) => setBombPotFrequency(parseInt(e.target.value))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500/50"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500/50 focus:shadow-[0_0_8px_rgba(239,68,68,0.15)]"
                   >
                     {[3, 5, 7, 10].map(n => (
                       <option key={n} value={n} className="bg-gray-900">Every {n} hands</option>
@@ -300,7 +304,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                     onChange={(e) => setBombPotAnte(parseInt(e.target.value) || 0)}
                     min={0}
                     placeholder={`${bigBlind}`}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500/50 placeholder-gray-600"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500/50 focus:shadow-[0_0_8px_rgba(239,68,68,0.15)] placeholder-gray-600"
                   />
                 </div>
               </div>
@@ -319,7 +323,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                   value={minBuyIn}
                   onChange={(e) => setMinBuyIn(parseInt(e.target.value) || 100)}
                   min={1}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)]"
                 />
               </div>
               <div>
@@ -331,7 +335,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                   value={maxBuyIn}
                   onChange={(e) => setMaxBuyIn(parseInt(e.target.value) || 1000)}
                   min={1}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)]"
                 />
               </div>
             </div>
@@ -339,28 +343,30 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
 
           {/* Toggles */}
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isPrivate}
-                onChange={(e) => setIsPrivate(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-600 bg-white/5 text-cyan-500 focus:ring-cyan-500/30"
-              />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPrivate(!isPrivate)}
+                className={`w-9 h-5 rounded-full transition-colors ${isPrivate ? 'bg-cyan-500' : 'bg-white/10'} relative`}
+              >
+                <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${isPrivate ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+              </button>
               <span className="text-xs text-gray-400 flex items-center gap-1">
                 <Lock className="w-3 h-3" /> Private
               </span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={allowBots}
-                onChange={(e) => setAllowBots(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-600 bg-white/5 text-cyan-500 focus:ring-cyan-500/30"
-              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAllowBots(!allowBots)}
+                className={`w-9 h-5 rounded-full transition-colors ${allowBots ? 'bg-cyan-500' : 'bg-white/10'} relative`}
+              >
+                <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${allowBots ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+              </button>
               <span className="text-xs text-gray-400 flex items-center gap-1">
                 <Bot className="w-3 h-3" /> Allow Bots
               </span>
-            </label>
+            </div>
           </div>
 
           {/* Submit */}

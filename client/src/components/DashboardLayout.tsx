@@ -176,7 +176,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             <motion.h1
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="text-lg font-bold tracking-wider text-white uppercase"
+              className="text-lg font-bold tracking-wider text-white uppercase gold-text"
             >
               {title}
             </motion.h1>

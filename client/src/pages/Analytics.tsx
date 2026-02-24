@@ -106,9 +106,21 @@ export default function Analytics() {
   ];
 
   const getTrendIcon = (trend: string) => {
-    if (trend === "high") return <ArrowUpRight className="w-3 h-3 text-green-400" />;
-    if (trend === "low") return <ArrowDownRight className="w-3 h-3 text-red-400" />;
-    return <Minus className="w-3 h-3 text-gray-500" />;
+    if (trend === "high") return (
+      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/10 border border-green-500/20">
+        <ArrowUpRight className="w-3 h-3 text-green-400" />
+      </span>
+    );
+    if (trend === "low") return (
+      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500/10 border border-red-500/20">
+        <ArrowDownRight className="w-3 h-3 text-red-400" />
+      </span>
+    );
+    return (
+      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-500/10 border border-gray-500/20">
+        <Minus className="w-3 h-3 text-gray-500" />
+      </span>
+    );
   };
 
   return (
@@ -167,7 +179,7 @@ export default function Analytics() {
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Detailed Statistics</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Detailed Statistics</h3>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-white/[0.03]">
                 {advancedStats.map((stat, i) => (
@@ -209,12 +221,12 @@ export default function Analytics() {
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
                 <Brain className="w-4 h-4 text-purple-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Play Style Assessment</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Play Style Assessment</h3>
               </div>
               <div className="p-5">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Aggression */}
-                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                  <div className="p-3 rounded-lg bg-white/5 border border-white/10">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Aggression</div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-1.5">
                       <div
@@ -229,7 +241,7 @@ export default function Analytics() {
                   </div>
 
                   {/* Tightness */}
-                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                  <div className="p-3 rounded-lg bg-white/5 border border-white/10">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Hand Selection</div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-1.5">
                       <div
@@ -244,7 +256,7 @@ export default function Analytics() {
                   </div>
 
                   {/* Overall */}
-                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                  <div className="p-3 rounded-lg bg-white/5 border border-white/10">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Play Type</div>
                     <div className="text-lg font-bold tracking-tight mt-1" style={{
                       color: vpipPct <= 20 && pfrPct <= 15 ? "#00f0ff"

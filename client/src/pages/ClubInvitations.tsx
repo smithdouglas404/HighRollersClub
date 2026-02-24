@@ -172,8 +172,8 @@ export default function ClubInvitations() {
               onClick={() => navigate("/lobby")}
               className="mt-4 px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
               style={{
-                background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                boxShadow: "0 0 15px rgba(0,255,157,0.2)",
+                background: "linear-gradient(135deg, #c9a84c, #f0d078)",
+                boxShadow: "0 0 20px rgba(201,168,76,0.3)",
               }}
             >
               Back to Lobby
@@ -200,7 +200,7 @@ export default function ClubInvitations() {
                   <UserPlus className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                  <h3 className="text-sm font-bold text-cyan-400 tracking-wider uppercase">
                     Invite Player
                   </h3>
                   <p className="text-[9px] text-gray-500">Send an invite by username</p>
@@ -228,8 +228,8 @@ export default function ClubInvitations() {
                     disabled={sending || !inviteUsername.trim()}
                     className="px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                     style={{
-                      background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                      boxShadow: "0 0 15px rgba(0,255,157,0.15)",
+                      background: "linear-gradient(135deg, #c9a84c, #f0d078)",
+                      boxShadow: "0 0 20px rgba(201,168,76,0.3)",
                     }}
                   >
                     {sending ? (
@@ -295,7 +295,7 @@ export default function ClubInvitations() {
                     <Inbox className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                    <h3 className="text-sm font-bold tracking-wider uppercase gold-text">
                       Pending Requests
                     </h3>
                     <p className="text-[9px] text-gray-500">Players wanting to join your club</p>
@@ -326,7 +326,7 @@ export default function ClubInvitations() {
                         className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-white/[0.02]"
                         style={{ border: "1px solid rgba(255,255,255,0.04)" }}
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(0,200,255,0.15)]">
                           <span className="text-[10px] font-bold text-white">
                             {inv.displayName.charAt(0).toUpperCase()}
                           </span>
@@ -396,7 +396,7 @@ export default function ClubInvitations() {
                   <Send className="w-5 h-5 text-purple-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                  <h3 className="text-sm font-bold tracking-wider uppercase gold-text">
                     Sent Invitations
                   </h3>
                   <p className="text-[9px] text-gray-500">Track your outgoing invites</p>
@@ -419,7 +419,7 @@ export default function ClubInvitations() {
                         className="flex items-center gap-3 px-4 py-3 rounded-lg"
                         style={{ border: "1px solid rgba(255,255,255,0.04)" }}
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(0,200,255,0.15)]">
                           <span className="text-[10px] font-bold text-white">
                             {inv.displayName.charAt(0).toUpperCase()}
                           </span>

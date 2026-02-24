@@ -12,7 +12,14 @@
       "Bash(curl -s \"http://localhost:5000/@fs/home/runner/workspace/attached_assets/generated_images/holographic_network_graph_green.png?import\" -o /dev/null -w \"HTTP %{http_code}, size %{size_download}\" 2>&1)",
       "Bash(node scripts/generate-avatars.mjs 2>&1)",
       "Bash(fuser -k -9 5000/tcp 2>/dev/null; sleep 3; fuser 5000/tcp 2>/dev/null && echo \"still in use\" || echo \"free\")",
-      "Bash(npx vite build 2>&1)"
+      "Bash(npx vite build 2>&1)",
+      "Bash(node tests/e2e-websocket.mjs 2>&1)",
+      "Bash(fuser -k 5000/tcp 2>/dev/null; pkill -f \"tsx server\" 2>/dev/null; sleep 2)",
+      "Bash(npm run db:push 2>&1 | tail -5)",
+      "Bash(npx tsx --eval \"import './server/game/engine'; console.log\\('Engine OK'\\)\" 2>&1)",
+      "Bash(git -C /home/runner/workspace commit -m \"$\\(cat <<'EOF'\nComplete full plan: game formats, club system, analytics, shop, and missions\n\n- Game Format System: SNG, Tournament, Heads Up, Bomb Pot with blind schedules,\n  elimination detection, format lifecycle, and full lobby/create UI\n- Club System: invitations, announcements, events, member management with\n  promote/demote/kick, online status indicators, ClubSettings page\n- Engine upgrades: LUT hand evaluator \\(fast-evaluator.ts\\), contribution-tier\n  side pots with positional remainder, rake system, VPIP/PFR auto-tracking,\n  action time tracking, double-click protection\n- Hand history persistence: relational handPlayers + handActions tables with\n  API endpoints, dealer seat and total rake columns\n- Tournament Stats HUD, Player Analytics Panel, AI Hand Analysis \\(dedicated\n  hand-analyzer module\\), Blind Level Indicator, Tournament Results overlay,\n  Bomb Pot indicator\n- Daily missions expansion: 7 mission types with lazy daily/weekly auto-reset\n- Shop: purchase flow, inventory, equip, New Arrivals section, Wishlist\n  \\(localStorage\\), Premium pass stub\n- Hand Export: PDF \\(jsPDF\\) and JSON with blockchain verification proof\n- Club Alliances & Leagues: schema, API, full Leagues page with standings\n- WebSocket rate limiting \\(20 msg/sec sliding window\\), REST join/leave\n  endpoints, online users endpoint\n- Tournament API: create, list, register with buy-in deduction and prize pool\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm run dev 2>&1 | head -30)",
+      "Bash(curl -s http://localhost:5000/ | head -20)"
     ]
   }
 }

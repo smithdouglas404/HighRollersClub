@@ -355,15 +355,15 @@ export default function Members() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.05 }}
-                      className="flex items-center px-5 py-4 border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors group"
+                      className="flex items-center px-5 py-4 border-b border-white/[0.03] hover:bg-white/[0.06] transition-all duration-200 group"
                     >
                       <div className="grid grid-cols-5 gap-4 flex-1 items-center">
                         {/* Avatar + Name + Role */}
                         <div className="flex items-center gap-3 col-span-1">
                           <div className="relative">
                             <div
-                              className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/10 flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-purple-500/30"
-                              style={{ boxShadow: "0 0 15px rgba(0,240,255,0.1)" }}
+                              className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/10 flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-purple-500/30 shadow-[0_0_12px_rgba(0,200,255,0.15)]"
+                              style={{ boxShadow: "0 0 15px rgba(0,240,255,0.1), 0 0 12px rgba(0,200,255,0.15)" }}
                             >
                               <span className="text-sm font-bold text-white">
                                 {member.displayName.charAt(0).toUpperCase()}
@@ -519,7 +519,8 @@ export default function Members() {
                 transition={{ delay: 0.3 }}
                 className="glass rounded-xl p-4 border border-white/5"
               >
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-3 flex items-center gap-2">
+                  <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
                   Club Info
                 </h3>
                 <div className="space-y-2">
@@ -558,7 +559,8 @@ export default function Members() {
                   transition={{ delay: 0.35 }}
                   className="glass rounded-xl p-4 border border-white/5"
                 >
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-3 flex items-center gap-2">
+                    <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
                     <UserPlus className="w-3.5 h-3.5 text-cyan-400" />
                     Invite Player
                   </h3>
@@ -628,7 +630,8 @@ export default function Members() {
                     onClick={() => setShowPending(!showPending)}
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors"
                   >
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 flex items-center gap-2">
+                      <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
                       <Clock className="w-3.5 h-3.5 text-amber-400" />
                       Pending Join Requests
                       {pendingCount > 0 && (
@@ -727,7 +730,8 @@ export default function Members() {
                 transition={{ delay: 0.45 }}
                 className="glass rounded-xl p-4 border border-white/5"
               >
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-3 flex items-center gap-2">
+                  <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
                   Your Role
                 </h3>
                 <div className="flex items-center gap-3">
@@ -765,7 +769,8 @@ export default function Members() {
             transition={{ delay: 0.5 }}
             className="glass rounded-xl p-5 border border-white/5"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-4 flex items-center gap-2">
+              <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
               Daily Missions
             </h3>
             {missions.length === 0 ? (
@@ -813,23 +818,24 @@ export default function Members() {
             transition={{ delay: 0.6 }}
             className="glass rounded-xl p-5 border border-white/5"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-4 flex items-center gap-2">
+              <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
               Your Stats
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="text-center p-3 rounded-lg" style={{ background: "rgba(0,240,255,0.03)", border: "1px solid rgba(0,240,255,0.08)" }}>
+              <div className="text-center p-3 rounded-lg bg-white/5 border border-cyan-500/15" style={{ boxShadow: "0 0 20px rgba(0,240,255,0.05)" }}>
                 <div className="text-lg font-bold text-cyan-400">{stats?.handsPlayed ?? 0}</div>
                 <div className="text-[9px] text-gray-500 uppercase tracking-wider">Hands Played</div>
               </div>
-              <div className="text-center p-3 rounded-lg" style={{ background: "rgba(0,255,157,0.03)", border: "1px solid rgba(0,255,157,0.08)" }}>
+              <div className="text-center p-3 rounded-lg bg-white/5 border border-green-500/15" style={{ boxShadow: "0 0 20px rgba(0,255,157,0.05)" }}>
                 <div className="text-lg font-bold text-green-400">{stats?.potsWon ?? 0}</div>
                 <div className="text-[9px] text-gray-500 uppercase tracking-wider">Pots Won</div>
               </div>
-              <div className="text-center p-3 rounded-lg" style={{ background: "rgba(234,179,8,0.03)", border: "1px solid rgba(234,179,8,0.08)" }}>
+              <div className="text-center p-3 rounded-lg bg-white/5 border border-amber-500/15" style={{ boxShadow: "0 0 20px rgba(234,179,8,0.05)" }}>
                 <div className="text-lg font-bold text-amber-400">{stats?.bestWinStreak ?? 0}</div>
                 <div className="text-[9px] text-gray-500 uppercase tracking-wider">Best Streak</div>
               </div>
-              <div className="text-center p-3 rounded-lg" style={{ background: "rgba(168,85,247,0.03)", border: "1px solid rgba(168,85,247,0.08)" }}>
+              <div className="text-center p-3 rounded-lg bg-white/5 border border-purple-500/15" style={{ boxShadow: "0 0 20px rgba(168,85,247,0.05)" }}>
                 <div className="text-lg font-bold text-purple-400">{stats?.currentWinStreak ?? 0}</div>
                 <div className="text-[9px] text-gray-500 uppercase tracking-wider">Current Streak</div>
               </div>

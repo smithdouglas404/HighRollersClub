@@ -64,7 +64,7 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02, y: -2 }}
+      whileHover={{ scale: 1.02, y: -2, boxShadow: "0 0 20px rgba(0,240,255,0.08), 0 4px 20px rgba(0,0,0,0.2)" }}
       onClick={onClick}
       className={`relative glass rounded-xl p-5 cursor-pointer transition-all border border-white/5 hover:border-cyan-500/20 ${
         isFull ? "opacity-60" : ""
@@ -80,7 +80,7 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-sm text-white tracking-wide">{table.name}</h3>
+            <h3 className="font-bold text-sm text-cyan-400 tracking-wide" style={{ textShadow: "0 0 8px rgba(0,240,255,0.3)" }}>{table.name}</h3>
             <FormatBadge format={table.gameFormat} />
           </div>
           <p className="text-[10px] text-gray-500 font-mono mt-0.5">
@@ -336,38 +336,40 @@ export default function Lobby() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-16"
+            className="flex justify-center py-12"
           >
-            <div className="w-16 h-16 rounded-full bg-white/[0.03] flex items-center justify-center mx-auto mb-4 border border-white/5">
-              <Users className="w-8 h-8 text-gray-600" />
-            </div>
-            <p className="text-sm text-gray-400 mb-2">
-              {activeFormat === "all" ? "No tables yet" : `No ${activeFormat.replace("_", " ")} tables`}
-            </p>
-            <p className="text-xs text-gray-600 mb-6">Create the first table or play offline vs bots</p>
-            <div className="flex items-center gap-3 justify-center">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/game")}
-                className="glass rounded-lg px-5 py-2.5 text-xs font-bold tracking-wider text-gray-300 border border-white/10 hover:border-white/20 transition-all flex items-center gap-2"
-              >
-                <Bot className="w-4 h-4" />
-                PLAY VS BOTS
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowCreateTable(true)}
-                className="rounded-lg px-5 py-2.5 text-xs font-bold tracking-wider text-black flex items-center gap-2"
-                style={{
-                  background: "linear-gradient(135deg, #c9a84c, #e8c566)",
-                  boxShadow: "0 0 20px rgba(201,168,76,0.3)",
-                }}
-              >
-                <Plus className="w-4 h-4" />
-                CREATE TABLE
-              </motion.button>
+            <div className="glass rounded-2xl border border-white/5 px-12 py-10 text-center max-w-md">
+              <div className="w-16 h-16 rounded-full bg-cyan-500/5 flex items-center justify-center mx-auto mb-4 border border-cyan-500/10 shadow-[0_0_20px_rgba(0,240,255,0.05)]">
+                <Users className="w-8 h-8 text-cyan-500/40" />
+              </div>
+              <p className="text-sm text-gray-300 mb-1 font-medium">
+                {activeFormat === "all" ? "No tables yet" : `No ${activeFormat.replace("_", " ")} tables`}
+              </p>
+              <p className="text-xs text-gray-600 mb-6">Create the first table or play offline vs bots</p>
+              <div className="flex items-center gap-3 justify-center">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/game")}
+                  className="glass rounded-lg px-5 py-2.5 text-xs font-bold tracking-wider text-gray-300 border border-white/10 hover:border-white/20 transition-all flex items-center gap-2"
+                >
+                  <Bot className="w-4 h-4" />
+                  PLAY VS BOTS
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowCreateTable(true)}
+                  className="rounded-lg px-5 py-2.5 text-xs font-bold tracking-wider text-black flex items-center gap-2"
+                  style={{
+                    background: "linear-gradient(135deg, #c9a84c, #e8c566)",
+                    boxShadow: "0 0 20px rgba(201,168,76,0.3)",
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  CREATE TABLE
+                </motion.button>
+              </div>
             </div>
           </motion.div>
         ) : (

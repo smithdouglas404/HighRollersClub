@@ -169,10 +169,9 @@ export default function Leagues() {
                   setCreateType(activeTab === "alliances" ? "alliance" : "league");
                   setShowCreate(true);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black shadow-[0_0_20px_rgba(201,168,76,0.3)]"
                 style={{
-                  background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                  boxShadow: "0 0 15px rgba(0,255,157,0.2)",
+                  background: "linear-gradient(135deg, #c9a84c, #f0d078)",
                 }}
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -192,7 +191,7 @@ export default function Leagues() {
                     <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center mb-4">
                       <Swords className="w-8 h-8 text-cyan-400/50" />
                     </div>
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">No Alliances Yet</h3>
+                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wider mb-1">No Alliances Yet</h3>
                     <p className="text-xs text-gray-600 max-w-xs">
                       Create an alliance to unite clubs and compete together in leagues.
                     </p>
@@ -241,7 +240,7 @@ export default function Leagues() {
                               {allianceClubs.map((club, ci) => (
                                 <div
                                   key={club.id}
-                                  className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]"
+                                  className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/10"
                                 >
                                   <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center shrink-0">
                                     {ci === 0 ? (
@@ -285,7 +284,7 @@ export default function Leagues() {
                     <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center mb-4">
                       <Trophy className="w-8 h-8 text-amber-400/50" />
                     </div>
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">No League Seasons</h3>
+                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wider mb-1">No League Seasons</h3>
                     <p className="text-xs text-gray-600 max-w-xs">
                       Create a league season to track inter-club competition and rankings.
                     </p>
@@ -342,7 +341,7 @@ export default function Leagues() {
                               return (
                                 <div
                                   key={entry.clubId}
-                                  className="flex items-center gap-4 px-3 py-2.5 hover:bg-white/[0.02] transition-colors border-b border-white/[0.02]"
+                                  className="flex items-center gap-4 px-3 py-2.5 hover:bg-white/[0.06] transition-colors border-b border-white/[0.02]"
                                 >
                                   <span className="w-8 text-center">
                                     {rank < 3 ? (
@@ -448,7 +447,7 @@ export default function Leagues() {
 
                 {/* Name */}
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">Name</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">Name</label>
                   <input
                     type="text"
                     value={createName}
@@ -462,7 +461,7 @@ export default function Leagues() {
                 {createType === "league" && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">Start Date</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">Start Date</label>
                       <input
                         type="date"
                         value={leagueStart}
@@ -471,7 +470,7 @@ export default function Leagues() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">End Date</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">End Date</label>
                       <input
                         type="date"
                         value={leagueEnd}
@@ -494,10 +493,9 @@ export default function Leagues() {
                   <button
                     onClick={handleCreate}
                     disabled={createLoading || !createName.trim() || (createType === "league" && (!leagueStart || !leagueEnd))}
-                    className="flex-1 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(201,168,76,0.3)]"
                     style={{
-                      background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                      boxShadow: "0 0 15px rgba(0,255,157,0.2)",
+                      background: "linear-gradient(135deg, #c9a84c, #f0d078)",
                     }}
                   >
                     {createLoading ? (

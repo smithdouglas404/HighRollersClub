@@ -454,7 +454,7 @@ function SafeAvatarDisc({
             roughness={0.4}
             metalness={0.5}
             emissive={isActive ? (glowColor || "#00f0ff") : "#000000"}
-            emissiveIntensity={isActive ? 0.3 : 0}
+            emissiveIntensity={isActive ? 0.6 : 0}
           />
         </mesh>
       </Float>
@@ -493,10 +493,68 @@ function AvatarTextured({
           roughness={0.4}
           metalness={0.3}
           emissive={isActive ? (glowColor || "#00f0ff") : "#000000"}
-          emissiveIntensity={isActive ? 0.35 : 0}
+          emissiveIntensity={isActive ? 0.65 : 0}
         />
       </mesh>
     </Float>
+  );
+}
+
+// Animated rotating glow ring for active player seats in 3D
+function ActiveGlowRing({ glowColor }: { glowColor: string }) {
+  const ringRef = useRef<THREE.Mesh>(null);
+
+  useFrame((_, delta) => {
+    if (ringRef.current) {
+      ringRef.current.rotation.z += delta * 1.2;
+    }
+  });
+
+  return (
+    <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+      <ringGeometry args={[0.48, 0.57, 32]} />
+      <meshStandardMaterial
+        color={glowColor}
+        transparent
+        opacity={0.85}
+        emissive={glowColor}
+        emissiveIntensity={1.2}
+        roughness={0.2}
+        metalness={0.8}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+// ─── Player Silhouette (torso + head behind avatar) ─────────────────────────
+function PlayerSilhouette({ isActive }: { isActive?: boolean }) {
+  return (
+    <group position={[0, 1.2, -0.15]}>
+      {/* Torso — cylinder */}
+      <mesh position={[0, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.35, 0.3, 0.6, 16]} />
+        <meshStandardMaterial
+          color="#0a0f18"
+          roughness={0.8}
+          metalness={0.3}
+          emissive={isActive ? "#0a2030" : "#000000"}
+          emissiveIntensity={isActive ? 0.4 : 0}
+        />
+      </mesh>
+
+      {/* Head — sphere */}
+      <mesh position={[0, 0.5, 0]} castShadow>
+        <sphereGeometry args={[0.2, 16, 12]} />
+        <meshStandardMaterial
+          color="#0a0f18"
+          roughness={0.8}
+          metalness={0.3}
+          emissive={isActive ? "#0a2030" : "#000000"}
+          emissiveIntensity={isActive ? 0.4 : 0}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -508,6 +566,9 @@ function PlayerSeat({
 }) {
   return (
     <group position={position}>
+      {/* Player silhouette — shadowy figure behind the avatar */}
+      <PlayerSilhouette isActive={isActive} />
+
       {/* Seat base — thicker */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
         <cylinderGeometry args={[0.5, 0.55, 0.12, 32]} />
@@ -529,13 +590,8 @@ function PlayerSeat({
       {/* Avatar */}
       <SafeAvatarDisc avatarUrl={avatarUrl} isActive={isActive} glowColor={glowColor} />
 
-      {/* Active glow ring */}
-      {isActive && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-          <ringGeometry args={[0.48, 0.55, 32]} />
-          <meshBasicMaterial color={glowColor} transparent opacity={0.8} />
-        </mesh>
-      )}
+      {/* Active glow ring — animated rotation + brighter emission */}
+      {isActive && <ActiveGlowRing glowColor={glowColor} />}
     </group>
   );
 }

@@ -123,7 +123,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                     }}
                     className={`p-2.5 rounded-lg border text-center transition-all ${
                       isSelected
-                        ? `bg-${opt.color}-500/15 border-${opt.color}-500/30 text-${opt.color}-400`
+                        ? "border-transparent"
                         : "bg-white/5 border-white/10 text-gray-500 hover:border-white/20"
                     }`}
                     style={isSelected ? (() => {
@@ -132,6 +132,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                         backgroundColor: `rgba(${colorValues},0.1)`,
                         borderColor: `rgba(${colorValues},0.3)`,
                         boxShadow: `0 0 15px rgba(${colorValues},0.2)`,
+                        color: `rgb(${colorValues})`,
                       };
                     })() : {}}
                   >
@@ -349,7 +350,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 onClick={() => setIsPrivate(!isPrivate)}
                 className={`w-9 h-5 rounded-full transition-colors ${isPrivate ? 'bg-cyan-500' : 'bg-white/10'} relative`}
               >
-                <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${isPrivate ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${isPrivate ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
               </button>
               <span className="text-xs text-gray-400 flex items-center gap-1">
                 <Lock className="w-3 h-3" /> Private
@@ -361,7 +362,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 onClick={() => setAllowBots(!allowBots)}
                 className={`w-9 h-5 rounded-full transition-colors ${allowBots ? 'bg-cyan-500' : 'bg-white/10'} relative`}
               >
-                <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${allowBots ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${allowBots ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
               </button>
               <span className="text-xs text-gray-400 flex items-center gap-1">
                 <Bot className="w-3 h-3" /> Allow Bots

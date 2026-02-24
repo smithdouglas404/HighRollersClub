@@ -958,43 +958,71 @@ export default function Shop() {
               </div>
             </motion.div>
 
-            {/* Limited Time Offer */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="glass rounded-xl p-4 border border-amber-500/15 overflow-hidden relative"
-              style={{ boxShadow: "0 0 30px rgba(201,168,76,0.05)" }}
-            >
-              <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 blur-3xl rounded-full" />
-              <div className="relative">
-                <div className="text-[9px] font-bold uppercase tracking-wider text-amber-400 mb-1">
-                  Limited-Time Offer:
-                </div>
-                <div className="text-sm font-black text-white uppercase tracking-wider mb-1">
-                  Elite Player's Pass
-                </div>
-                <div className="text-[9px] text-gray-600 mb-3">
-                  <span className="text-amber-400/60 font-bold uppercase">Coming Soon</span>
-                </div>
-                <div className="flex items-center gap-2 mb-3">
-                  {[Star, Crown, Zap].map((Icon, i) => (
-                    <div key={i} className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/15 flex items-center justify-center">
-                      <Icon className="w-3 h-3 text-amber-400" />
-                    </div>
-                  ))}
-                </div>
-                <button
-                  disabled
-                  className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black/50 cursor-not-allowed"
-                  style={{
-                    background: "linear-gradient(135deg, #c9a84c80, #e8c56680)",
-                  }}
+            {/* Limited Time Offer — Elite Player's Pass */}
+            {(() => {
+              const elitePass = shopItems.find(
+                (item) => item.name.includes("Elite Player") && item.name.includes("Pass")
+              );
+              const eliteOwned = elitePass ? ownedItemIds.has(elitePass.id) : false;
+              return (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="glass rounded-xl p-4 border border-amber-500/15 overflow-hidden relative"
+                  style={{ boxShadow: "0 0 30px rgba(201,168,76,0.05)" }}
                 >
-                  Coming Soon
-                </button>
-              </div>
-            </motion.div>
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 blur-3xl rounded-full" />
+                  <div className="relative">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-amber-400 mb-1">
+                      Limited-Time Offer:
+                    </div>
+                    <div className="text-sm font-black text-white uppercase tracking-wider mb-1">
+                      Elite Player's Pass
+                    </div>
+                    <div className="text-[9px] text-gray-600 mb-3">
+                      <span className="text-amber-400/60 font-bold uppercase flex items-center gap-1">
+                        <Coins className="w-3 h-3" /> 5,000 Chips
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      {[Star, Crown, Zap].map((Icon, i) => (
+                        <div key={i} className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/15 flex items-center justify-center">
+                          <Icon className="w-3 h-3 text-amber-400" />
+                        </div>
+                      ))}
+                    </div>
+                    {eliteOwned ? (
+                      <button
+                        disabled
+                        className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-green-400 flex items-center justify-center gap-1.5"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(0,255,157,0.1), rgba(0,212,170,0.1))",
+                          border: "1px solid rgba(0,255,157,0.2)",
+                        }}
+                      >
+                        <Check className="w-3.5 h-3.5" /> Purchased
+                      </button>
+                    ) : (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => elitePass && setSelectedItem(elitePass)}
+                        disabled={!elitePass}
+                        className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        style={{
+                          background: "linear-gradient(135deg, #c9a84c, #e8c566)",
+                          boxShadow: "0 0 20px rgba(201,168,76,0.2)",
+                        }}
+                      >
+                        <ShoppingCart className="w-3.5 h-3.5" />
+                        Buy Now — 5,000 Chips
+                      </motion.button>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })()}
 
             {/* Wallet Actions */}
             <div className="flex gap-2">

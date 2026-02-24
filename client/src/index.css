@@ -68,9 +68,6 @@
   --rail-gold: #c9a84c;
 }
 
-/* === GOOGLE FONTS IMPORTS === */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
-
 @layer base {
   * {
     @apply border-border;
@@ -133,6 +130,16 @@
   50% { transform: translateY(-8px) scale(1.05); }
 }
 
+@keyframes avatarGlowSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes avatarGlowPulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
 @keyframes cardDeal {
   0% { transform: translateX(100px) translateY(-100px) rotate(20deg) scale(0.3); opacity: 0; }
   60% { transform: translateX(0) translateY(0) rotate(-3deg) scale(1.05); opacity: 1; }
@@ -176,6 +183,23 @@
 @keyframes breathe {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.02); }
+}
+
+@keyframes holoSweep {
+  0% {
+    opacity: 0;
+    background-position: -200% 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    background-position: 200% 0;
+  }
 }
 
 /* === UTILITY CLASSES === */

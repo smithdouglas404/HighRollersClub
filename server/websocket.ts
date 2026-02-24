@@ -306,8 +306,24 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendToUser(client.userId, { type: "error", message: "Already at max buy-in" });
         return;
       }
+      // Re-read to prevent race condition (optimistic locking)
+      const freshUser = await storage.getUser(client.userId);
+      if (!freshUser || freshUser.chipBalance < addAmount) {
+        sendToUser(client.userId, { type: "error", message: "Insufficient chips" });
+        return;
+      }
       // Deduct from user balance and add to stack
-      await storage.updateUser(client.userId, { chipBalance: user.chipBalance - addAmount });
+      await storage.updateUser(client.userId, { chipBalance: freshUser.chipBalance - addAmount });
+      // Record the transaction
+      await storage.createTransaction({
+        userId: client.userId,
+        type: "withdraw",
+        amount: -addAmount,
+        balanceBefore: freshUser.chipBalance,
+        balanceAfter: freshUser.chipBalance - addAmount,
+        tableId: client.tableId,
+        description: "Added chips to table",
+      });
       player.chips += addAmount;
       sendGameStateToTable(client.tableId);
       break;

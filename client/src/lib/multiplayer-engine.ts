@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { wsClient } from "./ws-client";
+import { AVATAR_OPTIONS } from "../components/poker/AvatarSelect";
 import type { Player, GameState, CardType } from "./poker-types";
 import type { PlayerResult } from "./hand-evaluator";
 import type { ShowdownData } from "./game-engine";
 
 // Convert server state to client-compatible format
 function serverToClientPlayers(serverPlayers: any[]): Player[] {
-  return serverPlayers.map((p) => ({
+  return serverPlayers.map((p) => {
+    const avatarOption = p.avatarId ? AVATAR_OPTIONS.find(a => a.id === p.avatarId) : undefined;
+    return {
     id: p.id,
     name: p.displayName,
     chips: p.chips,
-    avatar: undefined,
+    avatar: avatarOption?.image,
     cards: p.cards
       ? p.cards.map((c: any) =>
           c.hidden ? { suit: "spades" as const, rank: "A" as const, hidden: true } : c
@@ -24,7 +27,8 @@ function serverToClientPlayers(serverPlayers: any[]): Player[] {
     status: p.status || "waiting",
     timeLeft: p.status === "thinking" ? Math.max(0, Math.round((p.timeBank || 30) * 100 / 30)) : undefined,
     timeBank: p.timeBank ?? 30,
-  }));
+  };
+  });
 }
 
 function serverToClientGameState(serverState: any): GameState {

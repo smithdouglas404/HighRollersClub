@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Seat } from "../components/poker/Seat";
+import { Card } from "../components/poker/Card";
 // CommunityCards now rendered as 3D objects in Table3D scene
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
@@ -35,6 +36,7 @@ import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
 import luxuryRail from "@assets/generated_images/poker_table_top_cinematic.png";
+import serverBg from "@assets/generated_images/cinematic_server_room_bg.png";
 // Bot avatars from the avatar library
 import avatar1 from "@assets/generated_images/avatars/avatar_red_wolf.png";
 import avatar2 from "@assets/generated_images/avatars/avatar_steel_ghost.png";
@@ -49,12 +51,15 @@ const BOT_NAMES = ["CryptoKing", "Satoshi", "Whale_0x", "HODLer", "Degen"];
 const BOT_CHIPS = [3200, 850, 5000, 1200, 2100];
 
 const SEAT_POSITIONS = [
-  { x: 50, y: 88 },  // Hero (Bottom center)
-  { x: 10, y: 62 },  // Left
-  { x: 18, y: 22 },  // Top-left
-  { x: 50, y: 10 },  // Top center
-  { x: 82, y: 22 },  // Top-right
-  { x: 90, y: 62 },  // Right
+  { x: 50, y: 88 },  // Seat 0: Hero (bottom center)
+  { x: 15, y: 72 },  // Seat 1: bottom-left
+  { x: 5,  y: 48 },  // Seat 2: left
+  { x: 15, y: 25 },  // Seat 3: top-left
+  { x: 35, y: 12 },  // Seat 4: top-left-center
+  { x: 55, y: 8  },  // Seat 5: top-center
+  { x: 75, y: 12 },  // Seat 6: top-right-center
+  { x: 90, y: 25 },  // Seat 7: top-right
+  { x: 95, y: 48 },  // Seat 8: right
 ];
 
 const phaseLabels: Record<string, string> = {
@@ -186,6 +191,7 @@ function GameTable({
   return (
     <div className="min-h-screen bg-[#020508] text-white overflow-hidden relative font-sans flex">
       <div className="absolute inset-0">
+        <img src={serverBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-[1px]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,30,40,0.5)_0%,rgba(0,0,0,0.95)_70%)]" />
         <AmbientParticles />
       </div>
@@ -216,31 +222,37 @@ function GameTable({
           initial={{ y: -60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 25 }}
-          className="absolute top-0 left-0 right-0 h-14 flex items-center justify-between px-5 z-50"
+          className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 z-50 bg-black/40 backdrop-blur-md border-b border-white/5"
         >
           <div className="flex items-center gap-3">
             {onBack && (
               <button
                 onClick={leaveTable || onBack}
-                className="glass rounded-lg p-2 hover:bg-white/5 transition-colors mr-1"
+                className="rounded-lg p-2 hover:bg-white/10 transition-colors mr-1"
                 title="Back to lobby"
               >
                 <ArrowLeft className="w-4 h-4 text-gray-400" />
               </button>
             )}
-            <div className="w-9 h-9 rounded-lg gold-gradient flex items-center justify-center shadow-[0_0_15px_rgba(201,168,76,0.3)]">
-              <Trophy className="w-5 h-5 text-black" />
+            <div className="w-8 h-8 rounded-lg gold-gradient flex items-center justify-center shadow-[0_0_15px_rgba(201,168,76,0.3)]">
+              <Trophy className="w-4 h-4 text-black" />
             </div>
             <div>
-              <div className="font-display font-bold text-sm tracking-widest gold-text leading-none">
+              <div className="font-display font-bold text-xs tracking-widest gold-text leading-none">
                 {tableName || "HIGH ROLLERS"}
               </div>
               <div className="text-[9px] text-gray-500 tracking-[0.2em] font-mono mt-0.5">
-                {tableId ? `TABLE #${tableId.slice(0, 6).toUpperCase()}` : "TABLE #802"}
+                {formatInfo?.smallBlind && formatInfo?.bigBlind
+                  ? <span className="text-emerald-400/80">${formatInfo.smallBlind}/${formatInfo.bigBlind} NLH</span>
+                  : <>{players.length}-MAX NLH</>
+                }
                 <span className="mx-1.5 text-gray-700">|</span>
-                <span className="text-cyan-500/70">{phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
+                <span className="text-cyan-500/70">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
                 <span className="mx-1.5 text-gray-700">|</span>
-                {players.length}-MAX NLH
+                {gameState.handNumber
+                  ? <span className="text-gray-400">Hand #{gameState.handNumber}</span>
+                  : <>{tableId ? `TABLE #${tableId.slice(0, 6).toUpperCase()}` : "TABLE #802"}</>
+                }
                 {formatInfo && formatInfo.gameFormat !== "cash" && (
                   <>
                     <span className="mx-1.5 text-gray-700">|</span>
@@ -396,6 +408,21 @@ function GameTable({
               </div>
             )}
 
+            {/* Central pot display */}
+            {gameState.pot > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center"
+              >
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-0.5">POT</div>
+                <div className="px-4 py-1.5 rounded-lg backdrop-blur-md bg-black/50 border border-amber-500/20"
+                  style={{ boxShadow: "0 0 20px rgba(255,215,0,0.1)" }}>
+                  <span className="text-lg font-mono font-bold text-amber-400">${gameState.pot.toLocaleString()}</span>
+                </div>
+              </motion.div>
+            )}
+
             {/* Player seats (name, chips, timer HUD only — cards rendered in 3D) */}
             {players.map((player, index) => (
               <Seat
@@ -403,9 +430,31 @@ function GameTable({
                 player={player}
                 position={seatPositions[index] || SEAT_POSITIONS[index % SEAT_POSITIONS.length]}
                 isHero={player.id === heroId}
+                isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
+                seatIndex={index}
               />
             ))}
           </motion.div>
+
+          {/* Hero hole cards - large display at bottom */}
+          {heroCards && gameState.phase !== "waiting" && (
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5, type: "spring" }}
+              className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 flex gap-2"
+            >
+              {heroCards.map((card, i) => (
+                <Card
+                  key={`hero-${i}`}
+                  card={{ ...card, hidden: false }}
+                  size="lg"
+                  isHero={true}
+                  delay={0.3 + i * 0.15}
+                />
+              ))}
+            </motion.div>
+          )}
         </div>
 
         <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />

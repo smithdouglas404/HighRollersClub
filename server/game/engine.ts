@@ -967,18 +967,29 @@ export class GameEngine {
         }
         potWinners = eligibleResults.filter(r => (scoreMap.get(r.playerId) || 0) === bestScore);
       } else {
-        // Fallback: old kicker-based comparison
+        // Fallback: kicker-based comparison with numeric kicker arrays
+        // Kickers are already numeric (2-14) from the hand evaluator
+        function compareKickers(a: number[], b: number[]): number {
+          for (let i = 0; i < Math.min(a.length, b.length); i++) {
+            const diff = a[i] - b[i];
+            if (diff !== 0) return diff;
+          }
+          return 0;
+        }
+
         let bestRankValue = -1;
-        let bestKickers = "";
+        let bestKickers: number[] = [];
         for (const r of eligibleResults) {
-          const kStr = r.hand.kickers.join(",");
-          if (r.hand.rankValue > bestRankValue || (r.hand.rankValue === bestRankValue && kStr > bestKickers)) {
+          if (
+            r.hand.rankValue > bestRankValue ||
+            (r.hand.rankValue === bestRankValue && compareKickers(r.hand.kickers, bestKickers) > 0)
+          ) {
             bestRankValue = r.hand.rankValue;
-            bestKickers = kStr;
+            bestKickers = r.hand.kickers;
           }
         }
         potWinners = eligibleResults.filter(
-          r => r.hand.rankValue === bestRankValue && r.hand.kickers.join(",") === bestKickers
+          r => r.hand.rankValue === bestRankValue && compareKickers(r.hand.kickers, bestKickers) === 0
         );
       }
 

@@ -63,6 +63,15 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
     onAction("raise", betAmount);
   }, [sound, onAction, betAmount, isPending]);
 
+  const handleAllIn = useCallback(() => {
+    if (isPending) return;
+    setIsPending(true);
+    sound.playRaise();
+    onAction("raise", maxBet);
+  }, [sound, onAction, maxBet, isPending]);
+
+  const isAllIn = betAmount >= maxBet;
+
   return (
     <motion.div
       initial={{ y: 80, opacity: 0 }}
@@ -70,19 +79,109 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
       className="fixed bottom-0 left-0 right-0 z-50"
     >
-      {/* Gradient fade */}
-      <div className="h-12 bg-gradient-to-t from-[#030508] to-transparent pointer-events-none" />
+      {/* Gradient fade above controls */}
+      <div className="h-8 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
 
-      <div
-        className="pb-5 pt-2 px-4"
-        style={{
-          background: "linear-gradient(180deg, rgba(3,5,8,0.95) 0%, rgba(3,5,8,0.99) 100%)",
-          borderTop: "1px solid rgba(255,255,255,0.04)",
-        }}
-      >
+      <div className="py-3 px-6 bg-black/70 backdrop-blur-xl border-t border-white/10">
         <div className="max-w-3xl mx-auto space-y-2.5">
 
-          {/* ─── Bet Slider Row ──────────────────────────────── */}
+          {/* ─── Action Buttons Row ──────────────────────────── */}
+          <div className="flex items-center gap-2.5 justify-center">
+            {/* FOLD */}
+            <motion.button
+              whileHover={isPending ? {} : { scale: 1.02, y: -1 }}
+              whileTap={isPending ? {} : { scale: 0.97 }}
+              onClick={handleFold}
+              disabled={isPending}
+              className={`
+                relative overflow-hidden rounded-xl min-w-[90px] py-3.5 px-6
+                font-bold text-sm uppercase tracking-wider transition-all
+                bg-red-600/80 text-white border border-red-500/30
+                ${isPending ? "opacity-50 pointer-events-none" : "hover:bg-red-600/90"}
+              `}
+              style={{
+                boxShadow: "0 0 20px rgba(220,38,38,0.25), 0 0 8px rgba(220,38,38,0.15)",
+              }}
+            >
+              FOLD
+            </motion.button>
+
+            {/* CHECK / CALL */}
+            <motion.button
+              whileHover={isPending ? {} : { scale: 1.02, y: -1 }}
+              whileTap={isPending ? {} : { scale: 0.97 }}
+              onClick={minBet > 0 ? handleCall : handleCheck}
+              disabled={isPending}
+              className={`
+                relative overflow-hidden rounded-xl min-w-[90px] py-3.5 px-6
+                font-bold text-sm uppercase tracking-wider transition-all
+                bg-emerald-600/80 text-white border border-emerald-500/30
+                ${isPending ? "opacity-50 pointer-events-none" : "hover:bg-emerald-600/90"}
+              `}
+              style={{
+                boxShadow: "0 0 20px rgba(5,150,105,0.25), 0 0 8px rgba(5,150,105,0.15)",
+              }}
+            >
+              <span className="flex items-center justify-center gap-2">
+                {minBet > 0 ? "CALL" : "CHECK"}
+                {minBet > 0 && (
+                  <span className="font-mono text-xs bg-white/15 px-2 py-0.5 rounded text-white">
+                    ${minBet}
+                  </span>
+                )}
+              </span>
+            </motion.button>
+
+            {/* RAISE (becomes ALL-IN text when slider is at max) */}
+            <motion.button
+              whileHover={isPending ? {} : { scale: 1.02, y: -1 }}
+              whileTap={isPending ? {} : { scale: 0.97 }}
+              onClick={isAllIn ? handleAllIn : handleRaise}
+              disabled={isPending}
+              className={`
+                relative overflow-hidden rounded-xl min-w-[90px] py-3.5 px-6
+                font-bold text-sm uppercase tracking-wider transition-all
+                ${isAllIn
+                  ? "bg-gray-800/90 text-amber-400 border border-amber-500/40"
+                  : "bg-cyan-600/80 text-white border border-cyan-500/30"
+                }
+                ${isPending ? "opacity-50 pointer-events-none" : isAllIn ? "hover:bg-gray-800" : "hover:bg-cyan-600/90"}
+              `}
+              style={{
+                boxShadow: isAllIn
+                  ? "0 0 20px rgba(245,158,11,0.2), 0 0 8px rgba(245,158,11,0.1)"
+                  : "0 0 20px rgba(8,145,178,0.25), 0 0 8px rgba(8,145,178,0.15)",
+              }}
+            >
+              <span className="flex items-center justify-center gap-2">
+                {isAllIn ? "ALL-IN" : "RAISE"}
+                <span className={`font-mono text-xs px-2 py-0.5 rounded ${isAllIn ? "bg-amber-500/15 text-amber-300" : "bg-white/15 text-white"}`}>
+                  ${betAmount}
+                </span>
+              </span>
+            </motion.button>
+
+            {/* ALL-IN (always-visible dedicated button) */}
+            <motion.button
+              whileHover={isPending ? {} : { scale: 1.02, y: -1 }}
+              whileTap={isPending ? {} : { scale: 0.97 }}
+              onClick={handleAllIn}
+              disabled={isPending}
+              className={`
+                relative overflow-hidden rounded-xl min-w-[90px] py-3.5 px-6
+                font-bold text-sm uppercase tracking-wider transition-all
+                bg-gray-800/90 text-amber-400 border border-amber-500/40
+                ${isPending ? "opacity-50 pointer-events-none" : "hover:bg-gray-700/90"}
+              `}
+              style={{
+                boxShadow: "0 0 20px rgba(245,158,11,0.2), 0 0 8px rgba(245,158,11,0.1)",
+              }}
+            >
+              ALL-IN
+            </motion.button>
+          </div>
+
+          {/* ─── Bet Slider Row (compact, below buttons) ─────── */}
           <div className="flex items-center gap-2 px-1">
             {/* Presets */}
             <div className="flex gap-1">
@@ -91,10 +190,10 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
                   key={p.label}
                   onClick={() => handlePreset(p.value)}
                   className={`
-                    px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all
+                    px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all
                     ${betAmount === p.value
-                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
-                      : "bg-white/[0.03] text-gray-600 border border-white/[0.04] hover:bg-white/[0.06] hover:text-gray-400"
+                      ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/40"
+                      : "bg-white/[0.05] text-gray-500 border border-white/[0.06] hover:bg-white/[0.08] hover:text-gray-300"
                     }
                   `}
                 >
@@ -117,94 +216,9 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
             </div>
 
             {/* Amount badge */}
-            <div
-              className="rounded-lg px-3 py-1.5 min-w-[65px] text-center"
-              style={{
-                background: "rgba(0,240,255,0.06)",
-                border: "1px solid rgba(0,240,255,0.15)",
-                boxShadow: "0 0 12px rgba(0,240,255,0.06)",
-              }}
-            >
-              <span className="text-sm font-mono font-bold text-cyan-300">{betAmount}</span>
+            <div className="rounded-lg px-3 py-1 min-w-[70px] text-center bg-cyan-500/10 border border-cyan-500/20">
+              <span className="text-sm font-mono font-bold text-cyan-300">${betAmount}</span>
             </div>
-          </div>
-
-          {/* ─── Action Buttons ──────────────────────────────── */}
-          <div className="flex items-center gap-2 justify-center">
-            {/* FOLD */}
-            <motion.button
-              whileHover={isPending ? {} : { scale: 1.03, y: -1 }}
-              whileTap={isPending ? {} : { scale: 0.97 }}
-              onClick={handleFold}
-              disabled={isPending}
-              className={`relative overflow-hidden rounded-xl px-7 py-3 min-w-[100px] font-bold text-sm uppercase tracking-wider transition-all backdrop-blur-md ${isPending ? "opacity-50 pointer-events-none" : ""}`}
-              style={{
-                background: "linear-gradient(180deg, rgba(180,30,50,0.25) 0%, rgba(120,20,30,0.15) 100%)",
-                border: "1px solid rgba(255,60,80,0.2)",
-                color: "#ff6b7a",
-                boxShadow: "0 0 20px rgba(255,51,102,0.08), inset 0 1px 0 rgba(255,255,255,0.03)",
-              }}
-            >
-              FOLD
-            </motion.button>
-
-            {/* CHECK / CALL */}
-            <motion.button
-              whileHover={isPending ? {} : { scale: 1.03, y: -1 }}
-              whileTap={isPending ? {} : { scale: 0.97 }}
-              onClick={minBet > 0 ? handleCall : handleCheck}
-              disabled={isPending}
-              className={`relative overflow-hidden rounded-xl px-7 py-3 min-w-[160px] font-bold text-sm uppercase tracking-wider transition-all backdrop-blur-md ${isPending ? "opacity-50 pointer-events-none" : ""}`}
-              style={{
-                background: "linear-gradient(180deg, rgba(0,200,120,0.2) 0%, rgba(0,140,80,0.1) 100%)",
-                border: "1px solid rgba(0,255,157,0.2)",
-                color: "#4ade80",
-                boxShadow: "0 0 20px rgba(0,255,157,0.08), inset 0 1px 0 rgba(255,255,255,0.03)",
-              }}
-            >
-              <span className="flex items-center justify-center gap-2">
-                {minBet > 0 ? "CHECK/CALL" : "CHECK"}
-                {minBet > 0 && (
-                  <span
-                    className="font-mono text-xs px-2 py-0.5 rounded"
-                    style={{
-                      background: "rgba(0,255,157,0.1)",
-                      color: "#6ee7b7",
-                    }}
-                  >
-                    {minBet}
-                  </span>
-                )}
-              </span>
-            </motion.button>
-
-            {/* RAISE */}
-            <motion.button
-              whileHover={isPending ? {} : { scale: 1.03, y: -1 }}
-              whileTap={isPending ? {} : { scale: 0.97 }}
-              onClick={handleRaise}
-              disabled={isPending}
-              className={`relative overflow-hidden rounded-xl px-7 py-3 min-w-[130px] font-bold text-sm uppercase tracking-wider transition-all backdrop-blur-md ${isPending ? "opacity-50 pointer-events-none" : ""}`}
-              style={{
-                background: "linear-gradient(180deg, rgba(0,180,240,0.2) 0%, rgba(0,100,200,0.1) 100%)",
-                border: "1px solid rgba(0,240,255,0.25)",
-                color: "#67e8f9",
-                boxShadow: "0 0 20px rgba(0,240,255,0.1), inset 0 1px 0 rgba(255,255,255,0.03)",
-              }}
-            >
-              <span className="flex items-center justify-center gap-2">
-                RAISE
-                <span
-                  className="font-mono text-xs px-2 py-0.5 rounded"
-                  style={{
-                    background: "rgba(0,240,255,0.1)",
-                    color: "#a5f3fc",
-                  }}
-                >
-                  {betAmount}
-                </span>
-              </span>
-            </motion.button>
           </div>
         </div>
       </div>

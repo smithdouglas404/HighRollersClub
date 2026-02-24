@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Lock, Smartphone, Bitcoin, CreditCard, Cpu, Users, Shield, ChevronRight, Play, Zap, Trophy, Star, Globe } from "lucide-react";
+import { Lock, Smartphone, Bitcoin, CreditCard, Cpu, Users, Shield, ChevronRight, Play, Zap, Trophy, Globe, LayoutGrid } from "lucide-react";
 import { MatrixRain } from "../components/MatrixRain";
 
 // Cinematic DALL-E 3 assets
@@ -40,13 +41,53 @@ const FEATURES = [
   },
 ];
 
-const STATS = [
-  { label: "Players Online", value: "2,849", icon: Globe },
-  { label: "Hands Dealt", value: "12.4M", icon: Star },
-  { label: "Prize Pool", value: "$847K", icon: Trophy },
-];
-
 export default function Landing() {
+  const [stats, setStats] = useState([
+    { label: "Players Online", value: "0", icon: Globe },
+    { label: "Tables Active", value: "0", icon: LayoutGrid },
+    { label: "Prize Pool", value: "$0", icon: Trophy },
+  ]);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const [usersRes, tablesRes, tournamentsRes] = await Promise.all([
+          fetch("/api/online-users"),
+          fetch("/api/tables"),
+          fetch("/api/tournaments"),
+        ]);
+
+        const users = usersRes.ok ? await usersRes.json() : [];
+        const tables = tablesRes.ok ? await tablesRes.json() : [];
+        const tournaments = tournamentsRes.ok ? await tournamentsRes.json() : [];
+
+        const playersOnline = Array.isArray(users) ? users.length : 0;
+        const tablesActive = Array.isArray(tables) ? tables.length : 0;
+        const totalPrizePool = Array.isArray(tournaments)
+          ? tournaments.reduce((sum: number, t: any) => sum + (Number(t.prizePool) || 0), 0)
+          : 0;
+
+        setStats([
+          { label: "Players Online", value: playersOnline.toLocaleString(), icon: Globe },
+          { label: "Tables Active", value: tablesActive.toLocaleString(), icon: LayoutGrid },
+          {
+            label: "Prize Pool",
+            value: totalPrizePool >= 1000
+              ? `$${(totalPrizePool / 1000).toFixed(1)}K`
+              : `$${totalPrizePool.toLocaleString()}`,
+            icon: Trophy,
+          },
+        ]);
+      } catch (err) {
+        console.error("Failed to fetch landing stats:", err);
+      }
+    }
+
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#020508] text-white font-sans relative overflow-hidden">
       {/* ─── Background Layers ─────────────────────────── */}
@@ -331,7 +372,7 @@ export default function Landing() {
         >
           <div className="max-w-7xl mx-auto">
             <div className="glass rounded-xl p-4 flex items-center justify-around border border-white/[0.04]">
-              {STATS.map((s, i) => (
+              {stats.map((s, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <s.icon className="w-4 h-4 text-amber-400/60" />
                   <div>

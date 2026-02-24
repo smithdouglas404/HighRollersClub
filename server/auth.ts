@@ -5,28 +5,23 @@ import createMemoryStore from "memorystore";
 import { type Express, type Request } from "express";
 import { storage } from "./storage";
 import { type User } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
 
-// Simple password hashing using Web Crypto (no bcrypt dependency needed)
+const scryptAsync = promisify(scrypt);
+
 async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const salt = randomUUID();
-  const data = encoder.encode(salt + password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-  return `${salt}:${hashHex}`;
+  const salt = randomBytes(16).toString("hex");
+  const derived = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${salt}:${derived.toString("hex")}`;
 }
 
 async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
-  const encoder = new TextEncoder();
-  const data = encoder.encode(salt + password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-  return hashHex === hash;
+  const derived = (await scryptAsync(password, salt, 64)) as Buffer;
+  const hashBuffer = Buffer.from(hash, "hex");
+  return timingSafeEqual(derived, hashBuffer);
 }
 
 // Extend Express types for session user
@@ -114,18 +109,27 @@ function generateGuestName(): string {
   return `${adj}${noun}${num}`;
 }
 
+// Avatar IDs that can be randomly assigned to guest users
+const GUEST_AVATAR_IDS = [
+  "neon-viper", "chrome-siren", "gold-phantom", "shadow-king",
+  "red-wolf", "ice-queen", "tech-monk", "cyber-punk",
+  "steel-ghost", "neon-fox", "dark-ace", "bolt-runner",
+];
+
 // Auth route handlers
 export function registerAuthRoutes(app: Express) {
   // Create guest account
   app.post("/api/auth/guest", async (req, res, next) => {
     try {
       const guestName = generateGuestName();
+      const randomAvatar = GUEST_AVATAR_IDS[Math.floor(Math.random() * GUEST_AVATAR_IDS.length)];
       const user = await storage.createUser({
         username: guestName.toLowerCase(),
         password: await hashPassword(randomUUID()), // random password
         displayName: guestName,
         role: "guest",
         chipBalance: 10000,
+        avatarId: randomAvatar,
       });
 
       const safeUser = sanitizeUser(user);
@@ -195,11 +199,35 @@ export function registerAuthRoutes(app: Express) {
     }
   });
 
+  // Rate limiting for login attempts
+  const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+  const MAX_LOGIN_ATTEMPTS = 5;
+  const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
   // Login
   app.post("/api/auth/login", (req, res, next) => {
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    const now = Date.now();
+    const attempts = loginAttempts.get(ip);
+    if (attempts) {
+      if (now < attempts.resetAt) {
+        if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+          return res.status(429).json({ message: "Too many login attempts. Try again in 15 minutes." });
+        }
+      } else {
+        loginAttempts.delete(ip);
+      }
+    }
+
     passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json({ message: info?.message || "Login failed" });
+      if (!user) {
+        const current = loginAttempts.get(ip) || { count: 0, resetAt: now + LOGIN_WINDOW_MS };
+        current.count++;
+        loginAttempts.set(ip, current);
+        return res.status(401).json({ message: info?.message || "Login failed" });
+      }
+      loginAttempts.delete(ip);
       req.login(user, (err) => {
         if (err) return next(err);
         res.json(user);

@@ -9,10 +9,21 @@ import { ContractClient } from "../blockchain/contract-client";
 import { SNGLifecycle, type EliminationInfo } from "./format-lifecycle";
 import { STANDARD_SNG_SCHEDULE, getDefaultPayouts, type BlindLevel, type PayoutEntry } from "./blind-presets";
 
+// 12 cinematic avatar IDs available for players
+const AVATAR_IDS = [
+  "neon-viper", "chrome-siren", "gold-phantom", "shadow-king",
+  "red-wolf", "ice-queen", "tech-monk", "cyber-punk",
+  "steel-ghost", "neon-fox", "dark-ace", "bolt-runner",
+] as const;
+
+// Bots start at index 4 ("red-wolf") to avoid clashing with human defaults
+const BOT_AVATAR_START_INDEX = 4;
+
 export interface TableInstance {
   engine: GameEngine;
   bots: BotPlayer[];
   lifecycle: SNGLifecycle | null;
+  avatarMap: Map<string, string>; // playerId → avatarId
   config: {
     maxPlayers: number;
     smallBlind: number;
@@ -340,10 +351,13 @@ class TableManager {
       }
     };
 
+    const avatarMap = new Map<string, string>();
+
     instance = {
       engine,
       bots: [],
       lifecycle,
+      avatarMap,
       config: {
         maxPlayers: tableRow.maxPlayers,
         smallBlind: tableRow.smallBlind,
@@ -356,7 +370,15 @@ class TableManager {
         buyInAmount: tableRow.buyInAmount || tableRow.minBuyIn,
         startingChips: tableRow.startingChips || 1500,
       },
-      getStateForPlayer: (playerId: string) => engine.getStateForPlayer(playerId),
+      getStateForPlayer: (playerId: string) => {
+        const baseState = engine.getStateForPlayer(playerId);
+        // Inject avatarId into each player from the avatarMap
+        baseState.players = baseState.players.map((p: any) => ({
+          ...p,
+          avatarId: avatarMap.get(p.id) || null,
+        }));
+        return baseState;
+      },
     };
 
     this.tables.set(tableId, instance);
@@ -432,13 +454,19 @@ class TableManager {
         return { ok: false, error: "Insufficient chips for buy-in" };
       }
 
-      await storage.updateUser(userId, { chipBalance: user.chipBalance - fixedBuyIn });
+      // Re-read to prevent race condition (optimistic locking)
+      const freshUser = await storage.getUser(userId);
+      if (!freshUser || freshUser.chipBalance < fixedBuyIn) {
+        return { ok: false, error: "Insufficient chips for buy-in" };
+      }
+
+      await storage.updateUser(userId, { chipBalance: freshUser.chipBalance - fixedBuyIn });
       await storage.createTransaction({
         userId,
         type: "buyin",
         amount: -fixedBuyIn,
-        balanceBefore: user.chipBalance,
-        balanceAfter: user.chipBalance - fixedBuyIn,
+        balanceBefore: freshUser.chipBalance,
+        balanceAfter: freshUser.chipBalance - fixedBuyIn,
         tableId,
         description: `SNG buy-in`,
       });
@@ -460,9 +488,16 @@ class TableManager {
       engine.addPlayer(userId, displayName, seat, config.startingChips, false);
       await storage.addTablePlayer(tableId, userId, seat, config.startingChips);
 
+      // Use the player's profile avatar if set, otherwise assign first unused
+      const usedAvatarsSNG = new Set(instance.avatarMap.values());
+      const sngAvatar = (freshUser.avatarId && AVATAR_IDS.includes(freshUser.avatarId as any))
+        ? freshUser.avatarId
+        : AVATAR_IDS.find(a => !usedAvatarsSNG.has(a)) || AVATAR_IDS[0];
+      instance.avatarMap.set(userId, sngAvatar);
+
       broadcastToTable(tableId, {
         type: "player_joined",
-        player: { id: userId, displayName, seatIndex: seat, chips: config.startingChips },
+        player: { id: userId, displayName, seatIndex: seat, chips: config.startingChips, avatarId: sngAvatar },
       }, userId);
 
       // Auto-start when full
@@ -502,13 +537,19 @@ class TableManager {
       return { ok: false, error: "Insufficient chips" };
     }
 
-    await storage.updateUser(userId, { chipBalance: user.chipBalance - buyIn });
+    // Re-read to prevent race condition (optimistic locking)
+    const freshUser = await storage.getUser(userId);
+    if (!freshUser || freshUser.chipBalance < buyIn) {
+      return { ok: false, error: "Insufficient chips" };
+    }
+
+    await storage.updateUser(userId, { chipBalance: freshUser.chipBalance - buyIn });
     await storage.createTransaction({
       userId,
       type: "buyin",
       amount: -buyIn,
-      balanceBefore: user.chipBalance,
-      balanceAfter: user.chipBalance - buyIn,
+      balanceBefore: freshUser.chipBalance,
+      balanceAfter: freshUser.chipBalance - buyIn,
       tableId,
       description: `Buy-in at table`,
     });
@@ -525,14 +566,36 @@ class TableManager {
 
     engine.addPlayer(userId, displayName, seat, buyIn, false);
 
+    // Use the player's profile avatar if set, otherwise assign first unused
+    const usedAvatars = new Set(instance.avatarMap.values());
+    const humanAvatar = (user.avatarId && AVATAR_IDS.includes(user.avatarId as any))
+      ? user.avatarId
+      : AVATAR_IDS.find(a => !usedAvatars.has(a)) || AVATAR_IDS[0];
+    instance.avatarMap.set(userId, humanAvatar);
+
     // Track in storage
     await storage.addTablePlayer(tableId, userId, seat, buyIn);
 
     // Broadcast join
     broadcastToTable(tableId, {
       type: "player_joined",
-      player: { id: userId, displayName, seatIndex: seat, chips: buyIn },
+      player: { id: userId, displayName, seatIndex: seat, chips: buyIn, avatarId: humanAvatar },
     }, userId);
+
+    // Auto-fill bots for cash games when a human joins an empty-ish table
+    if (config.gameFormat === "cash" && config.allowBots) {
+      const humanCount = engine.state.players.filter(p => !p.isBot).length;
+      const botCount = instance.bots.length;
+      // Only auto-fill if this is the first human and no bots yet
+      if (humanCount === 1 && botCount === 0) {
+        setTimeout(() => {
+          this.addBots(tableId).then(() => {
+            sendGameStateToTable(tableId);
+          }).catch(() => {});
+        }, 1500);
+        return { ok: true };
+      }
+    }
 
     // Auto-start if enough players
     if (engine.state.phase === "waiting" && engine.canStartHand()) {
@@ -566,6 +629,7 @@ class TableManager {
         }
 
         instance.engine.forceRemovePlayer(userId);
+        instance.avatarMap.delete(userId);
         await storage.removeTablePlayer(tableId, userId);
         broadcastToTable(tableId, { type: "player_left", userId, seatIndex: player.seatIndex });
 
@@ -579,6 +643,7 @@ class TableManager {
     const cashOut = player.chips;
     const seatIndex = player.seatIndex;
     instance.engine.removePlayer(userId);
+    instance.avatarMap.delete(userId);
 
     // Return chips to balance
     if (cashOut > 0) {
@@ -725,6 +790,10 @@ class TableManager {
     const BOT_NAMES = ["CryptoKing", "Satoshi", "Whale_0x", "HODLer", "Degen", "NeonAce"];
     let botIndex = instance.bots.length;
 
+    // Collect already-used avatars so bots don't duplicate
+    const usedAvatars = new Set(instance.avatarMap.values());
+    let avatarOffset = 0;
+
     while (engine.state.players.length < config.maxPlayers && botIndex < BOT_NAMES.length) {
       const occupiedSeats = new Set(engine.state.players.map(p => p.seatIndex));
       let seat: number | undefined;
@@ -744,6 +813,24 @@ class TableManager {
       engine.addPlayer(botId, botName, seat, botChips, true);
       const bot = new BotPlayer(botId, botName);
       instance.bots.push(bot);
+
+      // Assign a unique avatar to the bot, starting from BOT_AVATAR_START_INDEX
+      let botAvatar: string | null = null;
+      for (let i = 0; i < AVATAR_IDS.length; i++) {
+        const candidateIdx = (BOT_AVATAR_START_INDEX + avatarOffset + i) % AVATAR_IDS.length;
+        const candidate = AVATAR_IDS[candidateIdx];
+        if (!usedAvatars.has(candidate)) {
+          botAvatar = candidate;
+          usedAvatars.add(candidate);
+          avatarOffset = avatarOffset + i + 1;
+          break;
+        }
+      }
+      // Fallback if all avatars taken (very unlikely with 12 avatars and 6 bots)
+      if (!botAvatar) {
+        botAvatar = AVATAR_IDS[(BOT_AVATAR_START_INDEX + botIndex) % AVATAR_IDS.length];
+      }
+      instance.avatarMap.set(botId, botAvatar);
 
       // Register bot in SNG lifecycle
       if (instance.lifecycle && config.gameFormat === "sng") {

@@ -151,7 +151,7 @@ export default function Analytics() {
                     <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${card.gradient} blur-3xl rounded-full opacity-30`} />
                     <div className="relative">
                       <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${card.gradient} border ${card.border} flex items-center justify-center mb-3`}>
-                        <Icon className={`w-4.5 h-4.5 ${card.textColor}`} />
+                        <Icon className={`w-5 h-5 ${card.textColor}`} />
                       </div>
                       <div className={`text-2xl font-bold ${card.textColor} tracking-tight`}>
                         {card.value}

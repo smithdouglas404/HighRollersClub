@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CardType, Suit } from "@/lib/poker-types";
@@ -34,6 +35,7 @@ const sizeConfig = {
 
 export function Card({ card, className, size = "md", delay = 0, isHero = false, dealFrom, onDealt }: CardProps) {
   const s = sizeConfig[size];
+  const [holoActive, setHoloActive] = useState(false);
 
   // Deal-from animation (arc trajectory from shoe position)
   const dealAnimation = dealFrom
@@ -107,7 +109,10 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
         scale: 1.05,
         transition: { duration: 0.25 },
       } : undefined}
-      onAnimationComplete={() => onDealt?.()}
+      onAnimationComplete={() => {
+        setHoloActive(true);
+        onDealt?.();
+      }}
       className={cn(
         "relative rounded-lg overflow-hidden select-none cursor-default",
         s.w, s.h,
@@ -154,6 +159,20 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
 
           {/* Top highlight */}
           <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/40 to-transparent rounded-t-[7px]" />
+
+          {/* Holographic rainbow shimmer overlay */}
+          {holoActive && (
+            <div
+              className="absolute inset-0 rounded-[7px] pointer-events-none"
+              style={{
+                background: "linear-gradient(105deg, rgba(255,0,0,0.15) 0%, rgba(255,154,0,0.15) 10%, rgba(208,222,33,0.15) 20%, rgba(79,220,74,0.15) 30%, rgba(63,218,216,0.15) 40%, rgba(47,201,226,0.15) 50%, rgba(28,127,238,0.15) 60%, rgba(95,21,242,0.15) 70%, rgba(186,12,248,0.15) 80%, rgba(251,7,217,0.15) 90%, rgba(255,0,0,0.15) 100%)",
+                backgroundSize: "200% 100%",
+                animation: "holoSweep 1.5s ease-out forwards",
+                mixBlendMode: "screen",
+              }}
+              onAnimationEnd={() => setHoloActive(false)}
+            />
+          )}
         </div>
       </div>
     </motion.div>

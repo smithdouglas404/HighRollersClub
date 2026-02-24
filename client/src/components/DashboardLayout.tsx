@@ -109,7 +109,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer group ${
                       isActive
                         ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(0,240,255,0.05)]"
-                        : "text-gray-500 hover:text-gray-300 hover:bg-white/3 border border-transparent"
+                        : "text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent"
                     }`}
                   >
                     <Icon
@@ -144,7 +144,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             </motion.button>
 
             {/* User */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/3 border border-white/5">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/5">
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center border border-white/10">
                 <User className="w-3.5 h-3.5 text-gray-400" />
               </div>

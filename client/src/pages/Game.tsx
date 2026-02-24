@@ -20,6 +20,7 @@ import { MatrixRain } from "@/components/MatrixRain";
 import { SoundProvider, useSoundEngine } from "@/lib/sound-context";
 import { soundEngine } from "@/lib/sound-engine";
 import { ShieldCheck, Volume2, VolumeX, Settings, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users } from "lucide-react";
+import { WalletBar } from "@/components/wallet/WalletBar";
 
 // Cinematic DALL-E 3 assets
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
@@ -209,6 +210,7 @@ function GameTable({
           </div>
 
           <div className="flex items-center gap-2">
+            <WalletBar />
             {/* Multiplayer indicators */}
             {isMultiplayer && (
               <>
@@ -323,11 +325,7 @@ function GameTable({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative w-[92%] max-w-[1100px] aspect-[2/1] z-10 pointer-events-none"
-            style={{
-              transform: "rotateX(28deg) translateY(40px) scale(0.88)",
-              transformStyle: "preserve-3d",
-            }}
+            className="absolute inset-0 z-10 pointer-events-none"
           >
             {/* Waiting overlay */}
             {isMultiplayer && waiting && players.length < 2 && (

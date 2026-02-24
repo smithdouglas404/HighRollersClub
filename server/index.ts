@@ -75,6 +75,16 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      log(`Port ${port} is busy, retrying in 2 seconds...`);
+      setTimeout(() => {
+        server.listen({ port, host: "0.0.0.0", reusePort: true });
+      }, 2000);
+    } else {
+      throw err;
+    }
+  });
   server.listen({
     port,
     host: "0.0.0.0",

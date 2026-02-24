@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { MatrixRain } from "./MatrixRain";
+import { WalletBar } from "./wallet/WalletBar";
 import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
   BarChart3, Coins, LogOut, User, ChevronRight
@@ -169,15 +170,27 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
 
       {/* ─── Main Content ────────────────────────────────────────── */}
       <main className="relative z-10 flex-1 overflow-y-auto min-h-screen">
-        {title && (
+        {/* Top header bar with wallet */}
+        <div className="flex items-center justify-between px-8 pt-4 pb-2">
+          {title ? (
+            <motion.h1
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="text-lg font-bold tracking-wider text-white uppercase"
+            >
+              {title}
+            </motion.h1>
+          ) : (
+            <div />
+          )}
           <motion.div
-            initial={{ y: -20, opacity: 0 }}
+            initial={{ y: -10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="px-8 pt-6 pb-4"
+            transition={{ delay: 0.2 }}
           >
-            <h1 className="text-lg font-bold tracking-wider text-white uppercase">{title}</h1>
+            <WalletBar />
           </motion.div>
-        )}
+        </div>
         {children}
       </main>
     </div>

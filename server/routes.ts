@@ -100,6 +100,30 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  app.get("/api/clubs/:id/members", async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+      const members = await storage.getClubMembers(club.id);
+      // Enrich with user data
+      const enriched = await Promise.all(
+        members.map(async (m) => {
+          const user = await storage.getUser(m.userId);
+          return {
+            ...m,
+            username: user?.username || "Unknown",
+            displayName: user?.displayName || user?.username || "Unknown",
+            avatarId: user?.avatarId || null,
+            chipBalance: user?.chipBalance ?? 0,
+          };
+        })
+      );
+      res.json(enriched);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   app.post("/api/clubs", requireAuth, async (req, res, next) => {
     try {
       const parsed = insertClubSchema.safeParse(req.body);

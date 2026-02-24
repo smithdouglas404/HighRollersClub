@@ -117,6 +117,35 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
+// ─── Shoe position (top center, where cards deal from) ──────────────────────
+const SHOE_POSITION: [number, number, number] = [0, 0.5, -2.5];
+
+// ─── Bezier interpolation helper ────────────────────────────────────────────
+function bezierArc(
+  start: [number, number, number],
+  end: [number, number, number],
+  t: number,
+  arcHeight: number = 1.2,
+): [number, number, number] {
+  const mid: [number, number, number] = [
+    (start[0] + end[0]) / 2,
+    Math.max(start[1], end[1]) + arcHeight,
+    (start[2] + end[2]) / 2,
+  ];
+  const inv = 1 - t;
+  return [
+    inv * inv * start[0] + 2 * inv * t * mid[0] + t * t * end[0],
+    inv * inv * start[1] + 2 * inv * t * mid[1] + t * t * end[1],
+    inv * inv * start[2] + 2 * inv * t * mid[2] + t * t * end[2],
+  ];
+}
+
+// ─── Spring bounce helper ───────────────────────────────────────────────────
+function settlingBounce(t: number): number {
+  if (t >= 1) return 0;
+  return Math.sin(t * Math.PI * 3) * 0.02 * (1 - t);
+}
+
 // ─── 3D Card with flip animation ────────────────────────────────────────────
 function Card3D({
   card,
@@ -135,6 +164,7 @@ function Card3D({
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const flipRef = useRef({ progress: faceDown ? 0 : 1, target: faceDown ? 0 : 1, started: false, timer: 0 });
+  const dealRef = useRef({ progress: 0, duration: 0.8, started: false, settled: false });
   const backTexture = useTexture(cardBackImg);
 
   const faceTex = useMemo(() => {
@@ -144,22 +174,55 @@ function Card3D({
 
   const showFace = !faceDown && faceTex && card && !card.hidden;
 
-  // Animate flip
+  // Animate deal arc + flip
   useFrame((_, delta) => {
     const flip = flipRef.current;
+    const deal = dealRef.current;
     flip.timer += delta;
-    if (flip.timer < flipDelay) return;
+    if (flip.timer < flipDelay) {
+      // Still waiting — keep card at shoe
+      if (meshRef.current) {
+        meshRef.current.position.set(SHOE_POSITION[0], SHOE_POSITION[1], SHOE_POSITION[2]);
+        meshRef.current.visible = false;
+      }
+      return;
+    }
+
+    if (meshRef.current) meshRef.current.visible = true;
+
+    // Deal arc animation
+    if (!deal.settled) {
+      if (!deal.started) deal.started = true;
+      deal.progress = Math.min(deal.progress + delta / deal.duration, 1);
+      const eased = 1 - Math.pow(1 - deal.progress, 3); // easeOutCubic
+      const arcPos = bezierArc(SHOE_POSITION, position, eased);
+      const bounce = settlingBounce(deal.progress);
+
+      if (meshRef.current) {
+        meshRef.current.position.set(arcPos[0], arcPos[1] + bounce, arcPos[2]);
+        // Interpolate rotation during deal
+        meshRef.current.rotation.set(
+          rotation[0] * eased,
+          rotation[1],
+          rotation[2] * eased,
+        );
+      }
+
+      if (deal.progress >= 1) deal.settled = true;
+      return;
+    }
+
+    // Post-deal: flip animation
     if (!flip.started) {
       flip.started = true;
       flip.target = showFace ? 1 : 0;
     }
 
     flip.target = showFace ? 1 : 0;
-    const speed = delta * 4;
+    const speed = delta * 2;
     flip.progress += (flip.target - flip.progress) * speed;
 
     if (meshRef.current) {
-      // Map progress 0→1 to rotation 0→PI for flip
       const baseRotX = rotation[0];
       meshRef.current.rotation.set(baseRotX, rotation[1], rotation[2]);
 
@@ -172,16 +235,16 @@ function Card3D({
   const materials = useMemo(() => {
     const back = new THREE.MeshStandardMaterial({
       map: backTexture,
-      roughness: 0.35,
-      metalness: 0.15,
+      roughness: 0.18,
+      metalness: 0.3,
     });
     const face = faceTex
-      ? new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.25, metalness: 0.08 })
+      ? new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.15, metalness: 0.25 })
       : back.clone();
     const edge = new THREE.MeshStandardMaterial({
       color: "#e8d8a8",
-      roughness: 0.25,
-      metalness: 0.4,
+      roughness: 0.1,
+      metalness: 0.7,
     });
 
     // BoxGeometry face order: +x, -x, +y, -y, +z (front/face), -z (back)
@@ -198,7 +261,7 @@ function Card3D({
       receiveShadow
       material={materials}
     >
-      <boxGeometry args={[0.65, 0.92, 0.012]} />
+      <boxGeometry args={[0.65, 0.92, 0.02]} />
     </mesh>
   );
 }
@@ -290,7 +353,7 @@ function FeltSurface() {
 
   return (
     <mesh geometry={feltGeometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-      <meshStandardMaterial map={texture} color="#1a3a3a" roughness={0.85} metalness={0.05} />
+      <meshStandardMaterial map={texture} color="#1a3a3a" roughness={0.65} metalness={0.12} />
     </mesh>
   );
 }
@@ -327,7 +390,7 @@ function TableRail() {
 
   return (
     <mesh geometry={railGeometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} castShadow receiveShadow>
-      <meshStandardMaterial color="#1a0f08" roughness={0.3} metalness={0.6} />
+      <meshStandardMaterial color="#1a0f08" roughness={0.2} metalness={0.75} />
     </mesh>
   );
 }
@@ -348,7 +411,7 @@ function GoldTrim() {
         roughness={0.15}
         metalness={0.95}
         emissive="#c9a84c"
-        emissiveIntensity={0.25}
+        emissiveIntensity={0.7}
       />
     </mesh>
   );
@@ -445,10 +508,22 @@ function PlayerSeat({
 }) {
   return (
     <group position={position}>
-      {/* Seat base */}
+      {/* Seat base — thicker */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
-        <cylinderGeometry args={[0.5, 0.55, 0.06, 32]} />
+        <cylinderGeometry args={[0.5, 0.55, 0.12, 32]} />
         <meshStandardMaterial color="#0a0f18" roughness={0.5} metalness={0.7} />
+      </mesh>
+
+      {/* Gold accent ring around seat */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+        <ringGeometry args={[0.52, 0.57, 32]} />
+        <meshStandardMaterial
+          color="#c9a84c"
+          roughness={0.15}
+          metalness={0.9}
+          emissive="#c9a84c"
+          emissiveIntensity={0.3}
+        />
       </mesh>
 
       {/* Avatar */}
@@ -458,7 +533,7 @@ function PlayerSeat({
       {isActive && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
           <ringGeometry args={[0.48, 0.55, 32]} />
-          <meshBasicMaterial color={glowColor} transparent opacity={0.6} />
+          <meshBasicMaterial color={glowColor} transparent opacity={0.8} />
         </mesh>
       )}
     </group>
@@ -474,7 +549,7 @@ function ChipStack3D({ position, count = 5 }: { position: [number, number, numbe
       {Array.from({ length: Math.min(count, 8) }).map((_, i) => (
         <mesh key={i} position={[0, i * 0.055, 0]} rotation={[0, i * 0.3, 0]} castShadow>
           <cylinderGeometry args={[0.18, 0.18, 0.04, 24]} />
-          <meshStandardMaterial color={colors[i % colors.length]} roughness={0.25} metalness={0.75} />
+          <meshStandardMaterial color={colors[i % colors.length]} roughness={0.12} metalness={0.85} />
         </mesh>
       ))}
     </group>
@@ -518,26 +593,28 @@ function Lighting({ quality }: { quality: QualityLevel }) {
 
   return (
     <>
-      {/* Main overhead spotlight — warm white */}
+      {/* Key light — dramatic angle from upper-left */}
       <spotLight
-        position={[0, 8, 0]}
-        angle={0.5}
+        position={[-3, 7, 4]}
+        angle={0.4}
         penumbra={0.8}
-        intensity={2.2}
+        intensity={2.8}
         color="#fff5e6"
         castShadow={cfg.shadows}
         shadow-mapSize-width={cfg.shadowMapSize}
         shadow-mapSize-height={cfg.shadowMapSize}
         shadow-bias={-0.001}
       />
-      {/* Rim lights */}
-      <pointLight position={[-8, 3, 0]} intensity={0.35} color="#00f0ff" />
-      <pointLight position={[8, 3, 0]} intensity={0.35} color="#c9a84c" />
-      <pointLight position={[0, 3, -5]} intensity={0.25} color="#00ff9d" />
+      {/* Rim lights — punched up */}
+      <pointLight position={[-8, 3, 0]} intensity={0.7} color="#00f0ff" />
+      <pointLight position={[8, 3, 0]} intensity={0.7} color="#c9a84c" />
+      <pointLight position={[0, 3, -5]} intensity={0.4} color="#00ff9d" />
+      {/* Warm fill from lower-right */}
+      <pointLight position={[4, 2, -3]} intensity={0.2} color="#ffd4a0" />
       {/* Subtle fill from below */}
       <pointLight position={[0, -2, 4]} intensity={0.1} color="#0a2030" />
-      {/* Ambient fill */}
-      <ambientLight intensity={0.12} color="#0a1520" />
+      {/* Ambient fill — very low for contrast */}
+      <ambientLight intensity={0.06} color="#0a1520" />
     </>
   );
 }
@@ -553,7 +630,7 @@ function CinematicCamera({
   joinPhase: boolean;
 }) {
   const { camera } = useThree();
-  const targetPos = useRef(new THREE.Vector3(0, 12, 14));
+  const targetPos = useRef(new THREE.Vector3(8, 15, 18));
   const targetLookAt = useRef(new THREE.Vector3(0, 0, 0));
   const currentLookAt = useRef(new THREE.Vector3(0, 0, 0));
   const startTime = useRef(Date.now());
@@ -561,34 +638,34 @@ function CinematicCamera({
   useFrame((_, delta) => {
     const elapsed = (Date.now() - startTime.current) / 1000;
 
-    if (joinPhase && elapsed < 2.5) {
-      // Cinematic sweep: start high and far, sweep down to table
-      const t = Math.min(elapsed / 2.5, 1);
+    if (joinPhase && elapsed < 4) {
+      // Cinematic sweep: start high and far, sweep down to table over 4 seconds
+      const t = Math.min(elapsed / 4, 1);
       const ease = 1 - Math.pow(1 - t, 3); // easeOutCubic
       targetPos.current.set(
-        Math.sin(t * 0.5) * 2,
-        12 - ease * 5, // 12 → 7
-        14 - ease * 6, // 14 → 8
+        8 - ease * 8 + Math.sin(t * 0.8) * 2,  // 8 → 0 with slight sine
+        15 - ease * 8,  // 15 → 7
+        18 - ease * 10, // 18 → 8
       );
       targetLookAt.current.set(0, 0, 0);
     } else if (isHeroTurn && heroPosition) {
-      // Ease toward hero's perspective
+      // Ease toward hero's perspective — closer to the action
       targetPos.current.set(
         heroPosition[0] * 0.35,
-        5.8,
+        4.5,
         heroPosition[2] * 0.25 + 6.5,
       );
       targetLookAt.current.set(0, 0.15, -0.3);
     } else {
-      // Default overview with idle breathing
-      const breathX = Math.sin(elapsed * 0.15) * 0.15;
-      const breathY = Math.sin(elapsed * 0.1) * 0.08;
-      const breathZ = Math.cos(elapsed * 0.12) * 0.1;
+      // Default overview with idle breathing — larger amplitude
+      const breathX = Math.sin(elapsed * 0.15) * 0.3;
+      const breathY = Math.sin(elapsed * 0.1) * 0.15;
+      const breathZ = Math.cos(elapsed * 0.12) * 0.2;
       targetPos.current.set(0 + breathX, 7 + breathY, 8 + breathZ);
       targetLookAt.current.set(0, 0, 0);
     }
 
-    const speed = delta * (joinPhase && elapsed < 2.5 ? 3 : 1.5);
+    const speed = delta * (joinPhase && elapsed < 4 ? 2.5 : 1.5);
     camera.position.lerp(targetPos.current, speed);
     currentLookAt.current.lerp(targetLookAt.current, speed);
     camera.lookAt(currentLookAt.current);
@@ -605,13 +682,13 @@ function PostProcessing({ quality }: { quality: QualityLevel }) {
   return (
     <EffectComposer multisampling={0}>
       <Bloom
-        intensity={quality === "high" ? 0.35 : 0.3}
-        luminanceThreshold={quality === "high" ? 0.6 : 0.65}
+        intensity={quality === "high" ? 0.5 : 0.35}
+        luminanceThreshold={quality === "high" ? 0.4 : 0.55}
         luminanceSmoothing={0.4}
         mipmapBlur
       />
-      {cfg.ao ? <N8AO aoRadius={0.8} intensity={1.5} distanceFalloff={0.5} /> : <></>}
-      <Vignette eskil={false} offset={0.15} darkness={quality === "high" ? 0.6 : 0.5} />
+      {cfg.ao ? <N8AO aoRadius={2.0} intensity={2.5} distanceFalloff={0.5} /> : <></>}
+      <Vignette eskil={false} offset={0.15} darkness={quality === "high" ? 0.8 : 0.5} />
     </EffectComposer>
   );
 }
@@ -645,7 +722,7 @@ function Scene({
   const joinTimerRef = useRef(Date.now());
 
   useFrame(() => {
-    if (joinPhaseRef.current && Date.now() - joinTimerRef.current > 3000) {
+    if (joinPhaseRef.current && Date.now() - joinTimerRef.current > 4500) {
       joinPhaseRef.current = false;
     }
   });
@@ -734,7 +811,7 @@ export function Table3D({
     <div className={`w-full h-full ${className}`}>
       <Canvas
         shadows={cfg.shadows}
-        camera={{ position: [0, 12, 14], fov: 45, near: 0.1, far: 100 }}
+        camera={{ position: [8, 15, 18], fov: 45, near: 0.1, far: 100 }}
         gl={{ antialias: cfg.antialias, alpha: true, powerPreference: "high-performance" }}
         dpr={cfg.dpr}
         style={{ background: "transparent" }}

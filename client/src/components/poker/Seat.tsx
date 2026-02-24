@@ -89,14 +89,14 @@ export function Seat({ player, position, isHero = false }: SeatProps) {
         {/* Compact name + chips HUD */}
         <div
           className={cn(
-            "relative z-10 px-3 py-2 rounded-lg flex flex-col items-center min-w-[80px] backdrop-blur-md",
-            "bg-black/60 border",
+            "relative z-10 px-2 py-1.5 rounded-lg flex flex-col items-center min-w-[72px] backdrop-blur-md",
+            "bg-black/40 border",
             isFolded && "opacity-40 grayscale",
             isTurn
               ? isHero
-                ? "border-cyan-500/40 shadow-[0_0_12px_rgba(0,240,255,0.2)]"
-                : "border-amber-500/40 shadow-[0_0_12px_rgba(255,215,0,0.2)]"
-              : "border-white/[0.06]"
+                ? "border-cyan-500/30 shadow-[0_0_10px_rgba(0,240,255,0.15)]"
+                : "border-amber-500/30 shadow-[0_0_10px_rgba(255,215,0,0.15)]"
+              : "border-white/[0.04]"
           )}
         >
           {/* Dealer badge */}
@@ -129,7 +129,7 @@ export function Seat({ player, position, isHero = false }: SeatProps) {
           {/* Player name */}
           <span
             className={cn(
-              "text-[9px] uppercase tracking-[0.15em] font-semibold",
+              "text-[8px] uppercase tracking-[0.15em] font-semibold",
               isTurn ? (isHero ? "text-cyan-300" : "text-yellow-300") : "text-gray-400"
             )}
           >
@@ -138,10 +138,10 @@ export function Seat({ player, position, isHero = false }: SeatProps) {
 
           {/* Chip count */}
           <div className="flex items-center gap-0.5">
-            <span className="text-[10px] text-yellow-500/80">$</span>
+            <span className="text-[9px] text-yellow-500/80">$</span>
             <span
               className={cn(
-                "text-xs font-mono font-bold leading-none tracking-tight",
+                "text-[11px] font-mono font-bold leading-none tracking-tight",
                 isHero ? "text-amber-400" : "text-yellow-400/90"
               )}
             >
@@ -151,7 +151,7 @@ export function Seat({ player, position, isHero = false }: SeatProps) {
 
           {/* Current bet (if any) */}
           {player.currentBet > 0 && (
-            <div className="mt-0.5 text-[9px] font-mono font-bold text-green-400/80">
+            <div className="text-[8px] font-mono font-bold text-green-400/80">
               Bet: {player.currentBet.toLocaleString()}
             </div>
           )}

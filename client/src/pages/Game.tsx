@@ -11,6 +11,7 @@ import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
 import { EmotePicker } from "../components/poker/EmoteSystem";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { ChipAnimation } from "../components/poker/ChipAnimation";
+import { Table3D } from "../components/poker/Table3D";
 import { Player } from "../lib/poker-types";
 import { useGameEngine } from "@/lib/game-engine";
 import { useMultiplayerGame } from "@/lib/multiplayer-engine";
@@ -250,58 +251,46 @@ function GameTable({
           </div>
         </motion.div>
 
-        {/* 3D Table Scene */}
-        <div className="flex-1 relative flex items-center justify-center overflow-hidden" style={{ perspective: "1200px" }}>
+        {/* 3D WebGL Table + HTML Overlay */}
+        <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+          {/* Three.js 3D Table (background layer) */}
+          <div className="absolute inset-0 z-0">
+            <Table3D
+              playerAvatars={players.map((p, i) => {
+                const pos = seatPositions[i] || SEAT_POSITIONS[i % SEAT_POSITIONS.length];
+                // Convert percentage positions to 3D world coords
+                const x = ((pos.x - 50) / 50) * 5.5;
+                const z = ((pos.y - 50) / 50) * 3.5;
+                return {
+                  position: [x, 0.15, z] as [number, number, number],
+                  avatarUrl: p.avatar,
+                  isActive: p.status === "thinking",
+                  glowColor: p.id === heroId ? "#00f0ff" : "#ffd700",
+                };
+              })}
+              chipPositions={players
+                .filter(p => p.currentBet > 0)
+                .map((p, i) => {
+                  const pos = seatPositions[players.indexOf(p)] || SEAT_POSITIONS[0];
+                  const x = ((pos.x - 50) / 50) * 4;
+                  const z = ((pos.y - 50) / 50) * 2.5;
+                  return [x * 0.6, 0.2, z * 0.6] as [number, number, number];
+                })}
+            />
+          </div>
+
+          {/* HTML Overlay (cards, seats, UI elements) */}
           <motion.div
             ref={tableRef}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative w-[92%] max-w-[1100px] aspect-[2/1]"
+            className="relative w-[92%] max-w-[1100px] aspect-[2/1] z-10"
             style={{
               transform: "rotateX(28deg) translateY(40px) scale(0.88)",
               transformStyle: "preserve-3d",
             }}
           >
-            {/* Table rail */}
-            <div
-              className="absolute -inset-[45px] rounded-[55%] overflow-hidden"
-              style={{
-                boxShadow: "0 40px 80px -10px rgba(0,0,0,0.9), 0 0 120px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.08)",
-              }}
-            >
-              <div className="absolute inset-0"
-                style={{ backgroundImage: `url(${luxuryRail})`, backgroundSize: "cover", backgroundPosition: "center" }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-[rgba(30,25,18,0.6)] to-[rgba(10,8,5,0.8)]" />
-              <div className="absolute inset-[8px] rounded-[53%] pointer-events-none"
-                style={{ border: "1.5px solid rgba(201,168,76,0.25)", boxShadow: "0 0 20px rgba(201,168,76,0.08), inset 0 0 20px rgba(201,168,76,0.05)" }}
-              />
-            </div>
-
-            {/* Felt surface */}
-            <div
-              className="absolute inset-0 rounded-[50%] overflow-hidden"
-              style={{ boxShadow: "inset 0 0 100px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.5)" }}
-            >
-              <div className="absolute inset-0"
-                style={{ backgroundImage: `url(${feltTexture})`, backgroundSize: "cover", backgroundPosition: "center" }}
-              />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,10,15,0.6)_100%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(255,255,255,0.04)_0%,transparent_60%)]" />
-
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 pointer-events-none">
-                <img src={lionLogo} alt="High Rollers Club"
-                  className="w-full h-full object-contain"
-                  style={{ opacity: 0.12, filter: "grayscale(30%) brightness(1.2)", mixBlendMode: "overlay" }}
-                />
-              </div>
-
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[50%] rounded-[50%] pointer-events-none"
-                style={{ border: "1px solid rgba(255,255,255,0.04)", boxShadow: "0 0 8px rgba(255,255,255,0.02)" }}
-              />
-            </div>
-
             {/* Community Cards */}
             <div className="absolute top-[44%] left-1/2 z-20"
               style={{ transform: "translate(-50%, -50%) translateZ(25px)" }}

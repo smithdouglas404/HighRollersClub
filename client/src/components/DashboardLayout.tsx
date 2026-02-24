@@ -8,8 +8,8 @@ import {
   BarChart3, Coins, LogOut, User, ChevronRight
 } from "lucide-react";
 
-import lionLogo from "@assets/generated_images/Golden_Lion_Logo_for_Poker_Table_961614b0.png";
-import serverBg from "@assets/generated_images/blurred_server_room_background.png";
+import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
+import serverBg from "@assets/generated_images/cinematic_server_room_bg.png";
 
 interface NavItem {
   icon: any;

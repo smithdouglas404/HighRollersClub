@@ -7,13 +7,13 @@ import {
   Download, Tag, Zap, Gem
 } from "lucide-react";
 
-import avatar1 from "@assets/generated_images/cyberpunk_poker_player_avatar_1.png";
-import avatar2 from "@assets/generated_images/cyberpunk_poker_player_avatar_2.png";
-import avatar3 from "@assets/generated_images/cyberpunk_poker_player_avatar_3.png";
-import avatar4 from "@assets/generated_images/cyberpunk_poker_player_avatar_4.png";
-import entropyHud from "@assets/generated_images/holographic_entropy_network_hud.png";
-import allianceHud from "@assets/generated_images/holographic_player_alliance_ui.png";
-import feltTexture from "@assets/generated_images/Dark_Teal_Poker_Felt_Texture_83ec2760.png";
+import avatar1 from "@assets/generated_images/player_seated_cyberpunk_1.png";
+import avatar2 from "@assets/generated_images/player_seated_cyberpunk_2.png";
+import avatar3 from "@assets/generated_images/player_seated_cyberpunk_3.png";
+import avatar4 from "@assets/generated_images/player_seated_cyberpunk_4.png";
+import entropyHud from "@assets/generated_images/holographic_hud_overlay.png";
+import allianceHud from "@assets/generated_images/marketplace_item_armor.png";
+import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
 
 const TABS = ["Avatars", "Table Themes", "Emotes", "Premium"];
 

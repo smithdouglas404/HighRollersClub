@@ -3,15 +3,14 @@ import { motion } from "framer-motion";
 import { Lock, Smartphone, Bitcoin, CreditCard, Cpu, Users, Shield, ChevronRight, Play } from "lucide-react";
 import { MatrixRain } from "../components/MatrixRain";
 
-// Assets
-import lionLogo from "@assets/generated_images/Golden_Lion_Logo_for_Poker_Table_961614b0.png";
-import serverBg from "@assets/generated_images/blurred_server_room_background.png";
-import entropyHud from "@assets/generated_images/holographic_network_graph_green.png";
-import allianceHud from "@assets/generated_images/holographic_player_alliance_ui.png";
-import avatar1 from "@assets/generated_images/cyberpunk_poker_player_avatar_1.png";
-import avatar2 from "@assets/generated_images/cyberpunk_poker_player_avatar_2.png";
-import avatar3 from "@assets/generated_images/cyberpunk_poker_player_avatar_3.png";
-import feltTexture from "@assets/generated_images/Dark_Teal_Poker_Felt_Texture_83ec2760.png";
+// Cinematic DALL-E 3 assets
+import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
+import serverBg from "@assets/generated_images/cinematic_server_room_bg.png";
+import entropyHud from "@assets/generated_images/holographic_hud_overlay.png";
+import allianceHud from "@assets/generated_images/holographic_hud_overlay.png";
+import avatar1 from "@assets/generated_images/player_seated_cyberpunk_1.png";
+import avatar2 from "@assets/generated_images/player_seated_cyberpunk_2.png";
+import avatar3 from "@assets/generated_images/player_seated_cyberpunk_3.png";
 
 export default function Landing() {
   return (

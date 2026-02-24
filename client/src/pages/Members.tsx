@@ -7,10 +7,10 @@ import {
   CheckCircle, XCircle, Gamepad2, Coins, Target
 } from "lucide-react";
 
-import avatar1 from "@assets/generated_images/cyberpunk_poker_player_avatar_1.png";
-import avatar2 from "@assets/generated_images/cyberpunk_poker_player_avatar_2.png";
-import avatar3 from "@assets/generated_images/cyberpunk_poker_player_avatar_3.png";
-import avatar4 from "@assets/generated_images/cyberpunk_poker_player_avatar_4.png";
+import avatar1 from "@assets/generated_images/player_seated_cyberpunk_1.png";
+import avatar2 from "@assets/generated_images/player_seated_cyberpunk_2.png";
+import avatar3 from "@assets/generated_images/player_seated_cyberpunk_3.png";
+import avatar4 from "@assets/generated_images/player_seated_cyberpunk_4.png";
 
 // Mock members data (will be replaced with API)
 const MEMBERS = [

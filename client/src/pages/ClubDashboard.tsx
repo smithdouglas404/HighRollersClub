@@ -8,12 +8,12 @@ import {
   Target, Gamepad2, Coins, ChevronRight, X, Bookmark
 } from "lucide-react";
 
-import avatar1 from "@assets/generated_images/cyberpunk_poker_player_avatar_1.png";
-import avatar2 from "@assets/generated_images/cyberpunk_poker_player_avatar_2.png";
-import avatar3 from "@assets/generated_images/cyberpunk_poker_player_avatar_3.png";
-import avatar4 from "@assets/generated_images/cyberpunk_poker_player_avatar_4.png";
-import feltTexture from "@assets/generated_images/Dark_Teal_Poker_Felt_Texture_83ec2760.png";
-import lionLogo from "@assets/generated_images/Golden_Lion_Logo_for_Poker_Table_961614b0.png";
+import avatar1 from "@assets/generated_images/player_seated_cyberpunk_1.png";
+import avatar2 from "@assets/generated_images/player_seated_cyberpunk_2.png";
+import avatar3 from "@assets/generated_images/player_seated_cyberpunk_3.png";
+import avatar4 from "@assets/generated_images/player_seated_cyberpunk_4.png";
+import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
+import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 
 // Mock tournament data
 const TOURNAMENTS = [

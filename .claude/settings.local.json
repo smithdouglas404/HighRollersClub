@@ -9,7 +9,8 @@
       "Bash(curl -s http://localhost:5000 | grep -i \"matrix\\\\|landing\\\\|MatrixRain\\\\|lion\\\\|empire\" | head -10)",
       "Bash(curl -s http://localhost:5000/src/pages/Landing.tsx 2>&1 | head -20)",
       "Bash(curl -s http://localhost:5000/src/components/MatrixRain.tsx 2>&1 | head -5)",
-      "Bash(curl -s \"http://localhost:5000/@fs/home/runner/workspace/attached_assets/generated_images/holographic_network_graph_green.png?import\" -o /dev/null -w \"HTTP %{http_code}, size %{size_download}\" 2>&1)"
+      "Bash(curl -s \"http://localhost:5000/@fs/home/runner/workspace/attached_assets/generated_images/holographic_network_graph_green.png?import\" -o /dev/null -w \"HTTP %{http_code}, size %{size_download}\" 2>&1)",
+      "Bash(node scripts/generate-avatars.mjs 2>&1)"
     ]
   }
 }

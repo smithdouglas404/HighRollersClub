@@ -137,6 +137,9 @@ export const tables = pgTable("tables", {
   startingChips: integer("starting_chips").default(1500),
   payoutStructure: jsonb("payout_structure"), // JSON array of {place, percentage}
   tournamentId: varchar("tournament_id"),
+  // Rake configuration
+  rakePercent: integer("rake_percent").notNull().default(0), // rake % (e.g., 5 = 5%), 0 = no rake
+  rakeCap: integer("rake_cap").notNull().default(0), // max rake per hand in chips, 0 = no cap
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -169,6 +172,8 @@ export const insertTableSchema = z.object({
     place: z.number(),
     percentage: z.number(),
   })).optional(),
+  rakePercent: z.number().int().min(0).max(10).default(0),
+  rakeCap: z.number().int().min(0).default(0),
 });
 
 export type TableRow = typeof tables.$inferSelect;
@@ -195,8 +200,10 @@ export const gameHands = pgTable("game_hands", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tableId: varchar("table_id").notNull().references(() => tables.id),
   handNumber: integer("hand_number").notNull(),
+  dealerSeat: integer("dealer_seat"),
   communityCards: jsonb("community_cards"),
   potTotal: integer("pot_total").notNull().default(0),
+  totalRake: integer("total_rake").notNull().default(0),
   winnerIds: jsonb("winner_ids"),
   summary: jsonb("summary"), // full hand history for replay
   serverSeed: text("server_seed"),
@@ -213,6 +220,42 @@ export const gameHands = pgTable("game_hands", {
 ]);
 
 export type GameHand = typeof gameHands.$inferSelect;
+
+// ─── Hand Players (per-player participation record) ─────────────────────────
+export const handPlayers = pgTable("hand_players", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  handId: varchar("hand_id").notNull().references(() => gameHands.id),
+  userId: varchar("user_id").notNull(),
+  seatIndex: integer("seat_index").notNull(),
+  holeCards: jsonb("hole_cards"), // [CardType, CardType]
+  startStack: integer("start_stack").notNull(),
+  endStack: integer("end_stack").notNull(),
+  netResult: integer("net_result").notNull().default(0), // end - start
+  isWinner: boolean("is_winner").notNull().default(false),
+  finalAction: text("final_action"), // fold | showdown | all-in
+}, (table) => [
+  index("hand_players_hand_idx").on(table.handId),
+  index("hand_players_user_idx").on(table.userId),
+]);
+
+export type HandPlayer = typeof handPlayers.$inferSelect;
+
+// ─── Hand Actions (immutable action-by-action log) ──────────────────────────
+export const handActions = pgTable("hand_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  handId: varchar("hand_id").notNull().references(() => gameHands.id),
+  playerId: varchar("player_id").notNull(),
+  street: text("street").notNull(), // preflop | flop | turn | river | showdown
+  actionType: text("action_type").notNull(), // fold | check | call | raise | all_in | blind | ante
+  amount: integer("amount").default(0),
+  timeSpent: integer("time_spent_ms"), // milliseconds taken to act (for bot detection)
+  sequenceNum: integer("sequence_num").notNull(), // ordering within the hand
+}, (table) => [
+  index("hand_actions_hand_idx").on(table.handId),
+  index("hand_actions_player_idx").on(table.playerId),
+]);
+
+export type HandAction = typeof handActions.$inferSelect;
 
 // ─── Transactions ────────────────────────────────────────────────────────────
 export const transactions = pgTable("transactions", {
@@ -277,6 +320,9 @@ export const playerStats = pgTable("player_stats", {
   vpip: integer("vpip").notNull().default(0), // voluntarily put in pot count
   pfr: integer("pfr").notNull().default(0), // pre-flop raise count
   showdownCount: integer("showdown_count").notNull().default(0),
+  sngWins: integer("sng_wins").notNull().default(0),
+  bombPotsPlayed: integer("bomb_pots_played").notNull().default(0),
+  headsUpWins: integer("heads_up_wins").notNull().default(0),
   lastResetAt: timestamp("last_reset_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [

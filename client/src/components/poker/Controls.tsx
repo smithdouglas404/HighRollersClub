@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { useSoundEngine } from "@/lib/sound-context";
@@ -7,11 +7,21 @@ interface ControlsProps {
   onAction: (action: string, amount?: number) => void;
   minBet: number;
   maxBet: number;
+  /** Current game phase (preflop, flop, etc.) — used to reset pending state */
+  phase?: string;
+  /** Current turn seat index — used to reset pending state */
+  currentTurnSeat?: number;
 }
 
-export function PokerControls({ onAction, minBet, maxBet }: ControlsProps) {
+export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat }: ControlsProps) {
   const [betAmount, setBetAmount] = useState(minBet);
+  const [isPending, setIsPending] = useState(false);
   const sound = useSoundEngine();
+
+  // Reset pending state when game state advances (server confirmed the action)
+  useEffect(() => {
+    setIsPending(false);
+  }, [phase, currentTurnSeat]);
 
   const presets = [
     { label: "Min", value: minBet },
@@ -26,24 +36,32 @@ export function PokerControls({ onAction, minBet, maxBet }: ControlsProps) {
   }, []);
 
   const handleFold = useCallback(() => {
+    if (isPending) return;
+    setIsPending(true);
     sound.playFold();
     onAction("fold");
-  }, [sound, onAction]);
+  }, [sound, onAction, isPending]);
 
   const handleCheck = useCallback(() => {
+    if (isPending) return;
+    setIsPending(true);
     sound.playCheck();
     onAction("check");
-  }, [sound, onAction]);
+  }, [sound, onAction, isPending]);
 
   const handleCall = useCallback(() => {
+    if (isPending) return;
+    setIsPending(true);
     sound.playCall();
     onAction("call");
-  }, [sound, onAction]);
+  }, [sound, onAction, isPending]);
 
   const handleRaise = useCallback(() => {
+    if (isPending) return;
+    setIsPending(true);
     sound.playRaise();
     onAction("raise", betAmount);
-  }, [sound, onAction, betAmount]);
+  }, [sound, onAction, betAmount, isPending]);
 
   return (
     <motion.div
@@ -115,10 +133,11 @@ export function PokerControls({ onAction, minBet, maxBet }: ControlsProps) {
           <div className="flex items-center gap-2 justify-center">
             {/* FOLD */}
             <motion.button
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={isPending ? {} : { scale: 1.03, y: -1 }}
+              whileTap={isPending ? {} : { scale: 0.97 }}
               onClick={handleFold}
-              className="relative overflow-hidden rounded-xl px-7 py-3 min-w-[100px] font-bold text-sm uppercase tracking-wider transition-all backdrop-blur-md"
+              disabled={isPending}
+              className={`relative overflow-hidden rounded-xl px-7 py-3 min-w-[100px] font-bold text-sm uppercase tracking-wider transition-all backdrop-blur-md ${isPending ? "opacity-50 pointer-events-none" : ""}`}
               style={{
                 background: "linear-gradient(180deg, rgba(180,30,50,0.25) 0%, rgba(120,20,30,0.15) 100%)",
                 border: "1px solid rgba(255,60,80,0.2)",
@@ -131,10 +150,11 @@ export function PokerControls({ onAction, minBet, maxBet }: ControlsProps) {
 
             {/* CHECK / CALL */}
             <motion.button
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={isPending ? {} : { scale: 1.03, y: -1 }}
+              whileTap={isPending ? {} : { scale: 0.97 }}
               onClick={minBet > 0 ? handleCall : handleCheck}
-              className="relative overflow-hidden rounded-xl px-7 py-3 min-w-[160px] font-bold text-sm uppercase tracking-wider transition-all backdrop-blur-md"
+              disabled={isPending}
+              className={`relative overflow-hidden rounded-xl px-7 py-3 min-w-[160px] font-bold text-sm uppercase tracking-wider transition-all backdrop-blur-md ${isPending ? "opacity-50 pointer-events-none" : ""}`}
               style={{
                 background: "linear-gradient(180deg, rgba(0,200,120,0.2) 0%, rgba(0,140,80,0.1) 100%)",
                 border: "1px solid rgba(0,255,157,0.2)",
@@ -160,10 +180,11 @@ export function PokerControls({ onAction, minBet, maxBet }: ControlsProps) {
 
             {/* RAISE */}
             <motion.button
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={isPending ? {} : { scale: 1.03, y: -1 }}
+              whileTap={isPending ? {} : { scale: 0.97 }}
               onClick={handleRaise}
-              className="relative overflow-hidden rounded-xl px-7 py-3 min-w-[130px] font-bold text-sm uppercase tracking-wider transition-all backdrop-blur-md"
+              disabled={isPending}
+              className={`relative overflow-hidden rounded-xl px-7 py-3 min-w-[130px] font-bold text-sm uppercase tracking-wider transition-all backdrop-blur-md ${isPending ? "opacity-50 pointer-events-none" : ""}`}
               style={{
                 background: "linear-gradient(180deg, rgba(0,180,240,0.2) 0%, rgba(0,100,200,0.1) 100%)",
                 border: "1px solid rgba(0,240,255,0.25)",

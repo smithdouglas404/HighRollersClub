@@ -8,11 +8,13 @@ import {
   type Mission, type UserMission, type HandAnalysis,
   type ShopItem, type UserInventoryItem,
   type ClubAlliance, type LeagueSeason,
-  users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, playerStats,
+  type HandPlayer, type HandAction, type TournamentRegistration,
+  users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, tournamentRegistrations, playerStats,
   clubInvitations, clubAnnouncements, clubEvents,
   missions, userMissions, handAnalyses,
   shopItems, userInventory,
   clubAlliances, leagueSeasons,
+  handPlayers, handActions,
 } from "@shared/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -70,10 +72,17 @@ export interface IStorage {
   getGameHands(tableId: string, limit?: number): Promise<GameHand[]>;
   getGameHand(id: string): Promise<GameHand | undefined>;
 
+  // Hand Players & Actions (relational hand history)
+  createHandPlayers(records: Omit<HandPlayer, "id">[]): Promise<void>;
+  getHandPlayers(handId: string): Promise<HandPlayer[]>;
+  getPlayerHandHistory(userId: string, limit?: number): Promise<HandPlayer[]>;
+  createHandActions(records: Omit<HandAction, "id">[]): Promise<void>;
+  getHandActions(handId: string): Promise<HandAction[]>;
+
   // Player Stats
   getPlayerStats(userId: string): Promise<PlayerStat | undefined>;
   getPlayerStatsBatch(userIds: string[]): Promise<Map<string, PlayerStat>>;
-  incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number): Promise<void>;
+  incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number): Promise<void>;
   resetDailyStats(userId: string): Promise<void>;
 
   // Missions
@@ -96,11 +105,22 @@ export interface IStorage {
   equipItem(id: string): Promise<void>;
   unequipItem(id: string): Promise<void>;
 
+  // Tournaments
+  getTournaments(): Promise<Tournament[]>;
+  getTournament(id: string): Promise<Tournament | undefined>;
+  createTournament(data: Omit<Tournament, "id" | "createdAt">): Promise<Tournament>;
+  updateTournament(id: string, data: Partial<Tournament>): Promise<Tournament | undefined>;
+  getTournamentRegistrations(tournamentId: string): Promise<TournamentRegistration[]>;
+  registerForTournament(data: Omit<TournamentRegistration, "id" | "registeredAt">): Promise<TournamentRegistration>;
+  updateTournamentRegistration(id: string, data: Partial<TournamentRegistration>): Promise<TournamentRegistration | undefined>;
+
   // Alliances & Leagues
   getClubAlliances(): Promise<ClubAlliance[]>;
   createClubAlliance(data: Omit<ClubAlliance, "id" | "createdAt">): Promise<ClubAlliance>;
   getLeagueSeasons(): Promise<LeagueSeason[]>;
   createLeagueSeason(data: Omit<LeagueSeason, "id" | "createdAt">): Promise<LeagueSeason>;
+  getActiveLeagueSeason(): Promise<LeagueSeason | undefined>;
+  updateLeagueStandings(seasonId: string, standings: any[]): Promise<void>;
 }
 
 // ─── In-Memory Storage (fallback when no DATABASE_URL) ───────────────────────
@@ -115,12 +135,16 @@ export class MemStorage implements IStorage {
   private tablePlayersList: TablePlayer[] = [];
   private transactionsList: Transaction[] = [];
   private gameHandsList: GameHand[] = [];
+  private handPlayersList: HandPlayer[] = [];
+  private handActionsList: HandAction[] = [];
   private playerStatsList: Map<string, PlayerStat> = new Map();
   private missionsList: Mission[] = [];
   private userMissionsList: UserMission[] = [];
   private handAnalysesList: HandAnalysis[] = [];
   private shopItemsList: ShopItem[] = [];
   private userInventoryList: UserInventoryItem[] = [];
+  private tournamentsList: Tournament[] = [];
+  private tournamentRegsList: TournamentRegistration[] = [];
   private clubAlliancesList: ClubAlliance[] = [];
   private leagueSeasonsList: LeagueSeason[] = [];
 
@@ -352,6 +376,32 @@ export class MemStorage implements IStorage {
     return this.gameHandsList.find(h => h.id === id);
   }
 
+  // Hand Players & Actions
+  async createHandPlayers(records: Omit<HandPlayer, "id">[]) {
+    for (const r of records) {
+      this.handPlayersList.push({ ...r, id: randomUUID() } as HandPlayer);
+    }
+  }
+  async getHandPlayers(handId: string) {
+    return this.handPlayersList.filter(hp => hp.handId === handId);
+  }
+  async getPlayerHandHistory(userId: string, limit = 50) {
+    return this.handPlayersList
+      .filter(hp => hp.userId === userId)
+      .slice(-limit)
+      .reverse();
+  }
+  async createHandActions(records: Omit<HandAction, "id">[]) {
+    for (const r of records) {
+      this.handActionsList.push({ ...r, id: randomUUID() } as HandAction);
+    }
+  }
+  async getHandActions(handId: string) {
+    return this.handActionsList
+      .filter(a => a.handId === handId)
+      .sort((a, b) => a.sequenceNum - b.sequenceNum);
+  }
+
   // Player Stats
   async getPlayerStats(userId: string) {
     return this.playerStatsList.get(userId);
@@ -364,7 +414,7 @@ export class MemStorage implements IStorage {
     }
     return result;
   }
-  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number) {
+  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number) {
     let stats = this.playerStatsList.get(userId);
     if (!stats) {
       stats = {
@@ -372,11 +422,12 @@ export class MemStorage implements IStorage {
         handsPlayed: 0, potsWon: 0,
         bestWinStreak: 0, currentWinStreak: 0, totalWinnings: 0,
         vpip: 0, pfr: 0, showdownCount: 0,
+        sngWins: 0, bombPotsPlayed: 0, headsUpWins: 0,
         lastResetAt: new Date(), updatedAt: new Date(),
       };
       this.playerStatsList.set(userId, stats);
     }
-    stats[field] += amount;
+    (stats as any)[field] = ((stats as any)[field] || 0) + amount;
     if (field === "potsWon") {
       stats.currentWinStreak += amount;
       if (stats.currentWinStreak > stats.bestWinStreak) {
@@ -460,6 +511,35 @@ export class MemStorage implements IStorage {
     if (item) item.equippedAt = null;
   }
 
+  // Tournaments
+  async getTournaments() { return this.tournamentsList; }
+  async getTournament(id: string) { return this.tournamentsList.find(t => t.id === id); }
+  async createTournament(data: Omit<Tournament, "id" | "createdAt">): Promise<Tournament> {
+    const t: Tournament = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.tournamentsList.push(t);
+    return t;
+  }
+  async updateTournament(id: string, data: Partial<Tournament>): Promise<Tournament | undefined> {
+    const t = this.tournamentsList.find(t => t.id === id);
+    if (!t) return undefined;
+    Object.assign(t, data);
+    return t;
+  }
+  async getTournamentRegistrations(tournamentId: string) {
+    return this.tournamentRegsList.filter(r => r.tournamentId === tournamentId);
+  }
+  async registerForTournament(data: Omit<TournamentRegistration, "id" | "registeredAt">): Promise<TournamentRegistration> {
+    const r: TournamentRegistration = { ...data, id: randomUUID(), registeredAt: new Date() };
+    this.tournamentRegsList.push(r);
+    return r;
+  }
+  async updateTournamentRegistration(id: string, data: Partial<TournamentRegistration>): Promise<TournamentRegistration | undefined> {
+    const r = this.tournamentRegsList.find(r => r.id === id);
+    if (!r) return undefined;
+    Object.assign(r, data);
+    return r;
+  }
+
   // Alliances & Leagues
   async getClubAlliances() { return this.clubAlliancesList; }
   async createClubAlliance(data: Omit<ClubAlliance, "id" | "createdAt">): Promise<ClubAlliance> {
@@ -472,6 +552,14 @@ export class MemStorage implements IStorage {
     const s: LeagueSeason = { ...data, id: randomUUID(), createdAt: new Date() };
     this.leagueSeasonsList.push(s);
     return s;
+  }
+  async getActiveLeagueSeason(): Promise<LeagueSeason | undefined> {
+    const now = new Date();
+    return this.leagueSeasonsList.find(s => new Date(s.startDate) <= now && new Date(s.endDate) >= now);
+  }
+  async updateLeagueStandings(seasonId: string, standings: any[]) {
+    const season = this.leagueSeasonsList.find(s => s.id === seasonId);
+    if (season) season.standings = standings;
   }
 }
 
@@ -672,6 +760,30 @@ export class DatabaseStorage implements IStorage {
     return hand;
   }
 
+  // Hand Players & Actions
+  async createHandPlayers(records: Omit<HandPlayer, "id">[]) {
+    if (records.length === 0) return;
+    await this.db.insert(handPlayers).values(records);
+  }
+  async getHandPlayers(handId: string) {
+    return this.db.select().from(handPlayers).where(eq(handPlayers.handId, handId));
+  }
+  async getPlayerHandHistory(userId: string, limit = 50) {
+    return this.db.select().from(handPlayers)
+      .where(eq(handPlayers.userId, userId))
+      .orderBy(desc(handPlayers.handId))
+      .limit(limit);
+  }
+  async createHandActions(records: Omit<HandAction, "id">[]) {
+    if (records.length === 0) return;
+    await this.db.insert(handActions).values(records);
+  }
+  async getHandActions(handId: string) {
+    return this.db.select().from(handActions)
+      .where(eq(handActions.handId, handId))
+      .orderBy(handActions.sequenceNum);
+  }
+
   // Player Stats
   async getPlayerStats(userId: string) {
     const [stats] = await this.db.select().from(playerStats).where(eq(playerStats.userId, userId));
@@ -686,10 +798,19 @@ export class DatabaseStorage implements IStorage {
     }
     return result;
   }
-  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number) {
+  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number) {
     // Use raw SQL upsert to avoid race conditions when two concurrent
-    // increments (handsPlayed + potsWon) fire for the same user
-    const colName = field === "handsPlayed" ? "hands_played" : "pots_won";
+    // increments fire for the same user
+    const colMap: Record<string, string> = {
+      handsPlayed: "hands_played",
+      potsWon: "pots_won",
+      sngWins: "sng_wins",
+      bombPotsPlayed: "bomb_pots_played",
+      headsUpWins: "heads_up_wins",
+      vpip: "vpip",
+      pfr: "pfr",
+    };
+    const colName = colMap[field];
     if (field === "potsWon") {
       await this.db.execute(sql`
         INSERT INTO player_stats (id, user_id, ${sql.raw(colName)}, current_win_streak, best_win_streak)
@@ -782,6 +903,36 @@ export class DatabaseStorage implements IStorage {
     await this.db.update(userInventory).set({ equippedAt: null }).where(eq(userInventory.id, id));
   }
 
+  // Tournaments
+  async getTournaments() {
+    return this.db.select().from(tournaments).orderBy(desc(tournaments.createdAt));
+  }
+  async getTournament(id: string) {
+    const [t] = await this.db.select().from(tournaments).where(eq(tournaments.id, id));
+    return t;
+  }
+  async createTournament(data: Omit<Tournament, "id" | "createdAt">): Promise<Tournament> {
+    const [t] = await this.db.insert(tournaments).values(data).returning();
+    return t;
+  }
+  async updateTournament(id: string, data: Partial<Tournament>): Promise<Tournament | undefined> {
+    const [t] = await this.db.update(tournaments).set(data).where(eq(tournaments.id, id)).returning();
+    return t;
+  }
+  async getTournamentRegistrations(tournamentId: string) {
+    return this.db.select().from(tournamentRegistrations)
+      .where(eq(tournamentRegistrations.tournamentId, tournamentId));
+  }
+  async registerForTournament(data: Omit<TournamentRegistration, "id" | "registeredAt">): Promise<TournamentRegistration> {
+    const [r] = await this.db.insert(tournamentRegistrations).values(data).returning();
+    return r;
+  }
+  async updateTournamentRegistration(id: string, data: Partial<TournamentRegistration>): Promise<TournamentRegistration | undefined> {
+    const [r] = await this.db.update(tournamentRegistrations).set(data)
+      .where(eq(tournamentRegistrations.id, id)).returning();
+    return r;
+  }
+
   // Alliances & Leagues
   async getClubAlliances() {
     return this.db.select().from(clubAlliances);
@@ -796,6 +947,21 @@ export class DatabaseStorage implements IStorage {
   async createLeagueSeason(data: Omit<LeagueSeason, "id" | "createdAt">): Promise<LeagueSeason> {
     const [s] = await this.db.insert(leagueSeasons).values(data).returning();
     return s;
+  }
+  async getActiveLeagueSeason(): Promise<LeagueSeason | undefined> {
+    const now = new Date();
+    const [season] = await this.db.select().from(leagueSeasons)
+      .where(and(
+        sql`${leagueSeasons.startDate} <= ${now}`,
+        sql`${leagueSeasons.endDate} >= ${now}`,
+      ))
+      .limit(1);
+    return season;
+  }
+  async updateLeagueStandings(seasonId: string, standings: any[]) {
+    await this.db.update(leagueSeasons)
+      .set({ standings })
+      .where(eq(leagueSeasons.id, seasonId));
   }
 }
 

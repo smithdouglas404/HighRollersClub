@@ -68,6 +68,8 @@ class TableManager {
       bombPotFrequency: tableRow.bombPotFrequency || 0,
       bombPotAnte: tableRow.bombPotAnte || 0,
       ante: tableRow.ante,
+      rakePercent: tableRow.rakePercent || 0,
+      rakeCap: tableRow.rakeCap || 0,
     });
 
     // Pass VRF client if available
@@ -158,12 +160,14 @@ class TableManager {
     engine.onHandComplete = (proof: ShuffleProof, summary: HandSummary) => {
       const winnerIds = summary.winners.map(w => w.playerId);
 
-      // Persist to storage with real summary
+      // Persist to storage with real summary + relational hand history
       storage.createGameHand({
         tableId,
         handNumber: proof.handNumber,
+        dealerSeat: summary.dealerSeat,
         communityCards: summary.communityCards,
         potTotal: summary.pot,
+        totalRake: engine.lastHandRake,
         winnerIds,
         summary: summary as any,
         serverSeed: proof.serverSeed,
@@ -174,6 +178,40 @@ class TableManager {
         vrfRandomWord: proof.vrfRandomWord || null,
         onChainCommitTx: null,
         onChainRevealTx: null,
+      }).then((savedHand) => {
+        // Persist relational hand_players records
+        const playerRecords = summary.players.map(p => {
+          const enginePlayer = engine.getPlayer(p.id);
+          const isWinner = winnerIds.includes(p.id);
+          const endStack = enginePlayer ? enginePlayer.chips : 0;
+          const finalAction = enginePlayer
+            ? (enginePlayer.status === "folded" ? "fold" : enginePlayer.status === "all-in" ? "all-in" : "showdown")
+            : "fold";
+          return {
+            handId: savedHand.id,
+            userId: p.id,
+            seatIndex: p.seatIndex,
+            holeCards: enginePlayer?.cards || null,
+            startStack: p.startChips,
+            endStack,
+            netResult: endStack - p.startChips,
+            isWinner,
+            finalAction,
+          };
+        });
+        storage.createHandPlayers(playerRecords).catch(() => {});
+
+        // Persist relational hand_actions records
+        const actionRecords = summary.actions.map((a, idx) => ({
+          handId: savedHand.id,
+          playerId: a.playerId,
+          street: a.phase,
+          actionType: a.action,
+          amount: a.amount || 0,
+          timeSpent: a.timeSpent ? Math.round(a.timeSpent * 1000) : null, // convert seconds to ms
+          sequenceNum: idx,
+        }));
+        storage.createHandActions(actionRecords).catch(() => {});
       }).catch(() => {});
 
       // Fire blockchain reveal in background
@@ -206,6 +244,41 @@ class TableManager {
         if (!w.playerId.startsWith("bot-")) {
           storage.incrementPlayerStat(w.playerId, "potsWon", 1).catch(() => {});
         }
+      }
+
+      // Track VPIP and PFR for pre-flop voluntary actions
+      for (const vpipId of engine.vpipPlayers) {
+        if (!vpipId.startsWith("bot-")) {
+          storage.incrementPlayerStat(vpipId, "vpip", 1).catch(() => {});
+        }
+      }
+      for (const pfrId of engine.pfrPlayers) {
+        if (!pfrId.startsWith("bot-")) {
+          storage.incrementPlayerStat(pfrId, "pfr", 1).catch(() => {});
+        }
+      }
+
+      // Track bomb pot plays
+      if (engine.state.isBombPot) {
+        for (const p of summary.players) {
+          if (!p.id.startsWith("bot-")) {
+            storage.incrementPlayerStat(p.id, "bombPotsPlayed", 1).catch(() => {});
+          }
+        }
+      }
+
+      // Track heads-up wins (2-player format only)
+      if (gameFormat === "heads_up") {
+        for (const w of summary.winners) {
+          if (!w.playerId.startsWith("bot-")) {
+            storage.incrementPlayerStat(w.playerId, "headsUpWins", 1).catch(() => {});
+          }
+        }
+      }
+
+      // Update league standings for club tables
+      if (tableRow.clubId) {
+        this.updateLeagueStandings(tableRow.clubId, summary.winners.map(w => w.playerId)).catch(() => {});
       }
 
       // Broadcast seed reveal at showdown
@@ -312,6 +385,12 @@ class TableManager {
       results,
       prizePool: lifecycle.prizePool,
     } as any);
+
+    // Track SNG win for 1st place finisher
+    const winner = results.find((r: any) => r.finishPlace === 1);
+    if (winner && !winner.playerId.startsWith("bot-")) {
+      storage.incrementPlayerStat(winner.playerId, "sngWins", 1).catch(() => {});
+    }
 
     // Clean up table after delay
     setTimeout(() => {
@@ -708,6 +787,34 @@ class TableManager {
   // Get all active table IDs
   getActiveTableIds(): string[] {
     return Array.from(this.tables.keys());
+  }
+
+  // Update league standings when a hand finishes on a club table
+  private async updateLeagueStandings(clubId: string, winnerPlayerIds: string[]) {
+    const season = await storage.getActiveLeagueSeason();
+    if (!season) return;
+
+    const standings: { clubId: string; clubName?: string; points: number; wins: number; losses: number }[] =
+      (season.standings as any[] || []);
+
+    let entry = standings.find(s => s.clubId === clubId);
+    if (!entry) {
+      // Look up club name
+      const club = await storage.getClub(clubId);
+      entry = { clubId, clubName: club?.name || "Unknown", points: 0, wins: 0, losses: 0 };
+      standings.push(entry);
+    }
+
+    // Each hand won by a human = +1 point, +1 win for the club
+    const humanWinners = winnerPlayerIds.filter(id => !id.startsWith("bot-"));
+    if (humanWinners.length > 0) {
+      entry.wins += 1;
+      entry.points += 1;
+    } else {
+      entry.losses += 1;
+    }
+
+    await storage.updateLeagueStandings(season.id, standings);
   }
 }
 

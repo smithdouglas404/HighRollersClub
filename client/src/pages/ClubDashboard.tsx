@@ -13,11 +13,27 @@ import {
 import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 
-const MISSION_DEFS = [
-  { id: "1", icon: Gamepad2, label: "Play 50 Hands", target: 50, statKey: "handsPlayed" as const, reward: 200 },
-  { id: "2", icon: Coins, label: "Win 20 Pots", target: 20, statKey: "potsWon" as const, reward: 500 },
-  { id: "3", icon: Target, label: "Win Streak 5", target: 5, statKey: "bestWinStreak" as const, reward: 750 },
-];
+interface MissionData {
+  id: string;
+  type: string;
+  label: string;
+  description: string | null;
+  target: number;
+  reward: number;
+  progress: number;
+  completed: boolean;
+  claimed: boolean;
+}
+
+const MISSION_ICON_MAP: Record<string, any> = {
+  hands_played: Gamepad2,
+  pots_won: Coins,
+  win_streak: Target,
+  consecutive_wins: Zap,
+  sng_win: Trophy,
+  bomb_pot: Target,
+  heads_up_win: Users,
+};
 
 interface PlayerStats {
   handsPlayed: number;
@@ -64,8 +80,46 @@ interface ClubEvent {
   createdAt: string;
 }
 
-// AI Analysis Modal
+// AI Analysis Modal - fetches real data from /api/analyses
+interface AnalysisResult {
+  rating: "OPTIMAL" | "SUBOPTIMAL";
+  overallScore: number;
+  evByAction: { action: string; ev: number }[];
+  leaks: string[];
+  recommendations: string[];
+}
+
+interface HandAnalysis {
+  id: string;
+  holeCards: any[];
+  communityCards: any[] | null;
+  pot: number;
+  position: string | null;
+  analysis: AnalysisResult;
+  createdAt: string;
+}
+
 function AIAnalysisPanel({ onClose }: { onClose: () => void }) {
+  const [analyses, setAnalyses] = useState<HandAnalysis[]>([]);
+  const [loadingAnalyses, setLoadingAnalyses] = useState(true);
+
+  useEffect(() => {
+    async function fetchAnalyses() {
+      try {
+        const res = await fetch("/api/analyses");
+        if (res.ok) {
+          setAnalyses(await res.json());
+        }
+      } catch {} finally {
+        setLoadingAnalyses(false);
+      }
+    }
+    fetchAnalyses();
+  }, []);
+
+  const latest = analyses[0]; // Most recent analysis (API returns sorted by createdAt desc)
+  const analysis = latest?.analysis;
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -89,7 +143,11 @@ function AIAnalysisPanel({ onClose }: { onClose: () => void }) {
             </div>
             <div>
               <h3 className="text-sm font-bold text-white tracking-wider uppercase">AI Hand Analysis</h3>
-              <p className="text-[9px] text-gray-500">Powered by Neural Engine v2.1</p>
+              <p className="text-[9px] text-gray-500">
+                {analyses.length > 0
+                  ? `${analyses.length} analysis${analyses.length !== 1 ? "es" : ""} saved`
+                  : "No analyses yet"}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors">
@@ -98,68 +156,122 @@ function AIAnalysisPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="p-5 space-y-4">
-          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(0,255,157,0.05)", border: "1px solid rgba(0,255,157,0.1)" }}>
-            <CheckCircle className="w-6 h-6 text-green-400 shrink-0" />
-            <div>
-              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Your Play Indicator</div>
-              <div className="text-lg font-black text-green-400 uppercase tracking-wider">OPTIMAL</div>
+          {loadingAnalyses ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
             </div>
-          </div>
-
-          <div className="space-y-2.5">
-            <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(0,255,157,0.03)", border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div className="w-7 h-7 rounded bg-green-500/15 border border-green-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-white">Optimal (FOLD)</div>
-                <div className="text-[10px] text-gray-500 mt-0.5">
-                  Expected Value: <span className="text-green-400">+12.5% Pot</span>
+          ) : !analysis ? (
+            <div className="text-center py-6">
+              <Brain className="w-10 h-10 text-gray-700 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-gray-400 mb-1">No analyses yet</p>
+              <p className="text-[11px] text-gray-600 leading-relaxed max-w-xs mx-auto">
+                Play a hand and use the AI analysis feature during gameplay to see your results here.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Rating */}
+              <div
+                className="flex items-center gap-3 p-3 rounded-xl"
+                style={{
+                  background: analysis.rating === "OPTIMAL" ? "rgba(0,255,157,0.05)" : "rgba(255,165,0,0.05)",
+                  border: `1px solid ${analysis.rating === "OPTIMAL" ? "rgba(0,255,157,0.1)" : "rgba(255,165,0,0.1)"}`,
+                }}
+              >
+                {analysis.rating === "OPTIMAL" ? (
+                  <CheckCircle className="w-6 h-6 text-green-400 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
+                )}
+                <div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">Last Hand Rating</div>
+                  <div className={`text-lg font-black uppercase tracking-wider ${analysis.rating === "OPTIMAL" ? "text-green-400" : "text-amber-400"}`}>
+                    {analysis.rating}
+                  </div>
+                  <div className="text-[9px] text-gray-600">
+                    Score: {analysis.overallScore}/100
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(255,60,60,0.03)", border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div className="w-7 h-7 rounded bg-red-500/15 border border-red-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+              {/* EV by Action */}
+              <div className="space-y-2.5">
+                {analysis.evByAction.map((item) => {
+                  const isPositive = item.ev >= 0;
+                  return (
+                    <div
+                      key={item.action}
+                      className="flex items-start gap-3 p-3 rounded-lg"
+                      style={{
+                        background: isPositive ? "rgba(0,255,157,0.03)" : "rgba(255,60,60,0.03)",
+                        border: "1px solid rgba(255,255,255,0.04)",
+                      }}
+                    >
+                      <div
+                        className={`w-7 h-7 rounded ${isPositive ? "bg-green-500/15 border-green-500/20" : "bg-red-500/15 border-red-500/20"} border flex items-center justify-center shrink-0 mt-0.5`}
+                      >
+                        {isPositive ? (
+                          <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                        ) : (
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-white">{item.action}</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">
+                          Expected Value: <span className={isPositive ? "text-green-400" : "text-red-400"}>
+                            {isPositive ? "+" : ""}{item.ev} BB
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div>
-                <div className="text-xs font-semibold text-white">CALL:</div>
-                <div className="text-[10px] text-gray-500 mt-0.5 space-y-0.5">
-                  <div>Expected Value: <span className="text-red-400">-8.2% Pot</span></div>
-                  <div>Fold/Hold Error: <span className="text-red-400">(Major Error)</span></div>
+
+              {/* Leaks */}
+              {analysis.leaks.length > 0 && (
+                <div className="p-3 rounded-xl" style={{ background: "rgba(255,165,0,0.04)", border: "1px solid rgba(255,165,0,0.1)" }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">Leak Detection</span>
+                  </div>
+                  {analysis.leaks.map((leak, i) => (
+                    <p key={i} className="text-[11px] text-gray-400 leading-relaxed">
+                      {leak}
+                    </p>
+                  ))}
                 </div>
+              )}
+
+              {/* Recommendations */}
+              {analysis.recommendations.length > 0 && (
+                <div className="p-3 rounded-xl" style={{ background: "rgba(0,240,255,0.04)", border: "1px solid rgba(0,240,255,0.1)" }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-bold text-cyan-300 uppercase tracking-wider">Recommendations</span>
+                  </div>
+                  {analysis.recommendations.map((rec, i) => (
+                    <p key={i} className="text-[11px] text-gray-400 leading-relaxed">
+                      {rec}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="text-[9px] text-gray-600 text-center">
+                Analyzed {new Date(latest.createdAt).toLocaleDateString()} at {new Date(latest.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </div>
-            </div>
-          </div>
+            </>
+          )}
 
-          <div className="p-3 rounded-xl" style={{ background: "rgba(255,165,0,0.04)", border: "1px solid rgba(255,165,0,0.1)" }}>
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">Leak Detection</span>
-            </div>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              AI detected tendency: You overbluff.
-              You over-fold to river bets. This
-              leak costs roughly bb <span className="text-amber-400">~1,588/100 hands</span>.
-            </p>
-          </div>
-
-          <div className="flex gap-2">
-            <button className="flex-1 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              Run More Drills
-            </button>
-            <button
-              className="flex-1 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black"
-              style={{
-                background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                boxShadow: "0 0 15px rgba(0,255,157,0.2)",
-              }}
-            >
-              Save Analysis
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            Close
+          </button>
         </div>
       </div>
     </motion.div>
@@ -177,15 +289,21 @@ export default function ClubDashboard() {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<ClubEvent[]>([]);
+  const [missions, setMissions] = useState<MissionData[]>([]);
 
   // Fetch first club the user might belong to (or first club available)
   useEffect(() => {
     async function loadClub() {
       try {
-        const [res, statsRes] = await Promise.all([
+        const [res, statsRes, missionsRes] = await Promise.all([
           fetch("/api/clubs"),
           fetch("/api/stats/me"),
+          fetch("/api/missions"),
         ]);
+
+        if (missionsRes.ok) {
+          setMissions(await missionsRes.json());
+        }
 
         if (statsRes.ok) {
           setStats(await statsRes.json());
@@ -460,31 +578,37 @@ export default function ClubDashboard() {
                     Daily Missions
                   </h3>
                   <span className="text-[9px] text-cyan-400 font-bold uppercase tracking-wider">
-                    {MISSION_DEFS.filter(m => stats && stats[m.statKey] >= m.target).length}/{MISSION_DEFS.length} Complete
+                    {missions.filter(m => m.completed).length}/{missions.length} Complete
                   </span>
                 </div>
+                {missions.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Target className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                    <p className="text-[11px] text-gray-600">No missions available</p>
+                  </div>
+                ) : (
                 <div className="grid grid-cols-3 gap-4">
-                  {MISSION_DEFS.map((mission) => {
-                    const Icon = mission.icon;
-                    const current = stats ? stats[mission.statKey] : 0;
-                    const progress = Math.min(Math.round((current / mission.target) * 100), 100);
-                    const completed = current >= mission.target;
+                  {missions.slice(0, 6).map((mission) => {
+                    const Icon = MISSION_ICON_MAP[mission.type] || Target;
+                    const progressPct = Math.min(Math.round((mission.progress / mission.target) * 100), 100);
                     return (
                       <div key={mission.id} className="text-center">
-                        <div className={`w-10 h-10 rounded-lg ${completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2`}>
-                          <Icon className={`w-4 h-4 ${completed ? "text-green-400" : "text-cyan-400"}`} />
+                        <div className={`w-10 h-10 rounded-lg ${mission.completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2`}>
+                          <Icon className={`w-4 h-4 ${mission.completed ? "text-green-400" : "text-cyan-400"}`} />
                         </div>
                         <div className="text-[10px] font-medium text-gray-300 mb-1">{mission.label}</div>
                         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-1">
                           <div
-                            className={`h-full rounded-full transition-all ${completed ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-cyan-500 to-green-500"}`}
-                            style={{ width: `${progress}%` }}
+                            className={`h-full rounded-full transition-all ${mission.completed ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-cyan-500 to-green-500"}`}
+                            style={{ width: `${progressPct}%` }}
                           />
                         </div>
                         <div className="text-[9px] text-gray-500">
-                          {Math.min(current, mission.target)}/{mission.target}
-                          {completed
-                            ? <span className="text-green-400 ml-1">Done!</span>
+                          {mission.progress}/{mission.target}
+                          {mission.completed
+                            ? mission.claimed
+                              ? <span className="text-gray-500 ml-1">Claimed</span>
+                              : <span className="text-green-400 ml-1">Done!</span>
                             : <span className="text-amber-400 ml-1">+{mission.reward}</span>
                           }
                         </div>
@@ -492,6 +616,7 @@ export default function ClubDashboard() {
                     );
                   })}
                 </div>
+                )}
               </motion.div>
             </div>
 
@@ -524,10 +649,7 @@ export default function ClubDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3">
-                    <div className="flex-1 h-1 bg-purple-500/15 rounded-full overflow-hidden">
-                      <div className="h-full w-[72%] bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full" />
-                    </div>
-                    <span className="text-[9px] text-purple-400 font-bold">72% EV</span>
+                    <span className="text-[9px] text-purple-400/70">View your latest analysis</span>
                   </div>
                 </div>
                 <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 group-hover:text-purple-400 transition-colors" />

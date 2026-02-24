@@ -77,37 +77,43 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-/* ── Online Status Indicator ───────────────────────────── */
+/* ── "Member since" helper ─────────────────────────────── */
 
-function OnlineIndicator({ online }: { online: boolean }) {
-  return (
-    <span className="relative flex h-2.5 w-2.5">
-      {online && (
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-      )}
-      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${online ? "bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]" : "bg-gray-600"}`} />
-    </span>
-  );
+function formatMemberSince(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays < 1) return "Joined today";
+  if (diffDays === 1) return "Joined yesterday";
+  if (diffDays < 30) return `Member for ${diffDays}d`;
+  if (diffDays < 365) return `Member for ${Math.floor(diffDays / 30)}mo`;
+  return `Member for ${Math.floor(diffDays / 365)}y`;
 }
 
-/* ── Simulated online check (random but deterministic per userId) ── */
+/* ── Mission types ─────────────────────────────────────── */
 
-function isSimulatedOnline(userId: string): boolean {
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = ((hash << 5) - hash) + userId.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash) % 3 !== 0; // ~66% online
+interface MissionData {
+  id: string;
+  type: string;
+  label: string;
+  description: string | null;
+  target: number;
+  reward: number;
+  progress: number;
+  completed: boolean;
+  claimed: boolean;
 }
 
-/* ── Mission Definitions ───────────────────────────────── */
-
-const MISSION_DEFS = [
-  { id: "1", icon: Gamepad2, label: "Play Hands", target: 50, statKey: "handsPlayed" as const, reward: 200 },
-  { id: "2", icon: Coins, label: "Win Pots", target: 20, statKey: "potsWon" as const, reward: 500 },
-  { id: "3", icon: Target, label: "Win Streak", target: 5, statKey: "bestWinStreak" as const, reward: 750 },
-];
+const MISSION_ICON_MAP: Record<string, any> = {
+  hands_played: Gamepad2,
+  pots_won: Coins,
+  win_streak: Target,
+  consecutive_wins: TrendingUp,
+  sng_win: Clock,
+  bomb_pot: Target,
+  heads_up_win: Users,
+};
 
 /* ── Main Component ────────────────────────────────────── */
 
@@ -119,6 +125,8 @@ export default function Members() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [memberStatsMap, setMemberStatsMap] = useState<Record<string, MemberStats>>({});
+  const [missions, setMissions] = useState<MissionData[]>([]);
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
 
   // My role in the club
   const [myRole, setMyRole] = useState<string>("member");
@@ -140,10 +148,15 @@ export default function Members() {
 
   const loadData = useCallback(async () => {
     try {
-      const [clubsRes, statsRes] = await Promise.all([
+      const [clubsRes, statsRes, missionsRes] = await Promise.all([
         fetch("/api/clubs"),
         fetch("/api/stats/me"),
+        fetch("/api/missions"),
       ]);
+
+      if (missionsRes.ok) {
+        setMissions(await missionsRes.json());
+      }
 
       if (statsRes.ok) {
         setStats(await statsRes.json());
@@ -188,6 +201,26 @@ export default function Members() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  /* ── Poll online status ─────────────────────────────────── */
+
+  useEffect(() => {
+    const fetchOnline = async () => {
+      try {
+        const res = await fetch("/api/online-users");
+        if (res.ok) {
+          const ids: string[] = await res.json();
+          setOnlineUserIds(new Set(ids));
+        }
+      } catch {
+        // silently fail
+      }
+    };
+
+    fetchOnline();
+    const interval = setInterval(fetchOnline, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   /* ── Actions ───────────────────────────────────────────── */
 
@@ -272,7 +305,6 @@ export default function Members() {
     return (order[a.role] ?? 3) - (order[b.role] ?? 3);
   });
 
-  const onlineCount = members.filter(m => isSimulatedOnline(m.userId)).length;
   const pendingCount = invitations.length;
 
   /* ── Component ─────────────────────────────────────────── */
@@ -305,7 +337,7 @@ export default function Members() {
                 <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
                   <div className="grid grid-cols-5 gap-4 flex-1 text-[9px] font-bold uppercase tracking-wider text-gray-500">
                     <span className="col-span-1">Name / Role</span>
-                    <span>Status</span>
+                    <span>Joined</span>
                     <span>Stats</span>
                     <span>Balance</span>
                     <span className="text-right">Actions</span>
@@ -314,7 +346,6 @@ export default function Members() {
 
                 {/* Member rows */}
                 {sortedMembers.map((member, i) => {
-                  const online = isSimulatedOnline(member.userId);
                   const isMe = member.userId === user?.id;
                   const canManage = isAdminOrOwner && !isMe && member.role !== "owner";
 
@@ -332,16 +363,20 @@ export default function Members() {
                           <div className="relative">
                             <div
                               className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/10 flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-purple-500/30"
-                              style={{ boxShadow: online ? "0 0 12px rgba(74,222,128,0.15)" : "0 0 15px rgba(0,240,255,0.1)" }}
+                              style={{ boxShadow: "0 0 15px rgba(0,240,255,0.1)" }}
                             >
                               <span className="text-sm font-bold text-white">
                                 {member.displayName.charAt(0).toUpperCase()}
                               </span>
                             </div>
-                            {/* Online dot overlaid on avatar */}
-                            <div className="absolute -bottom-0.5 -right-0.5">
-                              <OnlineIndicator online={online} />
-                            </div>
+                            {/* Online status dot */}
+                            <span
+                              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0a0a1a] ${
+                                onlineUserIds.has(member.userId)
+                                  ? "bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)] animate-pulse"
+                                  : "bg-gray-600"
+                              }`}
+                            />
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
@@ -352,16 +387,23 @@ export default function Members() {
                                 <span className="text-[8px] text-cyan-400 font-bold uppercase bg-cyan-500/10 px-1.5 py-0.5 rounded">You</span>
                               )}
                             </div>
-                            <div className="text-[10px] text-gray-600 truncate">@{member.username}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-gray-600 truncate">@{member.username}</span>
+                              <span className={`text-[9px] font-medium ${
+                                onlineUserIds.has(member.userId) ? "text-green-400" : "text-gray-600"
+                              }`}>
+                                {onlineUserIds.has(member.userId) ? "Online" : "Offline"}
+                              </span>
+                            </div>
                             <RoleBadge role={member.role} />
                           </div>
                         </div>
 
-                        {/* Online Status */}
+                        {/* Member Since */}
                         <div className="flex items-center gap-2">
-                          <OnlineIndicator online={online} />
-                          <span className={`text-xs ${online ? "text-green-400" : "text-gray-600"}`}>
-                            {online ? "Online" : "Offline"}
+                          <Clock className="w-3 h-3 text-gray-600" />
+                          <span className="text-xs text-gray-500">
+                            {formatMemberSince(member.joinedAt)}
                           </span>
                         </div>
 
@@ -490,11 +532,8 @@ export default function Members() {
                     <span className="text-xs font-bold text-green-400">{members.length}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500">Online Now</span>
-                    <span className="text-xs font-bold text-green-400 flex items-center gap-1.5">
-                      <OnlineIndicator online={true} />
-                      {onlineCount}
-                    </span>
+                    <span className="text-[10px] text-gray-500">Pending Invites</span>
+                    <span className="text-xs font-bold text-amber-400">{pendingCount}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-500">Owners</span>
@@ -729,28 +768,34 @@ export default function Members() {
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">
               Daily Missions
             </h3>
+            {missions.length === 0 ? (
+              <div className="text-center py-4">
+                <Target className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                <p className="text-[11px] text-gray-600">No missions available</p>
+              </div>
+            ) : (
             <div className="grid grid-cols-3 gap-3">
-              {MISSION_DEFS.map((mission) => {
-                const Icon = mission.icon;
-                const current = stats ? stats[mission.statKey] : 0;
-                const progress = Math.min(Math.round((current / mission.target) * 100), 100);
-                const completed = current >= mission.target;
+              {missions.slice(0, 6).map((mission) => {
+                const Icon = MISSION_ICON_MAP[mission.type] || Target;
+                const progressPct = Math.min(Math.round((mission.progress / mission.target) * 100), 100);
                 return (
                   <div key={mission.id} className="text-center">
-                    <div className={`w-10 h-10 rounded-lg ${completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2`}>
-                      <Icon className={`w-4 h-4 ${completed ? "text-green-400" : "text-cyan-400"}`} />
+                    <div className={`w-10 h-10 rounded-lg ${mission.completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2`}>
+                      <Icon className={`w-4 h-4 ${mission.completed ? "text-green-400" : "text-cyan-400"}`} />
                     </div>
                     <div className="text-[10px] font-medium text-gray-300 mb-1">{mission.label}</div>
                     <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-1">
                       <div
-                        className={`h-full rounded-full transition-all ${completed ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-cyan-500 to-green-500"}`}
-                        style={{ width: `${progress}%` }}
+                        className={`h-full rounded-full transition-all ${mission.completed ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-cyan-500 to-green-500"}`}
+                        style={{ width: `${progressPct}%` }}
                       />
                     </div>
                     <div className="text-[9px] text-gray-500">
-                      {Math.min(current, mission.target)}/{mission.target}
-                      {completed
-                        ? <span className="text-green-400 ml-1">Done!</span>
+                      {mission.progress}/{mission.target}
+                      {mission.completed
+                        ? mission.claimed
+                          ? <span className="text-gray-500 ml-1">Claimed</span>
+                          : <span className="text-green-400 ml-1">Done!</span>
                         : <span className="text-amber-400 ml-1">+{mission.reward}</span>
                       }
                     </div>
@@ -758,6 +803,7 @@ export default function Members() {
                 );
               })}
             </div>
+            )}
           </motion.div>
 
           {/* Your Stats */}

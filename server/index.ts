@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
+import { seedData } from "./seed";
 
 try { execSync("fuser -k -9 5000/tcp 2>/dev/null", { timeout: 3000 }); } catch {}
 await new Promise(r => setTimeout(r, 2000));
@@ -56,6 +57,9 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app, sessionMiddleware);
+
+  // Seed default missions and shop items
+  await seedData().catch(err => console.error("[seed] Failed:", err));
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

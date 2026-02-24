@@ -12,6 +12,8 @@ import Shop from "@/pages/Shop";
 import ClubDashboard from "@/pages/ClubDashboard";
 import ClubSettings from "@/pages/ClubSettings";
 import ClubInvitations from "@/pages/ClubInvitations";
+import Leagues from "@/pages/Leagues";
+import Analytics from "@/pages/Analytics";
 import HandReplay from "@/pages/HandReplay";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
@@ -40,6 +42,14 @@ function ProtectedClubInvitations() {
   return <AuthGate><ClubInvitations /></AuthGate>;
 }
 
+function ProtectedLeagues() {
+  return <AuthGate><Leagues /></AuthGate>;
+}
+
+function ProtectedAnalytics() {
+  return <AuthGate><Analytics /></AuthGate>;
+}
+
 function GameWithTable({ params }: { params: { tableId: string } }) {
   return <AuthGate><Game tableId={params.tableId} /></AuthGate>;
 }
@@ -61,8 +71,8 @@ function Router() {
       <Route path="/club" component={ProtectedClub} />
       <Route path="/club/settings" component={ProtectedClubSettings} />
       <Route path="/club/invitations" component={ProtectedClubInvitations} />
-      <Route path="/leagues" component={ProtectedClub} />
-      <Route path="/analytics" component={ProtectedClub} />
+      <Route path="/leagues" component={ProtectedLeagues} />
+      <Route path="/analytics" component={ProtectedAnalytics} />
       <Route component={NotFound} />
     </Switch>
   );

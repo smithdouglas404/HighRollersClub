@@ -1,4 +1,5 @@
-import { type CardType, type Suit, type Rank, determineWinners, type PlayerResult } from "./hand-evaluator";
+import { type CardType, type Suit, type Rank, determineWinners, evaluateHand, type PlayerResult } from "./hand-evaluator";
+import { encodeCard, evaluate7Fast, getHandCategory } from "./fast-evaluator";
 import { createProvablyFairShuffle, createProvablyFairShuffleMultiParty, type ShuffleProof, type PlayerSeedData } from "./crypto-shuffle";
 import type { VRFClient } from "../blockchain/vrf-client";
 import type { BlindLevel } from "./blind-presets";
@@ -53,8 +54,9 @@ export interface GameEngineState {
 
 export interface HandSummary {
   handNumber: number;
+  dealerSeat: number;
   players: { id: string; displayName: string; startChips: number; seatIndex: number }[];
-  actions: { playerId: string; action: string; amount?: number; phase: GamePhase }[];
+  actions: { playerId: string; action: string; amount?: number; phase: GamePhase; timeSpent?: number }[];
   communityCards: CardType[];
   pot: number;
   winners: { playerId: string; amount: number }[];
@@ -70,6 +72,8 @@ export interface GameEngineOpts {
   bombPotFrequency?: number;
   bombPotAnte?: number;
   ante?: number;
+  rakePercent?: number; // e.g., 5 = 5% rake
+  rakeCap?: number; // max rake per hand in chips, 0 = no cap
 }
 
 // ─── Game Engine ─────────────────────────────────────────────────────────────
@@ -87,8 +91,9 @@ export class GameEngine {
 
   private currentShuffleProof: ShuffleProof | null = null;
   private handProofs = new Map<number, ShuffleProof>();
-  private actionLog: { playerId: string; action: string; amount?: number; phase: GamePhase }[] = [];
+  private actionLog: { playerId: string; action: string; amount?: number; phase: GamePhase; timeSpent?: number }[] = [];
   private handStartPlayers: { id: string; displayName: string; startChips: number; seatIndex: number }[] = [];
+  private turnStartedAt: number = 0; // timestamp when current turn began
 
   private smallBlind: number;
   private bigBlind: number;
@@ -103,6 +108,13 @@ export class GameEngine {
   private bombPotAnte: number;
   private baseAnte: number;
   private blindLevelStartTime = 0;
+  private rakePercent: number;
+  private rakeCap: number;
+  public lastHandRake: number = 0; // rake taken from last hand (for persistence)
+
+  // VPIP/PFR tracking for pre-flop voluntary actions
+  public vpipPlayers: Set<string> = new Set();
+  public pfrPlayers: Set<string> = new Set();
 
   // Seed collection for multi-party entropy
   private seedCommitments = new Map<string, string>();
@@ -127,6 +139,8 @@ export class GameEngine {
     this.bombPotFrequency = opts.bombPotFrequency || 0;
     this.bombPotAnte = opts.bombPotAnte || 0;
     this.baseAnte = opts.ante || 0;
+    this.rakePercent = opts.rakePercent || 0;
+    this.rakeCap = opts.rakeCap || 0;
 
     this.state = {
       phase: "waiting",
@@ -389,6 +403,8 @@ export class GameEngine {
     this.state.turnDeadline = 0;
     this.actedThisRound.clear();
     this.actionLog = [];
+    this.vpipPlayers.clear();
+    this.pfrPlayers.clear();
 
     // Reset players
     const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0);
@@ -677,9 +693,20 @@ export class GameEngine {
     this.state.actionNumber++;
 
     this.state.lastAction = { playerId, action, amount };
-    this.actionLog.push({ playerId, action, amount, phase: this.state.phase });
+    const timeSpent = this.turnStartedAt > 0 ? Math.round((Date.now() - this.turnStartedAt) / 100) / 10 : undefined;
+    this.actionLog.push({ playerId, action, amount, phase: this.state.phase, timeSpent });
     if (action !== "raise") {
       this.actedThisRound.add(playerId);
+    }
+
+    // Track VPIP and PFR for pre-flop voluntary actions
+    if (this.state.phase === "pre-flop") {
+      if (action === "call" || action === "raise") {
+        this.vpipPlayers.add(playerId);
+      }
+      if (action === "raise") {
+        this.pfrPlayers.add(playerId);
+      }
     }
 
     // Chip integrity check after every mutation
@@ -792,20 +819,40 @@ export class GameEngine {
     }
 
     const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out" && p.cards);
-    const playerHands = active.map(p => ({
-      id: p.id,
-      cards: p.cards!.map(c => ({ ...c, hidden: false })),
-    }));
 
-    const results = determineWinners(playerHands, this.state.communityCards);
+    // Fast path: use bitmask/prime evaluator for scoring, old evaluator for UI descriptions
+    const communityEncoded = this.state.communityCards.map(encodeCard);
+    let bestScore = 0;
+    const playerScores: { id: string; score: number }[] = [];
+    for (const p of active) {
+      const encoded = [...p.cards!.map(encodeCard), ...communityEncoded];
+      const score = evaluate7Fast(encoded);
+      playerScores.push({ id: p.id, score });
+      if (score > bestScore) bestScore = score;
+    }
+
+    // Build results with UI-friendly hand descriptions from old evaluator
+    const results: PlayerResult[] = playerScores.map(ps => {
+      const player = active.find(p => p.id === ps.id)!;
+      const hand = evaluateHand(player.cards!.map(c => ({ ...c, hidden: false })), this.state.communityCards);
+      return {
+        playerId: ps.id,
+        hand,
+        isWinner: ps.score === bestScore,
+      };
+    });
     this.state.showdownResults = results;
+
+    // Build fast score map for distribution (used for per-tier winner finding)
+    const scoreMap = new Map<string, number>();
+    for (const ps of playerScores) scoreMap.set(ps.id, ps.score);
 
     // Snapshot chip counts before distribution to calculate actual winnings
     const chipsBefore = new Map<string, number>();
     for (const p of this.state.players) chipsBefore.set(p.id, p.chips);
 
     // Calculate pot distribution
-    this.distributePot(results);
+    this.distributePot(results, scoreMap);
 
     // Calculate actual amounts each player won
     const winnerAmounts: { playerId: string; amount: number }[] = [];
@@ -840,51 +887,87 @@ export class GameEngine {
     }, 5000);
   }
 
-  private distributePot(results: PlayerResult[]) {
+  // Calculate rake from pot: percentage of total pot, capped at rakeCap
+  // Returns the rake amount and adjusts the provided pot tiers
+  private applyRake(potTiers: { amount: number; eligible: string[] }[]): number {
+    if (this.rakePercent <= 0) return 0;
+    const totalPot = potTiers.reduce((sum, t) => sum + t.amount, 0);
+    let rake = Math.floor(totalPot * this.rakePercent / 100);
+    if (this.rakeCap > 0) rake = Math.min(rake, this.rakeCap);
+    if (rake <= 0) return 0;
+
+    // Deduct rake from main pot (first tier) first, then side pots if needed
+    let remaining = rake;
+    for (const tier of potTiers) {
+      if (remaining <= 0) break;
+      const deduct = Math.min(remaining, tier.amount);
+      tier.amount -= deduct;
+      remaining -= deduct;
+    }
+    return rake;
+  }
+
+  // Return the player closest left of the dealer (worst position = earliest to act)
+  // Used for awarding odd chips in split pots per industry standard
+  private worstPositionFirst(playerIds: string[]): string[] {
+    const maxPlayers = this.state.players.length;
+    const dealerSeat = this.state.dealerSeat;
+    return [...playerIds].sort((aId, bId) => {
+      const aPlayer = this.getPlayer(aId);
+      const bPlayer = this.getPlayer(bId);
+      if (!aPlayer || !bPlayer) return 0;
+      // Distance from dealer going clockwise (left of dealer = seat after dealer)
+      const aDist = (aPlayer.seatIndex - dealerSeat + maxPlayers) % maxPlayers;
+      const bDist = (bPlayer.seatIndex - dealerSeat + maxPlayers) % maxPlayers;
+      return aDist - bDist;
+    });
+  }
+
+  private distributePot(results: PlayerResult[], scoreMap?: Map<string, number>) {
     // All players who contributed (not sitting-out, even if folded)
     const contributors = this.state.players.filter(p => p.totalBetThisHand > 0 && p.status !== "sitting-out");
     const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out");
 
     if (contributors.length === 0) return;
 
-    // Get unique bet levels sorted ascending for side pot calculation
+    // ── Step 1: Build contribution tiers ──────────────────────────────────
     const betLevels = Array.from(new Set(contributors.map(p => p.totalBetThisHand))).sort((a, b) => a - b);
 
-    if (betLevels.length <= 1) {
-      // Simple pot — all bets equal, no side pots
-      const winners = results.filter(r => r.isWinner);
-      if (winners.length === 0) return;
-      const share = Math.floor(this.state.pot / winners.length);
-      for (const w of winners) {
-        const player = this.getPlayer(w.playerId);
-        if (player) player.chips += share;
-      }
-      const remainder = this.state.pot - share * winners.length;
-      if (remainder > 0) {
-        const first = this.getPlayer(winners[0].playerId);
-        if (first) first.chips += remainder;
-      }
-      return;
-    }
-
-    // Multi-level side pot calculation
+    const tiers: { amount: number; eligible: string[] }[] = [];
     let prevLevel = 0;
-    let totalDistributed = 0;
-
     for (const level of betLevels) {
       const increment = level - prevLevel;
       if (increment <= 0) continue;
-
-      // Everyone who bet at least this level contributes to this pot
       const potContributors = contributors.filter(p => p.totalBetThisHand >= level);
-      const potSize = increment * potContributors.length;
+      const eligible = potContributors.filter(p => active.some(a => a.id === p.id)).map(p => p.id);
+      tiers.push({
+        amount: increment * potContributors.length,
+        eligible,
+      });
+      prevLevel = level;
+    }
 
-      // Only non-folded players are eligible to win
-      const eligibleIds = new Set(potContributors.filter(p => active.some(a => a.id === p.id)).map(p => p.id));
-      const eligibleResults = results.filter(r => eligibleIds.has(r.playerId));
+    // ── Step 2: Apply rake (after slicing, before distribution) ───────────
+    this.lastHandRake = this.applyRake(tiers);
 
-      if (eligibleResults.length > 0) {
-        // Find best hand among eligible
+    // ── Step 3: Distribute each tier to its winners ───────────────────────
+    for (const tier of tiers) {
+      if (tier.amount <= 0 || tier.eligible.length === 0) continue;
+
+      const eligibleResults = results.filter(r => tier.eligible.includes(r.playerId));
+      if (eligibleResults.length === 0) continue;
+
+      // Find best hand among eligible — use fast scores when available
+      let potWinners: PlayerResult[];
+      if (scoreMap && scoreMap.size > 0) {
+        let bestScore = 0;
+        for (const r of eligibleResults) {
+          const s = scoreMap.get(r.playerId) || 0;
+          if (s > bestScore) bestScore = s;
+        }
+        potWinners = eligibleResults.filter(r => (scoreMap.get(r.playerId) || 0) === bestScore);
+      } else {
+        // Fallback: old kicker-based comparison
         let bestRankValue = -1;
         let bestKickers = "";
         for (const r of eligibleResults) {
@@ -894,42 +977,27 @@ export class GameEngine {
             bestKickers = kStr;
           }
         }
-
-        const potWinners = eligibleResults.filter(
+        potWinners = eligibleResults.filter(
           r => r.hand.rankValue === bestRankValue && r.hand.kickers.join(",") === bestKickers
         );
-
-        const share = Math.floor(potSize / potWinners.length);
-        for (const w of potWinners) {
-          const player = this.getPlayer(w.playerId);
-          if (player) player.chips += share;
-        }
-        // Remainder to first winner (positional advantage)
-        const leftover = potSize - share * potWinners.length;
-        if (leftover > 0) {
-          const first = this.getPlayer(potWinners[0].playerId);
-          if (first) first.chips += leftover;
-        }
-        totalDistributed += potSize;
       }
 
-      prevLevel = level;
+      const share = Math.floor(tier.amount / potWinners.length);
+      for (const w of potWinners) {
+        const player = this.getPlayer(w.playerId);
+        if (player) player.chips += share;
+      }
+      // Odd chip to worst position (closest left of button)
+      const leftover = tier.amount - share * potWinners.length;
+      if (leftover > 0) {
+        const sorted = this.worstPositionFirst(potWinners.map(w => w.playerId));
+        const first = this.getPlayer(sorted[0]);
+        if (first) first.chips += leftover;
+      }
     }
 
-    // Track side pots in state for UI display
-    this.state.sidePots = [];
-    prevLevel = 0;
-    for (const level of betLevels) {
-      const increment = level - prevLevel;
-      if (increment <= 0) continue;
-      const potContributors = contributors.filter(p => p.totalBetThisHand >= level);
-      const eligible = potContributors.filter(p => active.some(a => a.id === p.id)).map(p => p.id);
-      this.state.sidePots.push({
-        amount: increment * potContributors.length,
-        eligible,
-      });
-      prevLevel = level;
-    }
+    // Track side pots in state for UI display (use the already-computed tiers)
+    this.state.sidePots = tiers.filter(t => t.amount > 0);
   }
 
   private endHandLastStanding() {
@@ -974,6 +1042,7 @@ export class GameEngine {
 
     this.state.currentTurnSeat = seatIndex;
     player.status = "thinking";
+    this.turnStartedAt = Date.now();
 
     // Set turn deadline for temporal validation
     const turnDuration = this.timeBankSeconds;
@@ -1066,6 +1135,7 @@ export class GameEngine {
   private buildHandSummary(winners: { playerId: string; amount: number }[]): HandSummary {
     return {
       handNumber: this.state.handNumber,
+      dealerSeat: this.state.dealerSeat,
       players: this.handStartPlayers,
       actions: this.actionLog,
       communityCards: [...this.state.communityCards],

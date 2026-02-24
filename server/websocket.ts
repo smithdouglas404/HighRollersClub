@@ -4,6 +4,7 @@ import type { RequestHandler, Request } from "express";
 import type { IncomingMessage } from "http";
 import passport from "passport";
 import { tableManager } from "./game/table-manager";
+import { storage } from "./storage";
 
 // Client connection with metadata
 export interface WsClient {
@@ -56,6 +57,30 @@ export type ServerMessage =
 
 // Global map of connected clients
 const clients = new Map<string, WsClient>();
+
+// Rate limiting: sliding window per client (max messages per second)
+const RATE_LIMIT_MAX = 20; // max 20 messages per window
+const RATE_LIMIT_WINDOW_MS = 1000; // 1 second window
+const rateLimitBuckets = new Map<string, number[]>(); // userId → timestamps
+
+function isRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  let timestamps = rateLimitBuckets.get(userId);
+  if (!timestamps) {
+    timestamps = [];
+    rateLimitBuckets.set(userId, timestamps);
+  }
+  // Remove expired timestamps
+  while (timestamps.length > 0 && timestamps[0] < cutoff) {
+    timestamps.shift();
+  }
+  if (timestamps.length >= RATE_LIMIT_MAX) {
+    return true;
+  }
+  timestamps.push(now);
+  return false;
+}
 
 export function getClients() {
   return clients;
@@ -156,6 +181,11 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
 
     ws.on("message", async (data) => {
       try {
+        // Rate limiting check
+        if (isRateLimited(user.id)) {
+          sendToUser(user.id, { type: "error", message: "Rate limited — slow down" });
+          return;
+        }
         const msg = JSON.parse(data.toString()) as ClientMessage;
         await handleMessage(client, msg);
       } catch (err: any) {
@@ -169,6 +199,7 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
         tableManager.handleDisconnect(client.tableId, client.userId);
       }
       clients.delete(user.id);
+      rateLimitBuckets.delete(user.id);
     });
 
     ws.on("error", () => {
@@ -242,6 +273,42 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
     case "sit_in": {
       if (!client.tableId) return;
       tableManager.setSitOut(client.tableId, client.userId, false);
+      sendGameStateToTable(client.tableId);
+      break;
+    }
+
+    case "add_chips": {
+      if (!client.tableId) return;
+      const amount = msg.amount;
+      if (!amount || amount <= 0) return;
+      // Verify user has enough chips and add to their stack
+      const user = await storage.getUser(client.userId);
+      if (!user || user.chipBalance < amount) {
+        sendToUser(client.userId, { type: "error", message: "Insufficient chips" });
+        return;
+      }
+      const table = await storage.getTable(client.tableId);
+      if (!table) return;
+      // Can only add chips between hands
+      const instance = tableManager.getTable(client.tableId);
+      if (!instance) return;
+      const player = instance.engine.getPlayer(client.userId);
+      if (!player) return;
+      // Only allow adding chips when not in an active hand
+      if (instance.engine.state.phase !== "waiting" && instance.engine.state.phase !== "showdown") {
+        sendToUser(client.userId, { type: "error", message: "Can only add chips between hands" });
+        return;
+      }
+      // Cap at table max buy-in
+      const maxAdd = table.maxBuyIn - player.chips;
+      const addAmount = Math.min(amount, maxAdd);
+      if (addAmount <= 0) {
+        sendToUser(client.userId, { type: "error", message: "Already at max buy-in" });
+        return;
+      }
+      // Deduct from user balance and add to stack
+      await storage.updateUser(client.userId, { chipBalance: user.chipBalance - addAmount });
+      player.chips += addAmount;
       sendGameStateToTable(client.tableId);
       break;
     }

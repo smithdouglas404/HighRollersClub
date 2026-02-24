@@ -29,6 +29,7 @@ import { TournamentResults } from "@/components/game/TournamentResults";
 import { BombPotIndicator } from "@/components/game/BombPotIndicator";
 import { TournamentStatsPanel } from "@/components/game/TournamentStatsPanel";
 import { PlayerAnalyticsPanel } from "@/components/game/PlayerAnalyticsPanel";
+import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
 
 // Cinematic DALL-E 3 assets
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
@@ -136,6 +137,15 @@ function GameTable({
   const sound = useSoundEngine();
   const tableRef = useRef<HTMLDivElement>(null);
   const prevHeroTurn = useRef(false);
+
+  // Fetch real player stats for analytics panel
+  const [playerStats, setPlayerStats] = useState({ handsPlayed: 0, potsWon: 0, vpip: 0, pfr: 0, showdownCount: 0 });
+  useEffect(() => {
+    if (!isMultiplayer) return;
+    fetch("/api/stats/me").then(r => r.ok ? r.json() : null).then(s => {
+      if (s) setPlayerStats({ handsPlayed: s.handsPlayed || 0, potsWon: s.potsWon || 0, vpip: s.vpip || 0, pfr: s.pfr || 0, showdownCount: s.showdownCount || 0 });
+    }).catch(() => {});
+  }, [isMultiplayer, gameState.handNumber]);
 
   const cycleQuality = () => {
     const next: Record<QualityLevel, QualityLevel> = { low: "medium", medium: "high", high: "low" };
@@ -427,14 +437,19 @@ function GameTable({
 
         {isMultiplayer && hero && (
           <PlayerAnalyticsPanel
-            stats={{
-              handsPlayed: 0,
-              potsWon: 0,
-              vpip: 0,
-              pfr: 0,
-              showdownCount: 0,
-            }}
+            stats={playerStats}
           />
+        )}
+
+        {isMultiplayer && hero && heroCards && heroCards.length > 0 && gameState.phase !== "waiting" && (
+          <div className="fixed bottom-4 right-4 z-40">
+            <AIAnalysisPanel
+              holeCards={heroCards}
+              communityCards={gameState.communityCards || []}
+              pot={gameState.pot || 0}
+              position={hero.isDealer ? "button" : hero.isBigBlind ? "early" : "late"}
+            />
+          </div>
         )}
 
         <AnimatePresence>

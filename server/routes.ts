@@ -3,11 +3,21 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { registerAuthRoutes, requireAuth } from "./auth";
 import { insertTableSchema, insertClubSchema } from "@shared/schema";
-import { setupWebSocket } from "./websocket";
+import { setupWebSocket, sendGameStateToTable, getClients } from "./websocket";
+import { getBlindPreset } from "./game/blind-presets";
+import { tableManager } from "./game/table-manager";
+import { analyzeHand } from "./game/hand-analyzer";
 
 export async function registerRoutes(app: Express, sessionMiddleware: RequestHandler): Promise<Server> {
   // Auth routes
   registerAuthRoutes(app);
+
+  // ─── Online Users ──────────────────────────────────────────────────────
+  app.get("/api/online-users", (_req, res) => {
+    const clients = getClients();
+    const onlineIds = Array.from(clients.keys());
+    res.json(onlineIds);
+  });
 
   // ─── Table Routes ────────────────────────────────────────────────────────
   // List all public tables (+ user's private tables)
@@ -54,10 +64,38 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // REST endpoint for joining a table (professional: REST for join/leave, WS for gameplay)
+  app.post("/api/tables/:id/join", requireAuth, async (req, res, next) => {
+    try {
+      const { buyIn, seatIndex } = req.body;
+      if (!buyIn || buyIn <= 0) return res.status(400).json({ message: "Invalid buy-in amount" });
+      const result = await tableManager.joinTable(req.params.id, req.user!.id, req.user!.displayName || req.user!.username, buyIn, seatIndex);
+      if (!result.ok) return res.status(400).json({ message: result.error });
+      sendGameStateToTable(req.params.id);
+      res.json({ ok: true });
+    } catch (err) { next(err); }
+  });
+
+  // REST endpoint for leaving a table
+  app.post("/api/tables/:id/leave", requireAuth, async (req, res, next) => {
+    try {
+      await tableManager.leaveTable(req.params.id, req.user!.id);
+      sendGameStateToTable(req.params.id);
+      res.json({ ok: true });
+    } catch (err) { next(err); }
+  });
+
   // Create table
   app.post("/api/tables", requireAuth, async (req, res, next) => {
     try {
-      const parsed = insertTableSchema.safeParse(req.body);
+      // Resolve blindPreset to blindSchedule for SNG/Tournament tables
+      const body = { ...req.body };
+      if ((body.gameFormat === "sng" || body.gameFormat === "tournament") && body.blindPreset && !body.blindSchedule) {
+        body.blindSchedule = getBlindPreset(body.blindPreset);
+      }
+      delete body.blindPreset; // Not a schema field
+
+      const parsed = insertTableSchema.safeParse(body);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid table config", errors: parsed.error.flatten() });
       }
@@ -512,6 +550,37 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // Hand players (per-player records for a specific hand)
+  app.get("/api/hands/:id/players", async (req, res, next) => {
+    try {
+      const players = await storage.getHandPlayers(req.params.id);
+      res.json(players);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Hand actions (action-by-action replay log)
+  app.get("/api/hands/:id/actions", async (req, res, next) => {
+    try {
+      const actions = await storage.getHandActions(req.params.id);
+      res.json(actions);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Player hand history (all hands a user participated in)
+  app.get("/api/players/:id/hands", async (req, res, next) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const hands = await storage.getPlayerHandHistory(req.params.id, limit);
+      res.json(hands);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ─── Player Stats Routes ──────────────────────────────────────────────
   app.get("/api/stats/me", requireAuth, async (req, res, next) => {
     try {
@@ -539,10 +608,56 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // ─── Missions Routes ──────────────────────────────────────────────────
+
+  // Helper: check if a mission period has expired and needs reset
+  function isMissionPeriodStale(periodStart: Date | null, periodType: string): boolean {
+    if (!periodStart) return true;
+    const now = Date.now();
+    const start = new Date(periodStart).getTime();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+    if (periodType === "daily" && now - start > TWENTY_FOUR_HOURS) return true;
+    if (periodType === "weekly" && now - start > SEVEN_DAYS) return true;
+    return false;
+  }
+
+  // Helper: reset stale user missions and player stats for a given user.
+  // Returns true if any missions were reset.
+  async function resetStaleMissions(userId: string, allMissions: any[], userMs: any[]): Promise<boolean> {
+    let didReset = false;
+    for (const um of userMs) {
+      const mission = allMissions.find((m: any) => m.id === um.missionId);
+      if (!mission) continue;
+      if (isMissionPeriodStale(um.periodStart, mission.periodType)) {
+        await storage.updateUserMission(um.id, {
+          progress: 0,
+          claimedAt: null,
+          completedAt: null,
+          periodStart: new Date(),
+        });
+        didReset = true;
+      }
+    }
+    // If any mission was reset, also reset the player's tracked stats so
+    // progress counters start fresh for the new period
+    if (didReset) {
+      await storage.resetDailyStats(userId);
+    }
+    return didReset;
+  }
+
   app.get("/api/missions", requireAuth, async (req, res, next) => {
     try {
       const allMissions = await storage.getMissions();
-      const userMs = await storage.getUserMissions(req.user!.id);
+      let userMs = await storage.getUserMissions(req.user!.id);
+
+      // Lazy reset: check for stale mission periods and reset them
+      const didReset = await resetStaleMissions(req.user!.id, allMissions, userMs);
+      // Re-fetch after reset so we have fresh data
+      if (didReset) {
+        userMs = await storage.getUserMissions(req.user!.id);
+      }
+
       const stats = await storage.getPlayerStats(req.user!.id);
 
       const result = allMissions.map(m => {
@@ -553,6 +668,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
             case "hands_played": progress = stats.handsPlayed; break;
             case "pots_won": progress = stats.potsWon; break;
             case "win_streak": progress = stats.bestWinStreak; break;
+            case "consecutive_wins": progress = stats.currentWinStreak; break;
+            case "sng_win": progress = (stats as any).sngWins ?? 0; break;
+            case "bomb_pot": progress = (stats as any).bombPotsPlayed ?? 0; break;
+            case "heads_up_win": progress = (stats as any).headsUpWins ?? 0; break;
             default: progress = userMission?.progress || 0;
           }
         }
@@ -572,8 +691,16 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
   app.post("/api/missions/:id/claim", requireAuth, async (req, res, next) => {
     try {
-      const mission = (await storage.getMissions()).find(m => m.id === req.params.id);
+      const allMissions = await storage.getMissions();
+      const mission = allMissions.find(m => m.id === req.params.id);
       if (!mission) return res.status(404).json({ message: "Mission not found" });
+
+      // Lazy reset: check all user missions for staleness before evaluating claim
+      let userMs = await storage.getUserMissions(req.user!.id);
+      const didReset = await resetStaleMissions(req.user!.id, allMissions, userMs);
+      if (didReset) {
+        userMs = await storage.getUserMissions(req.user!.id);
+      }
 
       const stats = await storage.getPlayerStats(req.user!.id);
       let progress = 0;
@@ -582,6 +709,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
           case "hands_played": progress = stats.handsPlayed; break;
           case "pots_won": progress = stats.potsWon; break;
           case "win_streak": progress = stats.bestWinStreak; break;
+          case "consecutive_wins": progress = stats.currentWinStreak; break;
+          case "sng_win": progress = (stats as any).sngWins ?? 0; break;
+          case "bomb_pot": progress = (stats as any).bombPotsPlayed ?? 0; break;
+          case "heads_up_win": progress = (stats as any).headsUpWins ?? 0; break;
         }
       }
 
@@ -590,7 +721,6 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
 
       // Check if already claimed
-      const userMs = await storage.getUserMissions(req.user!.id);
       const existing = userMs.find(um => um.missionId === mission.id && um.claimedAt);
       if (existing) {
         return res.status(400).json({ message: "Already claimed" });
@@ -647,7 +777,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       // Simple analysis based on hand strength and position
       const analysis = analyzeHand(holeCards, communityCards || [], pot || 0, position || "middle");
 
-      const saved = await storage.createHandAnalysis({
+      await storage.createHandAnalysis({
         userId: req.user!.id,
         handId: req.body.handId || null,
         holeCards,
@@ -657,7 +787,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         analysis,
       });
 
-      res.json(saved);
+      // Return the analysis directly (matches AIAnalysisPanel's AnalysisResult shape)
+      res.json(analysis);
     } catch (err) {
       next(err);
     }
@@ -746,6 +877,103 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // ─── Tournament Routes ──────────────────────────────────────────────────
+  app.get("/api/tournaments", async (_req, res, next) => {
+    try {
+      const tourneys = await storage.getTournaments();
+      res.json(tourneys);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/tournaments/:id", async (req, res, next) => {
+    try {
+      const tourney = await storage.getTournament(req.params.id);
+      if (!tourney) return res.status(404).json({ message: "Tournament not found" });
+      const regs = await storage.getTournamentRegistrations(tourney.id);
+      res.json({ ...tourney, registrations: regs });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/tournaments", requireAuth, async (req, res, next) => {
+    try {
+      const { name, buyIn, startingChips, blindPreset, maxPlayers, clubId, startAt } = req.body;
+      if (!name) return res.status(400).json({ message: "Name required" });
+
+      const blindSchedule = blindPreset ? getBlindPreset(blindPreset) : getBlindPreset("mtt");
+
+      const tourney = await storage.createTournament({
+        name,
+        buyIn: buyIn || 100,
+        startingChips: startingChips || 1500,
+        blindSchedule,
+        maxPlayers: maxPlayers || 50,
+        status: "registering",
+        prizePool: 0,
+        createdById: req.user!.id,
+        clubId: clubId || null,
+        startAt: startAt ? new Date(startAt) : null,
+      });
+      res.status(201).json(tourney);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/tournaments/:id/register", requireAuth, async (req, res, next) => {
+    try {
+      const tourney = await storage.getTournament(req.params.id);
+      if (!tourney) return res.status(404).json({ message: "Tournament not found" });
+      if (tourney.status !== "registering") {
+        return res.status(400).json({ message: "Registration closed" });
+      }
+
+      // Check if already registered
+      const regs = await storage.getTournamentRegistrations(tourney.id);
+      if (regs.some(r => r.userId === req.user!.id)) {
+        return res.status(400).json({ message: "Already registered" });
+      }
+      if (regs.length >= tourney.maxPlayers) {
+        return res.status(400).json({ message: "Tournament full" });
+      }
+
+      // Deduct buy-in
+      const user = await storage.getUser(req.user!.id);
+      if (!user || user.chipBalance < tourney.buyIn) {
+        return res.status(400).json({ message: "Insufficient chips" });
+      }
+      await storage.updateUser(user.id, { chipBalance: user.chipBalance - tourney.buyIn });
+      await storage.createTransaction({
+        userId: user.id,
+        type: "withdraw",
+        amount: -tourney.buyIn,
+        balanceBefore: user.chipBalance,
+        balanceAfter: user.chipBalance - tourney.buyIn,
+        tableId: null,
+        description: `Tournament buy-in: ${tourney.name}`,
+      });
+
+      // Update prize pool
+      await storage.updateTournament(tourney.id, {
+        prizePool: tourney.prizePool + tourney.buyIn,
+      });
+
+      const reg = await storage.registerForTournament({
+        tournamentId: tourney.id,
+        userId: req.user!.id,
+        status: "registered",
+        finishPlace: null,
+        prizeAmount: 0,
+      });
+      res.status(201).json(reg);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ─── Alliance & League Routes ──────────────────────────────────────────
   app.get("/api/alliances", async (_req, res, next) => {
     try {
@@ -795,60 +1023,4 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   setupWebSocket(httpServer, sessionMiddleware);
 
   return httpServer;
-}
-
-// Simple hand analysis helper
-function analyzeHand(holeCards: any[], communityCards: any[], pot: number, position: string) {
-  const highCards = ["A", "K", "Q", "J"];
-  const ranks = holeCards.map((c: any) => c.rank);
-  const suits = holeCards.map((c: any) => c.suit);
-
-  let rating = "SUBOPTIMAL";
-  let ev = 0;
-  const leaks: string[] = [];
-  const recommendations: string[] = [];
-
-  // Premium hands
-  const isPair = ranks[0] === ranks[1];
-  const isSuited = suits[0] === suits[1];
-  const hasHighCard = ranks.some((r: string) => highCards.includes(r));
-  const hasTwoHighCards = ranks.every((r: string) => highCards.includes(r));
-
-  if (isPair && highCards.includes(ranks[0])) {
-    rating = "OPTIMAL";
-    ev = 15;
-    recommendations.push("Strong pair - raise from any position");
-  } else if (hasTwoHighCards && isSuited) {
-    rating = "OPTIMAL";
-    ev = 10;
-    recommendations.push("Strong suited connectors - raise or call");
-  } else if (hasTwoHighCards) {
-    rating = "OPTIMAL";
-    ev = 7;
-    recommendations.push("Good high cards - raise from late position");
-  } else if (isPair) {
-    rating = "OPTIMAL";
-    ev = 5;
-    recommendations.push("Medium pair - call, set mine on flop");
-  } else if (hasHighCard && isSuited) {
-    ev = 3;
-    recommendations.push("Suited with high card - call from late position");
-  } else {
-    ev = -2;
-    leaks.push("Weak starting hand");
-    recommendations.push("Consider folding from early/middle position");
-  }
-
-  // Position adjustment
-  if (position === "late" || position === "button") {
-    ev += 2;
-    recommendations.push("Late position advantage - wider range is acceptable");
-  } else if (position === "early") {
-    ev -= 1;
-    if (rating !== "OPTIMAL") {
-      leaks.push("Playing marginal hand from early position");
-    }
-  }
-
-  return { rating, ev, leaks, recommendations };
 }

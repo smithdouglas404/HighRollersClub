@@ -13,6 +13,7 @@ interface CreateTableModalProps {
 const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string; color: string }[] = [
   { key: "cash", label: "Cash Game", icon: Coins, desc: "Standard ring game", color: "cyan" },
   { key: "sng", label: "Sit & Go", icon: Clock, desc: "Fixed buy-in, rising blinds", color: "amber" },
+  { key: "tournament", label: "Tournament", icon: Trophy, desc: "Multi-table, scheduled start", color: "emerald" },
   { key: "heads_up", label: "Heads Up", icon: Swords, desc: "1v1 match", color: "purple" },
   { key: "bomb_pot", label: "Bomb Pot", icon: Bomb, desc: "Cash + periodic bomb pots", color: "red" },
 ];
@@ -53,12 +54,12 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
       gameFormat,
     };
 
-    if (gameFormat === "sng") {
+    if (gameFormat === "sng" || gameFormat === "tournament") {
       config.buyInAmount = buyInAmount;
       config.startingChips = startingChips;
       config.minBuyIn = buyInAmount;
       config.maxBuyIn = buyInAmount;
-      // Blind schedule will be applied server-side based on preset
+      config.blindPreset = blindPreset;
     } else {
       config.minBuyIn = minBuyIn;
       config.maxBuyIn = maxBuyIn;
@@ -107,7 +108,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
             <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-2">
               Game Format
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               {FORMAT_OPTIONS.map(opt => {
                 const Icon = opt.icon;
                 const isSelected = gameFormat === opt.key;
@@ -126,8 +127,8 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                         : "bg-white/5 border-white/10 text-gray-500 hover:border-white/20"
                     }`}
                     style={isSelected ? {
-                      backgroundColor: `rgba(${opt.color === "cyan" ? "34,211,238" : opt.color === "amber" ? "245,158,11" : opt.color === "purple" ? "168,85,247" : "239,68,68"},0.1)`,
-                      borderColor: `rgba(${opt.color === "cyan" ? "34,211,238" : opt.color === "amber" ? "245,158,11" : opt.color === "purple" ? "168,85,247" : "239,68,68"},0.3)`,
+                      backgroundColor: `rgba(${opt.color === "cyan" ? "34,211,238" : opt.color === "amber" ? "245,158,11" : opt.color === "emerald" ? "52,211,153" : opt.color === "purple" ? "168,85,247" : "239,68,68"},0.1)`,
+                      borderColor: `rgba(${opt.color === "cyan" ? "34,211,238" : opt.color === "amber" ? "245,158,11" : opt.color === "emerald" ? "52,211,153" : opt.color === "purple" ? "168,85,247" : "239,68,68"},0.3)`,
                     } : {}}
                   >
                     <Icon className="w-4 h-4 mx-auto mb-1" />
@@ -231,10 +232,12 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
             </div>
           </div>
 
-          {/* SNG-specific fields */}
-          {gameFormat === "sng" && (
-            <div className="p-3 rounded-lg border border-amber-500/15 bg-amber-500/5">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-3">SNG Settings</div>
+          {/* SNG / Tournament shared fields */}
+          {(gameFormat === "sng" || gameFormat === "tournament") && (
+            <div className={`p-3 rounded-lg border ${gameFormat === "tournament" ? "border-emerald-500/15 bg-emerald-500/5" : "border-amber-500/15 bg-amber-500/5"}`}>
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${gameFormat === "tournament" ? "text-emerald-400" : "text-amber-400"} mb-3`}>
+                {gameFormat === "tournament" ? "Tournament Settings" : "SNG Settings"}
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Buy-In</label>
@@ -243,7 +246,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                     value={buyInAmount}
                     onChange={(e) => setBuyInAmount(parseInt(e.target.value) || 100)}
                     min={100}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
                   />
                 </div>
                 <div>
@@ -253,7 +256,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                     value={startingChips}
                     onChange={(e) => setStartingChips(parseInt(e.target.value) || 1500)}
                     min={100}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
                   />
                 </div>
                 <div>
@@ -261,7 +264,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                   <select
                     value={blindPreset}
                     onChange={(e) => setBlindPreset(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
                   >
                     <option value="standard" className="bg-gray-900">Standard (5min)</option>
                     <option value="turbo" className="bg-gray-900">Turbo (3min)</option>
@@ -305,7 +308,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
           )}
 
           {/* Buy-in Range (cash / heads_up / bomb_pot) */}
-          {gameFormat !== "sng" && (
+          {gameFormat !== "sng" && gameFormat !== "tournament" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">
@@ -367,7 +370,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
             whileTap={{ scale: 0.98 }}
             className="w-full gold-gradient rounded-lg py-3 text-sm font-bold tracking-wider text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] mt-2"
           >
-            {gameFormat === "sng" ? "CREATE SIT & GO" : gameFormat === "bomb_pot" ? "CREATE BOMB POT TABLE" : "CREATE TABLE"}
+            {gameFormat === "sng" ? "CREATE SIT & GO" : gameFormat === "tournament" ? "CREATE TOURNAMENT" : gameFormat === "bomb_pot" ? "CREATE BOMB POT TABLE" : "CREATE TABLE"}
           </motion.button>
         </form>
       </motion.div>

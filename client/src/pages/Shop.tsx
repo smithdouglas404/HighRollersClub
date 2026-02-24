@@ -5,10 +5,10 @@ import { useAuth } from "@/lib/auth-context";
 import {
   Sparkles, Star, Crown, Wallet, Gift,
   Tag, Zap, Gem, Coins, Clock, Loader2, ArrowUpRight, ArrowDownRight,
-  Package, Check, ShoppingCart, X, Shield
+  Package, Check, ShoppingCart, X, Shield, Heart
 } from "lucide-react";
 
-const TABS = ["Avatars", "Table Themes", "Emotes", "Premium", "Inventory"];
+const TABS = ["Avatars", "Table Themes", "Emotes", "Premium", "Wishlist", "Inventory"];
 
 const TAB_CATEGORY_MAP: Record<string, string> = {
   Avatars: "avatar",
@@ -228,10 +228,14 @@ function ShopItemCard({
   item,
   onPurchase,
   owned,
+  wishlisted,
+  onToggleWishlist,
 }: {
   item: ShopItem;
   onPurchase: (item: ShopItem) => void;
   owned: boolean;
+  wishlisted?: boolean;
+  onToggleWishlist?: (itemId: string) => void;
 }) {
   return (
     <motion.div
@@ -250,6 +254,26 @@ function ShopItemCard({
           <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border bg-green-500/15 border-green-500/30 text-green-400">
             Owned
           </div>
+        )}
+        {/* Wishlist heart button */}
+        {onToggleWishlist && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleWishlist(item.id);
+            }}
+            className={`absolute ${owned ? "top-8 right-2 mt-1" : "top-2 right-2"} w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+              wishlisted
+                ? "bg-pink-500/20 border border-pink-500/40 hover:bg-pink-500/30"
+                : "bg-black/40 border border-white/10 hover:bg-white/10 opacity-0 group-hover:opacity-100"
+            } ${wishlisted ? "opacity-100" : ""}`}
+          >
+            <Heart
+              className={`w-3.5 h-3.5 transition-colors ${
+                wishlisted ? "text-pink-400 fill-pink-400" : "text-white/60"
+              }`}
+            />
+          </button>
         )}
       </div>
       <div className="p-3">
@@ -362,6 +386,29 @@ export default function Shop() {
   const [purchasing, setPurchasing] = useState(false);
   const [equipping, setEquipping] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Wishlist state (localStorage-backed)
+  const [wishlist, setWishlist] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("poker-wishlist");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const toggleWishlist = useCallback((itemId: string) => {
+    setWishlist((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      localStorage.setItem("poker-wishlist", JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -525,11 +572,27 @@ export default function Shop() {
 
   // Filter items by active tab category
   const activeCategory = TAB_CATEGORY_MAP[activeTab];
-  const filteredItems = activeCategory
-    ? shopItems.filter((item) => item.category === activeCategory)
-    : shopItems;
-
+  const isWishlistTab = activeTab === "Wishlist";
   const isInventoryTab = activeTab === "Inventory";
+
+  const filteredItems = isWishlistTab
+    ? shopItems.filter((item) => wishlist.has(item.id))
+    : activeCategory
+      ? shopItems.filter((item) => item.category === activeCategory)
+      : shopItems;
+
+  // New Arrivals: items created within the last 7 days
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const newArrivals = filteredItems.filter(
+    (item) => new Date(item.createdAt).getTime() >= sevenDaysAgo
+  );
+  // For the "All Items" grid, exclude items already shown in Featured or New Arrivals
+  const featuredCount = filteredItems.length >= 3 ? 3 : 0;
+  const newArrivalIds = new Set(newArrivals.map((item) => item.id));
+  const featuredIds = new Set(filteredItems.slice(0, featuredCount).map((item) => item.id));
+  const remainingItems = filteredItems.filter(
+    (item) => !featuredIds.has(item.id) && !newArrivalIds.has(item.id)
+  );
 
   return (
     <DashboardLayout>
@@ -547,7 +610,13 @@ export default function Shop() {
               }`}
             >
               {tab === "Inventory" && <Package className="w-3.5 h-3.5" />}
+              {tab === "Wishlist" && <Heart className={`w-3.5 h-3.5 ${activeTab === "Wishlist" ? "fill-pink-400 text-pink-400" : ""}`} />}
               {tab}
+              {tab === "Wishlist" && wishlist.size > 0 && (
+                <span className="ml-1 text-[9px] bg-pink-500/15 text-pink-400 px-1.5 py-0.5 rounded-full">
+                  {wishlist.size}
+                </span>
+              )}
               {tab === "Inventory" && inventory.length > 0 && (
                 <span className="ml-1 text-[9px] bg-cyan-500/15 text-cyan-400 px-1.5 py-0.5 rounded-full">
                   {inventory.length}
@@ -568,6 +637,11 @@ export default function Shop() {
                     <Package className="w-5 h-5 text-cyan-400" />
                     Your Collection
                   </>
+                ) : isWishlistTab ? (
+                  <>
+                    <Heart className="w-5 h-5 text-pink-400 fill-pink-400" />
+                    Your Wishlist
+                  </>
                 ) : (
                   <>
                     <Gem className="w-5 h-5 text-purple-400" />
@@ -577,7 +651,7 @@ export default function Shop() {
               </h2>
               {!isInventoryTab && (
                 <p className="text-xs text-gray-600 mt-1">
-                  {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""} available
+                  {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""} {isWishlistTab ? "wishlisted" : "available"}
                 </p>
               )}
             </div>
@@ -632,7 +706,7 @@ export default function Shop() {
               </>
             )}
 
-            {/* Shop Items Grid */}
+            {/* Shop / Wishlist Items Grid */}
             {!isInventoryTab && (
               <>
                 {loadingItems ? (
@@ -645,14 +719,36 @@ export default function Shop() {
                     animate={{ opacity: 1, y: 0 }}
                     className="glass rounded-xl border border-white/5 py-16 text-center"
                   >
-                    <Tag className="w-10 h-10 text-gray-700 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-gray-500">No items available yet</p>
-                    <p className="text-xs text-gray-600 mt-1">Check back soon for new {activeTab.toLowerCase()}!</p>
+                    {isWishlistTab ? (
+                      <>
+                        <Heart className="w-10 h-10 text-gray-700 mx-auto mb-3" />
+                        <p className="text-sm font-bold text-gray-500">Your wishlist is empty</p>
+                        <p className="text-xs text-gray-600 mt-1">Browse the shop and tap the heart icon to save items you love.</p>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setActiveTab("Avatars")}
+                          className="mt-4 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
+                          style={{
+                            background: "linear-gradient(135deg, #ec4899, #f472b6)",
+                            boxShadow: "0 0 20px rgba(236,72,153,0.15)",
+                          }}
+                        >
+                          Browse Shop
+                        </motion.button>
+                      </>
+                    ) : (
+                      <>
+                        <Tag className="w-10 h-10 text-gray-700 mx-auto mb-3" />
+                        <p className="text-sm font-bold text-gray-500">No items available yet</p>
+                        <p className="text-xs text-gray-600 mt-1">Check back soon for new {activeTab.toLowerCase()}!</p>
+                      </>
+                    )}
                   </motion.div>
                 ) : (
                   <>
-                    {/* Featured (first 3 items) */}
-                    {filteredItems.length >= 3 && (
+                    {/* Featured (first 3 items) - only on category tabs */}
+                    {!isWishlistTab && filteredItems.length >= 3 && (
                       <div>
                         <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
                           <Sparkles className="w-4 h-4 text-amber-400" />
@@ -670,6 +766,8 @@ export default function Shop() {
                                 item={item}
                                 onPurchase={setSelectedItem}
                                 owned={ownedItemIds.has(item.id)}
+                                wishlisted={wishlist.has(item.id)}
+                                onToggleWishlist={toggleWishlist}
                               />
                             </motion.div>
                           ))}
@@ -677,14 +775,54 @@ export default function Shop() {
                       </div>
                     )}
 
-                    {/* All Items */}
+                    {/* New Arrivals - items from last 7 days, shown between Featured and All Items */}
+                    {!isWishlistTab && newArrivals.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
+                          <Zap className="w-4 h-4 text-green-400" />
+                          New Arrivals
+                          <span className="text-[9px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full font-bold">
+                            Last 7 days
+                          </span>
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                          {newArrivals.map((item, i) => (
+                            <motion.div
+                              key={item.id}
+                              initial={{ opacity: 0, y: 15 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.15 + i * 0.05 }}
+                            >
+                              <ShopItemCard
+                                item={item}
+                                onPurchase={setSelectedItem}
+                                owned={ownedItemIds.has(item.id)}
+                                wishlisted={wishlist.has(item.id)}
+                                onToggleWishlist={toggleWishlist}
+                              />
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* All Items (or Wishlist items) */}
                     <div>
                       <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-cyan-400" />
-                        {filteredItems.length >= 3 ? "All Items" : activeTab}
+                        {isWishlistTab ? (
+                          <>
+                            <Heart className="w-4 h-4 text-pink-400 fill-pink-400" />
+                            Saved Items
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 text-cyan-400" />
+                            {filteredItems.length >= 3 ? "All Items" : activeTab}
+                          </>
+                        )}
                       </h3>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                        {(filteredItems.length >= 3 ? filteredItems.slice(3) : filteredItems).map((item, i) => (
+                        {(isWishlistTab ? filteredItems : remainingItems).map((item, i) => (
                           <motion.div
                             key={item.id}
                             initial={{ opacity: 0, scale: 0.9 }}
@@ -695,6 +833,8 @@ export default function Shop() {
                               item={item}
                               onPurchase={setSelectedItem}
                               owned={ownedItemIds.has(item.id)}
+                              wishlisted={wishlist.has(item.id)}
+                              onToggleWishlist={toggleWishlist}
                             />
                           </motion.div>
                         ))}

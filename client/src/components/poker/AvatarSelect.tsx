@@ -1,40 +1,59 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Zap, Shield, Crown, Skull, Ghost, Bot } from "lucide-react";
+import { ChevronRight, Zap, Shield, Crown, Star, Trophy, Flame } from "lucide-react";
+import { MatrixRain } from "../MatrixRain";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
-import avatar1 from "@assets/generated_images/player_seated_cyberpunk_1.png";
-import avatar2 from "@assets/generated_images/player_seated_cyberpunk_2.png";
-import avatar3 from "@assets/generated_images/player_seated_cyberpunk_3.png";
-import avatar4 from "@assets/generated_images/player_seated_cyberpunk_4.png";
+
+// ─── 12 DALL-E 3 Avatars ─────────────────────────────────────────────────────
+import avNeonViper from "@assets/generated_images/avatars/avatar_neon_viper.png";
+import avChromeSiren from "@assets/generated_images/avatars/avatar_chrome_siren.png";
+import avGoldPhantom from "@assets/generated_images/avatars/avatar_gold_phantom.png";
+import avShadowKing from "@assets/generated_images/avatars/avatar_shadow_king.png";
+import avRedWolf from "@assets/generated_images/avatars/avatar_red_wolf.png";
+import avIceQueen from "@assets/generated_images/avatars/avatar_ice_queen.png";
+import avTechMonk from "@assets/generated_images/avatars/avatar_tech_monk.png";
+import avCyberPunk from "@assets/generated_images/avatars/avatar_cyber_punk.png";
+import avSteelGhost from "@assets/generated_images/avatars/avatar_steel_ghost.png";
+import avNeonFox from "@assets/generated_images/avatars/avatar_neon_fox.png";
+import avDarkAce from "@assets/generated_images/avatars/avatar_dark_ace.png";
+import avBoltRunner from "@assets/generated_images/avatars/avatar_bolt_runner.png";
 
 export interface AvatarOption {
   id: string;
   name: string;
-  image?: string;        // real image
-  gradient?: string;     // CSS gradient for generated avatars
-  icon?: React.ReactNode;
+  image: string;
   tier: "legendary" | "epic" | "rare" | "common";
   borderColor: string;
+  glowColor: string;
 }
 
 export const AVATAR_OPTIONS: AvatarOption[] = [
-  { id: "av1", name: "Neon Viper", image: avatar1, tier: "legendary", borderColor: "#00f0ff" },
-  { id: "av2", name: "Chrome Siren", image: avatar2, tier: "legendary", borderColor: "#b44dff" },
-  { id: "av3", name: "Gold Protocol", image: avatar3, tier: "epic", borderColor: "#ffd700" },
-  { id: "av4", name: "Ghost Wire", image: avatar4, tier: "epic", borderColor: "#ff3366" },
-  { id: "av5", name: "Phantom", gradient: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)", icon: <Ghost className="w-8 h-8" />, tier: "rare", borderColor: "#00ff9d" },
-  { id: "av6", name: "Overlord", gradient: "linear-gradient(135deg, #2d1b00 0%, #4a2c00 50%, #1a0f00 100%)", icon: <Crown className="w-8 h-8" />, tier: "rare", borderColor: "#c9a84c" },
-  { id: "av7", name: "Skull Jack", gradient: "linear-gradient(135deg, #1a0000 0%, #330000 50%, #1a0000 100%)", icon: <Skull className="w-8 h-8" />, tier: "common", borderColor: "#ef4444" },
-  { id: "av8", name: "Synth Bot", gradient: "linear-gradient(135deg, #001a1a 0%, #003333 50%, #001a1a 100%)", icon: <Bot className="w-8 h-8" />, tier: "common", borderColor: "#06b6d4" },
+  // Legendary (4)
+  { id: "neon-viper",    name: "Neon Viper",    image: avNeonViper,    tier: "legendary", borderColor: "#00f0ff", glowColor: "rgba(0,240,255,0.3)" },
+  { id: "chrome-siren",  name: "Chrome Siren",  image: avChromeSiren,  tier: "legendary", borderColor: "#b44dff", glowColor: "rgba(180,77,255,0.3)" },
+  { id: "gold-phantom",  name: "Gold Phantom",  image: avGoldPhantom,  tier: "legendary", borderColor: "#ffd700", glowColor: "rgba(255,215,0,0.3)" },
+  { id: "shadow-king",   name: "Shadow King",   image: avShadowKing,   tier: "legendary", borderColor: "#c9a84c", glowColor: "rgba(201,168,76,0.3)" },
+  // Epic (4)
+  { id: "red-wolf",      name: "Red Wolf",      image: avRedWolf,      tier: "epic", borderColor: "#ff3366", glowColor: "rgba(255,51,102,0.3)" },
+  { id: "ice-queen",     name: "Ice Queen",     image: avIceQueen,     tier: "epic", borderColor: "#67e8f9", glowColor: "rgba(103,232,249,0.3)" },
+  { id: "tech-monk",     name: "Tech Monk",     image: avTechMonk,     tier: "epic", borderColor: "#00ff9d", glowColor: "rgba(0,255,157,0.3)" },
+  { id: "cyber-punk",    name: "Cyber Punk",    image: avCyberPunk,    tier: "epic", borderColor: "#ff69b4", glowColor: "rgba(255,105,180,0.3)" },
+  // Rare (4)
+  { id: "steel-ghost",   name: "Steel Ghost",   image: avSteelGhost,   tier: "rare", borderColor: "#8ecae6", glowColor: "rgba(142,202,230,0.25)" },
+  { id: "neon-fox",      name: "Neon Fox",      image: avNeonFox,      tier: "rare", borderColor: "#ff8c00", glowColor: "rgba(255,140,0,0.25)" },
+  { id: "dark-ace",      name: "Dark Ace",      image: avDarkAce,      tier: "rare", borderColor: "#6366f1", glowColor: "rgba(99,102,241,0.25)" },
+  { id: "bolt-runner",   name: "Bolt Runner",   image: avBoltRunner,   tier: "rare", borderColor: "#facc15", glowColor: "rgba(250,204,21,0.25)" },
 ];
 
-const tierColors: Record<string, { bg: string; text: string; label: string }> = {
-  legendary: { bg: "rgba(255,215,0,0.1)", text: "text-yellow-400", label: "LEGENDARY" },
-  epic: { bg: "rgba(180,77,255,0.1)", text: "text-purple-400", label: "EPIC" },
-  rare: { bg: "rgba(0,255,157,0.1)", text: "text-green-400", label: "RARE" },
-  common: { bg: "rgba(150,150,150,0.1)", text: "text-gray-400", label: "COMMON" },
+const TIER_CONFIG: Record<string, { bg: string; text: string; label: string; icon: any }> = {
+  legendary: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", label: "LEGENDARY", icon: Crown },
+  epic:      { bg: "bg-purple-500/10 border-purple-500/20", text: "text-purple-400", label: "EPIC", icon: Star },
+  rare:      { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "RARE", icon: Zap },
+  common:    { bg: "bg-gray-500/10 border-gray-500/20", text: "text-gray-400", label: "COMMON", icon: Shield },
 };
+
+const TIER_FILTERS = ["all", "legendary", "epic", "rare"] as const;
 
 interface AvatarSelectProps {
   onSelect: (avatar: AvatarOption, playerName: string) => void;
@@ -44,6 +63,11 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
   const [selected, setSelected] = useState<AvatarOption>(AVATAR_OPTIONS[0]);
   const [playerName, setPlayerName] = useState("");
   const [isReady, setIsReady] = useState(false);
+  const [tierFilter, setTierFilter] = useState<string>("all");
+
+  const filteredAvatars = tierFilter === "all"
+    ? AVATAR_OPTIONS
+    : AVATAR_OPTIONS.filter(a => a.tier === tierFilter);
 
   const handleJoin = () => {
     if (!playerName.trim()) return;
@@ -59,88 +83,120 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.1 }}
           transition={{ duration: 0.5 }}
-          className="min-h-screen bg-[#030508] text-white flex flex-col items-center justify-center relative overflow-hidden"
+          className="min-h-screen bg-[#020508] text-white flex flex-col items-center justify-center relative overflow-hidden"
         >
-          {/* Background glow */}
+          {/* Background */}
           <div className="absolute inset-0">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-20"
-              style={{ background: `radial-gradient(circle, ${selected.borderColor}33 0%, transparent 70%)` }}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,20,30,0.4)_0%,rgba(0,0,0,0.95)_70%)]" />
+          </div>
+          <MatrixRain side="both" color="#00ff9d" opacity={0.08} density={0.2} className="absolute inset-0 z-[1]" />
+
+          {/* Dynamic glow for selected avatar */}
+          <div className="absolute inset-0 z-[2] pointer-events-none">
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full transition-all duration-700"
+              style={{ background: `radial-gradient(circle, ${selected.glowColor} 0%, transparent 60%)` }}
             />
           </div>
 
-          <div className="relative z-10 w-full max-w-3xl px-6 space-y-8">
+          <div className="relative z-10 w-full max-w-4xl px-6 space-y-6">
 
-            {/* Header */}
+            {/* ─── Header ─────────────────────────────────────── */}
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="text-center space-y-3"
+              className="text-center space-y-2"
             >
-              <div className="w-16 h-16 mx-auto relative">
-                <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-full" />
-                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10" />
+              <div className="w-14 h-14 mx-auto relative">
+                <div className="absolute inset-[-6px] bg-amber-500/20 blur-xl rounded-full animate-pulse" />
+                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(201,168,76,0.5)]" />
               </div>
-              <h1 className="font-display text-2xl font-bold tracking-widest gold-text">CHOOSE YOUR IDENTITY</h1>
-              <p className="text-sm text-gray-500">Select an avatar to represent you at the table</p>
+              <h1 className="font-display text-xl font-bold tracking-[0.2em] gold-text">CHOOSE YOUR AVATAR</h1>
+              <p className="text-xs text-gray-500">Your avatar carries your win history and total earnings</p>
             </motion.div>
 
-            {/* Avatar grid */}
+            {/* ─── Tier Filter ─────────────────────────────────── */}
+            <motion.div
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="flex items-center justify-center gap-1"
+            >
+              {TIER_FILTERS.map((tier) => (
+                <button
+                  key={tier}
+                  onClick={() => setTierFilter(tier)}
+                  className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
+                    tierFilter === tier
+                      ? tier === "all"
+                        ? "bg-white/10 text-white border border-white/15"
+                        : `${TIER_CONFIG[tier].bg} ${TIER_CONFIG[tier].text} border`
+                      : "text-gray-600 hover:text-gray-400 border border-transparent"
+                  }`}
+                >
+                  {tier === "all" ? "All" : TIER_CONFIG[tier].label}
+                </button>
+              ))}
+            </motion.div>
+
+            {/* ─── Avatar Grid ─────────────────────────────────── */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="grid grid-cols-4 gap-3"
+              transition={{ delay: 0.15 }}
+              className="grid grid-cols-4 sm:grid-cols-6 gap-3"
             >
-              {AVATAR_OPTIONS.map((av, i) => {
+              {filteredAvatars.map((av, i) => {
                 const isSelected = selected.id === av.id;
-                const tier = tierColors[av.tier];
+                const tier = TIER_CONFIG[av.tier];
+                const TierIcon = tier.icon;
                 return (
                   <motion.button
                     key={av.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + i * 0.05 }}
+                    transition={{ delay: 0.05 + i * 0.03 }}
                     onClick={() => setSelected(av)}
-                    className={`
-                      relative rounded-xl p-1 transition-all duration-300
-                      ${isSelected ? "scale-105" : "hover:scale-[1.02] opacity-70 hover:opacity-100"}
-                    `}
+                    className={`relative rounded-xl overflow-hidden transition-all duration-300 group ${
+                      isSelected ? "scale-[1.05] z-10" : "opacity-70 hover:opacity-100 hover:scale-[1.02]"
+                    }`}
                     style={{
-                      background: isSelected ? `linear-gradient(135deg, ${av.borderColor}40, transparent, ${av.borderColor}40)` : "rgba(255,255,255,0.03)",
                       border: isSelected ? `2px solid ${av.borderColor}` : "2px solid rgba(255,255,255,0.05)",
-                      boxShadow: isSelected ? `0 0 30px ${av.borderColor}30` : "none",
+                      boxShadow: isSelected ? `0 0 25px ${av.glowColor}, 0 8px 25px rgba(0,0,0,0.4)` : "0 4px 15px rgba(0,0,0,0.3)",
                     }}
                   >
-                    {/* Avatar display */}
-                    <div className="aspect-square rounded-lg overflow-hidden relative mb-2">
-                      {av.image ? (
-                        <img src={av.image} alt={av.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center" style={{ background: av.gradient }}>
-                          <div style={{ color: av.borderColor, opacity: 0.8 }}>{av.icon}</div>
-                        </div>
-                      )}
-                      {/* Overlay gradient */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    {/* Image */}
+                    <div className="aspect-square relative">
+                      <img
+                        src={av.image}
+                        alt={av.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                      {/* Selected check */}
+                      {/* Selected indicator */}
                       {isSelected && (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
-                          style={{ background: av.borderColor }}
+                          className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                          style={{ background: av.borderColor, boxShadow: `0 0 10px ${av.glowColor}` }}
                         >
                           <Zap className="w-3 h-3 text-black" />
                         </motion.div>
                       )}
-                    </div>
 
-                    {/* Name & tier */}
-                    <div className="px-1 pb-1">
-                      <div className="text-[11px] font-bold text-white truncate">{av.name}</div>
-                      <div className={`text-[8px] font-bold uppercase tracking-wider ${tier.text}`}>
-                        {tier.label}
+                      {/* Tier badge */}
+                      <div className="absolute top-1.5 left-1.5">
+                        <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider ${tier.bg} ${tier.text} border backdrop-blur-sm`}>
+                          <TierIcon className="w-2 h-2" />
+                          {av.tier === "legendary" ? "LEG" : av.tier === "epic" ? "EPIC" : "RARE"}
+                        </div>
+                      </div>
+
+                      {/* Name at bottom */}
+                      <div className="absolute bottom-0 left-0 right-0 px-2 pb-1.5">
+                        <div className="text-[10px] font-bold text-white truncate drop-shadow-lg">{av.name}</div>
                       </div>
                     </div>
                   </motion.button>
@@ -148,12 +204,51 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
               })}
             </motion.div>
 
-            {/* Name input & join */}
+            {/* ─── Selected Avatar Detail ──────────────────────── */}
+            <motion.div
+              key={selected.id}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-center gap-6"
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-lg overflow-hidden"
+                  style={{ border: `2px solid ${selected.borderColor}`, boxShadow: `0 0 15px ${selected.glowColor}` }}
+                >
+                  <img src={selected.image} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">{selected.name}</div>
+                  <div className={`text-[9px] font-bold uppercase tracking-wider ${TIER_CONFIG[selected.tier].text}`}>
+                    {TIER_CONFIG[selected.tier].label}
+                  </div>
+                </div>
+              </div>
+              <div className="h-8 w-px bg-white/10" />
+              {/* Mock stats for the avatar */}
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <div className="text-xs font-bold text-white">0</div>
+                  <div className="text-[8px] text-gray-600 uppercase tracking-wider">Wins</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs font-bold text-amber-400">0</div>
+                  <div className="text-[8px] text-gray-600 uppercase tracking-wider">Chips Won</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs font-bold text-cyan-400">0</div>
+                  <div className="text-[8px] text-gray-600 uppercase tracking-wider">Hands</div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* ─── Name Input & Join ──────────────────────────── */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="flex items-center gap-3 max-w-md mx-auto"
+              transition={{ delay: 0.3 }}
+              className="flex items-center gap-3 max-w-lg mx-auto"
             >
               <div className="flex-1 relative">
                 <input
@@ -161,50 +256,36 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value.slice(0, 16))}
                   onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-                  placeholder="Enter your name..."
+                  placeholder="Enter your player name..."
                   maxLength={16}
-                  className="w-full glass rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none transition-all focus:neon-border-cyan bg-transparent"
-                  style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+                  className="w-full rounded-xl px-4 py-3.5 text-sm text-white placeholder-gray-600 outline-none transition-all bg-white/[0.03] backdrop-blur-sm focus:bg-white/[0.05]"
+                  style={{
+                    border: playerName.trim() ? `1px solid ${selected.borderColor}40` : "1px solid rgba(255,255,255,0.06)",
+                    boxShadow: playerName.trim() ? `0 0 15px ${selected.glowColor.replace("0.3", "0.1")}` : "none",
+                  }}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 font-mono">
                   {playerName.length}/16
                 </div>
               </div>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={handleJoin}
                 disabled={!playerName.trim()}
-                className={`
-                  rounded-xl px-6 py-3 font-bold text-sm uppercase tracking-wider flex items-center gap-2
-                  transition-all duration-300
-                  ${playerName.trim()
-                    ? "text-black hover:scale-105"
-                    : "text-gray-600 bg-gray-800/50 cursor-not-allowed"
-                  }
-                `}
+                className={`rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all ${
+                  playerName.trim() ? "text-black" : "text-gray-600 bg-gray-800/50 cursor-not-allowed"
+                }`}
                 style={playerName.trim() ? {
                   background: `linear-gradient(135deg, ${selected.borderColor}, ${selected.borderColor}cc)`,
-                  boxShadow: `0 0 20px ${selected.borderColor}40`,
+                  boxShadow: `0 0 25px ${selected.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
                 } : undefined}
               >
-                <Shield className="w-4 h-4" />
+                <Flame className="w-4 h-4" />
                 Join Table
                 <ChevronRight className="w-4 h-4" />
-              </button>
-            </motion.div>
-
-            {/* Selected avatar preview info */}
-            <motion.div
-              key={selected.id}
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-center"
-            >
-              <span className="text-[10px] text-gray-600 font-mono">
-                Selected: <span style={{ color: selected.borderColor }}>{selected.name}</span>
-                {" | "}
-                <span className={tierColors[selected.tier].text}>{tierColors[selected.tier].label}</span>
-              </span>
+              </motion.button>
             </motion.div>
           </div>
         </motion.div>
@@ -213,7 +294,7 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
           initial={{ opacity: 1 }}
           animate={{ opacity: 0, scale: 1.2 }}
           transition={{ duration: 0.8 }}
-          className="min-h-screen bg-[#030508] flex items-center justify-center"
+          className="min-h-screen bg-[#020508] flex items-center justify-center"
         >
           <motion.div
             initial={{ scale: 1 }}
@@ -221,7 +302,9 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
             transition={{ duration: 0.6 }}
             className="text-center"
           >
-            <div className="font-display text-xl tracking-widest neon-text-cyan">ENTERING TABLE...</div>
+            <div className="font-display text-xl tracking-widest" style={{ color: selected.borderColor }}>
+              ENTERING TABLE...
+            </div>
           </motion.div>
         </motion.div>
       )}

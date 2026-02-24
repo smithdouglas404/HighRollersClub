@@ -145,6 +145,21 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // ─── Profile Routes ──────────────────────────────────────────────────────
+  app.put("/api/profile/avatar", requireAuth, async (req, res, next) => {
+    try {
+      const { avatarId } = req.body;
+      if (!avatarId || typeof avatarId !== "string") {
+        return res.status(400).json({ message: "avatarId required" });
+      }
+      await storage.updateUser(req.user!.id, { avatarId });
+      const user = await storage.getUser(req.user!.id);
+      res.json(user);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ─── Wallet Routes ───────────────────────────────────────────────────────
   app.get("/api/wallet/balance", requireAuth, async (req, res, next) => {
     try {

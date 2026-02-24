@@ -24,10 +24,11 @@ import { ShieldCheck, Volume2, VolumeX, Settings, Trophy, ArrowLeft, Bot, Wifi, 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
 import luxuryRail from "@assets/generated_images/poker_table_top_cinematic.png";
-import avatar1 from "@assets/generated_images/player_seated_cyberpunk_1.png";
-import avatar2 from "@assets/generated_images/player_seated_cyberpunk_2.png";
-import avatar3 from "@assets/generated_images/player_seated_cyberpunk_3.png";
-import avatar4 from "@assets/generated_images/player_seated_cyberpunk_4.png";
+// Bot avatars from the avatar library
+import avatar1 from "@assets/generated_images/avatars/avatar_red_wolf.png";
+import avatar2 from "@assets/generated_images/avatars/avatar_steel_ghost.png";
+import avatar3 from "@assets/generated_images/avatars/avatar_dark_ace.png";
+import avatar4 from "@assets/generated_images/avatars/avatar_neon_fox.png";
 
 const HERO_ID = "player-1";
 

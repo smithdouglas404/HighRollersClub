@@ -23,6 +23,14 @@ interface ClubData {
   memberCount: number;
 }
 
+interface PlayerStats {
+  handsPlayed: number;
+  potsWon: number;
+  bestWinStreak: number;
+  currentWinStreak: number;
+  totalWinnings: number;
+}
+
 function RoleBadge({ role }: { role: string }) {
   const config: Record<string, { color: string; icon: any; bg: string }> = {
     owner: { color: "text-amber-400", icon: Crown, bg: "bg-amber-500/10 border-amber-500/20" },
@@ -39,10 +47,10 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-const DAILY_MISSIONS = [
-  { id: "1", icon: Gamepad2, label: "Play Hands", target: 50, current: 23, reward: 200 },
-  { id: "2", icon: Coins, label: "Win Pots", target: 20, current: 8, reward: 500 },
-  { id: "3", icon: Target, label: "Win Streaks", target: 30, current: 12, reward: 750 },
+const MISSION_DEFS = [
+  { id: "1", icon: Gamepad2, label: "Play Hands", target: 50, statKey: "handsPlayed" as const, reward: 200 },
+  { id: "2", icon: Coins, label: "Win Pots", target: 20, statKey: "potsWon" as const, reward: 500 },
+  { id: "3", icon: Target, label: "Win Streak", target: 5, statKey: "bestWinStreak" as const, reward: 750 },
 ];
 
 export default function Members() {
@@ -50,11 +58,20 @@ export default function Members() {
   const [club, setClub] = useState<ClubData | null>(null);
   const [members, setMembers] = useState<ClubMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<PlayerStats | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const clubsRes = await fetch("/api/clubs");
+        const [clubsRes, statsRes] = await Promise.all([
+          fetch("/api/clubs"),
+          fetch("/api/stats/me"),
+        ]);
+
+        if (statsRes.ok) {
+          setStats(await statsRes.json());
+        }
+
         if (!clubsRes.ok) return;
         const clubs: ClubData[] = await clubsRes.json();
         if (clubs.length === 0) { setLoading(false); return; }
@@ -90,7 +107,7 @@ export default function Members() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* ─── Members List (2 columns) ─────────────────────── */}
+            {/* Members List (2 columns) */}
             <div className="lg:col-span-2">
               <div
                 className="glass rounded-xl overflow-hidden border border-cyan-500/10"
@@ -162,7 +179,7 @@ export default function Members() {
               </div>
             </div>
 
-            {/* ─── Right Panel ─────────────────────────────────── */}
+            {/* Right Panel */}
             <div className="space-y-4">
               {/* Club Info */}
               <motion.div
@@ -177,7 +194,7 @@ export default function Members() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-500">Club Name</span>
-                    <span className="text-xs font-bold text-cyan-400">{club?.name || "—"}</span>
+                    <span className="text-xs font-bold text-cyan-400">{club?.name || "\u2014"}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-500">Total Members</span>
@@ -195,9 +212,9 @@ export default function Members() {
           </div>
         )}
 
-        {/* ─── Bottom Widgets ──────────────────────────────── */}
+        {/* Bottom Widgets */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          {/* Daily Missions */}
+          {/* Daily Missions — Real Stats */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -208,24 +225,29 @@ export default function Members() {
               Daily Missions
             </h3>
             <div className="grid grid-cols-3 gap-3">
-              {DAILY_MISSIONS.map((mission) => {
+              {MISSION_DEFS.map((mission) => {
                 const Icon = mission.icon;
-                const progress = Math.round((mission.current / mission.target) * 100);
+                const current = stats ? stats[mission.statKey] : 0;
+                const progress = Math.min(Math.round((current / mission.target) * 100), 100);
+                const completed = current >= mission.target;
                 return (
                   <div key={mission.id} className="text-center">
-                    <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center mx-auto mb-2">
-                      <Icon className="w-4 h-4 text-cyan-400" />
+                    <div className={`w-10 h-10 rounded-lg ${completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2`}>
+                      <Icon className={`w-4 h-4 ${completed ? "text-green-400" : "text-cyan-400"}`} />
                     </div>
                     <div className="text-[10px] font-medium text-gray-300 mb-1">{mission.label}</div>
                     <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-1">
                       <div
-                        className="h-full bg-gradient-to-r from-cyan-500 to-green-500 rounded-full transition-all"
+                        className={`h-full rounded-full transition-all ${completed ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-cyan-500 to-green-500"}`}
                         style={{ width: `${progress}%` }}
                       />
                     </div>
                     <div className="text-[9px] text-gray-500">
-                      {mission.current}/{mission.target}
-                      <span className="text-amber-400 ml-1">+{mission.reward}</span>
+                      {Math.min(current, mission.target)}/{mission.target}
+                      {completed
+                        ? <span className="text-green-400 ml-1">Done!</span>
+                        : <span className="text-amber-400 ml-1">+{mission.reward}</span>
+                      }
                     </div>
                   </div>
                 );
@@ -233,7 +255,7 @@ export default function Members() {
             </div>
           </motion.div>
 
-          {/* Upcoming Private Games */}
+          {/* Your Stats */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -241,25 +263,25 @@ export default function Members() {
             className="glass rounded-xl p-5 border border-white/5"
           >
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">
-              Upcoming Private Games
+              Your Stats
             </h3>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="text-sm font-bold text-white">Tonight @ 9 PM EST</span>
-                </div>
-                <div className="text-[10px] text-gray-500">2/4 No Limit Hold'em</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-3 rounded-lg" style={{ background: "rgba(0,240,255,0.03)", border: "1px solid rgba(0,240,255,0.08)" }}>
+                <div className="text-lg font-bold text-cyan-400">{stats?.handsPlayed ?? 0}</div>
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Hands Played</div>
               </div>
-              <button
-                className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black"
-                style={{
-                  background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                  boxShadow: "0 0 15px rgba(0,255,157,0.2)",
-                }}
-              >
-                Remind Me
-              </button>
+              <div className="text-center p-3 rounded-lg" style={{ background: "rgba(0,255,157,0.03)", border: "1px solid rgba(0,255,157,0.08)" }}>
+                <div className="text-lg font-bold text-green-400">{stats?.potsWon ?? 0}</div>
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Pots Won</div>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ background: "rgba(234,179,8,0.03)", border: "1px solid rgba(234,179,8,0.08)" }}>
+                <div className="text-lg font-bold text-amber-400">{stats?.bestWinStreak ?? 0}</div>
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Best Streak</div>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ background: "rgba(168,85,247,0.03)", border: "1px solid rgba(168,85,247,0.08)" }}>
+                <div className="text-lg font-bold text-purple-400">{stats?.currentWinStreak ?? 0}</div>
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Current Streak</div>
+              </div>
             </div>
           </motion.div>
         </div>

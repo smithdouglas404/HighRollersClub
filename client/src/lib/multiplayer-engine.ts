@@ -42,6 +42,8 @@ function serverToClientGameState(serverState: any): GameState {
   };
 }
 
+export type VerificationStatus = "pending" | "verifying" | "verified" | "failed" | null;
+
 export function useMultiplayerGame(tableId: string, userId: string) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameState, setGameState] = useState<GameState>({
@@ -57,6 +59,9 @@ export function useMultiplayerGame(tableId: string, userId: string) {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [waiting, setWaiting] = useState(true);
+  const [commitmentHash, setCommitmentHash] = useState<string | null>(null);
+  const [shuffleProof, setShuffleProof] = useState<any>(null);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>(null);
   const joinedRef = useRef(false);
 
   // Connect WebSocket and set up handlers
@@ -87,6 +92,11 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         setGameState(serverToClientGameState(state));
         setWaiting(state.phase === "waiting");
 
+        // Capture commitment hash
+        if (state.commitmentHash) {
+          setCommitmentHash(state.commitmentHash);
+        }
+
         if (state.phase === "showdown" && state.showdownResults) {
           setShowdown({
             results: state.showdownResults,
@@ -95,8 +105,30 @@ export function useMultiplayerGame(tableId: string, userId: string) {
               .map((r: PlayerResult) => r.playerId),
             pot: state.pot,
           });
+
+          // Capture shuffle proof at showdown and auto-verify
+          if (state.shuffleProof) {
+            setShuffleProof(state.shuffleProof);
+            setVerificationStatus("verifying");
+            import("@shared/crypto-verify").then(({ verifyShuffleProof }) => {
+              verifyShuffleProof(state.shuffleProof).then((result) => {
+                setVerificationStatus(result.valid ? "verified" : "failed");
+              }).catch(() => {
+                setVerificationStatus("failed");
+              });
+            }).catch(() => {
+              setVerificationStatus("failed");
+            });
+          }
         } else {
           setShowdown(null);
+          if (state.phase !== "showdown") {
+            // Reset proof on new hand, keep commitment
+            if (state.phase === "pre-flop" && state.commitmentHash) {
+              setShuffleProof(null);
+              setVerificationStatus("pending");
+            }
+          }
         }
       })
     );
@@ -169,5 +201,8 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     leaveTable,
     addBots,
     sendChat,
+    commitmentHash,
+    shuffleProof,
+    verificationStatus,
   };
 }

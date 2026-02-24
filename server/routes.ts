@@ -244,6 +244,70 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // ─── Hand Routes ─────────────────────────────────────────────────────────
+  app.get("/api/hands/:id", async (req, res, next) => {
+    try {
+      const hand = await storage.getGameHand(req.params.id);
+      if (!hand) return res.status(404).json({ message: "Hand not found" });
+      res.json(hand);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Hand Verification Route ──────────────────────────────────────────────
+  app.get("/api/hands/:id/verify", async (req, res, next) => {
+    try {
+      const hand = await storage.getGameHand(req.params.id);
+      if (!hand) return res.status(404).json({ message: "Hand not found" });
+      if (!hand.serverSeed || !hand.commitmentHash || !hand.deckOrder) {
+        return res.status(404).json({ message: "No proof data for this hand" });
+      }
+      res.json({
+        serverSeed: hand.serverSeed,
+        commitmentHash: hand.commitmentHash,
+        deckOrder: hand.deckOrder,
+        handNumber: hand.handNumber,
+        tableId: hand.tableId,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Hand History Routes ────────────────────────────────────────────────
+  app.get("/api/tables/:id/hands", async (req, res, next) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const hands = await storage.getGameHands(req.params.id, limit);
+      res.json(hands);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Player Stats Routes ──────────────────────────────────────────────
+  app.get("/api/stats/me", requireAuth, async (req, res, next) => {
+    try {
+      const stats = await storage.getPlayerStats(req.user!.id);
+      if (!stats) {
+        return res.json({
+          handsPlayed: 0, potsWon: 0,
+          bestWinStreak: 0, currentWinStreak: 0, totalWinnings: 0,
+        });
+      }
+      res.json({
+        handsPlayed: stats.handsPlayed,
+        potsWon: stats.potsWon,
+        bestWinStreak: stats.bestWinStreak,
+        currentWinStreak: stats.currentWinStreak,
+        totalWinnings: stats.totalWinnings,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ─── Create HTTP Server + WebSocket ──────────────────────────────────────
   const httpServer = createServer(app);
   setupWebSocket(httpServer, sessionMiddleware);

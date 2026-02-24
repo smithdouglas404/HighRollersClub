@@ -1,7 +1,11 @@
+import { execSync } from "child_process";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
+
+try { execSync("fuser -k -9 5000/tcp 2>/dev/null", { timeout: 3000 }); } catch {}
+await new Promise(r => setTimeout(r, 2000));
 
 const app = express();
 
@@ -75,16 +79,6 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code === 'EADDRINUSE') {
-      log(`Port ${port} is busy, retrying in 2 seconds...`);
-      setTimeout(() => {
-        server.listen({ port, host: "0.0.0.0", reusePort: true });
-      }, 2000);
-    } else {
-      throw err;
-    }
-  });
   server.listen({
     port,
     host: "0.0.0.0",

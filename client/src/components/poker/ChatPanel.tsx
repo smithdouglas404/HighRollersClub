@@ -1,0 +1,195 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { wsClient } from "@/lib/ws-client";
+import { MessageSquare, Send, X, ChevronRight } from "lucide-react";
+
+interface ChatMessage {
+  id: string;
+  userId: string;
+  displayName: string;
+  message: string;
+  timestamp: number;
+}
+
+interface ChatPanelProps {
+  isMultiplayer?: boolean;
+  sendChat?: (message: string) => void;
+}
+
+export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Listen for incoming chat messages
+  useEffect(() => {
+    if (!isMultiplayer) return;
+
+    const unsub = wsClient.on("chat", (msg: any) => {
+      const chatMsg: ChatMessage = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        userId: msg.userId,
+        displayName: msg.displayName,
+        message: msg.message,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => {
+        const next = [...prev, chatMsg];
+        // Keep last 100 messages
+        return next.slice(-100);
+      });
+      if (!isOpen) {
+        setUnreadCount(prev => prev + 1);
+      }
+    });
+
+    return unsub;
+  }, [isMultiplayer, isOpen]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Clear unread when opening
+  useEffect(() => {
+    if (isOpen) {
+      setUnreadCount(0);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
+
+  const handleSend = useCallback(() => {
+    const trimmed = input.trim();
+    if (!trimmed || !sendChat) return;
+    sendChat(trimmed);
+    setInput("");
+  }, [input, sendChat]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  if (!isMultiplayer) return null;
+
+  return (
+    <>
+      {/* Toggle button */}
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.button
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsOpen(true)}
+            className="fixed right-4 bottom-32 z-40 glass rounded-full p-3 border border-white/10 hover:border-cyan-500/30 transition-all shadow-lg"
+          >
+            <MessageSquare className="w-5 h-5 text-cyan-400" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Chat panel */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ x: 320, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 320, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed right-0 top-0 bottom-0 w-72 z-40 flex flex-col"
+            style={{
+              background: "rgba(5, 10, 20, 0.95)",
+              borderLeft: "1px solid rgba(255,255,255,0.05)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-bold uppercase tracking-wider text-white">Chat</span>
+                <span className="text-[9px] text-gray-600">{messages.length}</span>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 hover:bg-white/5 rounded transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 scrollbar-thin">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <MessageSquare className="w-8 h-8 text-gray-700 mb-2" />
+                  <p className="text-[10px] text-gray-600">No messages yet</p>
+                  <p className="text-[9px] text-gray-700">Say something to the table!</p>
+                </div>
+              ) : (
+                messages.map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="group"
+                  >
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-[10px] font-bold text-cyan-400 shrink-0">
+                        {msg.displayName}
+                      </span>
+                      <span className="text-[9px] text-gray-700">
+                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-300 leading-relaxed break-words">
+                      {msg.message}
+                    </p>
+                  </motion.div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="px-3 py-2 border-t border-white/5">
+              <div className="flex items-center gap-2">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Type a message..."
+                  maxLength={200}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 hover:bg-cyan-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-3.5 h-3.5 text-cyan-400" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}

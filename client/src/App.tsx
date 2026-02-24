@@ -10,6 +10,7 @@ import Lobby from "@/pages/Lobby";
 import Members from "@/pages/Members";
 import Shop from "@/pages/Shop";
 import ClubDashboard from "@/pages/ClubDashboard";
+import HandReplay from "@/pages/HandReplay";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 
@@ -33,12 +34,17 @@ function GameWithTable({ params }: { params: { tableId: string } }) {
   return <AuthGate><Game tableId={params.tableId} /></AuthGate>;
 }
 
+function HandReplayPage({ params }: { params: { handId: string } }) {
+  return <AuthGate><HandReplay handId={params.handId} /></AuthGate>;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/game">{() => <Game />}</Route>
       <Route path="/game/:tableId">{(params) => <GameWithTable params={params} />}</Route>
+      <Route path="/hands/:handId">{(params) => <HandReplayPage params={params} />}</Route>
       <Route path="/lobby" component={ProtectedLobby} />
       <Route path="/members" component={ProtectedMembers} />
       <Route path="/shop" component={ProtectedShop} />

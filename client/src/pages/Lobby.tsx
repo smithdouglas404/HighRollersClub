@@ -90,6 +90,7 @@ export default function Lobby() {
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateTable, setShowCreateTable] = useState(false);
+  const [defaultPrivate, setDefaultPrivate] = useState(false);
 
   const fetchTables = async () => {
     try {
@@ -161,7 +162,7 @@ export default function Lobby() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setShowCreateTable(true)}
+              onClick={() => { setDefaultPrivate(false); setShowCreateTable(true); }}
               className="rounded-lg px-5 py-2 text-[10px] font-bold tracking-wider text-black flex items-center gap-2"
               style={{
                 background: "linear-gradient(135deg, #c9a84c, #e8c566)",
@@ -180,7 +181,15 @@ export default function Lobby() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.02 }}
-            onClick={() => navigate("/game")}
+            onClick={() => {
+              // Auto-join first non-full table, or go offline
+              const openTable = tables.find(t => t.playerCount < t.maxPlayers);
+              if (openTable) {
+                navigate(`/game/${openTable.id}`);
+              } else {
+                navigate("/game");
+              }
+            }}
             className="glass rounded-xl p-4 border border-cyan-500/10 hover:border-cyan-500/25 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
@@ -189,7 +198,7 @@ export default function Lobby() {
               </div>
               <div>
                 <div className="text-xs font-bold text-white uppercase tracking-wider">Quick Match</div>
-                <div className="text-[9px] text-gray-500">Auto-join an open table</div>
+                <div className="text-[9px] text-gray-500">{tables.some(t => t.playerCount < t.maxPlayers) ? "Join an open table" : "Play offline vs bots"}</div>
               </div>
             </div>
           </motion.div>
@@ -199,6 +208,21 @@ export default function Lobby() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
             whileHover={{ scale: 1.02 }}
+            onClick={() => {
+              // Quick-create a Sit & Go style table
+              handleCreateTable({
+                name: "Sit & Go",
+                maxPlayers: 6,
+                smallBlind: 10,
+                bigBlind: 20,
+                ante: 0,
+                minBuyIn: 500,
+                maxBuyIn: 500,
+                timeBankSeconds: 20,
+                isPrivate: false,
+                allowBots: true,
+              });
+            }}
             className="glass rounded-xl p-4 border border-amber-500/10 hover:border-amber-500/25 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
@@ -207,7 +231,7 @@ export default function Lobby() {
               </div>
               <div>
                 <div className="text-xs font-bold text-white uppercase tracking-wider">Sit & Go</div>
-                <div className="text-[9px] text-gray-500">Tournament starts when full</div>
+                <div className="text-[9px] text-gray-500">Quick 6-max, 500 buy-in</div>
               </div>
             </div>
           </motion.div>
@@ -217,6 +241,7 @@ export default function Lobby() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             whileHover={{ scale: 1.02 }}
+            onClick={() => { setDefaultPrivate(true); setShowCreateTable(true); }}
             className="glass rounded-xl p-4 border border-purple-500/10 hover:border-purple-500/25 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
@@ -293,8 +318,9 @@ export default function Lobby() {
       <AnimatePresence>
         {showCreateTable && (
           <CreateTableModal
-            onClose={() => setShowCreateTable(false)}
+            onClose={() => { setShowCreateTable(false); setDefaultPrivate(false); }}
             onCreate={handleCreateTable}
+            defaultPrivate={defaultPrivate}
           />
         )}
       </AnimatePresence>

@@ -129,6 +129,9 @@ export const gameHands = pgTable("game_hands", {
   potTotal: integer("pot_total").notNull().default(0),
   winnerIds: jsonb("winner_ids"),
   summary: jsonb("summary"), // full hand history for replay
+  serverSeed: text("server_seed"),
+  commitmentHash: text("commitment_hash"),
+  deckOrder: text("deck_order"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   index("game_hands_table_idx").on(table.tableId),
@@ -170,3 +173,20 @@ export const tournaments = pgTable("tournaments", {
 });
 
 export type Tournament = typeof tournaments.$inferSelect;
+
+// ─── Player Stats (for missions tracking) ────────────────────────────────────
+export const playerStats = pgTable("player_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  handsPlayed: integer("hands_played").notNull().default(0),
+  potsWon: integer("pots_won").notNull().default(0),
+  bestWinStreak: integer("best_win_streak").notNull().default(0),
+  currentWinStreak: integer("current_win_streak").notNull().default(0),
+  totalWinnings: integer("total_winnings").notNull().default(0),
+  lastResetAt: timestamp("last_reset_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("player_stats_user_idx").on(table.userId),
+]);
+
+export type PlayerStat = typeof playerStats.$inferSelect;

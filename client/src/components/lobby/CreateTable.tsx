@@ -1,21 +1,23 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, Users, Coins, Clock, Lock, Bot } from "lucide-react";
+import { X, Users, Coins, Clock, Lock, Bot, Zap } from "lucide-react";
 
 interface CreateTableModalProps {
   onClose: () => void;
   onCreate: (config: any) => void;
+  defaultPrivate?: boolean;
 }
 
-export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
+export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTableModalProps) {
   const [name, setName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [smallBlind, setSmallBlind] = useState(10);
   const [bigBlind, setBigBlind] = useState(20);
+  const [ante, setAnte] = useState(0);
   const [minBuyIn, setMinBuyIn] = useState(200);
   const [maxBuyIn, setMaxBuyIn] = useState(2000);
   const [timeBankSeconds, setTimeBankSeconds] = useState(30);
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(defaultPrivate ?? false);
   const [allowBots, setAllowBots] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -26,6 +28,7 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
       maxPlayers,
       smallBlind,
       bigBlind,
+      ante,
       minBuyIn,
       maxBuyIn,
       timeBankSeconds,
@@ -47,7 +50,7 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="glass rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl"
+        className="glass rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="font-bold text-lg tracking-wider gold-text">CREATE TABLE</h2>
@@ -98,15 +101,15 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
                 onChange={(e) => setTimeBankSeconds(parseInt(e.target.value))}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
               >
-                {[15, 20, 30, 45, 60].map((n) => (
+                {[10, 15, 20, 30, 45, 60, 90, 120].map((n) => (
                   <option key={n} value={n} className="bg-gray-900">{n}s</option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Blinds */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Blinds + Ante */}
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1 mb-1.5">
                 <Coins className="w-3 h-3" /> Small Blind
@@ -132,6 +135,18 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
                 value={bigBlind}
                 onChange={(e) => setBigBlind(parseInt(e.target.value) || 2)}
                 min={2}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1 mb-1.5">
+                <Zap className="w-3 h-3" /> Ante
+              </label>
+              <input
+                type="number"
+                value={ante}
+                onChange={(e) => setAnte(parseInt(e.target.value) || 0)}
+                min={0}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
               />
             </div>

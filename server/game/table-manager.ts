@@ -1,7 +1,8 @@
-import { GameEngine } from "./engine";
+import { GameEngine, type HandSummary } from "./engine";
 import { BotPlayer } from "./bot-player";
 import { storage } from "../storage";
 import { sendGameStateToTable, broadcastToTable } from "../websocket";
+import type { ShuffleProof } from "./crypto-shuffle";
 
 export interface TableInstance {
   engine: GameEngine;
@@ -39,9 +40,61 @@ class TableManager {
       timeBankSeconds: tableRow.timeBankSeconds,
     });
 
+    // Track phase for commitment broadcasts
+    let lastPhase = "waiting";
+
     // When state changes, broadcast to all connected clients
     engine.onStateChange = () => {
+      // Broadcast commitment hash when a new hand starts
+      if (engine.state.phase === "pre-flop" && lastPhase !== "pre-flop") {
+        const commitment = engine.getCurrentCommitment();
+        if (commitment) {
+          broadcastToTable(tableId, {
+            type: "shuffle_commitment",
+            commitmentHash: commitment,
+            handNumber: engine.state.handNumber,
+          } as any);
+        }
+      }
+      lastPhase = engine.state.phase;
+
       sendGameStateToTable(tableId);
+    };
+
+    // When a hand completes, persist proof and broadcast reveal
+    engine.onHandComplete = (proof: ShuffleProof, summary: HandSummary) => {
+      const winnerIds = summary.winners.map(w => w.playerId);
+
+      // Persist to storage with real summary
+      storage.createGameHand({
+        tableId,
+        handNumber: proof.handNumber,
+        communityCards: summary.communityCards,
+        potTotal: summary.pot,
+        winnerIds,
+        summary: summary as any,
+        serverSeed: proof.serverSeed,
+        commitmentHash: proof.commitmentHash,
+        deckOrder: proof.deckOrder,
+      }).catch(() => {});
+
+      // Update player stats for missions (non-bot players only)
+      for (const p of summary.players) {
+        if (!p.id.startsWith("bot-")) {
+          storage.incrementPlayerStat(p.id, "handsPlayed", 1).catch(() => {});
+        }
+      }
+      for (const w of summary.winners) {
+        if (!w.playerId.startsWith("bot-")) {
+          storage.incrementPlayerStat(w.playerId, "potsWon", 1).catch(() => {});
+        }
+      }
+
+      // Broadcast seed reveal at showdown
+      broadcastToTable(tableId, {
+        type: "shuffle_reveal",
+        proof,
+      } as any);
     };
 
     // When a bot needs to act

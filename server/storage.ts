@@ -3,8 +3,8 @@ import {
   type Club, type InsertClub,
   type TableRow, type InsertTable,
   type TablePlayer, type ClubMember,
-  type Transaction, type GameHand, type Tournament,
-  users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments,
+  type Transaction, type GameHand, type Tournament, type PlayerStat,
+  users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, playerStats,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -45,6 +45,12 @@ export interface IStorage {
   // Game Hands
   createGameHand(hand: Omit<GameHand, "id" | "createdAt">): Promise<GameHand>;
   getGameHands(tableId: string, limit?: number): Promise<GameHand[]>;
+  getGameHand(id: string): Promise<GameHand | undefined>;
+
+  // Player Stats
+  getPlayerStats(userId: string): Promise<PlayerStat | undefined>;
+  incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number): Promise<void>;
+  resetDailyStats(userId: string): Promise<void>;
 }
 
 // ─── In-Memory Storage (fallback when no DATABASE_URL) ───────────────────────
@@ -56,6 +62,7 @@ export class MemStorage implements IStorage {
   private tablePlayersList: TablePlayer[] = [];
   private transactionsList: Transaction[] = [];
   private gameHandsList: GameHand[] = [];
+  private playerStatsList: Map<string, PlayerStat> = new Map();
 
   // Users
   async getUser(id: string) { return this.users.get(id); }
@@ -224,6 +231,44 @@ export class MemStorage implements IStorage {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, limit);
   }
+  async getGameHand(id: string) {
+    return this.gameHandsList.find(h => h.id === id);
+  }
+
+  // Player Stats
+  async getPlayerStats(userId: string) {
+    return this.playerStatsList.get(userId);
+  }
+  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number) {
+    let stats = this.playerStatsList.get(userId);
+    if (!stats) {
+      stats = {
+        id: randomUUID(), userId,
+        handsPlayed: 0, potsWon: 0,
+        bestWinStreak: 0, currentWinStreak: 0, totalWinnings: 0,
+        lastResetAt: new Date(), updatedAt: new Date(),
+      };
+      this.playerStatsList.set(userId, stats);
+    }
+    stats[field] += amount;
+    if (field === "potsWon") {
+      stats.currentWinStreak += amount;
+      if (stats.currentWinStreak > stats.bestWinStreak) {
+        stats.bestWinStreak = stats.currentWinStreak;
+      }
+    }
+    stats.updatedAt = new Date();
+  }
+  async resetDailyStats(userId: string) {
+    const stats = this.playerStatsList.get(userId);
+    if (stats) {
+      stats.handsPlayed = 0;
+      stats.potsWon = 0;
+      stats.currentWinStreak = 0;
+      stats.lastResetAt = new Date();
+      stats.updatedAt = new Date();
+    }
+  }
 }
 
 // ─── Database Storage (when DATABASE_URL is set) ─────────────────────────────
@@ -367,6 +412,44 @@ export class DatabaseStorage implements IStorage {
       .where(eq(gameHands.tableId, tableId))
       .orderBy(desc(gameHands.createdAt))
       .limit(limit);
+  }
+  async getGameHand(id: string) {
+    const [hand] = await this.db.select().from(gameHands).where(eq(gameHands.id, id));
+    return hand;
+  }
+
+  // Player Stats
+  async getPlayerStats(userId: string) {
+    const [stats] = await this.db.select().from(playerStats).where(eq(playerStats.userId, userId));
+    return stats;
+  }
+  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon", amount: number) {
+    const existing = await this.getPlayerStats(userId);
+    if (!existing) {
+      await this.db.insert(playerStats).values({
+        userId,
+        [field]: amount,
+      });
+      return;
+    }
+    const update: any = { updatedAt: new Date() };
+    update[field] = existing[field] + amount;
+    if (field === "potsWon") {
+      update.currentWinStreak = existing.currentWinStreak + amount;
+      if (update.currentWinStreak > existing.bestWinStreak) {
+        update.bestWinStreak = update.currentWinStreak;
+      }
+    }
+    await this.db.update(playerStats).set(update).where(eq(playerStats.id, existing.id));
+  }
+  async resetDailyStats(userId: string) {
+    const existing = await this.getPlayerStats(userId);
+    if (existing) {
+      await this.db.update(playerStats).set({
+        handsPlayed: 0, potsWon: 0, currentWinStreak: 0,
+        lastResetAt: new Date(), updatedAt: new Date(),
+      }).where(eq(playerStats.id, existing.id));
+    }
   }
 }
 

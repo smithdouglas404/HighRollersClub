@@ -9,6 +9,8 @@ import { AmbientParticles } from "../components/AmbientParticles";
 import { AvatarSelect, AVATAR_OPTIONS, AvatarOption } from "../components/poker/AvatarSelect";
 import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
 import { EmotePicker } from "../components/poker/EmoteSystem";
+import { ChatPanel } from "../components/poker/ChatPanel";
+import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { ChipAnimation } from "../components/poker/ChipAnimation";
 import { Table3D, type QualityLevel, type PlayerData3D } from "../components/poker/Table3D";
@@ -19,6 +21,7 @@ import { useAuth } from "@/lib/auth-context";
 import { MatrixRain } from "@/components/MatrixRain";
 import { SoundProvider, useSoundEngine } from "@/lib/sound-context";
 import { soundEngine } from "@/lib/sound-engine";
+import type { VerificationStatus } from "@/lib/multiplayer-engine";
 import { ShieldCheck, Volume2, VolumeX, Settings, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users } from "lucide-react";
 import { WalletBar } from "@/components/wallet/WalletBar";
 
@@ -86,6 +89,7 @@ function buildPlayers(heroAvatar: AvatarOption, heroName: string): Player[] {
 function GameTable({
   players, gameState, handlePlayerAction, showdown, heroId, tableName, tableId,
   onBack, isMultiplayer, connected, waiting, addBots, leaveTable,
+  commitmentHash, shuffleProof, verificationStatus, sendChat,
 }: {
   players: Player[];
   gameState: any;
@@ -100,6 +104,10 @@ function GameTable({
   waiting?: boolean;
   addBots?: () => void;
   leaveTable?: () => void;
+  commitmentHash?: string | null;
+  shuffleProof?: any | null;
+  verificationStatus?: VerificationStatus;
+  sendChat?: (message: string) => void;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
@@ -263,19 +271,30 @@ function GameTable({
             >
               <Settings className="w-4 h-4" />
             </button>
-            {!isMultiplayer && (
-              <button
-                onClick={() => setShowProvablyFair(!showProvablyFair)}
-                className={`glass rounded-lg px-3 py-1.5 flex items-center gap-2 transition-all ${
-                  showProvablyFair ? "neon-border-green" : "hover:bg-white/5"
-                }`}
-              >
-                <ShieldCheck className={`w-3.5 h-3.5 ${showProvablyFair ? "text-green-400" : "text-gray-500"}`} />
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${showProvablyFair ? "text-green-400" : "text-gray-500"}`}>
-                  Verified
-                </span>
-              </button>
-            )}
+            <button
+              onClick={() => setShowProvablyFair(!showProvablyFair)}
+              className={`glass rounded-lg px-3 py-1.5 flex items-center gap-2 transition-all ${
+                showProvablyFair ? "neon-border-green" : "hover:bg-white/5"
+              }`}
+            >
+              <ShieldCheck className={`w-3.5 h-3.5 ${
+                verificationStatus === "verified" ? "text-green-400" :
+                verificationStatus === "failed" ? "text-red-400" :
+                verificationStatus === "verifying" ? "text-blue-400" :
+                showProvablyFair ? "text-green-400" : "text-gray-500"
+              }`} />
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                verificationStatus === "verified" ? "text-green-400" :
+                verificationStatus === "failed" ? "text-red-400" :
+                verificationStatus === "verifying" ? "text-blue-400" :
+                showProvablyFair ? "text-green-400" : "text-gray-500"
+              }`}>
+                {verificationStatus === "verified" ? "Verified" :
+                 verificationStatus === "failed" ? "Failed" :
+                 verificationStatus === "verifying" ? "Verifying" :
+                 "Fair Play"}
+              </span>
+            </button>
           </div>
         </motion.div>
 
@@ -350,7 +369,9 @@ function GameTable({
           </motion.div>
         </div>
 
-        <EmotePicker heroId={heroId} />
+        <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
+        <ChatPanel isMultiplayer={isMultiplayer} sendChat={sendChat} />
+        {isMultiplayer && tableId && <HandHistoryDrawer tableId={tableId} />}
 
         <HandStrengthMeter
           holeCards={heroHoleCards}
@@ -371,7 +392,14 @@ function GameTable({
       </div>
 
       <AnimatePresence>
-        {showProvablyFair && <ProvablyFairPanel onClose={() => setShowProvablyFair(false)} />}
+        {showProvablyFair && (
+          <ProvablyFairPanel
+            onClose={() => setShowProvablyFair(false)}
+            commitmentHash={commitmentHash}
+            shuffleProof={shuffleProof}
+            verificationStatus={verificationStatus}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
@@ -387,7 +415,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   const {
     players, gameState, handlePlayerAction, showdown,
-    connected, waiting, joinTable, leaveTable, addBots,
+    connected, waiting, joinTable, leaveTable, addBots, sendChat,
+    commitmentHash, shuffleProof, verificationStatus,
   } = useMultiplayerGame(tableId, user?.id || "");
 
   // Fetch table info
@@ -497,6 +526,10 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         waiting={waiting}
         addBots={addBots}
         leaveTable={handleLeave}
+        commitmentHash={commitmentHash}
+        shuffleProof={shuffleProof}
+        verificationStatus={verificationStatus}
+        sendChat={sendChat}
       />
     </SoundProvider>
   );

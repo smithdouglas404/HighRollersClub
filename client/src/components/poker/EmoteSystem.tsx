@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle } from "lucide-react";
+import { wsClient } from "@/lib/ws-client";
 
 export interface Emote {
   id: string;
@@ -19,6 +20,8 @@ export const EMOTES: Emote[] = [
   { id: "wow", emoji: "\ud83d\ude32", label: "Wow!", color: "#f59e0b" },
   { id: "cry", emoji: "\ud83d\ude2d", label: "Bad Beat", color: "#6b7280" },
 ];
+
+const EMOTE_MAP = new Map(EMOTES.map(e => [e.id, e]));
 
 interface EmoteBubbleData {
   id: number;
@@ -86,27 +89,48 @@ export function EmoteBubble({ playerId }: { playerId: string }) {
 }
 
 // Emote picker tray (for hero to send emotes)
-export function EmotePicker({ heroId }: { heroId: string }) {
+export function EmotePicker({ heroId, isMultiplayer }: { heroId: string; isMultiplayer?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [cooldown, setCooldown] = useState(false);
 
+  // Listen for emotes from other players via WebSocket
+  useEffect(() => {
+    if (!isMultiplayer) return;
+
+    const unsub = wsClient.on("emote", (msg: any) => {
+      const emote = EMOTE_MAP.get(msg.emoteId);
+      if (emote && msg.userId) {
+        triggerEmote(msg.userId, emote);
+      }
+    });
+
+    return unsub;
+  }, [isMultiplayer]);
+
   const sendEmote = useCallback((emote: Emote) => {
     if (cooldown) return;
+
+    // Trigger locally
     triggerEmote(heroId, emote);
     setCooldown(true);
     setIsOpen(false);
     setTimeout(() => setCooldown(false), 3000);
 
-    // Also trigger random bot emote response sometimes
-    setTimeout(() => {
-      if (Math.random() > 0.6) {
-        const botIds = ["player-2", "player-3", "player-4", "player-5", "player-6"];
-        const botId = botIds[Math.floor(Math.random() * botIds.length)];
-        const botEmote = EMOTES[Math.floor(Math.random() * EMOTES.length)];
-        triggerEmote(botId, botEmote);
-      }
-    }, 1000 + Math.random() * 2000);
-  }, [heroId, cooldown]);
+    if (isMultiplayer) {
+      // Broadcast via WebSocket
+      wsClient.send({ type: "emote", emoteId: emote.id });
+    } else {
+      // Offline: trigger random bot emote response sometimes
+      setTimeout(() => {
+        if (Math.random() > 0.6) {
+          const botIds = ["player-2", "player-3", "player-4", "player-5", "player-6"];
+          const botId = botIds[Math.floor(Math.random() * botIds.length)];
+          const botEmote = EMOTES[Math.floor(Math.random() * EMOTES.length)];
+          triggerEmote(botId, botEmote);
+        }
+      }, 1000 + Math.random() * 2000);
+    }
+  }, [heroId, cooldown, isMultiplayer]);
 
   return (
     <div className="fixed bottom-[140px] left-4 z-50">

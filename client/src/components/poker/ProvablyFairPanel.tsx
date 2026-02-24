@@ -2,20 +2,91 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   ShieldCheck, CheckCircle, Copy, Eye, EyeOff,
-  Download, Server, Smartphone, Link2, X
+  Download, Server, Smartphone, Link2, X,
+  Clock, Loader2, AlertTriangle, ChevronDown, ChevronUp,
 } from "lucide-react";
+import type { VerificationStatus } from "@/lib/multiplayer-engine";
 
-const MOCK_HASH = "0x7a3f92c1d8e4b6a5f0c2d9e8b7a6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8";
-const MOCK_SEED = "f29a3c4d...e8b7 (hidden until showdown)";
+interface ProvablyFairPanelProps {
+  onClose?: () => void;
+  commitmentHash?: string | null;
+  shuffleProof?: any | null;
+  verificationStatus?: VerificationStatus;
+}
 
-export function ProvablyFairPanel({ onClose }: { onClose?: () => void }) {
+const STATUS_CONFIG = {
+  pending: { color: "yellow", label: "Pending", icon: Clock, glow: "rgba(234,179,8,0.3)" },
+  verifying: { color: "blue", label: "Verifying", icon: Loader2, glow: "rgba(59,130,246,0.3)" },
+  verified: { color: "green", label: "Verified", icon: ShieldCheck, glow: "rgba(34,197,94,0.3)" },
+  failed: { color: "red", label: "Failed", icon: AlertTriangle, glow: "rgba(239,68,68,0.3)" },
+} as const;
+
+export function ProvablyFairPanel({
+  onClose,
+  commitmentHash,
+  shuffleProof,
+  verificationStatus,
+}: ProvablyFairPanelProps) {
   const [seedRevealed, setSeedRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [showDeckOrder, setShowDeckOrder] = useState(false);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(MOCK_HASH).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const status = verificationStatus && STATUS_CONFIG[verificationStatus]
+    ? STATUS_CONFIG[verificationStatus]
+    : STATUS_CONFIG.pending;
+
+  const StatusIcon = status.icon;
+  const colorClasses: Record<string, { text: string; bg: string; border: string }> = {
+    yellow: { text: "text-yellow-400", bg: "bg-yellow-500/15", border: "border-yellow-500/25" },
+    blue: { text: "text-blue-400", bg: "bg-blue-500/15", border: "border-blue-500/25" },
+    green: { text: "text-green-400", bg: "bg-green-500/15", border: "border-green-500/25" },
+    red: { text: "text-red-400", bg: "bg-red-500/15", border: "border-red-500/25" },
+  };
+  const sc = colorClasses[status.color];
+
+  const handleCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleDownload = () => {
+    if (!shuffleProof) return;
+    const html = `<!DOCTYPE html>
+<html><head><title>Poker Hand Verification - Hand #${shuffleProof.handNumber}</title>
+<style>body{font-family:monospace;background:#0a0a0a;color:#e0e0e0;padding:2rem;max-width:800px;margin:0 auto}
+h1{color:#00f0ff}pre{background:#111;padding:1rem;border-radius:8px;overflow-x:auto;border:1px solid #222}
+.pass{color:#22c55e;font-weight:bold}.fail{color:#ef4444;font-weight:bold}button{background:#00f0ff;color:#000;border:none;padding:0.75rem 1.5rem;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1rem}button:hover{opacity:0.9}</style></head>
+<body><h1>Provably Fair Verification</h1>
+<p>Hand #${shuffleProof.handNumber} | Table: ${shuffleProof.tableId}</p>
+<h3>Proof Data</h3>
+<pre>Server Seed: ${shuffleProof.serverSeed}
+Commitment Hash: ${shuffleProof.commitmentHash}
+Deck Order: ${shuffleProof.deckOrder}
+Nonce: ${shuffleProof.nonce}
+Timestamp: ${shuffleProof.timestamp}</pre>
+<button onclick="verify()">Run Verification</button>
+<pre id="result"></pre>
+<script>
+async function hmacSha256(key,msg){const e=new TextEncoder();const k=await crypto.subtle.importKey("raw",e.encode(key),{name:"HMAC",hash:"SHA-256"},false,["sign"]);const s=await crypto.subtle.sign("HMAC",k,e.encode(msg));return new Uint8Array(s)}
+async function sha256Hex(msg){const e=new TextEncoder();const h=await crypto.subtle.digest("SHA-256",e.encode(msg));return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("")}
+async function verify(){const el=document.getElementById("result");el.textContent="Verifying...";
+const suits=["hearts","diamonds","clubs","spades"];const ranks=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+const sh={hearts:"h",diamonds:"d",clubs:"c",spades:"s"};
+const deck=[];for(const s of suits)for(const r of ranks)deck.push({suit:s,rank:r});
+const seed="${shuffleProof.serverSeed}";
+for(let i=deck.length-1;i>0;i--){const h=await hmacSha256(seed,"shuffle-index-"+i);const rand=(h[0]<<24|h[1]<<16|h[2]<<8|h[3])>>>0;const j=rand%(i+1);[deck[i],deck[j]]=[deck[j],deck[i]]}
+const order=deck.map(c=>c.rank+sh[c.suit]).join(",");const hash=await sha256Hex(order);
+const expected="${shuffleProof.commitmentHash}";
+const valid=hash===expected;
+el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order: "+order+"\\n\\nResult: "+(valid?'<span class="pass">VERIFIED</span>':'<span class="fail">FAILED</span>')}</script></body></html>`;
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hand-${shuffleProof.handNumber}-verify.html`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -31,7 +102,7 @@ export function ProvablyFairPanel({ onClose }: { onClose?: () => void }) {
         boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
       }}
     >
-      {/* ─── Header: Shuffle Verified ─────────────────────────── */}
+      {/* Header */}
       <div className="p-5 relative" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         {onClose && (
           <button
@@ -41,45 +112,41 @@ export function ProvablyFairPanel({ onClose }: { onClose?: () => void }) {
             <X className="w-4 h-4 text-gray-500" />
           </button>
         )}
-
         <div className="flex items-start gap-3">
           <div className="relative mt-0.5 shrink-0">
-            <div className="absolute inset-0 bg-green-500 blur-lg opacity-30 animate-pulse" />
-            <div className="w-10 h-10 rounded-lg bg-green-500/15 border border-green-500/25 flex items-center justify-center relative">
-              <ShieldCheck className="w-5 h-5 text-green-400" />
+            <div className="absolute inset-0 blur-lg opacity-30 animate-pulse" style={{ background: status.glow }} />
+            <div className={`w-10 h-10 rounded-lg ${sc.bg} border ${sc.border} flex items-center justify-center relative`}>
+              <StatusIcon className={`w-5 h-5 ${sc.text} ${verificationStatus === "verifying" ? "animate-spin" : ""}`} />
             </div>
           </div>
           <div>
             <div className="text-xs font-bold text-gray-400 tracking-wider uppercase">
-              Shuffle Verified:
-              <span className="text-green-400 ml-1.5">True</span>
+              Shuffle Status:
+              <span className={`${sc.text} ml-1.5`}>{status.label}</span>
             </div>
             <div className="text-[9px] text-gray-600 font-mono mt-0.5">
-              v0.1 | SHA-256
+              v1.0 | HMAC-SHA256 Fisher-Yates
             </div>
           </div>
         </div>
       </div>
 
-      {/* ─── Scrollable Content ────────────────────────────────── */}
+      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="p-5 space-y-5">
 
-          {/* ─── Entropy Source (Checkmarks) ──────────────────── */}
+          {/* Entropy Sources */}
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-3">
-              Entropy Source
+              Entropy Sources
             </div>
             <div className="space-y-2">
               {[
-                { icon: Server, label: "Server Hardware RNG", active: true },
-                { icon: Smartphone, label: "User Device Input", active: true },
-                { icon: Link2, label: "Chainlink VRF", active: true },
+                { icon: Server, label: "Server CSPRNG", active: true, detail: "crypto.randomBytes(32)" },
+                { icon: Smartphone, label: "UUID Nonce", active: true, detail: "crypto.randomUUID()" },
+                { icon: Link2, label: "Chainlink VRF", active: false, detail: "Coming Soon" },
               ].map((source, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2.5 group"
-                >
+                <div key={i} className="flex items-center gap-2.5 group">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
                     source.active
                       ? "bg-green-500/20 border border-green-500/30"
@@ -89,94 +156,187 @@ export function ProvablyFairPanel({ onClose }: { onClose?: () => void }) {
                       source.active ? "text-green-400" : "text-gray-600"
                     }`} />
                   </div>
-                  <span className="text-[11px] text-gray-300 font-medium">
-                    {source.label}
-                  </span>
+                  <div className="flex-1">
+                    <span className="text-[11px] text-gray-300 font-medium">{source.label}</span>
+                    <span className="text-[9px] text-gray-600 ml-1.5">{source.detail}</span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* ─── Entropy Source Hash ──────────────────────────── */}
+          {/* Commitment Hash */}
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-2">
-              Entropy Source
+              Commitment Hash
             </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="flex-1 rounded-lg px-3 py-2.5 text-[9px] font-mono text-cyan-400/80 truncate"
-                style={{
-                  background: "rgba(0,240,255,0.04)",
-                  border: "1px solid rgba(0,240,255,0.1)",
-                }}
-              >
-                {MOCK_HASH.slice(0, 24)}...{MOCK_HASH.slice(-8)}
+            {commitmentHash ? (
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex-1 rounded-lg px-3 py-2.5 text-[9px] font-mono text-cyan-400/80 truncate"
+                  style={{
+                    background: "rgba(0,240,255,0.04)",
+                    border: "1px solid rgba(0,240,255,0.1)",
+                  }}
+                  title={commitmentHash}
+                >
+                  {commitmentHash.slice(0, 20)}...{commitmentHash.slice(-8)}
+                </div>
+                <button
+                  onClick={() => handleCopy(commitmentHash, "hash")}
+                  className="shrink-0 px-3 py-2.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all"
+                  style={{
+                    background: copiedField === "hash" ? "rgba(0,255,157,0.15)" : "rgba(0,240,255,0.08)",
+                    border: `1px solid ${copiedField === "hash" ? "rgba(0,255,157,0.3)" : "rgba(0,240,255,0.15)"}`,
+                    color: copiedField === "hash" ? "#00ff9d" : "#8ecae6",
+                  }}
+                >
+                  {copiedField === "hash" ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                </button>
               </div>
-              <button
-                onClick={handleCopy}
-                className="shrink-0 px-3 py-2.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all"
-                style={{
-                  background: copied ? "rgba(0,255,157,0.15)" : "rgba(0,240,255,0.08)",
-                  border: `1px solid ${copied ? "rgba(0,255,157,0.3)" : "rgba(0,240,255,0.15)"}`,
-                  color: copied ? "#00ff9d" : "#8ecae6",
-                }}
+            ) : (
+              <div className="rounded-lg px-3 py-2.5 text-[9px] font-mono text-gray-600 italic"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}
               >
-                {copied ? "COPIED" : "COPY"}
-              </button>
-            </div>
+                Waiting for next hand...
+              </div>
+            )}
+            <div className="text-[8px] text-gray-600 mt-1">Pre-deal locked SHA-256 of deck order</div>
           </div>
 
-          {/* ─── Verification Actions ────────────────────────── */}
-          <div className="space-y-2">
-            {/* Commitment Hash */}
-            <button
-              className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-white/[0.02] group"
-              style={{
-                background: "rgba(255,255,255,0.01)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center shrink-0">
-                <CheckCircle className="w-4 h-4 text-cyan-400" />
-              </div>
-              <div className="text-left">
-                <div className="text-[11px] font-semibold text-white group-hover:text-cyan-300 transition-colors">
-                  Commitment Hash
-                </div>
-                <div className="text-[9px] text-gray-600">Pre-deal locked hash</div>
-              </div>
-            </button>
-
-            {/* Reveal Seed */}
-            <button
-              onClick={() => setSeedRevealed(!seedRevealed)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-white/[0.02] group"
-              style={{
-                background: "rgba(255,255,255,0.01)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/15 flex items-center justify-center shrink-0">
-                {seedRevealed ? (
-                  <EyeOff className="w-4 h-4 text-purple-400" />
-                ) : (
-                  <Eye className="w-4 h-4 text-purple-400" />
+          {/* Seed Reveal */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-2">
+              Server Seed
+            </div>
+            {shuffleProof ? (
+              <div>
+                <button
+                  onClick={() => setSeedRevealed(!seedRevealed)}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-white/[0.02] group"
+                  style={{
+                    background: "rgba(255,255,255,0.01)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/15 flex items-center justify-center shrink-0">
+                    {seedRevealed ? <EyeOff className="w-4 h-4 text-purple-400" /> : <Eye className="w-4 h-4 text-purple-400" />}
+                  </div>
+                  <div className="text-left flex-1 min-w-0">
+                    <div className="text-[11px] font-semibold text-white group-hover:text-purple-300 transition-colors">
+                      {seedRevealed ? "Hide Seed" : "Reveal Seed"}
+                    </div>
+                    <div className="text-[9px] text-gray-600 truncate">
+                      {seedRevealed ? shuffleProof.serverSeed.slice(0, 24) + "..." : "Click to reveal after showdown"}
+                    </div>
+                  </div>
+                </button>
+                {seedRevealed && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <div
+                      className="flex-1 rounded-lg px-3 py-2 text-[8px] font-mono text-purple-400/80 break-all"
+                      style={{
+                        background: "rgba(168,85,247,0.04)",
+                        border: "1px solid rgba(168,85,247,0.1)",
+                      }}
+                    >
+                      {shuffleProof.serverSeed}
+                    </div>
+                    <button
+                      onClick={() => handleCopy(shuffleProof.serverSeed, "seed")}
+                      className="shrink-0 p-2 rounded-lg transition-all"
+                      style={{
+                        background: copiedField === "seed" ? "rgba(0,255,157,0.15)" : "rgba(168,85,247,0.08)",
+                        border: `1px solid ${copiedField === "seed" ? "rgba(0,255,157,0.3)" : "rgba(168,85,247,0.15)"}`,
+                        color: copiedField === "seed" ? "#00ff9d" : "#a78bfa",
+                      }}
+                    >
+                      {copiedField === "seed" ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  </div>
                 )}
               </div>
-              <div className="text-left flex-1 min-w-0">
-                <div className="text-[11px] font-semibold text-white group-hover:text-purple-300 transition-colors">
-                  Reveal Seed
+            ) : (
+              <div
+                className="flex items-center gap-3 p-3 rounded-lg opacity-50"
+                style={{
+                  background: "rgba(255,255,255,0.01)",
+                  border: "1px solid rgba(255,255,255,0.04)",
+                }}
+              >
+                <div className="w-8 h-8 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center shrink-0">
+                  <Eye className="w-4 h-4 text-gray-600" />
                 </div>
-                <div className="text-[9px] text-gray-600 truncate">
-                  {seedRevealed ? MOCK_SEED : "Available after showdown"}
+                <div className="text-left">
+                  <div className="text-[11px] font-semibold text-gray-500">Locked Until Showdown</div>
+                  <div className="text-[9px] text-gray-700">Seed revealed after hand completes</div>
                 </div>
               </div>
-            </button>
+            )}
           </div>
 
-          {/* ─── Download Verification Script ────────────────── */}
+          {/* Deck Order (collapsible) */}
+          {shuffleProof && (
+            <div>
+              <button
+                onClick={() => setShowDeckOrder(!showDeckOrder)}
+                className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-white mb-2"
+              >
+                <span>Deck Order</span>
+                {showDeckOrder ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+              </button>
+              {showDeckOrder && (
+                <div
+                  className="rounded-lg px-3 py-2 text-[8px] font-mono text-cyan-400/60 break-all max-h-32 overflow-y-auto custom-scrollbar"
+                  style={{
+                    background: "rgba(0,240,255,0.02)",
+                    border: "1px solid rgba(0,240,255,0.06)",
+                  }}
+                >
+                  {shuffleProof.deckOrder}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Verification Result */}
+          {verificationStatus === "verified" && (
+            <div
+              className="flex items-center gap-3 p-3 rounded-lg"
+              style={{
+                background: "rgba(34,197,94,0.05)",
+                border: "1px solid rgba(34,197,94,0.15)",
+              }}
+            >
+              <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+              <div>
+                <div className="text-[11px] font-semibold text-green-300">Client Verification Passed</div>
+                <div className="text-[9px] text-gray-500">Re-shuffled locally, hashes match</div>
+              </div>
+            </div>
+          )}
+
+          {verificationStatus === "failed" && (
+            <div
+              className="flex items-center gap-3 p-3 rounded-lg"
+              style={{
+                background: "rgba(239,68,68,0.05)",
+                border: "1px solid rgba(239,68,68,0.15)",
+              }}
+            >
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+              <div>
+                <div className="text-[11px] font-semibold text-red-300">Verification Failed</div>
+                <div className="text-[9px] text-gray-500">Hash mismatch detected</div>
+              </div>
+            </div>
+          )}
+
+          {/* Download Verification Script */}
           <button
-            className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-green-500/[0.03] group"
+            onClick={handleDownload}
+            disabled={!shuffleProof}
+            className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-green-500/[0.03] group disabled:opacity-30 disabled:cursor-not-allowed"
             style={{
               background: "rgba(0,255,157,0.02)",
               border: "1px solid rgba(0,255,157,0.1)",
@@ -187,21 +347,23 @@ export function ProvablyFairPanel({ onClose }: { onClose?: () => void }) {
             </div>
             <div className="text-left">
               <div className="text-[11px] font-semibold text-green-300 group-hover:text-green-200 transition-colors">
-                Download Verification Script
+                Download Verification
               </div>
-              <div className="text-[9px] text-gray-600">Python / JavaScript</div>
+              <div className="text-[9px] text-gray-600">Standalone HTML with proof + verify code</div>
             </div>
           </button>
         </div>
       </div>
 
-      {/* ─── Footer: Algorithm ─────────────────────────────────── */}
+      {/* Footer */}
       <div
         className="px-5 py-3 text-center"
         style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
       >
         <div className="text-[9px] text-gray-600 font-mono">
-          Algorithm: <span className="text-cyan-500/60">Fisher-Yates + (Quadruple)</span>
+          <span className="text-cyan-500/60">HMAC-SHA256 Fisher-Yates</span>
+          <span className="mx-1.5 text-gray-700">+</span>
+          <span className="text-cyan-500/60">SHA-512 Entropy</span>
         </div>
       </div>
     </motion.div>

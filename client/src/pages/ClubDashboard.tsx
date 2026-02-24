@@ -12,11 +12,19 @@ import {
 import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 
-const DAILY_MISSIONS = [
-  { id: "1", icon: Gamepad2, label: "Play 50 Hands", target: 50, current: 32, reward: 200 },
-  { id: "2", icon: Coins, label: "Win 20 Pots", target: 20, current: 8, reward: 500 },
-  { id: "3", icon: Target, label: "Win 30 Pots", target: 30, current: 12, reward: 750 },
+const MISSION_DEFS = [
+  { id: "1", icon: Gamepad2, label: "Play 50 Hands", target: 50, statKey: "handsPlayed" as const, reward: 200 },
+  { id: "2", icon: Coins, label: "Win 20 Pots", target: 20, statKey: "potsWon" as const, reward: 500 },
+  { id: "3", icon: Target, label: "Win Streak 5", target: 5, statKey: "bestWinStreak" as const, reward: 750 },
 ];
+
+interface PlayerStats {
+  handsPlayed: number;
+  potsWon: number;
+  bestWinStreak: number;
+  currentWinStreak: number;
+  totalWinnings: number;
+}
 
 interface ClubData {
   id: string;
@@ -146,12 +154,21 @@ export default function ClubDashboard() {
   const [members, setMembers] = useState<ClubMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingTable, setCreatingTable] = useState(false);
+  const [stats, setStats] = useState<PlayerStats | null>(null);
 
   // Fetch first club the user might belong to (or first club available)
   useEffect(() => {
     async function loadClub() {
       try {
-        const res = await fetch("/api/clubs");
+        const [res, statsRes] = await Promise.all([
+          fetch("/api/clubs"),
+          fetch("/api/stats/me"),
+        ]);
+
+        if (statsRes.ok) {
+          setStats(await statsRes.json());
+        }
+
         if (!res.ok) return;
         const clubs: ClubData[] = await res.json();
         if (clubs.length === 0) {
@@ -321,28 +338,33 @@ export default function ClubDashboard() {
                     Daily Missions
                   </h3>
                   <span className="text-[9px] text-cyan-400 font-bold uppercase tracking-wider">
-                    3/3 Active
+                    {MISSION_DEFS.filter(m => stats && stats[m.statKey] >= m.target).length}/{MISSION_DEFS.length} Complete
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
-                  {DAILY_MISSIONS.map((mission) => {
+                  {MISSION_DEFS.map((mission) => {
                     const Icon = mission.icon;
-                    const progress = Math.round((mission.current / mission.target) * 100);
+                    const current = stats ? stats[mission.statKey] : 0;
+                    const progress = Math.min(Math.round((current / mission.target) * 100), 100);
+                    const completed = current >= mission.target;
                     return (
                       <div key={mission.id} className="text-center">
-                        <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center mx-auto mb-2">
-                          <Icon className="w-4 h-4 text-cyan-400" />
+                        <div className={`w-10 h-10 rounded-lg ${completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2`}>
+                          <Icon className={`w-4 h-4 ${completed ? "text-green-400" : "text-cyan-400"}`} />
                         </div>
                         <div className="text-[10px] font-medium text-gray-300 mb-1">{mission.label}</div>
                         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-1">
                           <div
-                            className="h-full bg-gradient-to-r from-cyan-500 to-green-500 rounded-full transition-all"
+                            className={`h-full rounded-full transition-all ${completed ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-cyan-500 to-green-500"}`}
                             style={{ width: `${progress}%` }}
                           />
                         </div>
                         <div className="text-[9px] text-gray-500">
-                          {mission.current}/{mission.target}
-                          <span className="text-amber-400 ml-1">+{mission.reward}</span>
+                          {Math.min(current, mission.target)}/{mission.target}
+                          {completed
+                            ? <span className="text-green-400 ml-1">Done!</span>
+                            : <span className="text-amber-400 ml-1">+{mission.reward}</span>
+                          }
                         </div>
                       </div>
                     );

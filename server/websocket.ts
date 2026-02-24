@@ -22,7 +22,8 @@ export type ClientMessage =
   | { type: "sit_in" }
   | { type: "add_chips"; amount: number }
   | { type: "add_bots" }
-  | { type: "chat"; message: string };
+  | { type: "chat"; message: string }
+  | { type: "emote"; emoteId: string };
 
 // Message types: Server → Client
 export type ServerMessage =
@@ -36,7 +37,10 @@ export type ServerMessage =
   | { type: "pot_update"; pot: number; sidePots?: any[] }
   | { type: "error"; message: string }
   | { type: "chat"; userId: string; displayName: string; message: string }
-  | { type: "table_info"; table: any };
+  | { type: "table_info"; table: any }
+  | { type: "shuffle_commitment"; commitmentHash: string; handNumber: number }
+  | { type: "shuffle_reveal"; proof: any }
+  | { type: "emote"; userId: string; displayName: string; emoteId: string };
 
 // Global map of connected clients
 const clients = new Map<string, WsClient>();
@@ -225,6 +229,19 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         userId: client.userId,
         displayName: client.displayName,
         message: chatMsg,
+      });
+      break;
+    }
+
+    case "emote": {
+      if (!client.tableId) return;
+      const emoteId = msg.emoteId?.slice(0, 20);
+      if (!emoteId) return;
+      broadcastToTable(client.tableId, {
+        type: "emote",
+        userId: client.userId,
+        displayName: client.displayName,
+        emoteId,
       });
       break;
     }

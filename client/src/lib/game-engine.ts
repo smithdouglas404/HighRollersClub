@@ -18,8 +18,10 @@ const createDeck = (): CardType[] => {
 
 const shuffleDeck = (deck: CardType[]): CardType[] => {
   const newDeck = [...deck];
+  const randomValues = new Uint32Array(newDeck.length);
+  crypto.getRandomValues(randomValues);
   for (let i = newDeck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = randomValues[i] % (i + 1);
     [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
   }
   return newDeck;

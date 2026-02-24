@@ -1,4 +1,5 @@
 import { type CardType, type Suit, type Rank, determineWinners, type PlayerResult } from "./hand-evaluator";
+import { createProvablyFairShuffle, type ShuffleProof } from "./crypto-shuffle";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export type GamePhase = "waiting" | "pre-flop" | "flop" | "turn" | "river" | "showdown";
@@ -33,29 +34,17 @@ export interface GameEngineState {
   sidePots: { amount: number; eligible: string[] }[];
   lastAction?: { playerId: string; action: string; amount?: number };
   showdownResults?: PlayerResult[];
+  commitmentHash?: string;
 }
 
-// ─── Deck ────────────────────────────────────────────────────────────────────
-const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
-const RANKS: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
-
-function createDeck(): CardType[] {
-  const deck: CardType[] = [];
-  for (const suit of SUITS) {
-    for (const rank of RANKS) {
-      deck.push({ suit, rank });
-    }
-  }
-  return deck;
-}
-
-function shuffleDeck(deck: CardType[]): CardType[] {
-  const d = [...deck];
-  for (let i = d.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [d[i], d[j]] = [d[j], d[i]];
-  }
-  return d;
+export interface HandSummary {
+  handNumber: number;
+  players: { id: string; displayName: string; startChips: number; seatIndex: number }[];
+  actions: { playerId: string; action: string; amount?: number; phase: GamePhase }[];
+  communityCards: CardType[];
+  pot: number;
+  winners: { playerId: string; amount: number }[];
+  showdownResults?: PlayerResult[];
 }
 
 // ─── Game Engine ─────────────────────────────────────────────────────────────
@@ -66,6 +55,12 @@ export class GameEngine {
   private showdownTimer: ReturnType<typeof setTimeout> | null = null;
   public onStateChange: (() => void) | null = null;
   public onBotTurn: ((playerId: string) => void) | null = null;
+  public onHandComplete: ((proof: ShuffleProof, summary: HandSummary) => void) | null = null;
+
+  private currentShuffleProof: ShuffleProof | null = null;
+  private handProofs = new Map<number, ShuffleProof>();
+  private actionLog: { playerId: string; action: string; amount?: number; phase: GamePhase }[] = [];
+  private handStartPlayers: { id: string; displayName: string; startChips: number; seatIndex: number }[] = [];
 
   private smallBlind: number;
   private bigBlind: number;
@@ -158,9 +153,15 @@ export class GameEngine {
     this.state.showdownResults = undefined;
     this.state.lastAction = undefined;
     this.actedThisRound.clear();
+    this.actionLog = [];
 
     // Reset players
     const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0);
+
+    // Snapshot starting state for hand summary
+    this.handStartPlayers = eligible.map(p => ({
+      id: p.id, displayName: p.displayName, startChips: p.chips, seatIndex: p.seatIndex,
+    }));
     for (const p of this.state.players) {
       p.currentBet = 0;
       p.totalBetThisHand = 0;
@@ -193,8 +194,18 @@ export class GameEngine {
     this.state.minBet = this.bigBlind;
     this.state.minRaise = this.bigBlind * 2;
 
-    // Deal cards
-    this.deck = shuffleDeck(createDeck());
+    // Deal cards — provably fair shuffle
+    const { deck, proof } = createProvablyFairShuffle(this.tableId, this.state.handNumber);
+    this.deck = deck;
+    this.currentShuffleProof = proof;
+    this.handProofs.set(this.state.handNumber, proof);
+    // Evict old proofs (keep last 10)
+    if (this.handProofs.size > 10) {
+      const oldest = Math.min(...this.handProofs.keys());
+      this.handProofs.delete(oldest);
+    }
+    this.state.commitmentHash = proof.commitmentHash;
+
     for (const p of eligible) {
       p.cards = [this.deck.pop()!, this.deck.pop()!];
     }
@@ -285,6 +296,7 @@ export class GameEngine {
     }
 
     this.state.lastAction = { playerId, action, amount };
+    this.actionLog.push({ playerId, action, amount, phase: this.state.phase });
     if (action !== "raise") {
       this.actedThisRound.add(playerId);
     }
@@ -407,6 +419,19 @@ export class GameEngine {
     // Calculate pot distribution (simplified - no side pots for now)
     this.distributePot(results);
 
+    // Calculate winners for summary
+    const winnerAmounts: { playerId: string; amount: number }[] = [];
+    const winnerResults = results.filter(r => r.isWinner);
+    const share = Math.floor(this.state.pot / winnerResults.length);
+    for (const w of winnerResults) {
+      winnerAmounts.push({ playerId: w.playerId, amount: share });
+    }
+
+    // Fire hand complete callback with proof and summary
+    if (this.currentShuffleProof) {
+      this.onHandComplete?.(this.currentShuffleProof, this.buildHandSummary(winnerAmounts));
+    }
+
     this.emitState();
 
     // Auto-start next hand after delay
@@ -492,6 +517,14 @@ export class GameEngine {
     if (active.length === 1) {
       active[0].chips += this.state.pot;
       this.state.lastAction = { playerId: active[0].id, action: "win" };
+    }
+
+    // Fire hand complete callback with proof and summary
+    const winnerAmounts = active.length === 1
+      ? [{ playerId: active[0].id, amount: this.state.pot }]
+      : [];
+    if (this.currentShuffleProof) {
+      this.onHandComplete?.(this.currentShuffleProof, this.buildHandSummary(winnerAmounts));
     }
 
     this.state.phase = "showdown";
@@ -588,6 +621,26 @@ export class GameEngine {
   }
 
   // ─── State Serialization ──────────────────────────────────────────────
+  private buildHandSummary(winners: { playerId: string; amount: number }[]): HandSummary {
+    return {
+      handNumber: this.state.handNumber,
+      players: this.handStartPlayers,
+      actions: this.actionLog,
+      communityCards: [...this.state.communityCards],
+      pot: this.state.pot,
+      winners,
+      showdownResults: this.state.showdownResults,
+    };
+  }
+
+  getShuffleProof(handNumber: number): ShuffleProof | undefined {
+    return this.handProofs.get(handNumber);
+  }
+
+  getCurrentCommitment(): string | undefined {
+    return this.state.commitmentHash;
+  }
+
   getStateForPlayer(playerId: string): any {
     const state = this.state;
     return {
@@ -603,6 +656,10 @@ export class GameEngine {
       handNumber: state.handNumber,
       lastAction: state.lastAction,
       showdownResults: state.phase === "showdown" ? state.showdownResults : undefined,
+      commitmentHash: state.commitmentHash,
+      shuffleProof: state.phase === "showdown" && this.currentShuffleProof
+        ? this.currentShuffleProof
+        : undefined,
       players: state.players.map(p => ({
         id: p.id,
         displayName: p.displayName,

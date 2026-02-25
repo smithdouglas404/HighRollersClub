@@ -23,7 +23,12 @@
       "Bash(npx tsc --noEmit --project client/tsconfig.json 2>&1 | head -30)",
       "Bash(npx tsc --noEmit --pretty 2>&1 | head -50)",
       "Bash(npx tsc --noEmit 2>&1 | head -60)",
-      "Bash(fuser -k 5000/tcp 2>/dev/null; sleep 1)"
+      "Bash(fuser -k 5000/tcp 2>/dev/null; sleep 1)",
+      "Bash(env | grep -i OPENAI 2>/dev/null; echo \"---\"; env | grep -i API_KEY 2>/dev/null; echo \"---\"; cat /home/runner/workspace/.replit 2>/dev/null | head -20)",
+      "Bash(echo $OPENAI_API_KEY | head -c 10)",
+      "Bash(node -e \"console.log\\(process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring\\(0,10\\) + '...' : 'NOT SET'\\)\")",
+      "Bash(node -e \"const fs = require\\('fs'\\); try { const k = fs.readFileSync\\('/home/runner/.config/sops/age/keys.txt','utf8'\\); console.log\\(k.substring\\(0,20\\)\\); } catch\\(e\\) { console.log\\('no sops'\\); }\" 2>/dev/null; node -e \"try { const d = require\\('dotenv'\\); d.config\\(\\); console.log\\(process.env.OPENAI_API_KEY ? 'found via dotenv' : 'not in .env'\\); } catch\\(e\\) { console.log\\('no dotenv'\\); }\")",
+      "Bash(OPENAI_API_KEY=\"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\" node scripts/generate-table-images.mjs)"
     ]
   }
 }

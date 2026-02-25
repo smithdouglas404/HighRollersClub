@@ -3,6 +3,9 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CardType, Suit } from "@/lib/poker-types";
 
+// DALL-E generated card back
+import cardBackImage from "@assets/generated_images/card_back_cyberpunk.png";
+
 interface CardProps {
   card?: CardType;
   className?: string;
@@ -56,7 +59,7 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
         transition: { type: "spring" as const, stiffness: 300, damping: 20, delay },
       };
 
-  // Card Back
+  // Card Back — uses DALL-E generated cyberpunk card back image
   if (!card || card.hidden) {
     return (
       <motion.div
@@ -69,26 +72,17 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
           className
         )}
       >
-        {/* Gold border */}
+        {/* Gold border frame */}
         <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-[#c9a84c] via-[#8b6914] to-[#c9a84c] p-[1.5px]">
-          <div className="w-full h-full rounded-[6px] bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f0f23] relative overflow-hidden">
-            {/* Diamond pattern */}
-            <div className="absolute inset-0 opacity-20"
-              style={{
-                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(201,168,76,0.3) 4px, rgba(201,168,76,0.3) 5px),
-                  repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(201,168,76,0.3) 4px, rgba(201,168,76,0.3) 5px)`,
-              }}
+          <div className="w-full h-full rounded-[6px] overflow-hidden relative">
+            <img
+              src={cardBackImage}
+              alt=""
+              className="w-full h-full object-cover"
+              draggable={false}
             />
-            {/* Center emblem */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-[60%] h-[60%] rounded-full border border-[#c9a84c]/30 flex items-center justify-center">
-                <div className="text-[#c9a84c]/50 font-display font-bold" style={{ fontSize: size === "sm" ? "8px" : size === "md" ? "10px" : "14px" }}>
-                  HR
-                </div>
-              </div>
-            </div>
-            {/* Top shine */}
-            <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/5 to-transparent" />
+            {/* Top shine overlay */}
+            <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/8 to-transparent" />
           </div>
         </div>
       </motion.div>

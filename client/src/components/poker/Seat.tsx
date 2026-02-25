@@ -6,6 +6,9 @@ import { useSoundEngine } from "@/lib/sound-context";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { triggerChipFlight } from "./ChipAnimation";
 
+// DALL-E generated neon avatar frame
+import neonFrame from "@assets/generated_images/avatar_neon_frame_cyan.png";
+
 // ─── Winner Particle Burst System ────────────────────────────────────────────
 interface Particle {
   x: number;
@@ -302,25 +305,36 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           )}
         </AnimatePresence>
 
-        {/* ── Avatar circle with neon ring ── */}
+        {/* ── Avatar circle with DALL-E neon ring ── */}
         <div ref={avatarRef} className="relative z-10 mb-0.5">
-          {/* Active turn: animated spinning conic-gradient ring */}
-          {isTurn && (
-            <div
-              className="absolute -inset-[6px] rounded-full"
+          {/* DALL-E neon frame ring — always visible, intensified on turn */}
+          <div
+            className="absolute -inset-[10px] z-0 pointer-events-none"
+            style={{
+              opacity: isTurn ? 1 : 0.4,
+              filter: isTurn
+                ? `hue-rotate(${seatIndex * 30}deg) brightness(1.3) drop-shadow(0 0 12px ${hexToRgba(glowColor, 0.7)})`
+                : `hue-rotate(${seatIndex * 30}deg) brightness(0.7)`,
+              transition: "opacity 0.3s, filter 0.3s",
+            }}
+          >
+            <img
+              src={neonFrame}
+              alt=""
+              className="w-full h-full object-contain"
+              draggable={false}
               style={{
-                background: `conic-gradient(from 0deg, ${hexToRgba(glowColor, 0.8)}, ${hexToRgba(glowColor, 0.1)}, ${hexToRgba(glowColor, 0.8)})`,
-                animation: "avatarGlowSpin 2s linear infinite",
-                filter: `drop-shadow(0 0 8px ${hexToRgba(glowColor, 0.6)})`,
+                animation: isTurn ? "avatarGlowSpin 3s linear infinite" : "none",
               }}
             />
-          )}
-          {/* Active turn: pulsing outer ring */}
+          </div>
+
+          {/* Active turn: pulsing outer glow */}
           {isTurn && (
             <div
-              className="absolute -inset-[8px] rounded-full"
+              className="absolute -inset-[12px] rounded-full"
               style={{
-                boxShadow: `0 0 16px 4px ${hexToRgba(glowColor, 0.35)}`,
+                boxShadow: `0 0 20px 6px ${hexToRgba(glowColor, 0.35)}`,
                 animation: "avatarGlowPulse 1.5s ease-in-out infinite",
               }}
             />
@@ -331,7 +345,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               <div
                 className="w-full h-full rounded-full"
                 style={{
-                  background: `radial-gradient(circle, ${hexToRgba(glowColor, 0.2)} 0%, transparent 70%)`,
+                  background: `radial-gradient(circle, ${hexToRgba(glowColor, 0.25)} 0%, transparent 70%)`,
                   animation: "neonPulse 2s ease-in-out infinite",
                 }}
               />
@@ -343,7 +357,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <img
               src={player.avatar}
               alt={player.name}
-              className="w-12 h-12 rounded-full object-cover"
+              className="w-12 h-12 rounded-full object-cover relative z-[1]"
               style={{
                 border: `3px solid ${glowColor}`,
                 boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
@@ -352,7 +366,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             />
           ) : (
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white/70"
+              className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white/70 relative z-[1]"
               style={{
                 border: `3px solid ${glowColor}`,
                 boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,

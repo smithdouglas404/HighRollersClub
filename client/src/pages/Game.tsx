@@ -35,8 +35,8 @@ import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
 
 // Cinematic DALL-E 3 assets
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
-import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
-import luxuryRail from "@assets/generated_images/poker_table_top_cinematic.png";
+import feltTexture from "@assets/generated_images/poker_felt_top_down.png";
+import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.png";
 import serverBg from "@assets/generated_images/cinematic_server_room_bg.png";
 // Bot avatars from the avatar library
 import avatar1 from "@assets/generated_images/avatars/avatar_red_wolf.png";
@@ -195,8 +195,8 @@ function GameTable({
   return (
     <div className="min-h-screen bg-[#020508] text-white overflow-hidden relative font-sans flex">
       <div className="absolute inset-0">
-        <img src={serverBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-[1px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,30,40,0.5)_0%,rgba(0,0,0,0.95)_70%)]" />
+        <img src={casinoBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-25 blur-[2px]" style={{ filter: "brightness(0.3) saturate(1.4) blur(2px)" }} />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,20,30,0.4)_0%,rgba(0,0,0,0.95)_75%)]" />
         <AmbientParticles />
       </div>
 

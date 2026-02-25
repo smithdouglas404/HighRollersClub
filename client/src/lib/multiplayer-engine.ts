@@ -377,6 +377,11 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
   // Add bots
   const addBots = useCallback(() => {
+    if (!wsClient.connected) {
+      console.warn("[addBots] WebSocket not connected — cannot add bots");
+      setError("Not connected to server — please refresh the page");
+      return;
+    }
     wsClient.send({ type: "add_bots" });
   }, []);
 

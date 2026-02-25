@@ -4,7 +4,7 @@ import type { CardType } from "@/lib/poker-types";
 import type { Player } from "@/lib/poker-types";
 import { TABLE_SEATS, DEALER_POSITIONS } from "@/lib/table-constants";
 
-import tableBackground from "@assets/generated_images/poker_table_topdown_clean.png";
+import feltTexture from "@assets/generated_images/Dark_Teal_Poker_Felt_Texture_83ec2760.png";
 
 interface ImageTableProps {
   communityCards: CardType[];
@@ -30,42 +30,89 @@ export function ImageTable({
 
   return (
     <>
-      {/* ── Layer 1: DALL-E premium table image (NEVER replace with CSS) ── */}
-      <img
-        src={tableBackground}
-        alt="Poker Table"
-        className="absolute inset-0 w-full h-full object-cover rounded-2xl"
-        draggable={false}
+      {/* ── Layer 1: Premium CSS oval table (colors sampled from reference) ── */}
+      {/* Cyan outer glow ring — bright #5ccbdc teal like reference */}
+      <div
+        className="absolute pointer-events-none"
         style={{
           zIndex: 1,
-          filter: "brightness(0.95) contrast(1.1) saturate(1.15)",
+          left: "4.5%",
+          right: "4.5%",
+          top: "7.5%",
+          bottom: "7.5%",
+          borderRadius: "50%",
+          border: "2px solid rgba(92,203,220,0.6)",
+          boxShadow:
+            "0 0 40px 8px rgba(92,203,220,0.2), 0 0 80px 16px rgba(92,203,220,0.1)",
         }}
       />
 
-      {/* Warm spotlight on felt center — subtle overhead lamp effect */}
+      {/* Dark rim band — #1e2b4b dark navy between cyan glow and gold rail */}
       <div
-        className="absolute inset-0 rounded-2xl pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
           zIndex: 2,
-          background: "radial-gradient(ellipse 45% 40% at 50% 46%, rgba(255,248,220,0.06) 0%, transparent 100%)",
+          left: "5%",
+          right: "5%",
+          top: "8%",
+          bottom: "8%",
+          borderRadius: "50%",
+          background: "linear-gradient(180deg, #1e2b4b 0%, #152036 50%, #0c1a30 100%)",
         }}
       />
 
-      {/* Gold rim highlight — traces the table rail edge */}
+      {/* Gold rail border — warm amber #866834 from reference */}
       <div
-        className="absolute inset-0 rounded-2xl pointer-events-none"
-        style={{
-          zIndex: 2,
-          background: "radial-gradient(ellipse 52% 48% at 50% 46%, transparent 70%, rgba(201,168,76,0.08) 85%, transparent 100%)",
-        }}
-      />
-
-      {/* Cinematic vignette — dark edges, clear center */}
-      <div
-        className="absolute inset-0 rounded-2xl pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
           zIndex: 3,
-          background: "radial-gradient(ellipse 65% 60% at 50% 46%, transparent 25%, rgba(2,5,8,0.35) 55%, rgba(2,5,8,0.75) 80%, rgba(2,5,8,0.92) 100%)",
+          left: "7.5%",
+          right: "7.5%",
+          top: "12%",
+          bottom: "12%",
+          borderRadius: "50%",
+          border: "3px solid #866834",
+          boxShadow:
+            "0 0 12px rgba(134,104,52,0.4), 0 0 30px rgba(134,104,52,0.15), inset 0 0 12px rgba(134,104,52,0.2)",
+        }}
+      />
+
+      {/* Inner felt — exact greens from reference: center #19723c, edge #0d4020 */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          zIndex: 4,
+          left: "8%",
+          right: "8%",
+          top: "13%",
+          bottom: "13%",
+          borderRadius: "50%",
+          background: "radial-gradient(ellipse at 50% 48%, #19723c 0%, #16592d 30%, #0f4724 55%, #0d4020 75%, #0b3c1e 100%)",
+        }}
+      />
+
+      {/* Center spotlight — subtle brightening like reference overhead light */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          zIndex: 5,
+          left: "8%",
+          right: "8%",
+          top: "13%",
+          bottom: "13%",
+          borderRadius: "50%",
+          background:
+            "radial-gradient(ellipse 45% 40% at 50% 48%, rgba(255,255,240,0.08) 0%, transparent 60%)",
+        }}
+      />
+
+      {/* Soft vignette — dark navy edges, not black */}
+      <div
+        className="absolute inset-0 rounded-2xl pointer-events-none"
+        style={{
+          zIndex: 5,
+          background:
+            "radial-gradient(ellipse 62% 58% at 50% 50%, transparent 40%, rgba(10,16,34,0.2) 65%, rgba(10,16,34,0.45) 85%, rgba(10,16,34,0.65) 100%)",
         }}
       />
 
@@ -106,7 +153,7 @@ export function ImageTable({
               className="absolute flex gap-2.5"
               style={{
                 left: "50%",
-                top: "48%",
+                top: "50%",
                 transform: "translate(-50%, -50%)",
                 filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))",
               }}
@@ -183,15 +230,15 @@ export function ImageTable({
         </AnimatePresence>
       </div>
 
-      {/* Top fade */}
+      {/* Top fade — very subtle */}
       <div
-        className="absolute inset-x-0 top-0 h-12 rounded-t-2xl pointer-events-none"
-        style={{ zIndex: 20, background: "linear-gradient(to bottom, rgba(2,5,8,0.7) 0%, transparent 100%)" }}
+        className="absolute inset-x-0 top-0 h-10 rounded-t-2xl pointer-events-none"
+        style={{ zIndex: 20, background: "linear-gradient(to bottom, rgba(12,26,48,0.3) 0%, transparent 100%)" }}
       />
-      {/* Bottom fade */}
+      {/* Bottom fade — very subtle */}
       <div
-        className="absolute inset-x-0 bottom-0 h-20 rounded-b-2xl pointer-events-none"
-        style={{ zIndex: 20, background: "linear-gradient(to top, rgba(2,5,8,0.8) 0%, rgba(2,5,8,0.3) 60%, transparent 100%)" }}
+        className="absolute inset-x-0 bottom-0 h-16 rounded-b-2xl pointer-events-none"
+        style={{ zIndex: 20, background: "linear-gradient(to top, rgba(12,26,48,0.4) 0%, rgba(12,26,48,0.1) 60%, transparent 100%)" }}
       />
     </>
   );

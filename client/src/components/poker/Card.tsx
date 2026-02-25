@@ -6,7 +6,7 @@ import { CardType, Suit } from "@/lib/poker-types";
 interface CardProps {
   card?: CardType;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   delay?: number;
   isHero?: boolean;
   dealFrom?: { x: number; y: number };
@@ -30,7 +30,8 @@ const suitColors: Record<Suit, { text: string; css: string; glow: string }> = {
 const sizeConfig = {
   sm: { w: "w-[52px]",  h: "h-[72px]",  rank: "text-sm",  suit: "text-xs",   centerPx: "26px", padTop: "4px", padLeft: "5px" },
   md: { w: "w-[72px]",  h: "h-[100px]", rank: "text-lg",  suit: "text-sm",   centerPx: "36px", padTop: "6px", padLeft: "7px" },
-  lg: { w: "w-[90px]",  h: "h-[126px]", rank: "text-2xl", suit: "text-base", centerPx: "48px", padTop: "8px", padLeft: "9px" },
+  lg: { w: "w-[68px]",  h: "h-[97px]",  rank: "text-xl",  suit: "text-sm",   centerPx: "34px", padTop: "6px", padLeft: "7px" },
+  xl: { w: "w-[95px]",  h: "h-[136px]", rank: "text-3xl", suit: "text-lg",   centerPx: "50px", padTop: "8px", padLeft: "9px" },
 };
 
 export function Card({ card, className, size = "md", delay = 0, isHero = false, dealFrom, onDealt }: CardProps) {

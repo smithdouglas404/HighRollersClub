@@ -310,11 +310,11 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           )}
         </AnimatePresence>
 
-        {/* ── Avatar circle with CSS neon ring ── */}
+        {/* ── Avatar portrait with CSS neon ring (square, ~100px, matching reference) ── */}
         <div ref={avatarRef} className="relative z-10 mb-0.5">
           {/* CSS neon glow ring — always visible, intensified on turn */}
           <div
-            className="absolute -inset-[6px] z-0 rounded-full pointer-events-none"
+            className="absolute -inset-[6px] z-0 rounded-xl pointer-events-none"
             style={{
               border: `2px solid ${hexToRgba(glowColor, isTurn ? 0.8 : 0.3)}`,
               boxShadow: isTurn
@@ -328,7 +328,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           {/* Active turn: pulsing outer glow */}
           {isTurn && (
             <div
-              className="absolute -inset-[12px] rounded-full"
+              className="absolute -inset-[12px] rounded-xl"
               style={{
                 boxShadow: `0 0 20px 6px ${hexToRgba(glowColor, 0.35)}`,
                 animation: "avatarGlowPulse 1.5s ease-in-out infinite",
@@ -339,7 +339,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           {isTurn && (
             <div className="absolute -inset-6 z-0">
               <div
-                className="w-full h-full rounded-full"
+                className="w-full h-full rounded-xl"
                 style={{
                   background: `radial-gradient(circle, ${hexToRgba(glowColor, 0.25)} 0%, transparent 70%)`,
                   animation: "neonPulse 2s ease-in-out infinite",
@@ -348,23 +348,23 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             </div>
           )}
 
-          {/* The avatar image / fallback — 48px with 3px colored border */}
+          {/* The avatar image / fallback — 100px square portrait to match reference */}
           {player.avatar ? (
             <img
               src={player.avatar}
               alt={player.name}
-              className="w-12 h-12 rounded-full object-cover relative z-[1]"
+              className="w-[100px] h-[100px] rounded-xl object-cover relative z-[1]"
               style={{
-                border: `3px solid ${glowColor}`,
+                border: `2px solid ${glowColor}`,
                 boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
                 ...parallaxStyle,
               }}
             />
           ) : (
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white/70 relative z-[1]"
+              className="w-[100px] h-[100px] rounded-xl flex items-center justify-center text-2xl font-bold text-white/70 relative z-[1]"
               style={{
-                border: `3px solid ${glowColor}`,
+                border: `2px solid ${glowColor}`,
                 boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
                 background: isHero
                   ? "linear-gradient(135deg, #0e7490, #164e63)"
@@ -381,7 +381,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -right-1 -top-1 z-30 w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-black gold-gradient shadow-[0_0_8px_rgba(201,168,76,0.5)]"
+              className="absolute -right-2 -top-2 z-30 w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black text-black gold-gradient shadow-[0_0_8px_rgba(201,168,76,0.5)]"
             >
               D
             </motion.div>
@@ -389,7 +389,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
 
           {/* Seat index badge — small number in bottom-left */}
           <div
-            className="absolute -left-0.5 -bottom-0.5 z-30 w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold"
+            className="absolute -left-1 -bottom-1 z-30 w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold"
             style={{
               background: hexToRgba(glowColor, 0.25),
               border: `1px solid ${hexToRgba(glowColor, 0.5)}`,

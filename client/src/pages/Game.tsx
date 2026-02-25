@@ -39,11 +39,11 @@ import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 import feltTexture from "@assets/generated_images/poker_felt_top_down.png";
 import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.png";
 import serverBg from "@assets/generated_images/cinematic_server_room_bg.png";
-// Bot avatars from the avatar library
-import avatar1 from "@assets/generated_images/avatars/avatar_red_wolf.png";
-import avatar2 from "@assets/generated_images/avatars/avatar_steel_ghost.png";
-import avatar3 from "@assets/generated_images/avatars/avatar_dark_ace.png";
-import avatar4 from "@assets/generated_images/avatars/avatar_neon_fox.png";
+// Bot avatars — cyberpunk poker player style (matching reference)
+import avatar1 from "@assets/generated_images/cyberpunk_poker_player_avatar_1.png";
+import avatar2 from "@assets/generated_images/cyberpunk_poker_player_avatar_2.png";
+import avatar3 from "@assets/generated_images/cyberpunk_poker_player_avatar_3.png";
+import avatar4 from "@assets/generated_images/cyberpunk_poker_player_avatar_4.png";
 
 const HERO_ID = "player-1";
 
@@ -142,13 +142,7 @@ function GameTable({
   });
   const [enableOrbit, setEnableOrbit] = useState(false);
   const [tableMode, setTableMode] = useState<"image" | "3d">(() => {
-    // Force clear stale "image" from localStorage — 3D is the proper mode
-    const saved = localStorage.getItem("poker-table-mode");
-    if (saved === "image") {
-      localStorage.removeItem("poker-table-mode");
-      return "3d";
-    }
-    return (saved as "image" | "3d") || "3d";
+    return (localStorage.getItem("poker-table-mode") as "image" | "3d") || "image";
   });
   const sound = useSoundEngine();
   const tableRef = useRef<HTMLDivElement>(null);
@@ -201,10 +195,10 @@ function GameTable({
   const seatPositions = SEAT_POSITIONS.slice(0, Math.max(players.length, 2));
 
   return (
-    <div className="min-h-screen bg-[#020508] text-white overflow-hidden relative font-sans flex">
+    <div className="min-h-screen bg-[#0a1022] text-white overflow-hidden relative font-sans flex">
       <div className="absolute inset-0">
-        <img src={casinoBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-25 blur-[2px]" style={{ filter: "brightness(0.3) saturate(1.4) blur(2px)" }} />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,20,30,0.4)_0%,rgba(0,0,0,0.95)_75%)]" />
+        <img src={casinoBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-45" style={{ filter: "brightness(0.6) saturate(1.5) blur(1px)" }} />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.25)_0%,rgba(10,16,34,0.7)_80%)]" />
         <AmbientParticles />
       </div>
 
@@ -389,8 +383,8 @@ function GameTable({
                 All coordinates are % of the container.
               */}
               <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-                {/* Dark room bg */}
-                <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, #0a1a12 0%, #020508 70%)" }} />
+                {/* Room bg — dark navy like reference (#0a1022 → #1e2b4b) */}
+                <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, #1e2b4b 0%, #0a1022 70%)" }} />
 
                 {/* Aspect-ratio locked table container */}
                 <div
@@ -457,7 +451,7 @@ function GameTable({
                         <Card
                           key={`hero-${i}`}
                           card={{ ...card, hidden: false }}
-                          size="lg"
+                          size="xl"
                           isHero={true}
                           delay={0.3 + i * 0.15}
                         />
@@ -602,7 +596,7 @@ function GameTable({
                     <Card
                       key={`hero-${i}`}
                       card={{ ...card, hidden: false }}
-                      size="lg"
+                      size="xl"
                       isHero={true}
                       delay={0.3 + i * 0.15}
                     />

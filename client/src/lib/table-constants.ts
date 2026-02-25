@@ -1,24 +1,26 @@
 export const TABLE_SEATS = [
-  { x: 50, y: 88, scale: 1.0  },
-  { x: 15, y: 75, scale: 0.88 },
-  { x: 10, y: 50, scale: 0.78 },
-  { x: 15, y: 25, scale: 0.68 },
-  { x: 35, y: 12, scale: 0.60 },
-  { x: 65, y: 12, scale: 0.60 },
-  { x: 85, y: 25, scale: 0.68 },
-  { x: 90, y: 50, scale: 0.78 },
-  { x: 85, y: 75, scale: 0.88 },
+  { x: 50, y: 88, scale: 1.0  },  // 0: Hero (bottom center)
+  { x: 15, y: 75, scale: 0.85 },  // 1: bottom-left
+  { x: 8,  y: 50, scale: 0.75 },  // 2: left
+  { x: 15, y: 25, scale: 0.65 },  // 3: top-left
+  { x: 32, y: 10, scale: 0.58 },  // 4: top-left-center
+  { x: 50, y: 6,  scale: 0.55 },  // 5: top-center
+  { x: 68, y: 10, scale: 0.58 },  // 6: top-right-center
+  { x: 85, y: 25, scale: 0.65 },  // 7: top-right
+  { x: 92, y: 50, scale: 0.75 },  // 8: right
+  { x: 85, y: 75, scale: 0.85 },  // 9: bottom-right
 ];
 
 export const DEALER_POSITIONS = [
   { x: 50, y: 78 },
   { x: 24, y: 68 },
-  { x: 18, y: 50 },
+  { x: 17, y: 50 },
   { x: 24, y: 32 },
-  { x: 40, y: 22 },
-  { x: 60, y: 22 },
+  { x: 38, y: 20 },
+  { x: 52, y: 18 },
+  { x: 62, y: 20 },
   { x: 76, y: 32 },
-  { x: 82, y: 50 },
+  { x: 83, y: 50 },
   { x: 76, y: 68 },
 ];
 

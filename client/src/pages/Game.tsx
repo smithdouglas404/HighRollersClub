@@ -14,41 +14,29 @@ import { ChatPanel } from "../components/poker/ChatPanel";
 import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { ChipAnimation } from "../components/poker/ChipAnimation";
-import { Table3D, type QualityLevel, type PlayerData3D } from "../components/poker/Table3D";
-import { ImageTable } from "../components/poker/ImageTable";
-import { TABLE_SEATS } from "@/lib/table-constants";
 import { Player } from "../lib/poker-types";
 import { useGameEngine } from "@/lib/game-engine";
 import { useMultiplayerGame } from "@/lib/multiplayer-engine";
 import { useAuth } from "@/lib/auth-context";
-import { MatrixRain } from "@/components/MatrixRain";
 import { SoundProvider, useSoundEngine } from "@/lib/sound-context";
 import { soundEngine } from "@/lib/sound-engine";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Settings, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Download, Play, ExternalLink } from "lucide-react";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
 import { TournamentResults } from "@/components/game/TournamentResults";
 import { BombPotIndicator } from "@/components/game/BombPotIndicator";
-import { TournamentStatsPanel } from "@/components/game/TournamentStatsPanel";
-import { PlayerAnalyticsPanel } from "@/components/game/PlayerAnalyticsPanel";
-import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
 
-// Cinematic DALL-E 3 assets
-import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
-import feltTexture from "@assets/generated_images/poker_felt_top_down.png";
 import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.png";
-import serverBg from "@assets/generated_images/cinematic_server_room_bg.png";
-// Bot avatars — cyberpunk poker player style (matching reference)
-import avatar1 from "@assets/generated_images/cyberpunk_poker_player_avatar_1.png";
-import avatar2 from "@assets/generated_images/cyberpunk_poker_player_avatar_2.png";
-import avatar3 from "@assets/generated_images/cyberpunk_poker_player_avatar_3.png";
-import avatar4 from "@assets/generated_images/cyberpunk_poker_player_avatar_4.png";
+import avatar1 from "@assets/generated_images/avatars/avatar_red_wolf.png";
+import avatar2 from "@assets/generated_images/avatars/avatar_steel_ghost.png";
+import avatar3 from "@assets/generated_images/avatars/avatar_dark_ace.png";
+import avatar4 from "@assets/generated_images/avatars/avatar_neon_fox.png";
+import avatar5 from "@assets/generated_images/avatars/avatar_cyber_punk.png";
 
 const HERO_ID = "player-1";
 
-// Bot avatars - each is unique
-const BOT_AVATARS = [avatar2, avatar3, avatar4, avatar1, avatar2];
+const BOT_AVATARS = [avatar2, avatar3, avatar4, avatar5, avatar1];
 const BOT_NAMES = ["CryptoKing", "Satoshi", "Whale_0x", "HODLer", "Degen"];
 const BOT_CHIPS = [3200, 850, 5000, 1200, 2100];
 

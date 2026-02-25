@@ -3,10 +3,6 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CardType, Suit } from "@/lib/poker-types";
 
-// DALL-E generated premium card assets
-import cardBackImage from "@assets/generated_images/card_back_cyberpunk.png";
-import cardFaceTemplate from "@assets/generated_images/card_face_template.png";
-
 interface CardProps {
   card?: CardType;
   className?: string;
@@ -32,16 +28,15 @@ const suitColors: Record<Suit, { text: string; css: string; glow: string }> = {
 };
 
 const sizeConfig = {
-  sm: { w: "w-[46px]",  h: "h-[65px]",  rank: "text-xs",  suit: "text-[11px]", centerPx: "22px", padTop: "4px", padLeft: "5px" },
-  md: { w: "w-[62px]",  h: "h-[88px]",  rank: "text-base", suit: "text-sm",    centerPx: "30px", padTop: "5px", padLeft: "6px" },
-  lg: { w: "w-[82px]",  h: "h-[116px]", rank: "text-xl",  suit: "text-base",   centerPx: "44px", padTop: "7px", padLeft: "8px" },
+  sm: { w: "w-[52px]",  h: "h-[72px]",  rank: "text-sm",  suit: "text-xs",   centerPx: "26px", padTop: "4px", padLeft: "5px" },
+  md: { w: "w-[72px]",  h: "h-[100px]", rank: "text-lg",  suit: "text-sm",   centerPx: "36px", padTop: "6px", padLeft: "7px" },
+  lg: { w: "w-[90px]",  h: "h-[126px]", rank: "text-2xl", suit: "text-base", centerPx: "48px", padTop: "8px", padLeft: "9px" },
 };
 
 export function Card({ card, className, size = "md", delay = 0, isHero = false, dealFrom, onDealt }: CardProps) {
   const s = sizeConfig[size];
   const [holoActive, setHoloActive] = useState(false);
 
-  // Deal-from animation — sweeping arc from shoe/dealer position
   const dealAnimation = dealFrom
     ? {
         initial: { x: dealFrom.x, y: dealFrom.y, scale: 0.2, opacity: 0, rotate: -20 },
@@ -60,7 +55,6 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
         transition: { type: "spring" as const, stiffness: 280, damping: 20, delay },
       };
 
-  // ── Card Back — DALL-E premium cyberpunk design with gold border ──
   if (!card || card.hidden) {
     return (
       <motion.div
@@ -73,33 +67,38 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
           className
         )}
       >
-        {/* Gold border frame */}
-        <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-[#c9a84c] via-[#8b6914] to-[#c9a84c] p-[1.5px]">
-          <div className="w-full h-full rounded-[6px] overflow-hidden relative">
-            <img
-              src={cardBackImage}
-              alt=""
-              className="w-full h-full object-cover"
-              draggable={false}
-            />
-            {/* Top glossy shine */}
-            <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/10 to-transparent" />
+        <div className="absolute inset-0 rounded-lg p-[1.5px]"
+          style={{
+            background: "linear-gradient(135deg, #c9a84c, #8b6914, #c9a84c)",
+          }}
+        >
+          <div className="w-full h-full rounded-[6px] overflow-hidden relative"
+            style={{
+              background: "linear-gradient(145deg, #1a1040 0%, #0d0820 40%, #1a0a30 70%, #0a0618 100%)",
+            }}
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full border-2 border-amber-600/40"
+                style={{
+                  background: "radial-gradient(circle, rgba(201,168,76,0.15) 0%, transparent 70%)",
+                }}
+              />
+            </div>
+            <div className="absolute inset-2 rounded border border-amber-700/20" />
+            <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/8 to-transparent" />
           </div>
         </div>
       </motion.div>
     );
   }
 
-  // ── Card Face — DALL-E ornate template + CSS suit/rank overlay ──
   const colors = suitColors[card.suit];
 
   return (
     <motion.div
-      // 3D flip reveal: card spins from back to face
       initial={{ rotateY: 180, scale: 0.6, opacity: 0 }}
       animate={{ rotateY: 0, scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 180, damping: 16, delay }}
-      // Hero cards lift and tilt on hover
       whileHover={isHero ? {
         rotateY: -12,
         rotateX: 8,
@@ -124,63 +123,56 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
         transformOrigin: isHero ? "left center" : "center center",
       }}
     >
-      {/* DALL-E ornate card face template as base */}
-      <img
-        src={cardFaceTemplate}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover rounded-lg"
-        draggable={false}
+      <div className="absolute inset-0 rounded-lg"
+        style={{
+          background: "linear-gradient(180deg, #ffffff 0%, #f8f6f0 100%)",
+          border: "2px solid #c9a84c",
+        }}
       />
 
-      {/* Suit & rank overlays on top of the ornate template */}
       <div className="absolute inset-0 rounded-lg">
-        {/* Top-left rank & suit */}
         <div
           className="absolute flex flex-col items-center leading-none font-black"
           style={{
             top: s.padTop,
             left: s.padLeft,
             color: colors.css,
-            textShadow: `0 1px 3px rgba(0,0,0,0.3), 0 0 6px ${colors.glow}`,
+            textShadow: `0 1px 2px rgba(0,0,0,0.15)`,
           }}
         >
           <span className={s.rank}>{card.rank}</span>
           <span className={s.suit}>{suitSymbols[card.suit]}</span>
         </div>
 
-        {/* Center suit — large, semi-transparent watermark */}
         <div
           className="absolute inset-0 flex items-center justify-center"
-          style={{ color: colors.css, opacity: 0.18 }}
+          style={{ color: colors.css, opacity: 0.3 }}
         >
           <span style={{ fontSize: s.centerPx, fontWeight: 900 }}>
             {suitSymbols[card.suit]}
           </span>
         </div>
 
-        {/* Bottom-right rank & suit (rotated 180) */}
         <div
           className="absolute flex flex-col items-center leading-none font-black rotate-180"
           style={{
             bottom: s.padTop,
             right: s.padLeft,
             color: colors.css,
-            textShadow: `0 1px 3px rgba(0,0,0,0.3), 0 0 6px ${colors.glow}`,
+            textShadow: `0 1px 2px rgba(0,0,0,0.15)`,
           }}
         >
           <span className={s.rank}>{card.rank}</span>
           <span className={s.suit}>{suitSymbols[card.suit]}</span>
         </div>
 
-        {/* Glossy highlight overlay */}
         <div
           className="absolute inset-0 rounded-lg pointer-events-none"
           style={{
-            background: "linear-gradient(160deg, rgba(255,255,255,0.22) 0%, transparent 35%, transparent 70%, rgba(255,255,255,0.06) 100%)",
+            background: "linear-gradient(160deg, rgba(255,255,255,0.3) 0%, transparent 35%, transparent 70%, rgba(255,255,255,0.08) 100%)",
           }}
         />
 
-        {/* Holographic rainbow shimmer on reveal */}
         {holoActive && (
           <div
             className="absolute inset-0 rounded-lg pointer-events-none"

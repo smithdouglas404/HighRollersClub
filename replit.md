@@ -52,9 +52,11 @@ Preferred communication style: Simple, everyday language.
 
 3. **Synthesized audio over audio files:** All sound effects are generated programmatically via Web Audio API oscillators and noise buffers. This eliminates asset loading and keeps the bundle small.
 
-4. **3D + 2D hybrid UI:** The poker table is rendered in 3D (Three.js) with quality levels (low/medium/high), while HUD elements (controls, panels, overlays) remain 2D React components overlaid on top.
+4. **3D + 2D hybrid UI:** The poker table defaults to 3D mode (Three.js) with quality levels (low/medium/high), while HUD elements (controls, panels, overlays) remain 2D React components overlaid on top. A 2D "image" fallback mode is available via toggle. Cards use pure CSS rendering (no DALL-E images) for crisp display at any size.
 
-5. **Shared schema:** The `shared/` directory contains types and schemas used by both frontend and backend, ensuring type safety across the stack.
+5. **Shared constants:** Table seat positions, dealer positions, and quality configs live in `client/src/lib/table-constants.ts` (separate from React components to avoid HMR issues).
+
+6. **Shared schema:** The `shared/` directory contains types and schemas used by both frontend and backend, ensuring type safety across the stack.
 
 ### Project Structure
 

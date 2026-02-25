@@ -15,7 +15,8 @@ import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { ChipAnimation } from "../components/poker/ChipAnimation";
 import { Table3D, type QualityLevel, type PlayerData3D } from "../components/poker/Table3D";
-import { ImageTable, TABLE_SEATS } from "../components/poker/ImageTable";
+import { ImageTable } from "../components/poker/ImageTable";
+import { TABLE_SEATS } from "@/lib/table-constants";
 import { Player } from "../lib/poker-types";
 import { useGameEngine } from "@/lib/game-engine";
 import { useMultiplayerGame } from "@/lib/multiplayer-engine";
@@ -503,6 +504,14 @@ function GameTable({
                       const z = ((pos.y - 50) / 50) * 2.5;
                       return [x * 0.6, 0.2, z * 0.6] as [number, number, number];
                     })}
+                  dealerPosition={(() => {
+                    const dealerIdx = players.findIndex(p => p.isDealer);
+                    if (dealerIdx < 0) return undefined;
+                    const pos = seatPositions[dealerIdx] || SEAT_POSITIONS[dealerIdx % SEAT_POSITIONS.length];
+                    const x = ((pos.x - 50) / 50) * 5.5;
+                    const z = ((pos.y - 50) / 50) * 3.5;
+                    return [x * 0.7, 0.15, z * 0.7] as [number, number, number];
+                  })()}
                 />
               </div>
 
@@ -540,7 +549,35 @@ function GameTable({
                   </motion.div>
                 )}
 
-                {/* Player seats (name, chips, timer HUD only — cards rendered in 3D scene) */}
+                {/* Community cards — HTML overlay for 3D mode */}
+                {gameState.communityCards && gameState.communityCards.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute left-1/2 top-[48%] -translate-x-1/2 -translate-y-1/2 z-20 flex gap-2"
+                  >
+                    {gameState.communityCards.map((card: any, i: number) => (
+                      <Card key={`cc-${i}`} card={card} size="md" delay={i * 0.12} />
+                    ))}
+                  </motion.div>
+                )}
+
+                {/* Dealer button — HTML overlay for 3D mode */}
+                {(() => {
+                  const dealerIdx = players.findIndex(p => p.isDealer);
+                  if (dealerIdx < 0) return null;
+                  const pos = seatPositions[dealerIdx] || SEAT_POSITIONS[dealerIdx % SEAT_POSITIONS.length];
+                  return (
+                    <div
+                      className="absolute z-20 w-7 h-7 rounded-full bg-white text-black flex items-center justify-center text-[10px] font-black shadow-lg border-2 border-amber-400"
+                      style={{ left: `${pos.x + 3}%`, top: `${pos.y - 5}%` }}
+                    >
+                      D
+                    </div>
+                  );
+                })()}
+
+                {/* Player seats (name, chips, timer HUD + face-down card backs for opponents) */}
                 {players.map((player, index) => (
                   <Seat
                     key={player.id}
@@ -549,7 +586,6 @@ function GameTable({
                     isHero={player.id === heroId}
                     isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
                     seatIndex={index}
-                    hideCards={true}
                   />
                 ))}
               </motion.div>

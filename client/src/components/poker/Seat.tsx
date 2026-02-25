@@ -6,8 +6,6 @@ import { useSoundEngine } from "@/lib/sound-context";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { triggerChipFlight } from "./ChipAnimation";
 
-// DALL-E generated neon avatar frame
-import neonFrame from "@assets/generated_images/avatar_neon_frame_cyan.png";
 
 // ─── Winner Particle Burst System ────────────────────────────────────────────
 interface Particle {
@@ -141,8 +139,6 @@ const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: st
   "all-in":{ bg: "bg-amber-500/20",  text: "text-amber-400",  border: "border-amber-500/40" },
 };
 
-// DALL-E generated card back for face-down cards at seats
-import cardBackImage from "@assets/generated_images/card_back_cyberpunk.png";
 
 interface SeatProps {
   player: Player;
@@ -314,29 +310,20 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           )}
         </AnimatePresence>
 
-        {/* ── Avatar circle with DALL-E neon ring ── */}
+        {/* ── Avatar circle with CSS neon ring ── */}
         <div ref={avatarRef} className="relative z-10 mb-0.5">
-          {/* DALL-E neon frame ring — always visible, intensified on turn */}
+          {/* CSS neon glow ring — always visible, intensified on turn */}
           <div
-            className="absolute -inset-[10px] z-0 pointer-events-none"
+            className="absolute -inset-[6px] z-0 rounded-full pointer-events-none"
             style={{
-              opacity: isTurn ? 1 : 0.4,
-              filter: isTurn
-                ? `hue-rotate(${seatIndex * 30}deg) brightness(1.3) drop-shadow(0 0 12px ${hexToRgba(glowColor, 0.7)})`
-                : `hue-rotate(${seatIndex * 30}deg) brightness(0.7)`,
-              transition: "opacity 0.3s, filter 0.3s",
+              border: `2px solid ${hexToRgba(glowColor, isTurn ? 0.8 : 0.3)}`,
+              boxShadow: isTurn
+                ? `0 0 12px ${hexToRgba(glowColor, 0.6)}, 0 0 24px ${hexToRgba(glowColor, 0.3)}, inset 0 0 8px ${hexToRgba(glowColor, 0.2)}`
+                : `0 0 6px ${hexToRgba(glowColor, 0.2)}`,
+              transition: "all 0.3s ease",
+              animation: isTurn ? "avatarGlowPulse 1.5s ease-in-out infinite" : "none",
             }}
-          >
-            <img
-              src={neonFrame}
-              alt=""
-              className="w-full h-full object-contain"
-              draggable={false}
-              style={{
-                animation: isTurn ? "avatarGlowSpin 3s linear infinite" : "none",
-              }}
-            />
-          </div>
+          />
 
           {/* Active turn: pulsing outer glow */}
           {isTurn && (
@@ -518,12 +505,13 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 border: "1px solid rgba(201,168,76,0.4)",
               }}
             >
-              <img
-                src={cardBackImage}
-                alt=""
-                className="w-full h-full object-cover"
-                draggable={false}
-              />
+              <div className="w-full h-full flex items-center justify-center"
+                style={{ background: "linear-gradient(145deg, #1a1040 0%, #0d0820 40%, #1a0a30 70%, #0a0618 100%)" }}
+              >
+                <div className="w-4 h-4 rounded-full border border-amber-600/30"
+                  style={{ background: "radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%)" }}
+                />
+              </div>
             </div>
           ))}
         </motion.div>

@@ -2,40 +2,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "./Card";
 import type { CardType } from "@/lib/poker-types";
 import type { Player } from "@/lib/poker-types";
+import { TABLE_SEATS, DEALER_POSITIONS } from "@/lib/table-constants";
 
-// DALL-E generated assets
 import tableBackground from "@assets/generated_images/poker_table_topdown_clean.png";
-import chipStackImg from "@assets/generated_images/chip_stack_gold_pile.png";
-import dealerBtnImg from "@assets/generated_images/dealer_button.png";
-
-// ─── Seat Coordinate Map (percentage-based, 10% rail padding) ───────────────
-// All coordinates are % of the table container.
-// "Padded Rail" rule: no seat closer than 10% from any edge.
-// `scale`: perspective depth (1.0 = near you, 0.6 = across table).
-const TABLE_SEATS = [
-  { x: 50, y: 88, scale: 1.0  },  // Seat 0: YOU (bottom center)
-  { x: 15, y: 75, scale: 0.88 },  // Seat 1: Bottom-left
-  { x: 10, y: 50, scale: 0.78 },  // Seat 2: Mid-left
-  { x: 15, y: 25, scale: 0.68 },  // Seat 3: Top-left
-  { x: 35, y: 12, scale: 0.60 },  // Seat 4: Top-left-center
-  { x: 65, y: 12, scale: 0.60 },  // Seat 5: Top-right-center
-  { x: 85, y: 25, scale: 0.68 },  // Seat 6: Top-right
-  { x: 90, y: 50, scale: 0.78 },  // Seat 7: Mid-right
-  { x: 85, y: 75, scale: 0.88 },  // Seat 8: Bottom-right
-];
-
-// Dealer button — offset toward center from each seat
-const DEALER_POSITIONS = [
-  { x: 50, y: 78 },
-  { x: 24, y: 68 },
-  { x: 18, y: 50 },
-  { x: 24, y: 32 },
-  { x: 40, y: 22 },
-  { x: 60, y: 22 },
-  { x: 76, y: 32 },
-  { x: 82, y: 50 },
-  { x: 76, y: 68 },
-];
 
 interface ImageTableProps {
   communityCards: CardType[];
@@ -165,13 +134,12 @@ export function ImageTable({
               className="absolute flex flex-col items-center gap-0.5"
               style={{ left: "50%", top: "36%", transform: "translate(-50%, -50%)" }}
             >
-              <img
-                src={chipStackImg}
-                alt="Pot"
-                className="w-14 h-14 object-contain"
-                draggable={false}
-                style={{ filter: "brightness(1.2) drop-shadow(0 2px 10px rgba(255,215,0,0.4)) drop-shadow(0 4px 16px rgba(0,0,0,0.5))" }}
-              />
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" data-testid="pot-chip-icon">
+                <circle cx="24" cy="24" r="20" fill="#ffd700" stroke="#b8860b" strokeWidth="3" />
+                <circle cx="24" cy="24" r="14" fill="none" stroke="#b8860b" strokeWidth="1.5" />
+                <circle cx="24" cy="24" r="8" fill="#b8860b" />
+                <text x="24" y="28" textAnchor="middle" fontSize="12" fill="#ffd700" fontWeight="bold">$</text>
+              </svg>
               <div
                 className="px-4 py-1 rounded-lg border border-amber-500/30"
                 style={{
@@ -199,13 +167,17 @@ export function ImageTable({
               className="absolute"
               style={{ transform: "translate(-50%, -50%)", zIndex: 15 }}
             >
-              <img
-                src={dealerBtnImg}
-                alt="Dealer"
-                className="w-12 h-12 object-contain"
-                draggable={false}
-                style={{ filter: "brightness(1.4) drop-shadow(0 3px 10px rgba(0,0,0,0.7)) drop-shadow(0 0 16px rgba(255,255,255,0.25))" }}
-              />
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm text-black"
+                data-testid="dealer-button"
+                style={{
+                  background: "linear-gradient(145deg, #ffffff, #e8e0d0)",
+                  border: "3px solid #c9a84c",
+                  boxShadow: "0 3px 10px rgba(0,0,0,0.5), 0 0 16px rgba(255,255,255,0.2), inset 0 1px 2px rgba(255,255,255,0.5)",
+                }}
+              >
+                D
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -225,4 +197,3 @@ export function ImageTable({
   );
 }
 
-export { TABLE_SEATS };

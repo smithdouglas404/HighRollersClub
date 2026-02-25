@@ -9,13 +9,9 @@ import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 import cardBackImg from "@assets/generated_images/card_back_premium.png";
 
 // ─── Quality Settings ────────────────────────────────────────────────────────
-export type QualityLevel = "low" | "medium" | "high";
-
-const QUALITY_CONFIG = {
-  low: { shadows: false, particles: 0, antialias: false, shadowMapSize: 512, dpr: 1, bloom: false, ao: false },
-  medium: { shadows: true, particles: 25, antialias: true, shadowMapSize: 1024, dpr: 1.5, bloom: true, ao: false },
-  high: { shadows: true, particles: 50, antialias: true, shadowMapSize: 2048, dpr: 2, bloom: true, ao: true },
-};
+import { QUALITY_CONFIG } from "@/lib/table-constants";
+import type { QualityLevel } from "@/lib/table-constants";
+export type { QualityLevel };
 
 // ─── Card Texture Generator ─────────────────────────────────────────────────
 const suitSymbols: Record<Suit, string> = { hearts: "♥", diamonds: "♦", clubs: "♣", spades: "♠" };
@@ -608,6 +604,42 @@ function ChipStack3D({ position, count = 5 }: { position: [number, number, numbe
   );
 }
 
+// ─── Dealer Button 3D ────────────────────────────────────────────────────────
+function DealerButton3D({ position }: { position: [number, number, number] }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useFrame((_, delta) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += delta * 0.5;
+    }
+  });
+
+  return (
+    <group position={position}>
+      <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.18, 0]} castShadow>
+        <cylinderGeometry args={[0.22, 0.22, 0.06, 24]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          roughness={0.2}
+          metalness={0.1}
+          emissive="#ffffff"
+          emissiveIntensity={0.3}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.22, 0]}>
+        <ringGeometry args={[0.15, 0.21, 24]} />
+        <meshStandardMaterial
+          color="#c9a84c"
+          roughness={0.15}
+          metalness={0.9}
+          emissive="#c9a84c"
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 // ─── Pot Display ────────────────────────────────────────────────────────────
 function PotChips3D({ pot }: { pot: number }) {
   if (pot <= 0) return null;
@@ -767,11 +799,12 @@ interface Table3DSceneProps {
   heroPosition?: [number, number, number];
   isHeroTurn?: boolean;
   enableOrbit?: boolean;
+  dealerPosition?: [number, number, number];
 }
 
 function Scene({
   playerAvatars = [], chipPositions = [], communityCards = [], pot = 0,
-  quality = "high", heroPosition, isHeroTurn, enableOrbit,
+  quality = "high", heroPosition, isHeroTurn, enableOrbit, dealerPosition,
 }: Table3DSceneProps) {
   const joinPhaseRef = useRef(true);
   const joinTimerRef = useRef(Date.now());
@@ -807,6 +840,9 @@ function Scene({
       <TableRail />
       <GoldTrim />
       <CenterLogo />
+
+      {/* Dealer button */}
+      {dealerPosition && <DealerButton3D position={dealerPosition} />}
 
       {/* Community cards on felt */}
       {communityCards.length > 0 && <CommunityCards3D cards={communityCards} />}
@@ -858,7 +894,7 @@ function Scene({
 export function Table3D({
   playerAvatars = [], chipPositions = [], communityCards = [], pot = 0,
   quality = "high", heroPosition, isHeroTurn, enableOrbit = false,
-  className = "",
+  dealerPosition, className = "",
 }: Table3DSceneProps & { className?: string }) {
   const cfg = QUALITY_CONFIG[quality];
 
@@ -881,6 +917,7 @@ export function Table3D({
             heroPosition={heroPosition}
             isHeroTurn={isHeroTurn}
             enableOrbit={enableOrbit}
+            dealerPosition={dealerPosition}
           />
         </Suspense>
       </Canvas>
@@ -888,5 +925,4 @@ export function Table3D({
   );
 }
 
-export { QUALITY_CONFIG };
 export type { PlayerData3D };

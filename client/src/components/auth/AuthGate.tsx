@@ -14,7 +14,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030508] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a1022] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
       </div>
     );
@@ -52,7 +52,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#030508] text-white flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-[#0a1022] text-white flex items-center justify-center relative overflow-hidden">
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,30,40,0.5)_0%,rgba(0,0,0,0.95)_70%)]" />
         <AmbientParticles />

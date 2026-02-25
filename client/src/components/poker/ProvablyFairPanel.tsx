@@ -124,7 +124,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
       className="w-[320px] h-full flex flex-col z-40 pointer-events-auto relative overflow-hidden"
       style={{
-        background: "linear-gradient(180deg, rgba(8,16,24,0.97) 0%, rgba(4,10,16,0.99) 100%)",
+        background: "linear-gradient(180deg, rgba(12,20,40,0.97) 0%, rgba(10,16,34,0.99) 100%)",
         borderLeft: "1px solid rgba(0,240,255,0.12)",
         boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
       }}

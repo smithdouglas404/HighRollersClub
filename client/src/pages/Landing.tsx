@@ -89,11 +89,11 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#020508] text-white font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-[#0a1022] text-white font-sans relative overflow-hidden">
       {/* ─── Background Layers ─────────────────────────── */}
       <div className="absolute inset-0 z-0">
         <img src={serverBg} alt="" className="w-full h-full object-cover opacity-20 blur-sm scale-110" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#020508]/40 via-[#020508]/80 to-[#020508]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a1022]/40 via-[#0a1022]/80 to-[#0a1022]" />
       </div>
 
       {/* Matrix rain — subtle */}
@@ -228,13 +228,13 @@ export default function Landing() {
                     {[avatar1, avatar2, avatar3].map((av, i) => (
                       <div
                         key={i}
-                        className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#0a0f18] shadow-lg"
+                        className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#0c1428] shadow-lg"
                         style={{ boxShadow: "0 0 10px rgba(0,240,255,0.12)" }}
                       >
                         <img src={av} alt="" className="w-full h-full object-cover" />
                       </div>
                     ))}
-                    <div className="w-10 h-10 rounded-full bg-[#0a1520] border-2 border-[#0a0f18] flex items-center justify-center text-[10px] font-bold text-cyan-400">
+                    <div className="w-10 h-10 rounded-full bg-[#0a1520] border-2 border-[#0c1428] flex items-center justify-center text-[10px] font-bold text-cyan-400">
                       +2k
                     </div>
                   </div>
@@ -260,7 +260,7 @@ export default function Landing() {
                     </div>
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   </div>
-                  <div className="aspect-[4/3] relative bg-[#0a1218]">
+                  <div className="aspect-[4/3] relative bg-[#0c1428]">
                     <img src={feltImg} className="w-full h-full object-cover opacity-70" alt="Table" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
                     {/* Mini chip stack */}

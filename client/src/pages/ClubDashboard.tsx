@@ -131,7 +131,7 @@ function AIAnalysisPanel({ onClose }: { onClose: () => void }) {
       <div
         className="relative w-full max-w-md rounded-2xl overflow-hidden"
         style={{
-          background: "linear-gradient(135deg, rgba(8,16,24,0.98) 0%, rgba(4,10,16,0.99) 100%)",
+          background: "linear-gradient(135deg, rgba(12,20,40,0.98) 0%, rgba(10,16,34,0.99) 100%)",
           border: "1px solid rgba(0,240,255,0.1)",
           boxShadow: "0 25px 80px rgba(0,0,0,0.5), 0 0 40px rgba(0,240,255,0.05)",
         }}
@@ -384,7 +384,7 @@ export default function ClubDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-xl overflow-hidden relative"
                 style={{
-                  background: "linear-gradient(135deg, rgba(8,16,24,0.95) 0%, rgba(4,10,16,0.98) 100%)",
+                  background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
                   border: "1px solid rgba(0,240,255,0.1)",
                   boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
                 }}

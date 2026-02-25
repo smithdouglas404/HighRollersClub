@@ -91,6 +91,24 @@ export function ImageTable({
         }}
       />
 
+      {/* Felt texture overlay — adds realistic fabric grain */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          zIndex: 4,
+          left: "8%",
+          right: "8%",
+          top: "13%",
+          bottom: "13%",
+          borderRadius: "50%",
+          backgroundImage: `url(${feltTexture})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          opacity: 0.35,
+          mixBlendMode: "overlay",
+        }}
+      />
+
       {/* Center spotlight — subtle brightening like reference overhead light */}
       <div
         className="absolute pointer-events-none"

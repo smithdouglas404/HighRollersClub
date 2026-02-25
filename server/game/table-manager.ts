@@ -32,6 +32,7 @@ export interface TableInstance {
     maxBuyIn: number;
     timeBankSeconds: number;
     allowBots: boolean;
+    replaceBots: boolean;
     gameFormat: GameFormat;
     buyInAmount: number;
     startingChips: number;
@@ -366,6 +367,7 @@ class TableManager {
         maxBuyIn: tableRow.maxBuyIn,
         timeBankSeconds: tableRow.timeBankSeconds,
         allowBots: tableRow.allowBots,
+        replaceBots: tableRow.replaceBots ?? true,
         gameFormat,
         buyInAmount: tableRow.buyInAmount || tableRow.minBuyIn,
         startingChips: tableRow.startingChips || 1500,
@@ -523,6 +525,31 @@ class TableManager {
     // Check if player already at table
     if (engine.getPlayer(userId)) {
       return { ok: false, error: "Already at this table" };
+    }
+
+    // Bot replacement: if enabled and table is full, remove one bot to make room
+    if (config.replaceBots && engine.state.players.length >= config.maxPlayers) {
+      const botPlayers = engine.state.players.filter(p => p.isBot);
+      if (botPlayers.length > 0) {
+        const botToRemove = botPlayers[botPlayers.length - 1];
+
+        // Fold bot if mid-hand
+        if (engine.state.phase !== "waiting" && engine.state.phase !== "showdown") {
+          const bp = engine.getPlayer(botToRemove.id);
+          if (bp && bp.status !== "folded") {
+            engine.handleAction(botToRemove.id, "fold");
+          }
+        }
+
+        // Remove from engine + bots array + avatar map
+        engine.forceRemovePlayer(botToRemove.id);
+        const idx = instance.bots.findIndex(b => b.id === botToRemove.id);
+        if (idx !== -1) {
+          instance.bots[idx].cleanup();
+          instance.bots.splice(idx, 1);
+        }
+        instance.avatarMap.delete(botToRemove.id);
+      }
     }
 
     // Check max players

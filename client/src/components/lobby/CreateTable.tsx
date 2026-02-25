@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, Users, Coins, Clock, Lock, Bot, Zap, Trophy, Bomb, Swords } from "lucide-react";
+import { X, Users, Coins, Clock, Lock, Bot, Zap, Trophy, Bomb, Swords, UserPlus } from "lucide-react";
 
 type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
 
@@ -30,6 +30,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
   const [timeBankSeconds, setTimeBankSeconds] = useState(30);
   const [isPrivate, setIsPrivate] = useState(defaultPrivate ?? false);
   const [allowBots, setAllowBots] = useState(true);
+  const [replaceBots, setReplaceBots] = useState(true);
   // SNG-specific
   const [buyInAmount, setBuyInAmount] = useState(500);
   const [startingChips, setStartingChips] = useState(1500);
@@ -51,6 +52,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
       timeBankSeconds,
       isPrivate,
       allowBots,
+      replaceBots: allowBots ? replaceBots : false,
       gameFormat,
     };
 
@@ -368,6 +370,20 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 <Bot className="w-3 h-3" /> Allow Bots
               </span>
             </div>
+            {allowBots && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReplaceBots(!replaceBots)}
+                  className={`w-9 h-5 rounded-full transition-colors ${replaceBots ? 'bg-cyan-500' : 'bg-white/10'} relative`}
+                >
+                  <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${replaceBots ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                </button>
+                <span className="text-xs text-gray-400 flex items-center gap-1">
+                  <UserPlus className="w-3 h-3" /> Replace Bots
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Submit */}

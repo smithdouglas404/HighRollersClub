@@ -22,15 +22,15 @@ const suitSymbols: Record<Suit, string> = {
 
 const suitColors: Record<Suit, { text: string; css: string; glow: string }> = {
   hearts:   { text: "text-red-500",     css: "#ef4444", glow: "rgba(239,68,68,0.5)" },
-  diamonds: { text: "text-sky-400",     css: "#38bdf8", glow: "rgba(56,189,248,0.5)" },
-  clubs:    { text: "text-emerald-400", css: "#34d399", glow: "rgba(52,211,153,0.5)" },
-  spades:   { text: "text-slate-200",   css: "#e2e8f0", glow: "rgba(226,232,240,0.4)" },
+  diamonds: { text: "text-red-500",     css: "#ef4444", glow: "rgba(239,68,68,0.5)" },
+  clubs:    { text: "text-slate-800",   css: "#1e293b", glow: "rgba(30,41,59,0.4)" },
+  spades:   { text: "text-slate-800",   css: "#1e293b", glow: "rgba(30,41,59,0.4)" },
 };
 
 const sizeConfig = {
   sm: { w: "w-[52px]",  h: "h-[72px]",  rank: "text-sm",  suit: "text-xs",   centerPx: "26px", padTop: "4px", padLeft: "5px" },
   md: { w: "w-[72px]",  h: "h-[100px]", rank: "text-lg",  suit: "text-sm",   centerPx: "36px", padTop: "6px", padLeft: "7px" },
-  lg: { w: "w-[68px]",  h: "h-[97px]",  rank: "text-xl",  suit: "text-sm",   centerPx: "34px", padTop: "6px", padLeft: "7px" },
+  lg: { w: "w-[84px]",  h: "h-[118px]", rank: "text-xl",  suit: "text-base", centerPx: "42px", padTop: "7px", padLeft: "8px" },
   xl: { w: "w-[95px]",  h: "h-[136px]", rank: "text-3xl", suit: "text-lg",   centerPx: "50px", padTop: "8px", padLeft: "9px" },
 };
 

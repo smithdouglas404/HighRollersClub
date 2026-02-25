@@ -40,15 +40,15 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
   };
 
   return (
-    <div className="min-h-screen bg-[#020508] text-white flex relative overflow-hidden">
+    <div className="min-h-screen bg-[#0a1022] text-white flex relative overflow-hidden">
       {/* Background layers */}
       <div className="absolute inset-0 z-0">
         <img
           src={serverBg}
           alt=""
-          className="w-full h-full object-cover opacity-15 blur-[2px] scale-105"
+          className="w-full h-full object-cover opacity-20 blur-[2px] scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#020508]/80 via-[#020508]/70 to-[#020508]/90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1022]/80 via-[#0a1022]/70 to-[#0a1022]/90" />
       </div>
 
       {/* Matrix rain on edges */}
@@ -68,7 +68,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
         className="relative z-10 w-[220px] min-h-screen flex flex-col shrink-0"
       >
         {/* Glass panel */}
-        <div className="absolute inset-0 bg-[#0a0f18]/80 backdrop-blur-xl border-r border-cyan-500/10" />
+        <div className="absolute inset-0 bg-[#0c1428]/80 backdrop-blur-xl border-r border-cyan-500/10" />
         <div
           className="absolute inset-y-0 right-0 w-px"
           style={{

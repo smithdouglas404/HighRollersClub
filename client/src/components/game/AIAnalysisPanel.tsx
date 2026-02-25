@@ -100,7 +100,7 @@ export function AIAnalysisPanel({
       <div
         className="rounded-xl backdrop-blur-md overflow-hidden"
         style={{
-          background: "linear-gradient(180deg, rgba(8,16,24,0.95) 0%, rgba(4,10,16,0.98) 100%)",
+          background: "linear-gradient(180deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
           border: "1px solid rgba(0,240,255,0.1)",
           boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(0,240,255,0.04)",
         }}

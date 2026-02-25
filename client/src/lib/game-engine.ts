@@ -33,8 +33,16 @@ export interface ShowdownData {
   pot: number;
 }
 
+export interface GameEngineConfig {
+  smallBlind?: number;  // default 10
+  bigBlind?: number;    // default 20
+  ante?: number;        // default 0
+}
+
 // --- Hook Implementation ---
-export function useGameEngine(initialPlayers: Player[], heroId: string = 'player-1') {
+export function useGameEngine(initialPlayers: Player[], heroId: string = 'player-1', config?: GameEngineConfig) {
+  const sb = config?.smallBlind ?? 10;
+  const bb = config?.bigBlind ?? 20;
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [deck, setDeck] = useState<CardType[]>([]);
   const [showdown, setShowdown] = useState<ShowdownData | null>(null);
@@ -44,7 +52,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     currentTurnPlayerId: initialPlayers[0].id,
     dealerId: initialPlayers[1].id,
     phase: 'pre-flop',
-    minBet: 20,
+    minBet: bb,
     dealingPhase: 'idle',
   });
 
@@ -67,11 +75,11 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     const bbIndex = (dealerIndex + 2) % updatedPlayers.length;
     const utgIndex = (dealerIndex + 3) % updatedPlayers.length;
 
-    updatedPlayers[sbIndex].currentBet = 10;
-    updatedPlayers[sbIndex].chips -= 10;
+    updatedPlayers[sbIndex].currentBet = sb;
+    updatedPlayers[sbIndex].chips -= sb;
 
-    updatedPlayers[bbIndex].currentBet = 20;
-    updatedPlayers[bbIndex].chips -= 20;
+    updatedPlayers[bbIndex].currentBet = bb;
+    updatedPlayers[bbIndex].chips -= bb;
 
     updatedPlayers[utgIndex].status = 'thinking';
 
@@ -89,11 +97,11 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     setShowdown(null);
     setGameState(prev => ({
       ...prev,
-      pot: 30,
+      pot: sb + bb,
       communityCards: [],
       currentTurnPlayerId: finalPlayers[utgIndex].id,
       phase: 'pre-flop',
-      minBet: 20,
+      minBet: bb,
       lastAggressorId: undefined,
       dealingPhase: 'dealing',
     }));

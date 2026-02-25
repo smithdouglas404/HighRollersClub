@@ -128,6 +128,7 @@ export const tables = pgTable("tables", {
   status: text("status").notNull().default("waiting"), // waiting | playing
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   allowBots: boolean("allow_bots").notNull().default(true),
+  replaceBots: boolean("replace_bots").notNull().default(true),
   // Game format fields
   gameFormat: text("game_format").notNull().default("cash"), // cash | sng | heads_up | tournament | bomb_pot
   blindSchedule: jsonb("blind_schedule"), // JSON array of {level, sb, bb, ante, durationSeconds}
@@ -156,6 +157,7 @@ export const insertTableSchema = z.object({
   password: z.string().optional(),
   clubId: z.string().optional(),
   allowBots: z.boolean().default(true),
+  replaceBots: z.boolean().default(true),
   gameFormat: z.enum(["cash", "sng", "heads_up", "tournament", "bomb_pot"]).default("cash"),
   blindSchedule: z.array(z.object({
     level: z.number(),

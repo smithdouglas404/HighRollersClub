@@ -144,7 +144,7 @@ export default function Analytics() {
                     transition={{ delay: i * 0.05 }}
                     className={`rounded-xl p-4 border ${card.border} relative overflow-hidden`}
                     style={{
-                      background: "linear-gradient(135deg, rgba(8,16,24,0.95) 0%, rgba(4,10,16,0.98) 100%)",
+                      background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
                       boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
                     }}
                   >
@@ -172,7 +172,7 @@ export default function Analytics() {
               transition={{ delay: 0.2 }}
               className="rounded-xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(8,16,24,0.95) 0%, rgba(4,10,16,0.98) 100%)",
+                background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
                 border: "1px solid rgba(0,240,255,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
@@ -214,7 +214,7 @@ export default function Analytics() {
               transition={{ delay: 0.4 }}
               className="rounded-xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(120,80,220,0.08) 0%, rgba(8,16,24,0.95) 100%)",
+                background: "linear-gradient(135deg, rgba(120,80,220,0.08) 0%, rgba(12,20,40,0.95) 100%)",
                 border: "1px solid rgba(120,80,220,0.15)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}

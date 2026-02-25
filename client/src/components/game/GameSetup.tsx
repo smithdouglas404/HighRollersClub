@@ -1,0 +1,722 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronRight, ChevronLeft, Zap, Shield, Crown, Star, Flame,
+  Users, Coins, Clock, Bot, Trophy, Bomb, Swords, UserPlus,
+  Gamepad2, Settings2,
+} from "lucide-react";
+import { MatrixRain } from "../MatrixRain";
+import { AVATAR_OPTIONS, type AvatarOption } from "../poker/AvatarSelect";
+
+import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
+
+type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
+
+export interface GameSetupConfig {
+  gameFormat: GameFormat;
+  maxPlayers: number;
+  smallBlind: number;
+  bigBlind: number;
+  ante: number;
+  timeBankSeconds: number;
+  allowBots: boolean;
+  replaceBots: boolean;
+  // Cash
+  minBuyIn: number;
+  maxBuyIn: number;
+  // SNG/Tournament
+  buyInAmount: number;
+  startingChips: number;
+  blindPreset: string;
+  // Bomb Pot
+  bombPotFrequency: number;
+  bombPotAnte: number;
+}
+
+const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string; color: string; rgb: string }[] = [
+  { key: "cash",       label: "Cash Game",  icon: Coins,  desc: "Standard ring game",     color: "cyan",    rgb: "34,211,238" },
+  { key: "sng",        label: "Sit & Go",   icon: Clock,  desc: "Fixed buy-in, rising blinds", color: "amber",   rgb: "245,158,11" },
+  { key: "tournament", label: "Tournament",  icon: Trophy, desc: "Multi-table, scheduled",  color: "emerald", rgb: "52,211,153" },
+  { key: "heads_up",   label: "Heads Up",   icon: Swords, desc: "1v1 match",               color: "purple",  rgb: "168,85,247" },
+  { key: "bomb_pot",   label: "Bomb Pot",   icon: Bomb,   desc: "Periodic bomb pots",      color: "red",     rgb: "239,68,68" },
+];
+
+const TIER_CONFIG: Record<string, { bg: string; text: string; label: string; icon: any }> = {
+  legendary: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", label: "LEGENDARY", icon: Crown },
+  epic:      { bg: "bg-purple-500/10 border-purple-500/20", text: "text-purple-400", label: "EPIC", icon: Star },
+  rare:      { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "RARE", icon: Zap },
+  common:    { bg: "bg-gray-500/10 border-gray-500/20", text: "text-gray-400", label: "COMMON", icon: Shield },
+};
+
+const TIER_FILTERS = ["all", "legendary", "epic", "rare"] as const;
+
+interface GameSetupProps {
+  mode: "offline" | "multiplayer";
+  onStartOffline?: (avatar: AvatarOption, name: string, config: GameSetupConfig) => void;
+  onCreateTable?: (config: GameSetupConfig & { name: string }) => void;
+}
+
+export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProps) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [isReady, setIsReady] = useState(false);
+
+  // Step 1: Avatar + Name
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarOption>(AVATAR_OPTIONS[0]);
+  const [playerName, setPlayerName] = useState("");
+  const [tierFilter, setTierFilter] = useState<string>("all");
+
+  // Step 2: Game Settings
+  const [gameFormat, setGameFormat] = useState<GameFormat>("cash");
+  const [tableName, setTableName] = useState("");
+  const [maxPlayers, setMaxPlayers] = useState(6);
+  const [smallBlind, setSmallBlind] = useState(10);
+  const [bigBlind, setBigBlind] = useState(20);
+  const [ante, setAnte] = useState(0);
+  const [timeBankSeconds, setTimeBankSeconds] = useState(30);
+  const [allowBots, setAllowBots] = useState(true);
+  const [replaceBots, setReplaceBots] = useState(true);
+  const [minBuyIn, setMinBuyIn] = useState(200);
+  const [maxBuyIn, setMaxBuyIn] = useState(2000);
+  const [buyInAmount, setBuyInAmount] = useState(500);
+  const [startingChips, setStartingChips] = useState(1500);
+  const [blindPreset, setBlindPreset] = useState("standard");
+  const [bombPotFrequency, setBombPotFrequency] = useState(5);
+  const [bombPotAnte, setBombPotAnte] = useState(0);
+
+  const filteredAvatars = tierFilter === "all"
+    ? AVATAR_OPTIONS
+    : AVATAR_OPTIONS.filter(a => a.tier === tierFilter);
+
+  const handleNext = () => {
+    if (!playerName.trim()) return;
+    setStep(2);
+  };
+
+  const buildConfig = (): GameSetupConfig => ({
+    gameFormat,
+    maxPlayers: gameFormat === "heads_up" ? 2 : maxPlayers,
+    smallBlind,
+    bigBlind,
+    ante,
+    timeBankSeconds,
+    allowBots,
+    replaceBots: allowBots ? replaceBots : false,
+    minBuyIn: (gameFormat === "sng" || gameFormat === "tournament") ? buyInAmount : minBuyIn,
+    maxBuyIn: (gameFormat === "sng" || gameFormat === "tournament") ? buyInAmount : maxBuyIn,
+    buyInAmount,
+    startingChips,
+    blindPreset,
+    bombPotFrequency: gameFormat === "bomb_pot" ? bombPotFrequency : 0,
+    bombPotAnte: gameFormat === "bomb_pot" ? (bombPotAnte || bigBlind) : 0,
+  });
+
+  const handleStart = () => {
+    setIsReady(true);
+    const config = buildConfig();
+    setTimeout(() => {
+      if (mode === "offline" && onStartOffline) {
+        onStartOffline(selectedAvatar, playerName.trim(), config);
+      } else if (mode === "multiplayer" && onCreateTable) {
+        onCreateTable({ ...config, name: tableName.trim() || "My Table" });
+      }
+    }, 800);
+  };
+
+  const selectedFormat = FORMAT_OPTIONS.find(f => f.key === gameFormat)!;
+
+  const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)] transition-colors";
+  const labelClass = "text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-1.5";
+
+  // ─── Progress Bar ─────────────────────────────────────────────────
+  const ProgressBar = () => (
+    <div className="flex items-center justify-center gap-0 max-w-xs mx-auto">
+      {/* Step 1 */}
+      <button
+        onClick={() => step === 2 && setStep(1)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+          step === 1
+            ? "text-white"
+            : "text-gray-500 hover:text-gray-300 cursor-pointer"
+        }`}
+        style={step === 1 ? { color: selectedAvatar.borderColor } : {}}
+      >
+        <Gamepad2 className="w-3.5 h-3.5" />
+        Avatar
+      </button>
+
+      {/* Connector line */}
+      <div className="flex-1 h-px mx-1 relative">
+        <div className="absolute inset-0 bg-gray-700" />
+        <motion.div
+          className="absolute inset-y-0 left-0"
+          initial={false}
+          animate={{ width: step === 2 ? "100%" : "0%" }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          style={{ backgroundColor: selectedAvatar.borderColor }}
+        />
+      </div>
+
+      {/* Step 2 */}
+      <div
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+          step === 2
+            ? "text-white"
+            : "text-gray-600"
+        }`}
+        style={step === 2 ? { color: selectedAvatar.borderColor } : {}}
+      >
+        <Settings2 className="w-3.5 h-3.5" />
+        Settings
+      </div>
+    </div>
+  );
+
+  // ─── Avatar Preview Strip (shown on Step 2) ───────────────────────
+  const AvatarPreview = () => (
+    <motion.div
+      initial={{ y: -10, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: 0.05 }}
+      className="flex items-center gap-3 px-4 py-2.5 rounded-xl backdrop-blur-md bg-white/[0.03] border border-white/[0.06] max-w-lg mx-auto"
+    >
+      {/* Avatar thumbnail */}
+      <button
+        onClick={() => setStep(1)}
+        className="relative group flex-shrink-0"
+        title="Change avatar"
+      >
+        <div
+          className="w-10 h-10 rounded-lg overflow-hidden transition-transform group-hover:scale-105"
+          style={{
+            border: `2px solid ${selectedAvatar.borderColor}`,
+            boxShadow: `0 0 12px ${selectedAvatar.glowColor}`,
+          }}
+        >
+          <img src={selectedAvatar.image} alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-gray-900 border border-gray-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <ChevronLeft className="w-2 h-2 text-gray-400" />
+        </div>
+      </button>
+
+      {/* Player name */}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-bold text-white truncate">{playerName}</div>
+        <div className={`text-[9px] font-bold uppercase tracking-wider ${TIER_CONFIG[selectedAvatar.tier].text}`}>
+          {selectedAvatar.name}
+        </div>
+      </div>
+
+      {/* Format badge */}
+      <div
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border"
+        style={{
+          backgroundColor: `rgba(${selectedFormat.rgb},0.1)`,
+          borderColor: `rgba(${selectedFormat.rgb},0.2)`,
+          color: `rgb(${selectedFormat.rgb})`,
+        }}
+      >
+        {(() => { const Icon = selectedFormat.icon; return <Icon className="w-3 h-3" />; })()}
+        {selectedFormat.label}
+      </div>
+    </motion.div>
+  );
+
+  return (
+    <AnimatePresence mode="wait">
+      {isReady ? (
+        <motion.div
+          key="transition"
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0, scale: 1.2 }}
+          transition={{ duration: 0.8 }}
+          className="min-h-screen bg-[#0a1022] flex items-center justify-center"
+        >
+          <motion.div
+            initial={{ scale: 1 }}
+            animate={{ scale: 0.5, opacity: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
+          >
+            <div className="font-display text-xl tracking-widest" style={{ color: selectedAvatar.borderColor }}>
+              ENTERING TABLE...
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : (
+        <motion.div
+          key={`step-${step}`}
+          initial={{ opacity: 0, x: step === 1 ? -20 : 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: step === 1 ? -20 : 20 }}
+          transition={{ duration: 0.3 }}
+          className="min-h-screen bg-[#0a1022] text-white flex flex-col items-center relative overflow-hidden"
+          style={{ justifyContent: "safe center", paddingTop: "2vh", paddingBottom: "2vh" }}
+        >
+          {/* Background */}
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,20,30,0.4)_0%,rgba(0,0,0,0.95)_70%)]" />
+          </div>
+          <MatrixRain side="both" color="#00ff9d" opacity={0.08} density={0.2} className="absolute inset-0 z-[1]" />
+
+          {/* Dynamic glow */}
+          <div className="absolute inset-0 z-[2] pointer-events-none">
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full transition-all duration-700"
+              style={{ background: `radial-gradient(circle, ${selectedAvatar.glowColor} 0%, transparent 60%)` }}
+            />
+          </div>
+
+          <div className="relative z-10 w-full max-w-4xl px-6 space-y-4 overflow-y-auto" style={{ maxHeight: "96vh" }}>
+            {/* Header */}
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="text-center space-y-3"
+            >
+              <div className="w-12 h-12 mx-auto relative">
+                <div className="absolute inset-[-6px] bg-amber-500/20 blur-xl rounded-full animate-pulse" />
+                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(201,168,76,0.5)]" />
+              </div>
+              <h1 className="font-display text-lg font-bold tracking-[0.2em] gold-text">
+                {step === 1 ? "CHOOSE YOUR AVATAR" : "GAME SETTINGS"}
+              </h1>
+              <ProgressBar />
+            </motion.div>
+
+            {step === 1 ? (
+              <>
+                {/* Tier Filter */}
+                <motion.div
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="flex items-center justify-center gap-1"
+                >
+                  {TIER_FILTERS.map((tier) => (
+                    <button
+                      key={tier}
+                      onClick={() => setTierFilter(tier)}
+                      className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
+                        tierFilter === tier
+                          ? tier === "all"
+                            ? "bg-white/10 text-white border border-white/15"
+                            : `${TIER_CONFIG[tier].bg} ${TIER_CONFIG[tier].text} border`
+                          : "text-gray-600 hover:text-gray-400 border border-transparent"
+                      }`}
+                    >
+                      {tier === "all" ? "All" : TIER_CONFIG[tier].label}
+                    </button>
+                  ))}
+                </motion.div>
+
+                {/* Avatar Grid */}
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                  className="grid grid-cols-4 sm:grid-cols-6 gap-3"
+                >
+                  {filteredAvatars.map((av, i) => {
+                    const isSelected = selectedAvatar.id === av.id;
+                    const tier = TIER_CONFIG[av.tier];
+                    const TierIcon = tier.icon;
+                    return (
+                      <motion.button
+                        key={av.id}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05 + i * 0.03 }}
+                        onClick={() => setSelectedAvatar(av)}
+                        className={`relative rounded-xl overflow-hidden transition-all duration-300 group ${
+                          isSelected ? "scale-[1.05] z-10" : "opacity-70 hover:opacity-100 hover:scale-[1.02]"
+                        }`}
+                        style={{
+                          border: isSelected ? `2px solid ${av.borderColor}` : "2px solid rgba(255,255,255,0.05)",
+                          boxShadow: isSelected ? `0 0 25px ${av.glowColor}, 0 8px 25px rgba(0,0,0,0.4)` : "0 4px 15px rgba(0,0,0,0.3)",
+                        }}
+                      >
+                        <div className="aspect-square relative">
+                          <img src={av.image} alt={av.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                          {isSelected && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                              style={{ background: av.borderColor, boxShadow: `0 0 10px ${av.glowColor}` }}
+                            >
+                              <Zap className="w-3 h-3 text-black" />
+                            </motion.div>
+                          )}
+                          <div className="absolute top-1.5 left-1.5">
+                            <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider ${tier.bg} ${tier.text} border backdrop-blur-sm`}>
+                              <TierIcon className="w-2 h-2" />
+                              {av.tier === "legendary" ? "LEG" : av.tier === "epic" ? "EPIC" : "RARE"}
+                            </div>
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 px-2 pb-1.5">
+                            <div className="text-[10px] font-bold text-white truncate drop-shadow-lg">{av.name}</div>
+                          </div>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </motion.div>
+
+                {/* Name Input + Next Button */}
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex items-center gap-3 max-w-lg mx-auto"
+                >
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value.slice(0, 16))}
+                      onKeyDown={(e) => e.key === "Enter" && handleNext()}
+                      placeholder="Enter your player name..."
+                      maxLength={16}
+                      className="w-full rounded-xl px-4 py-3.5 text-sm text-white placeholder-gray-600 outline-none transition-all bg-white/[0.03] backdrop-blur-sm focus:bg-white/[0.05]"
+                      style={{
+                        border: playerName.trim() ? `1px solid ${selectedAvatar.borderColor}40` : "1px solid rgba(255,255,255,0.06)",
+                        boxShadow: playerName.trim() ? `0 0 15px ${selectedAvatar.glowColor.replace("0.3", "0.1")}` : "none",
+                      }}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 font-mono">
+                      {playerName.length}/16
+                    </div>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleNext}
+                    disabled={!playerName.trim()}
+                    className={`rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all ${
+                      playerName.trim() ? "text-black" : "text-gray-600 bg-gray-800/50 cursor-not-allowed"
+                    }`}
+                    style={playerName.trim() ? {
+                      background: `linear-gradient(135deg, ${selectedAvatar.borderColor}, ${selectedAvatar.borderColor}cc)`,
+                      boxShadow: `0 0 25px ${selectedAvatar.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
+                    } : undefined}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </motion.button>
+                </motion.div>
+              </>
+            ) : (
+              /* ─── Step 2: Game Settings ─── */
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.05 }}
+                className="max-w-lg mx-auto space-y-4"
+              >
+                {/* Avatar Preview Strip */}
+                <AvatarPreview />
+
+                {/* Settings Card */}
+                <motion.div
+                  initial={{ y: 15, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.12 }}
+                  className="rounded-2xl backdrop-blur-md bg-white/[0.03] border border-white/[0.06] p-5 space-y-4"
+                  style={{ boxShadow: `0 0 40px ${selectedAvatar.glowColor.replace("0.3", "0.05")}` }}
+                >
+                  {/* Format Selector */}
+                  <div>
+                    <label className={labelClass}>Game Format</label>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {FORMAT_OPTIONS.map(opt => {
+                        const Icon = opt.icon;
+                        const isSelected = gameFormat === opt.key;
+                        return (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            onClick={() => {
+                              setGameFormat(opt.key);
+                              if (opt.key === "heads_up") setMaxPlayers(2);
+                              else if (maxPlayers === 2) setMaxPlayers(6);
+                            }}
+                            className={`p-2 rounded-lg border text-center transition-all ${
+                              isSelected
+                                ? "border-transparent"
+                                : "bg-white/[0.02] border-white/[0.06] text-gray-500 hover:border-white/15 hover:bg-white/[0.04]"
+                            }`}
+                            style={isSelected ? {
+                              backgroundColor: `rgba(${opt.rgb},0.1)`,
+                              borderColor: `rgba(${opt.rgb},0.3)`,
+                              boxShadow: `0 0 12px rgba(${opt.rgb},0.15)`,
+                              color: `rgb(${opt.rgb})`,
+                            } : {}}
+                          >
+                            <Icon className="w-4 h-4 mx-auto mb-0.5" />
+                            <div className="text-[7px] font-bold uppercase tracking-wider leading-tight">{opt.label}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* Format description */}
+                    <div className="mt-1.5 text-[10px] text-gray-500 text-center italic">
+                      {selectedFormat.desc}
+                    </div>
+                  </div>
+
+                  {/* Table Name (multiplayer only) */}
+                  {mode === "multiplayer" && (
+                    <div>
+                      <label className={labelClass}>Table Name</label>
+                      <input
+                        type="text"
+                        value={tableName}
+                        onChange={(e) => setTableName(e.target.value)}
+                        placeholder={gameFormat === "sng" ? "Turbo SNG" : "High Stakes Showdown"}
+                        className={inputClass}
+                        maxLength={50}
+                      />
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+
+                  {/* Players + Time */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`}>
+                        <Users className="w-3 h-3" /> Max Players
+                      </label>
+                      <select
+                        value={gameFormat === "heads_up" ? 2 : maxPlayers}
+                        onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
+                        disabled={gameFormat === "heads_up"}
+                        className={`${inputClass} disabled:opacity-50`}
+                      >
+                        {[2, 3, 4, 5, 6].map((n) => (
+                          <option key={n} value={n} className="bg-gray-900">{n} Players</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`}>
+                        <Clock className="w-3 h-3" /> Time Bank
+                      </label>
+                      <select
+                        value={timeBankSeconds}
+                        onChange={(e) => setTimeBankSeconds(parseInt(e.target.value))}
+                        className={inputClass}
+                      >
+                        {[10, 15, 20, 30, 45, 60, 90, 120].map((n) => (
+                          <option key={n} value={n} className="bg-gray-900">{n}s</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Blinds + Ante */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`}>
+                        <Coins className="w-3 h-3" /> Small Blind
+                      </label>
+                      <input
+                        type="number"
+                        value={smallBlind}
+                        onChange={(e) => {
+                          const sb = parseInt(e.target.value) || 1;
+                          setSmallBlind(sb);
+                          setBigBlind(sb * 2);
+                        }}
+                        min={1}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`}>
+                        <Coins className="w-3 h-3" /> Big Blind
+                      </label>
+                      <input
+                        type="number"
+                        value={bigBlind}
+                        onChange={(e) => setBigBlind(parseInt(e.target.value) || 2)}
+                        min={2}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`}>
+                        <Zap className="w-3 h-3" /> Ante
+                      </label>
+                      <input
+                        type="number"
+                        value={ante}
+                        onChange={(e) => setAnte(parseInt(e.target.value) || 0)}
+                        min={0}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+
+                  {/* SNG / Tournament fields */}
+                  <AnimatePresence mode="wait">
+                    {(gameFormat === "sng" || gameFormat === "tournament") && (
+                      <motion.div
+                        key="sng-fields"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className={`p-3 rounded-lg border ${gameFormat === "tournament" ? "border-emerald-500/15 bg-emerald-500/5" : "border-amber-500/15 bg-amber-500/5"}`}>
+                          <div className={`text-[10px] font-bold uppercase tracking-wider ${gameFormat === "tournament" ? "text-emerald-400" : "text-amber-400"} mb-3`}>
+                            {gameFormat === "tournament" ? "Tournament Settings" : "SNG Settings"}
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className={labelClass}>Buy-In</label>
+                              <input type="number" value={buyInAmount} onChange={(e) => setBuyInAmount(parseInt(e.target.value) || 100)} min={100} className={inputClass} />
+                            </div>
+                            <div>
+                              <label className={labelClass}>Starting Chips</label>
+                              <input type="number" value={startingChips} onChange={(e) => setStartingChips(parseInt(e.target.value) || 1500)} min={100} className={inputClass} />
+                            </div>
+                            <div>
+                              <label className={labelClass}>Blind Speed</label>
+                              <select value={blindPreset} onChange={(e) => setBlindPreset(e.target.value)} className={inputClass}>
+                                <option value="standard" className="bg-gray-900">Standard (5min)</option>
+                                <option value="turbo" className="bg-gray-900">Turbo (3min)</option>
+                                <option value="mtt" className="bg-gray-900">Slow (10min)</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Bomb Pot fields */}
+                  <AnimatePresence mode="wait">
+                    {gameFormat === "bomb_pot" && (
+                      <motion.div
+                        key="bomb-fields"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-3 rounded-lg border border-red-500/15 bg-red-500/5">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-3">Bomb Pot Settings</div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className={labelClass}>Every N Hands</label>
+                              <select value={bombPotFrequency} onChange={(e) => setBombPotFrequency(parseInt(e.target.value))} className={inputClass}>
+                                {[3, 5, 7, 10].map(n => (
+                                  <option key={n} value={n} className="bg-gray-900">Every {n} hands</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className={labelClass}>Bomb Ante</label>
+                              <input type="number" value={bombPotAnte} onChange={(e) => setBombPotAnte(parseInt(e.target.value) || 0)} min={0} placeholder={`${bigBlind}`} className={inputClass} />
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Buy-in Range (cash / heads_up / bomb_pot) */}
+                  {gameFormat !== "sng" && gameFormat !== "tournament" && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelClass}>Min Buy-In</label>
+                        <input type="number" value={minBuyIn} onChange={(e) => setMinBuyIn(parseInt(e.target.value) || 100)} min={1} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Max Buy-In</label>
+                        <input type="number" value={maxBuyIn} onChange={(e) => setMaxBuyIn(parseInt(e.target.value) || 1000)} min={1} className={inputClass} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+
+                  {/* Toggles */}
+                  <div className="flex items-center gap-5 flex-wrap">
+                    {mode === "multiplayer" && (
+                      <label className="flex items-center gap-2.5 cursor-pointer group">
+                        <button
+                          type="button"
+                          onClick={() => setAllowBots(!allowBots)}
+                          className={`w-9 h-5 rounded-full transition-colors ${allowBots ? 'bg-cyan-500' : 'bg-white/10'} relative`}
+                        >
+                          <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${allowBots ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                        </button>
+                        <span className="text-xs text-gray-400 flex items-center gap-1 group-hover:text-gray-300 transition-colors">
+                          <Bot className="w-3 h-3" /> Allow Bots
+                        </span>
+                      </label>
+                    )}
+                    {mode === "multiplayer" && allowBots && (
+                      <label className="flex items-center gap-2.5 cursor-pointer group">
+                        <button
+                          type="button"
+                          onClick={() => setReplaceBots(!replaceBots)}
+                          className={`w-9 h-5 rounded-full transition-colors ${replaceBots ? 'bg-cyan-500' : 'bg-white/10'} relative`}
+                        >
+                          <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${replaceBots ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                        </button>
+                        <span className="text-xs text-gray-400 flex items-center gap-1 group-hover:text-gray-300 transition-colors">
+                          <UserPlus className="w-3 h-3" /> Replace Bots
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                </motion.div>
+
+                {/* Back + Start buttons */}
+                <motion.div
+                  initial={{ y: 15, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex items-center gap-3 pt-1 max-w-lg mx-auto"
+                >
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setStep(1)}
+                    className="flex items-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold uppercase tracking-wider text-gray-400 bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleStart}
+                    className="flex-1 rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 text-black"
+                    style={{
+                      background: `linear-gradient(135deg, ${selectedAvatar.borderColor}, ${selectedAvatar.borderColor}cc)`,
+                      boxShadow: `0 0 25px ${selectedAvatar.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
+                    }}
+                  >
+                    <Flame className="w-4 h-4" />
+                    {mode === "offline" ? "START GAME" : "CREATE TABLE"}
+                  </motion.button>
+                </motion.div>
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

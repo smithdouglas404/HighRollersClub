@@ -3,19 +3,26 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Seat } from "../components/poker/Seat";
 import { Card } from "../components/poker/Card";
-// CommunityCards now rendered as 3D objects in Table3D scene
+import { ImageTable } from "../components/poker/ImageTable";
+
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
 import { AmbientParticles } from "../components/AmbientParticles";
-import { AvatarSelect, AVATAR_OPTIONS, AvatarOption } from "../components/poker/AvatarSelect";
+import { MatrixRain } from "../components/MatrixRain";
+import { AVATAR_OPTIONS, type AvatarOption } from "../components/poker/AvatarSelect";
+import { GameSetup, type GameSetupConfig } from "../components/game/GameSetup";
 import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
 import { EmotePicker } from "../components/poker/EmoteSystem";
 import { ChatPanel } from "../components/poker/ChatPanel";
 import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { ChipAnimation } from "../components/poker/ChipAnimation";
+import { TournamentStatsPanel } from "@/components/game/TournamentStatsPanel";
+import { PlayerAnalyticsPanel } from "@/components/game/PlayerAnalyticsPanel";
+import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
 import { Player } from "../lib/poker-types";
-import { useGameEngine } from "@/lib/game-engine";
+import { QualityLevel, TABLE_SEATS } from "@/lib/table-constants";
+import { useGameEngine, type GameEngineConfig } from "@/lib/game-engine";
 import { useMultiplayerGame } from "@/lib/multiplayer-engine";
 import { useAuth } from "@/lib/auth-context";
 import { SoundProvider, useSoundEngine } from "@/lib/sound-context";
@@ -40,17 +47,6 @@ const BOT_AVATARS = [avatar2, avatar3, avatar4, avatar5, avatar1];
 const BOT_NAMES = ["CryptoKing", "Satoshi", "Whale_0x", "HODLer", "Degen"];
 const BOT_CHIPS = [3200, 850, 5000, 1200, 2100];
 
-const SEAT_POSITIONS = [
-  { x: 50, y: 88 },  // Seat 0: Hero (bottom center)
-  { x: 15, y: 72 },  // Seat 1: bottom-left
-  { x: 5,  y: 48 },  // Seat 2: left
-  { x: 15, y: 25 },  // Seat 3: top-left
-  { x: 35, y: 12 },  // Seat 4: top-left-center
-  { x: 55, y: 8  },  // Seat 5: top-center
-  { x: 75, y: 12 },  // Seat 6: top-right-center
-  { x: 90, y: 25 },  // Seat 7: top-right
-  { x: 95, y: 48 },  // Seat 8: right
-];
 
 const phaseLabels: Record<string, string> = {
   "pre-flop": "PRE-FLOP",
@@ -83,6 +79,46 @@ function buildPlayers(heroAvatar: AvatarOption, heroName: string): Player[] {
       status: "waiting" as const,
       avatar: BOT_AVATARS[i],
     })),
+  ];
+}
+
+function buildPlayersFromConfig(heroAvatar: AvatarOption, heroName: string, config: GameSetupConfig): Player[] {
+  const playerCount = config.maxPlayers;
+  const heroChips = (config.gameFormat === "sng" || config.gameFormat === "tournament")
+    ? config.startingChips
+    : config.minBuyIn + Math.floor((config.maxBuyIn - config.minBuyIn) * 0.6);
+  const botCount = playerCount - 1;
+
+  const bots: Player[] = [];
+  for (let i = 0; i < botCount && i < BOT_NAMES.length; i++) {
+    const botChips = (config.gameFormat === "sng" || config.gameFormat === "tournament")
+      ? config.startingChips
+      : config.minBuyIn + Math.floor(Math.random() * (config.maxBuyIn - config.minBuyIn));
+    bots.push({
+      id: `player-${i + 2}`,
+      name: BOT_NAMES[i],
+      chips: botChips,
+      isActive: true,
+      isDealer: i === 0,
+      currentBet: 0,
+      status: "waiting" as const,
+      avatar: BOT_AVATARS[i % BOT_AVATARS.length],
+    });
+  }
+
+  return [
+    {
+      id: HERO_ID,
+      name: heroName,
+      chips: heroChips,
+      isActive: true,
+      isDealer: false,
+      currentBet: 0,
+      status: "waiting",
+      timeLeft: 100,
+      avatar: heroAvatar.image || undefined,
+    },
+    ...bots,
   ];
 }
 
@@ -127,10 +163,6 @@ function GameTable({
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
   const [quality, setQuality] = useState<QualityLevel>(() => {
     return (localStorage.getItem("poker-quality") as QualityLevel) || "high";
-  });
-  const [enableOrbit, setEnableOrbit] = useState(false);
-  const [tableMode, setTableMode] = useState<"image" | "3d">(() => {
-    return (localStorage.getItem("poker-table-mode") as "image" | "3d") || "image";
   });
   const sound = useSoundEngine();
   const tableRef = useRef<HTMLDivElement>(null);
@@ -178,9 +210,6 @@ function GameTable({
     const nowMuted = sound.toggleMute();
     setIsMuted(nowMuted);
   };
-
-  // Seat positions adjusted for number of players
-  const seatPositions = SEAT_POSITIONS.slice(0, Math.max(players.length, 2));
 
   return (
     <div className="min-h-screen bg-[#0a1022] text-white overflow-hidden relative font-sans flex">
@@ -309,30 +338,6 @@ function GameTable({
                 {quality.toUpperCase()}
               </span>
             </button>
-            {tableMode === "3d" && (
-              <button
-                onClick={() => setEnableOrbit(!enableOrbit)}
-                className={`glass rounded-lg p-2 transition-colors ${enableOrbit ? "bg-cyan-500/10 text-cyan-400" : "hover:bg-white/5 text-gray-500"}`}
-                title={enableOrbit ? "Disable orbit" : "Enable orbit camera"}
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              onClick={() => {
-                const next = tableMode === "image" ? "3d" : "image";
-                setTableMode(next);
-                localStorage.setItem("poker-table-mode", next);
-              }}
-              className={`glass rounded-lg px-2.5 py-1.5 hover:bg-white/5 transition-colors flex items-center gap-1.5`}
-              title={tableMode === "image" ? "Switch to 3D table" : "Switch to Image table"}
-            >
-              <span className={`text-[9px] font-bold tracking-wider ${
-                tableMode === "3d" ? "text-purple-400" : "text-cyan-400"
-              }`}>
-                {tableMode === "3d" ? "3D" : "2D"}
-              </span>
-            </button>
             <button
               onClick={() => setShowProvablyFair(!showProvablyFair)}
               className={`glass rounded-lg px-3 py-1.5 flex items-center gap-2 transition-all ${
@@ -360,10 +365,8 @@ function GameTable({
           </div>
         </motion.div>
 
-        {/* Table Area — Image mode or 3D mode */}
+        {/* Table Area */}
         <div className="flex-1 relative flex items-center justify-center overflow-hidden">
-          {tableMode === "image" ? (
-            <>
               {/* ── The full table (background + game overlay + seats) ── */}
               {/*
                 Engineer spec: Responsive aspect-ratio container with
@@ -448,151 +451,6 @@ function GameTable({
                   )}
                 </div>
               </div>
-            </>
-          ) : (
-            <>
-              {/* Three.js 3D Table (full scene — cards, chips, avatars all in 3D) */}
-              <div className="absolute inset-0 z-0">
-                <Table3D
-                  quality={quality}
-                  enableOrbit={enableOrbit}
-                  communityCards={gameState.communityCards}
-                  pot={gameState.pot}
-                  isHeroTurn={isHeroTurn}
-                  heroPosition={(() => {
-                    const pos = seatPositions[0] || SEAT_POSITIONS[0];
-                    const x = ((pos.x - 50) / 50) * 5.5;
-                    const z = ((pos.y - 50) / 50) * 3.5;
-                    return [x, 0.15, z] as [number, number, number];
-                  })()}
-                  playerAvatars={players.map((p, i) => {
-                    const pos = seatPositions[i] || SEAT_POSITIONS[i % SEAT_POSITIONS.length];
-                    const x = ((pos.x - 50) / 50) * 5.5;
-                    const z = ((pos.y - 50) / 50) * 3.5;
-                    return {
-                      position: [x, 0.15, z] as [number, number, number],
-                      avatarUrl: p.avatar,
-                      isActive: p.status === "thinking",
-                      glowColor: p.id === heroId ? "#00f0ff" : "#ffd700",
-                      cards: p.cards,
-                      isHero: p.id === heroId,
-                    };
-                  })}
-                  chipPositions={players
-                    .filter(p => p.currentBet > 0)
-                    .map((p) => {
-                      const pos = seatPositions[players.indexOf(p)] || SEAT_POSITIONS[0];
-                      const x = ((pos.x - 50) / 50) * 4;
-                      const z = ((pos.y - 50) / 50) * 2.5;
-                      return [x * 0.6, 0.2, z * 0.6] as [number, number, number];
-                    })}
-                  dealerPosition={(() => {
-                    const dealerIdx = players.findIndex(p => p.isDealer);
-                    if (dealerIdx < 0) return undefined;
-                    const pos = seatPositions[dealerIdx] || SEAT_POSITIONS[dealerIdx % SEAT_POSITIONS.length];
-                    const x = ((pos.x - 50) / 50) * 5.5;
-                    const z = ((pos.y - 50) / 50) * 3.5;
-                    return [x * 0.7, 0.15, z * 0.7] as [number, number, number];
-                  })()}
-                />
-              </div>
-
-              {/* HTML Overlay (player names/chips HUD + waiting overlay) */}
-              <motion.div
-                ref={tableRef}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="absolute inset-0 z-10 pointer-events-none"
-              >
-                {/* Waiting overlay */}
-                {isMultiplayer && waiting && players.length < 2 && (
-                  <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-auto">
-                    <div className="glass rounded-xl px-6 py-4 text-center border border-white/10">
-                      <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
-                      <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Central pot display */}
-                {gameState.pot > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center"
-                  >
-                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-0.5">POT</div>
-                    <div className="px-4 py-1.5 rounded-lg backdrop-blur-md bg-black/50 border border-amber-500/20"
-                      style={{ boxShadow: "0 0 20px rgba(255,215,0,0.1)" }}>
-                      <span className="text-lg font-mono font-bold text-amber-400">${gameState.pot.toLocaleString()}</span>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Community cards — HTML overlay for 3D mode */}
-                {gameState.communityCards && gameState.communityCards.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute left-1/2 top-[48%] -translate-x-1/2 -translate-y-1/2 z-20 flex gap-2"
-                  >
-                    {gameState.communityCards.map((card: any, i: number) => (
-                      <Card key={`cc-${i}`} card={card} size="md" delay={i * 0.12} />
-                    ))}
-                  </motion.div>
-                )}
-
-                {/* Dealer button — HTML overlay for 3D mode */}
-                {(() => {
-                  const dealerIdx = players.findIndex(p => p.isDealer);
-                  if (dealerIdx < 0) return null;
-                  const pos = seatPositions[dealerIdx] || SEAT_POSITIONS[dealerIdx % SEAT_POSITIONS.length];
-                  return (
-                    <div
-                      className="absolute z-20 w-7 h-7 rounded-full bg-white text-black flex items-center justify-center text-[10px] font-black shadow-lg border-2 border-amber-400"
-                      style={{ left: `${pos.x + 3}%`, top: `${pos.y - 5}%` }}
-                    >
-                      D
-                    </div>
-                  );
-                })()}
-
-                {/* Player seats (name, chips, timer HUD + face-down card backs for opponents) */}
-                {players.map((player, index) => (
-                  <Seat
-                    key={player.id}
-                    player={player}
-                    position={seatPositions[index] || SEAT_POSITIONS[index % SEAT_POSITIONS.length]}
-                    isHero={player.id === heroId}
-                    isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
-                    seatIndex={index}
-                  />
-                ))}
-              </motion.div>
-
-              {/* Hero hole cards - large display at bottom */}
-              {heroCards && gameState.phase !== "waiting" && (
-                <motion.div
-                  initial={{ y: 30, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5, type: "spring" }}
-                  className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 flex gap-2"
-                >
-                  {heroCards.map((card, i) => (
-                    <Card
-                      key={`hero-${i}`}
-                      card={{ ...card, hidden: false }}
-                      size="xl"
-                      isHero={true}
-                      delay={0.3 + i * 0.15}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </>
-          )}
         </div>
 
         <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
@@ -775,9 +633,9 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   if (!joined) {
     return (
-      <div className="min-h-screen bg-[#030508] text-white flex items-center justify-center relative overflow-hidden">
+      <div className="min-h-screen bg-[#0a1022] text-white flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,30,40,0.5)_0%,rgba(0,0,0,0.95)_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.4)_0%,rgba(10,16,34,0.9)_70%)]" />
           <AmbientParticles />
         </div>
 
@@ -928,8 +786,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 }
 
 // ─── Offline Game (Original) ──────────────────────────────────────────────────
-function OfflineGameTable({ initialPlayers }: { initialPlayers: Player[] }) {
-  const { players, gameState, handlePlayerAction, showdown } = useGameEngine(initialPlayers, HERO_ID);
+function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Player[]; engineConfig?: GameEngineConfig }) {
+  const { players, gameState, handlePlayerAction, showdown } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
   const [, navigate] = useLocation();
 
   return (
@@ -948,6 +806,7 @@ function OfflineGameTable({ initialPlayers }: { initialPlayers: Player[] }) {
 export default function Game({ tableId }: { tableId?: string }) {
   const [gameStarted, setGameStarted] = useState(false);
   const [initialPlayers, setInitialPlayers] = useState<Player[]>([]);
+  const [engineConfig, setEngineConfig] = useState<GameEngineConfig | undefined>(undefined);
 
   // Multiplayer mode
   if (tableId) {
@@ -955,20 +814,30 @@ export default function Game({ tableId }: { tableId?: string }) {
   }
 
   // Offline mode
-  const handleAvatarSelect = (avatar: AvatarOption, playerName: string) => {
+  const handleGameSetup = (avatar: AvatarOption, name: string, config: GameSetupConfig) => {
     soundEngine.init();
-    const players = buildPlayers(avatar, playerName);
+    const players = buildPlayersFromConfig(avatar, name, config);
     setInitialPlayers(players);
+    setEngineConfig({
+      smallBlind: config.smallBlind,
+      bigBlind: config.bigBlind,
+      ante: config.ante,
+    });
     setGameStarted(true);
   };
 
   if (!gameStarted) {
-    return <AvatarSelect onSelect={handleAvatarSelect} />;
+    return (
+      <GameSetup
+        mode="offline"
+        onStartOffline={handleGameSetup}
+      />
+    );
   }
 
   return (
     <SoundProvider>
-      <OfflineGameTable initialPlayers={initialPlayers} />
+      <OfflineGameTable initialPlayers={initialPlayers} engineConfig={engineConfig} />
     </SoundProvider>
   );
 }

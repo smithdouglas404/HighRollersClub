@@ -374,67 +374,89 @@ function GameTable({
         <div className="flex-1 relative flex items-center justify-center overflow-hidden">
           {tableMode === "image" ? (
             <>
-              {/* Image-based table (lightweight, no WebGL) */}
-              <ImageTable
-                communityCards={gameState.communityCards}
-                pot={gameState.pot}
-                playerCount={players.length}
-              />
+              {/* ── The full table (background + game overlay + seats) ── */}
+              {/*
+                Engineer spec: Responsive aspect-ratio container with
+                table-background (z:1) → game-overlay (z:10) → seats (z:20)
+                All coordinates are % of the container.
+              */}
+              <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                {/* Dark room bg */}
+                <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, #0a1a12 0%, #020508 70%)" }} />
 
-              {/* HTML Overlay for seats */}
-              <motion.div
-                ref={tableRef}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="absolute inset-0 z-10 pointer-events-none"
-              >
-                {/* Waiting overlay */}
-                {isMultiplayer && waiting && players.length < 2 && (
-                  <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-auto">
-                    <div className="glass rounded-xl px-6 py-4 text-center border border-white/10">
-                      <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
-                      <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Player seats */}
-                {players.map((player, index) => {
-                  const imgSeat = TABLE_SEATS[index] || TABLE_SEATS[index % TABLE_SEATS.length];
-                  return (
-                    <Seat
-                      key={player.id}
-                      player={player}
-                      position={{ x: imgSeat.x, y: imgSeat.y }}
-                      isHero={player.id === heroId}
-                      isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
-                      seatIndex={index}
-                    />
-                  );
-                })}
-              </motion.div>
-
-              {/* Hero hole cards */}
-              {heroCards && gameState.phase !== "waiting" && (
-                <motion.div
-                  initial={{ y: 30, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5, type: "spring" }}
-                  className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 flex gap-2"
+                {/* Aspect-ratio locked table container */}
+                <div
+                  ref={tableRef}
+                  className="relative w-full"
+                  style={{
+                    aspectRatio: "16 / 9",
+                    maxHeight: "90vh",
+                    maxWidth: "min(100%, 160vh)",
+                  }}
                 >
-                  {heroCards.map((card, i) => (
-                    <Card
-                      key={`hero-${i}`}
-                      card={{ ...card, hidden: false }}
-                      size="lg"
-                      isHero={true}
-                      delay={0.3 + i * 0.15}
-                    />
-                  ))}
-                </motion.div>
-              )}
+                  {/* ImageTable renders: background image + community cards + pot + dealer btn + empty seats */}
+                  <ImageTable
+                    communityCards={gameState.communityCards}
+                    pot={gameState.pot}
+                    playerCount={players.length}
+                    maxSeats={9}
+                    players={players}
+                    dealerSeatIndex={players.findIndex(p => p.isDealer)}
+                  />
+
+                  {/* Waiting overlay */}
+                  {isMultiplayer && waiting && players.length < 2 && (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 30 }}>
+                      <div className="glass rounded-xl px-6 py-4 text-center border border-white/10 pointer-events-auto">
+                        <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
+                        <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Player seats — positioned inside the same container as the table */}
+                  {players.map((player, index) => {
+                    const seat = TABLE_SEATS[index] || TABLE_SEATS[index % TABLE_SEATS.length];
+                    return (
+                      <Seat
+                        key={player.id}
+                        player={player}
+                        position={{ x: seat.x, y: seat.y }}
+                        isHero={player.id === heroId}
+                        isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
+                        seatIndex={index}
+                        perspectiveScale={seat.scale}
+                      />
+                    );
+                  })}
+
+                  {/* Hero hole cards — at bottom of table container */}
+                  {heroCards && gameState.phase !== "waiting" && (
+                    <motion.div
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.5, type: "spring" }}
+                      className="absolute left-1/2 flex gap-2"
+                      style={{
+                        bottom: "2%",
+                        transform: "translateX(-50%)",
+                        zIndex: 30,
+                      }}
+                    >
+                      {heroCards.map((card, i) => (
+                        <Card
+                          key={`hero-${i}`}
+                          card={{ ...card, hidden: false }}
+                          size="lg"
+                          isHero={true}
+                          delay={0.3 + i * 0.15}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+                </div>
+              </div>
             </>
           ) : (
             <>

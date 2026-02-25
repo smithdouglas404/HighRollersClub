@@ -141,15 +141,20 @@ const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: st
   "all-in":{ bg: "bg-amber-500/20",  text: "text-amber-400",  border: "border-amber-500/40" },
 };
 
+// DALL-E generated card back for face-down cards at seats
+import cardBackImage from "@assets/generated_images/card_back_cyberpunk.png";
+
 interface SeatProps {
   player: Player;
   position: { x: number; y: number };
   isHero?: boolean;
   isWinner?: boolean;
   seatIndex?: number;
+  /** Perspective scale: 1.0 = full size (near you), 0.5 = half size (far away) */
+  perspectiveScale?: number;
 }
 
-export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0 }: SeatProps) {
+export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1 }: SeatProps) {
   const winnerCanvasRef = useWinnerParticles(isWinner);
 
   const isTurn = player.status === "thinking";
@@ -250,10 +255,12 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   return (
     <div
       ref={seatRef}
-      className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none"
+      className="absolute flex flex-col items-center pointer-events-none"
       style={{
         left: `${position.x}%`,
         top: `${position.y}%`,
+        transform: `translate(-50%, -50%) scale(${perspectiveScale})`,
+        transformOrigin: "center center",
         zIndex: isHero ? 40 : position.y < 50 ? 10 : 30,
       }}
     >
@@ -488,7 +495,37 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         </AnimatePresence>
       </div>
 
-      {/* Cards and chips are now rendered in 3D scene -- not here */}
+      {/* Face-down hole cards for non-hero players (like a real poker table) */}
+      {!isHero && player.cards && player.cards.length > 0 && !isFolded && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 20 }}
+          className="flex -mt-1"
+          style={{ gap: "-4px" }}
+        >
+          {player.cards.map((_, i) => (
+            <div
+              key={`card-back-${i}`}
+              className="rounded-sm overflow-hidden shadow-md"
+              style={{
+                width: 24,
+                height: 34,
+                marginLeft: i > 0 ? -6 : 0,
+                transform: `rotate(${i === 0 ? -5 : 5}deg)`,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+              }}
+            >
+              <img
+                src={cardBackImage}
+                alt=""
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
+            </div>
+          ))}
+        </motion.div>
+      )}
     </div>
   );
 }

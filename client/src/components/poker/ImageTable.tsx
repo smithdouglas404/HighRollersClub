@@ -3,24 +3,38 @@ import { Card } from "./Card";
 import type { CardType } from "@/lib/poker-types";
 import type { Player } from "@/lib/poker-types";
 
-// DALL-E 3 generated assets
-import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.png";
-import feltTexture from "@assets/generated_images/poker_felt_top_down.png";
-import chipStack from "@assets/generated_images/chip_stack_gold_pile.png";
+// DALL-E generated assets
+import tableBackground from "@assets/generated_images/poker_table_topdown_clean.png";
+import chipStackImg from "@assets/generated_images/chip_stack_gold_pile.png";
+import dealerBtnImg from "@assets/generated_images/dealer_button.png";
 
-// ─── 9-max seat positions around an oval table (top-down view) ──────────────
-// x/y are percentages of the TABLE container (not the screen).
-// Seats go clockwise from bottom-center (hero).
+// ─── Seat Coordinate Map (percentage-based, 10% rail padding) ───────────────
+// All coordinates are % of the table container.
+// "Padded Rail" rule: no seat closer than 10% from any edge.
+// `scale`: perspective depth (1.0 = near you, 0.6 = across table).
 const TABLE_SEATS = [
-  { x: 50, y: 92 },   // 0: Hero (bottom center)
-  { x: 15, y: 78 },   // 1: bottom-left
-  { x: 4,  y: 50 },   // 2: left
-  { x: 15, y: 22 },   // 3: top-left
-  { x: 38, y: 8  },   // 4: top-left-center
-  { x: 62, y: 8  },   // 5: top-right-center
-  { x: 85, y: 22 },   // 6: top-right
-  { x: 96, y: 50 },   // 7: right
-  { x: 85, y: 78 },   // 8: bottom-right
+  { x: 50, y: 88, scale: 1.0  },  // Seat 0: YOU (bottom center)
+  { x: 15, y: 75, scale: 0.88 },  // Seat 1: Bottom-left
+  { x: 10, y: 50, scale: 0.78 },  // Seat 2: Mid-left
+  { x: 15, y: 25, scale: 0.68 },  // Seat 3: Top-left
+  { x: 35, y: 12, scale: 0.60 },  // Seat 4: Top-left-center
+  { x: 65, y: 12, scale: 0.60 },  // Seat 5: Top-right-center
+  { x: 85, y: 25, scale: 0.68 },  // Seat 6: Top-right
+  { x: 90, y: 50, scale: 0.78 },  // Seat 7: Mid-right
+  { x: 85, y: 75, scale: 0.88 },  // Seat 8: Bottom-right
+];
+
+// Dealer button — offset toward center from each seat
+const DEALER_POSITIONS = [
+  { x: 50, y: 78 },
+  { x: 24, y: 68 },
+  { x: 18, y: 50 },
+  { x: 24, y: 32 },
+  { x: 40, y: 22 },
+  { x: 60, y: 22 },
+  { x: 76, y: 32 },
+  { x: 82, y: 50 },
+  { x: 76, y: 68 },
 ];
 
 interface ImageTableProps {
@@ -29,189 +43,158 @@ interface ImageTableProps {
   playerCount: number;
   maxSeats?: number;
   players?: Player[];
+  dealerSeatIndex?: number;
 }
 
-export function ImageTable({ communityCards, pot, playerCount, maxSeats = 9, players }: ImageTableProps) {
-  // Determine which seats are occupied
+export function ImageTable({
+  communityCards,
+  pot,
+  playerCount,
+  maxSeats = 9,
+  players,
+  dealerSeatIndex = -1,
+}: ImageTableProps) {
   const occupiedCount = players?.length || playerCount;
+  const dealerPos = dealerSeatIndex >= 0 && dealerSeatIndex < DEALER_POSITIONS.length
+    ? DEALER_POSITIONS[dealerSeatIndex]
+    : null;
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      {/* Layer 1: Casino room environment (DALL-E generated) */}
+    <>
+      {/* ── Layer 1: table-background (z-index: 1) ── */}
       <img
-        src={casinoBg}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover"
+        src={tableBackground}
+        alt="Poker Table"
+        className="absolute inset-0 w-full h-full object-cover rounded-2xl"
         draggable={false}
         style={{
-          filter: "brightness(0.35) saturate(1.3)",
+          zIndex: 1,
+          filter: "brightness(0.9) contrast(1.08) saturate(1.1)",
         }}
       />
 
-      {/* Ambient neon glow from casino */}
+      {/* Vignette */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 rounded-2xl pointer-events-none"
         style={{
-          background:
-            "radial-gradient(ellipse at 30% 70%, rgba(0,240,255,0.04) 0%, transparent 50%), " +
-            "radial-gradient(ellipse at 70% 70%, rgba(180,77,255,0.04) 0%, transparent 50%), " +
-            "radial-gradient(ellipse at 50% 40%, rgba(255,215,0,0.02) 0%, transparent 40%)",
+          zIndex: 2,
+          background: "radial-gradient(ellipse at 50% 48%, transparent 28%, rgba(2,5,8,0.5) 65%, rgba(2,5,8,0.88) 100%)",
         }}
       />
 
-      {/* Layer 2: The poker table — oval felt surface with gold rail */}
-      <div
-        className="absolute"
-        style={{
-          left: "10%",
-          top: "12%",
-          width: "80%",
-          height: "76%",
-        }}
-      >
-        {/* Outer gold rail ring */}
-        <div
-          className="absolute inset-0 rounded-[50%]"
-          style={{
-            background: "linear-gradient(145deg, #c9a84c 0%, #8b6914 30%, #c9a84c 50%, #6b5210 70%, #c9a84c 100%)",
-            padding: "6px",
-            boxShadow:
-              "0 0 40px rgba(201,168,76,0.25), " +
-              "0 0 80px rgba(201,168,76,0.1), " +
-              "inset 0 2px 4px rgba(255,255,255,0.15), " +
-              "0 8px 32px rgba(0,0,0,0.5)",
-          }}
-        >
-          {/* Inner dark rail border */}
-          <div
-            className="w-full h-full rounded-[50%] relative overflow-hidden"
-            style={{
-              background: "linear-gradient(180deg, #1a2a1a 0%, #0d1a0d 50%, #0a140a 100%)",
-              padding: "4px",
-              boxShadow: "inset 0 2px 8px rgba(0,0,0,0.6)",
-            }}
-          >
-            {/* Felt surface using DALL-E texture */}
-            <div className="w-full h-full rounded-[50%] relative overflow-hidden">
-              <img
-                src={feltTexture}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover rounded-[50%]"
-                draggable={false}
-                style={{
-                  filter: "brightness(0.75) contrast(1.1) saturate(1.2)",
-                }}
-              />
+      {/* ── Layer 2: game-overlay (z-index: 10) ── */}
+      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
 
-              {/* Spotlight on center of felt */}
-              <div
-                className="absolute inset-0 rounded-[50%] pointer-events-none"
-                style={{
-                  background: "radial-gradient(ellipse at 50% 45%, rgba(255,255,255,0.06) 0%, transparent 50%)",
-                }}
-              />
-
-              {/* Inner felt border line (subtle gold trim) */}
-              <div
-                className="absolute rounded-[50%] pointer-events-none"
-                style={{
-                  inset: "8%",
-                  border: "1px solid rgba(201,168,76,0.15)",
-                  boxShadow: "0 0 6px rgba(201,168,76,0.05)",
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Empty seat indicators for unoccupied positions */}
+        {/* Empty seat indicators */}
         {Array.from({ length: maxSeats }).map((_, i) => {
-          const isOccupied = i < occupiedCount;
-          if (isOccupied) return null; // Occupied seats handled by Game.tsx Seat overlay
+          if (i < occupiedCount) return null;
           const seat = TABLE_SEATS[i];
           if (!seat) return null;
           return (
             <div
               key={`empty-${i}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ left: `${seat.x}%`, top: `${seat.y}%` }}
+              className="absolute"
+              style={{
+                left: `${seat.x}%`,
+                top: `${seat.y}%`,
+                transform: `translate(-50%, -50%) scale(${seat.scale})`,
+              }}
             >
               <div
-                className="w-10 h-10 rounded-full border border-dashed flex items-center justify-center"
-                style={{
-                  borderColor: "rgba(255,255,255,0.1)",
-                  background: "rgba(0,0,0,0.3)",
-                }}
+                className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center"
+                style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.2)" }}
               >
-                <span className="text-[9px] text-gray-600 font-bold">{i + 1}</span>
+                <span className="text-[9px] text-white/10 font-mono font-bold">{i + 1}</span>
               </div>
             </div>
           );
         })}
 
-        {/* Community cards — dead center of the table */}
-        {communityCards.length > 0 && (
-          <div className="absolute left-1/2 top-[45%] -translate-x-1/2 -translate-y-1/2 z-10 flex gap-1.5">
-            {communityCards.map((card, i) => (
-              <Card
-                key={`cc-${i}-${card.suit}-${card.rank}`}
-                card={card}
-                size="md"
-                delay={i * 0.12}
-              />
-            ))}
-          </div>
-        )}
+        {/* ── Community cards — center of the table (50%, 50%) ── */}
+        <AnimatePresence>
+          {communityCards.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute flex gap-1.5"
+              style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
+            >
+              {communityCards.map((card, i) => (
+                <Card
+                  key={`cc-${i}-${card.suit}-${card.rank}`}
+                  card={card}
+                  size="md"
+                  delay={i * 0.15}
+                  dealFrom={{ x: 180, y: -80 }}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* POT display — above community cards, center of table */}
+        {/* ── Pot display — above the community cards ── */}
         <AnimatePresence>
           {pot > 0 && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute left-1/2 top-[28%] -translate-x-1/2 -translate-y-1/2 z-20 flex items-center gap-2"
+              exit={{ opacity: 0, scale: 0.85 }}
+              className="absolute flex items-center gap-2"
+              style={{ left: "50%", top: "38%", transform: "translate(-50%, -50%)" }}
             >
-              {/* Chip stack image */}
               <img
-                src={chipStack}
-                alt=""
-                className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,215,0,0.3)]"
-                style={{ filter: "brightness(1.1)" }}
+                src={chipStackImg}
+                alt="Pot"
+                className="w-9 h-9 object-contain"
                 draggable={false}
+                style={{ filter: "brightness(1.1) drop-shadow(0 0 6px rgba(255,215,0,0.3))" }}
               />
               <div
-                className="px-4 py-1.5 rounded-lg backdrop-blur-sm border border-amber-500/25"
-                style={{
-                  background: "rgba(0,0,0,0.55)",
-                  boxShadow: "0 0 20px rgba(255,215,0,0.15)",
-                }}
+                className="px-3 py-1 rounded-lg border border-amber-500/25"
+                style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", boxShadow: "0 0 16px rgba(255,215,0,0.1)" }}
               >
-                <span className="text-lg font-mono font-bold text-amber-400">
+                <span className="text-base font-mono font-bold text-amber-400">
                   ${pot.toLocaleString()}
                 </span>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ── Dealer button — spring-animates between seats ── */}
+        <AnimatePresence>
+          {dealerPos && (
+            <motion.div
+              key="dealer-btn"
+              initial={false}
+              animate={{ left: `${dealerPos.x}%`, top: `${dealerPos.y}%`, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 25 }}
+              className="absolute"
+              style={{ transform: "translate(-50%, -50%)", zIndex: 15 }}
+            >
+              <img
+                src={dealerBtnImg}
+                alt="D"
+                className="w-7 h-7 object-contain"
+                draggable={false}
+                style={{ filter: "brightness(1.2) drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Top edge fade for the HUD bar */}
+      {/* Top fade */}
       <div
-        className="absolute inset-x-0 top-0 h-14 pointer-events-none z-30"
-        style={{
-          background: "linear-gradient(to bottom, rgba(2,5,8,0.85) 0%, transparent 100%)",
-        }}
+        className="absolute inset-x-0 top-0 h-12 rounded-t-2xl pointer-events-none"
+        style={{ zIndex: 20, background: "linear-gradient(to bottom, rgba(2,5,8,0.7) 0%, transparent 100%)" }}
       />
-
-      {/* Bottom edge fade for controls */}
+      {/* Bottom fade */}
       <div
-        className="absolute inset-x-0 bottom-0 h-28 pointer-events-none z-30"
-        style={{
-          background: "linear-gradient(to top, rgba(2,5,8,0.9) 0%, rgba(2,5,8,0.5) 50%, transparent 100%)",
-        }}
+        className="absolute inset-x-0 bottom-0 h-20 rounded-b-2xl pointer-events-none"
+        style={{ zIndex: 20, background: "linear-gradient(to top, rgba(2,5,8,0.8) 0%, rgba(2,5,8,0.3) 60%, transparent 100%)" }}
       />
-    </div>
+    </>
   );
 }
 

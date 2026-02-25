@@ -141,7 +141,13 @@ function GameTable({
   });
   const [enableOrbit, setEnableOrbit] = useState(false);
   const [tableMode, setTableMode] = useState<"image" | "3d">(() => {
-    return (localStorage.getItem("poker-table-mode") as "image" | "3d") || "image";
+    // Force clear stale "image" from localStorage — 3D is the proper mode
+    const saved = localStorage.getItem("poker-table-mode");
+    if (saved === "image") {
+      localStorage.removeItem("poker-table-mode");
+      return "3d";
+    }
+    return (saved as "image" | "3d") || "3d";
   });
   const sound = useSoundEngine();
   const tableRef = useRef<HTMLDivElement>(null);
@@ -172,10 +178,11 @@ function GameTable({
     return heroCards.map(c => ({ ...c, hidden: false })) as [typeof heroCards[0], typeof heroCards[1]];
   }, [heroCards]);
 
-  useEffect(() => {
-    sound.startAmbient();
-    return () => sound.stopAmbient();
-  }, [sound]);
+  // Ambient drone disabled — too distracting
+  // useEffect(() => {
+  //   sound.startAmbient();
+  //   return () => sound.stopAmbient();
+  // }, [sound]);
 
   useEffect(() => {
     if (isHeroTurn && !prevHeroTurn.current) {
@@ -431,17 +438,18 @@ function GameTable({
                     );
                   })}
 
-                  {/* Hero hole cards — at bottom of table container */}
+                  {/* Hero hole cards — displayed ABOVE hero seat, z-index above everything */}
                   {heroCards && gameState.phase !== "waiting" && (
                     <motion.div
-                      initial={{ y: 20, opacity: 0 }}
+                      initial={{ y: 30, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.5, type: "spring" }}
-                      className="absolute left-1/2 flex gap-2"
+                      transition={{ delay: 0.5, type: "spring", stiffness: 200, damping: 22 }}
+                      className="absolute left-1/2 flex gap-3"
                       style={{
-                        bottom: "2%",
+                        bottom: "1%",
                         transform: "translateX(-50%)",
-                        zIndex: 30,
+                        zIndex: 50,
+                        filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.5))",
                       }}
                     >
                       {heroCards.map((card, i) => (
@@ -532,7 +540,7 @@ function GameTable({
                   </motion.div>
                 )}
 
-                {/* Player seats (name, chips, timer HUD only — cards rendered in 3D) */}
+                {/* Player seats (name, chips, timer HUD only — cards rendered in 3D scene) */}
                 {players.map((player, index) => (
                   <Seat
                     key={player.id}
@@ -541,6 +549,7 @@ function GameTable({
                     isHero={player.id === heroId}
                     isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
                     seatIndex={index}
+                    hideCards={true}
                   />
                 ))}
               </motion.div>

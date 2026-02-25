@@ -126,6 +126,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
   const notifIdRef = useRef(0);
 
   const joinedRef = useRef(false);
+  const lastBuyInRef = useRef<number>(0);
   const localSeedRef = useRef<string | null>(null);
   const actionNumberRef = useRef<number>(0);
 
@@ -139,6 +140,11 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       wsClient.on("_connected", () => {
         setConnected(true);
         setError(null);
+        // Auto-rejoin table after reconnect (e.g. server restart clears client.tableId)
+        if (joinedRef.current && lastBuyInRef.current > 0) {
+          console.log("[ws] reconnected — auto-rejoining table", tableId);
+          wsClient.send({ type: "join_table", tableId, buyIn: lastBuyInRef.current });
+        }
       })
     );
 
@@ -352,6 +358,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     (buyIn: number, seatIndex?: number) => {
       if (joinedRef.current) return;
       joinedRef.current = true;
+      lastBuyInRef.current = buyIn;
       wsClient.send({
         type: "join_table",
         tableId,

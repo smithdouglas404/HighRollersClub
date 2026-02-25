@@ -152,9 +152,11 @@ interface SeatProps {
   seatIndex?: number;
   /** Perspective scale: 1.0 = full size (near you), 0.5 = half size (far away) */
   perspectiveScale?: number;
+  /** Hide face-down cards (used in 3D mode where cards are rendered in the 3D scene) */
+  hideCards?: boolean;
 }
 
-export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1 }: SeatProps) {
+export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false }: SeatProps) {
   const winnerCanvasRef = useWinnerParticles(isWinner);
 
   const isTurn = player.status === "thinking";
@@ -495,25 +497,25 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         </AnimatePresence>
       </div>
 
-      {/* Face-down hole cards for non-hero players (like a real poker table) */}
-      {!isHero && player.cards && player.cards.length > 0 && !isFolded && (
+      {/* Face-down hole cards for non-hero players — hidden in 3D mode */}
+      {!hideCards && !isHero && player.cards && player.cards.length > 0 && !isFolded && (
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 20 }}
           className="flex -mt-1"
-          style={{ gap: "-4px" }}
         >
           {player.cards.map((_, i) => (
             <div
               key={`card-back-${i}`}
-              className="rounded-sm overflow-hidden shadow-md"
+              className="rounded-md overflow-hidden"
               style={{
-                width: 24,
-                height: 34,
-                marginLeft: i > 0 ? -6 : 0,
-                transform: `rotate(${i === 0 ? -5 : 5}deg)`,
-                boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+                width: 34,
+                height: 48,
+                marginLeft: i > 0 ? -10 : 0,
+                transform: `rotate(${i === 0 ? -8 : 8}deg)`,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(201,168,76,0.3)",
+                border: "1px solid rgba(201,168,76,0.4)",
               }}
             >
               <img

@@ -155,6 +155,7 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
   });
 
   wss.on("connection", (ws: WebSocket, _req: IncomingMessage, user: Express.User) => {
+    console.log(`[ws] client connected: ${user.displayName || user.username} (${user.id})`);
     const client: WsClient = {
       ws,
       userId: user.id,
@@ -187,6 +188,7 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
           return;
         }
         const msg = JSON.parse(data.toString()) as ClientMessage;
+        console.log(`[ws] ${client.displayName}: ${msg.type}${client.tableId ? ` (table: ${client.tableId.slice(0,8)})` : " (no table)"}`);
         await handleMessage(client, msg);
       } catch (err: any) {
         sendToUser(user.id, { type: "error", message: err.message || "Invalid message" });
@@ -330,7 +332,10 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
     }
 
     case "add_bots": {
-      if (!client.tableId) return;
+      if (!client.tableId) {
+        sendToUser(client.userId, { type: "error", message: "Not seated at a table — please rejoin" });
+        return;
+      }
       await tableManager.addBots(client.tableId);
       sendGameStateToTable(client.tableId);
       break;

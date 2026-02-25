@@ -86,6 +86,8 @@ class WsClient {
   send(msg: any) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));
+    } else {
+      console.warn("[ws] message dropped (not connected):", msg.type);
     }
   }
 

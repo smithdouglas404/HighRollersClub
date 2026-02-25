@@ -5,7 +5,6 @@ import { EffectComposer, Bloom, Vignette, N8AO } from "@react-three/postprocessi
 import * as THREE from "three";
 import type { CardType, Suit, Rank } from "@/lib/poker-types";
 
-import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 import cardBackImg from "@assets/generated_images/card_back_premium.png";
 
@@ -331,9 +330,6 @@ function PlayerHoleCards3D({
 
 // ─── Felt Surface ───────────────────────────────────────────────────────────
 function FeltSurface() {
-  const texture = useTexture(feltTexture);
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-
   const feltGeometry = useMemo(() => {
     const shape = new THREE.Shape();
     const rx = 5.5;
@@ -353,7 +349,7 @@ function FeltSurface() {
 
   return (
     <mesh geometry={feltGeometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-      <meshStandardMaterial map={texture} color="#1a3a3a" roughness={0.65} metalness={0.12} />
+      <meshStandardMaterial color="#2eaa5e" roughness={0.9} metalness={0.0} emissive="#0a3018" emissiveIntensity={0.4} />
     </mesh>
   );
 }
@@ -390,7 +386,7 @@ function TableRail() {
 
   return (
     <mesh geometry={railGeometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} castShadow receiveShadow>
-      <meshStandardMaterial color="#1a0f08" roughness={0.2} metalness={0.75} />
+      <meshStandardMaterial color="#a0522d" roughness={0.3} metalness={0.45} emissive="#3d1a08" emissiveIntensity={0.3} />
     </mesh>
   );
 }
@@ -407,11 +403,11 @@ function GoldTrim() {
   return (
     <mesh geometry={geometry} position={[0, 0, 0]}>
       <meshStandardMaterial
-        color="#c9a84c"
-        roughness={0.15}
+        color="#d4b050"
+        roughness={0.12}
         metalness={0.95}
-        emissive="#c9a84c"
-        emissiveIntensity={0.7}
+        emissive="#d4b050"
+        emissiveIntensity={1.2}
       />
     </mesh>
   );
@@ -427,9 +423,9 @@ function CenterLogo() {
       <meshStandardMaterial
         map={texture}
         transparent
-        opacity={0.12}
-        roughness={1}
-        metalness={0}
+        opacity={0.25}
+        roughness={0.9}
+        metalness={0.1}
         depthWrite={false}
       />
     </mesh>
@@ -649,28 +645,31 @@ function Lighting({ quality }: { quality: QualityLevel }) {
 
   return (
     <>
-      {/* Key light — dramatic angle from upper-left */}
+      {/* Key light — bright overhead casino pendant lamp */}
       <spotLight
-        position={[-3, 7, 4]}
-        angle={0.4}
-        penumbra={0.8}
-        intensity={2.8}
-        color="#fff5e6"
+        position={[0, 12, 0]}
+        angle={0.6}
+        penumbra={0.5}
+        intensity={8}
+        color="#fff8ee"
         castShadow={cfg.shadows}
         shadow-mapSize-width={cfg.shadowMapSize}
         shadow-mapSize-height={cfg.shadowMapSize}
         shadow-bias={-0.001}
       />
-      {/* Rim lights — punched up */}
-      <pointLight position={[-8, 3, 0]} intensity={0.7} color="#00f0ff" />
-      <pointLight position={[8, 3, 0]} intensity={0.7} color="#c9a84c" />
-      <pointLight position={[0, 3, -5]} intensity={0.4} color="#00ff9d" />
-      {/* Warm fill from lower-right */}
-      <pointLight position={[4, 2, -3]} intensity={0.2} color="#ffd4a0" />
-      {/* Subtle fill from below */}
-      <pointLight position={[0, -2, 4]} intensity={0.1} color="#0a2030" />
-      {/* Ambient fill — very low for contrast */}
-      <ambientLight intensity={0.06} color="#0a1520" />
+      {/* Secondary fills from different angles */}
+      <spotLight position={[-5, 8, 5]} angle={0.5} penumbra={0.8} intensity={3} color="#fff5e6" castShadow={false} />
+      <spotLight position={[5, 8, 5]} angle={0.5} penumbra={0.8} intensity={3} color="#fff5e6" castShadow={false} />
+      {/* Rim lights — neon accent glow */}
+      <pointLight position={[-8, 4, 0]} intensity={1.5} color="#00f0ff" />
+      <pointLight position={[8, 4, 0]} intensity={1.5} color="#c9a84c" />
+      <pointLight position={[0, 4, -6]} intensity={1.0} color="#00ff9d" />
+      {/* Warm fill from viewer direction */}
+      <pointLight position={[0, 5, 8]} intensity={3} color="#fff0dd" />
+      {/* Under-table ambient bounce */}
+      <pointLight position={[0, -1, 0]} intensity={0.5} color="#1a4030" />
+      {/* Ambient — bright enough to see all details */}
+      <ambientLight intensity={0.5} color="#2a3a4a" />
     </>
   );
 }
@@ -744,7 +743,7 @@ function PostProcessing({ quality }: { quality: QualityLevel }) {
         mipmapBlur
       />
       {cfg.ao ? <N8AO aoRadius={2.0} intensity={2.5} distanceFalloff={0.5} /> : <></>}
-      <Vignette eskil={false} offset={0.15} darkness={quality === "high" ? 0.8 : 0.5} />
+      <Vignette eskil={false} offset={0.25} darkness={quality === "high" ? 0.5 : 0.3} />
     </EffectComposer>
   );
 }
@@ -870,7 +869,7 @@ export function Table3D({
         camera={{ position: [8, 15, 18], fov: 45, near: 0.1, far: 100 }}
         gl={{ antialias: cfg.antialias, alpha: true, powerPreference: "high-performance" }}
         dpr={cfg.dpr}
-        style={{ background: "transparent" }}
+        style={{ background: "radial-gradient(ellipse at 50% 50%, #0a1f12 0%, #030a06 60%, #010204 100%)" }}
       >
         <Suspense fallback={null}>
           <Scene

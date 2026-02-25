@@ -61,7 +61,7 @@ export function ImageTable({
 
   return (
     <>
-      {/* ── Layer 1: table-background (z-index: 1) ── */}
+      {/* ── Layer 1: DALL-E premium table image (NEVER replace with CSS) ── */}
       <img
         src={tableBackground}
         alt="Poker Table"
@@ -69,16 +69,34 @@ export function ImageTable({
         draggable={false}
         style={{
           zIndex: 1,
-          filter: "brightness(0.9) contrast(1.08) saturate(1.1)",
+          filter: "brightness(0.95) contrast(1.1) saturate(1.15)",
         }}
       />
 
-      {/* Vignette */}
+      {/* Warm spotlight on felt center — subtle overhead lamp effect */}
       <div
         className="absolute inset-0 rounded-2xl pointer-events-none"
         style={{
           zIndex: 2,
-          background: "radial-gradient(ellipse at 50% 48%, transparent 28%, rgba(2,5,8,0.5) 65%, rgba(2,5,8,0.88) 100%)",
+          background: "radial-gradient(ellipse 45% 40% at 50% 46%, rgba(255,248,220,0.06) 0%, transparent 100%)",
+        }}
+      />
+
+      {/* Gold rim highlight — traces the table rail edge */}
+      <div
+        className="absolute inset-0 rounded-2xl pointer-events-none"
+        style={{
+          zIndex: 2,
+          background: "radial-gradient(ellipse 52% 48% at 50% 46%, transparent 70%, rgba(201,168,76,0.08) 85%, transparent 100%)",
+        }}
+      />
+
+      {/* Cinematic vignette — dark edges, clear center */}
+      <div
+        className="absolute inset-0 rounded-2xl pointer-events-none"
+        style={{
+          zIndex: 3,
+          background: "radial-gradient(ellipse 65% 60% at 50% 46%, transparent 25%, rgba(2,5,8,0.35) 55%, rgba(2,5,8,0.75) 80%, rgba(2,5,8,0.92) 100%)",
         }}
       />
 
@@ -110,50 +128,59 @@ export function ImageTable({
           );
         })}
 
-        {/* ── Community cards — center of the table (50%, 50%) ── */}
+        {/* ── Community cards — prominent center of felt (50%, 48%) ── */}
         <AnimatePresence>
           {communityCards.length > 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="absolute flex gap-1.5"
-              style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
+              className="absolute flex gap-2.5"
+              style={{
+                left: "50%",
+                top: "48%",
+                transform: "translate(-50%, -50%)",
+                filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))",
+              }}
             >
               {communityCards.map((card, i) => (
                 <Card
                   key={`cc-${i}-${card.suit}-${card.rank}`}
                   card={card}
-                  size="md"
+                  size="lg"
                   delay={i * 0.15}
-                  dealFrom={{ x: 180, y: -80 }}
+                  dealFrom={{ x: 200, y: -100 }}
                 />
               ))}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── Pot display — above the community cards ── */}
+        {/* ── Pot display — chip stack + gold amount above community cards ── */}
         <AnimatePresence>
           {pot > 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
-              className="absolute flex items-center gap-2"
-              style={{ left: "50%", top: "38%", transform: "translate(-50%, -50%)" }}
+              className="absolute flex flex-col items-center gap-0.5"
+              style={{ left: "50%", top: "36%", transform: "translate(-50%, -50%)" }}
             >
               <img
                 src={chipStackImg}
                 alt="Pot"
-                className="w-9 h-9 object-contain"
+                className="w-14 h-14 object-contain"
                 draggable={false}
-                style={{ filter: "brightness(1.1) drop-shadow(0 0 6px rgba(255,215,0,0.3))" }}
+                style={{ filter: "brightness(1.2) drop-shadow(0 2px 10px rgba(255,215,0,0.4)) drop-shadow(0 4px 16px rgba(0,0,0,0.5))" }}
               />
               <div
-                className="px-3 py-1 rounded-lg border border-amber-500/25"
-                style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", boxShadow: "0 0 16px rgba(255,215,0,0.1)" }}
+                className="px-4 py-1 rounded-lg border border-amber-500/30"
+                style={{
+                  background: "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.75) 100%)",
+                  backdropFilter: "blur(6px)",
+                  boxShadow: "0 0 20px rgba(255,215,0,0.12), 0 2px 8px rgba(0,0,0,0.4)",
+                }}
               >
-                <span className="text-base font-mono font-bold text-amber-400">
+                <span className="text-lg font-mono font-bold text-amber-400" style={{ textShadow: "0 0 8px rgba(255,215,0,0.3)" }}>
                   ${pot.toLocaleString()}
                 </span>
               </div>
@@ -174,10 +201,10 @@ export function ImageTable({
             >
               <img
                 src={dealerBtnImg}
-                alt="D"
-                className="w-7 h-7 object-contain"
+                alt="Dealer"
+                className="w-12 h-12 object-contain"
                 draggable={false}
-                style={{ filter: "brightness(1.2) drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }}
+                style={{ filter: "brightness(1.4) drop-shadow(0 3px 10px rgba(0,0,0,0.7)) drop-shadow(0 0 16px rgba(255,255,255,0.25))" }}
               />
             </motion.div>
           )}

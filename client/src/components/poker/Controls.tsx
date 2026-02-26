@@ -15,16 +15,55 @@ interface ControlsProps {
   currentTurnSeat?: number;
   /** Whether it's currently the hero's turn */
   isHeroTurn?: boolean;
+  /** Buy extra time callback */
+  onBuyTime?: () => void;
+  /** Big blind amount for buy-time cost display */
+  bigBlind?: number;
+  /** Hero time remaining percentage (0-100) */
+  heroTimeLeft?: number;
+  /** Hero's status (folded, all-in, etc.) */
+  heroStatus?: string;
 }
 
-export function PokerControls({ onAction, minBet, maxBet, pot = 0, phase, currentTurnSeat, isHeroTurn }: ControlsProps) {
+export function PokerControls({ onAction, minBet, maxBet, pot = 0, phase, currentTurnSeat, isHeroTurn, onBuyTime, bigBlind, heroTimeLeft, heroStatus }: ControlsProps) {
   const [betAmount, setBetAmount] = useState(minBet);
+  // Sync betAmount when minBet increases (e.g. opponent raises)
+  useEffect(() => {
+    setBetAmount(prev => prev < minBet ? minBet : prev);
+  }, [minBet]);
   const [isPending, setIsPending] = useState(false);
   const [foldConfirm, setFoldConfirm] = useState(false);
+  const [autoFold, setAutoFold] = useState(false);
+  const [autoCheckFold, setAutoCheckFold] = useState(false);
   const foldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sound = useSoundEngine();
   let compactMode = false;
   try { compactMode = useGameUI().compactMode; } catch {}
+
+  // Auto-fold: when hero's turn arrives and autoFold is checked, auto-fold immediately
+  const autoFoldTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (!isHeroTurn || isPending) return;
+    if (autoFold) {
+      autoFoldTriggeredRef.current = true;
+      setAutoFold(false);
+      setIsPending(true);
+      sound.playFold();
+      onAction("fold");
+    } else if (autoCheckFold) {
+      autoFoldTriggeredRef.current = true;
+      setAutoCheckFold(false);
+      if (minBet === 0) {
+        setIsPending(true);
+        sound.playCheck();
+        onAction("check");
+      } else {
+        setIsPending(true);
+        sound.playFold();
+        onAction("fold");
+      }
+    }
+  }, [isHeroTurn, autoFold, autoCheckFold, minBet, isPending, sound, onAction]);
 
   // Reset pending state when game state advances (server confirmed the action)
   useEffect(() => {
@@ -263,6 +302,29 @@ export function PokerControls({ onAction, minBet, maxBet, pot = 0, phase, curren
                 <kbd className="text-[9px] font-mono opacity-50 bg-white/10 px-1 rounded">{isAllIn ? "A" : "R"}</kbd>
               </span>
             </motion.button>
+            {/* BUY TIME button — visible when hero turn & time is low */}
+            {onBuyTime && isHeroTurn && heroTimeLeft !== undefined && heroTimeLeft < 30 && (
+              <motion.button
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={onBuyTime}
+                className={`
+                  relative overflow-hidden rounded-xl min-w-[80px] ${compactMode ? 'py-2 px-3' : 'py-3.5 px-4'}
+                  font-bold text-[11px] uppercase tracking-wider transition-all
+                  bg-amber-600/80 text-white border border-amber-500/40
+                  hover:bg-amber-600/90
+                `}
+                style={{
+                  boxShadow: "0 0 15px rgba(245,158,11,0.3), 0 0 6px rgba(245,158,11,0.15)",
+                  animation: "neonPulse 1.5s ease-in-out infinite",
+                }}
+              >
+                <span className="flex items-center justify-center gap-1">
+                  +10s
+                  {bigBlind && <span className="font-mono text-[9px] opacity-70">(${bigBlind})</span>}
+                </span>
+              </motion.button>
+            )}
           </div>
 
           {/* ─── Bet Slider Row (compact, below buttons) ─────── */}
@@ -295,7 +357,6 @@ export function PokerControls({ onAction, minBet, maxBet, pot = 0, phase, curren
             {/* Slider */}
             <div className="flex-1 px-2">
               <Slider
-                defaultValue={[minBet]}
                 value={[betAmount]}
                 max={maxBet}
                 min={minBet}
@@ -310,6 +371,34 @@ export function PokerControls({ onAction, minBet, maxBet, pot = 0, phase, curren
               <span className="text-sm font-mono font-bold text-cyan-300">${betAmount}</span>
             </div>
           </div>
+
+          {/* ─── Pre-action toggles (visible when not hero's turn) ── */}
+          {!isHeroTurn && heroStatus !== "folded" && heroStatus !== "all-in" && (
+            <div className="flex items-center gap-4 justify-center pt-1">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none group">
+                <input
+                  type="checkbox"
+                  checked={autoFold}
+                  onChange={(e) => { setAutoFold(e.target.checked); if (e.target.checked) setAutoCheckFold(false); }}
+                  className="w-3.5 h-3.5 rounded border-gray-600 bg-white/5 accent-red-500"
+                />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 group-hover:text-gray-300 transition-colors">
+                  Auto-Fold
+                </span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer select-none group">
+                <input
+                  type="checkbox"
+                  checked={autoCheckFold}
+                  onChange={(e) => { setAutoCheckFold(e.target.checked); if (e.target.checked) setAutoFold(false); }}
+                  className="w-3.5 h-3.5 rounded border-gray-600 bg-white/5 accent-emerald-500"
+                />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 group-hover:text-gray-300 transition-colors">
+                  Check/Fold
+                </span>
+              </label>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

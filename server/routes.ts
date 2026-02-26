@@ -2,11 +2,13 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { registerAuthRoutes, requireAuth } from "./auth";
-import { insertTableSchema, insertClubSchema } from "@shared/schema";
+import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema } from "@shared/schema";
 import { setupWebSocket, sendGameStateToTable, getClients } from "./websocket";
 import { getBlindPreset } from "./game/blind-presets";
 import { tableManager } from "./game/table-manager";
 import { analyzeHand } from "./game/hand-analyzer";
+import { geofenceMiddleware } from "./middleware/geofence";
+import { setAnthropicApiKey, getAnthropicApiKey, hasAIEnabled } from "./game/ai-bot-engine";
 
 export async function registerRoutes(app: Express, sessionMiddleware: RequestHandler): Promise<Server> {
   // Auth routes
@@ -58,14 +60,15 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const table = await storage.getTable(req.params.id);
       if (!table) return res.status(404).json({ message: "Table not found" });
       const players = await storage.getTablePlayers(table.id);
-      res.json({ ...table, password: undefined, players });
+      const occupiedSeats = players.map(p => p.seatIndex);
+      res.json({ ...table, password: undefined, players, occupiedSeats });
     } catch (err) {
       next(err);
     }
   });
 
   // REST endpoint for joining a table (professional: REST for join/leave, WS for gameplay)
-  app.post("/api/tables/:id/join", requireAuth, async (req, res, next) => {
+  app.post("/api/tables/:id/join", requireAuth, geofenceMiddleware(), async (req, res, next) => {
     try {
       const { buyIn, seatIndex, password } = req.body;
       if (!buyIn || buyIn <= 0) return res.status(400).json({ message: "Invalid buy-in amount" });
@@ -128,6 +131,16 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
       await storage.deleteTable(req.params.id);
       res.json({ message: "Table deleted" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── User's Clubs ───────────────────────────────────────────────────────
+  app.get("/api/me/clubs", requireAuth, async (req, res, next) => {
+    try {
+      const userClubs = await storage.getUserClubs(req.user!.id);
+      res.json(userClubs);
     } catch (err) {
       next(err);
     }
@@ -296,7 +309,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // Accept/decline invitation
   app.put("/api/clubs/:id/invitations/:invId", requireAuth, async (req, res, next) => {
     try {
-      const { status } = req.body; // "accepted" | "declined"
+      const { status } = req.body;
+      if (status !== "accepted" && status !== "declined") {
+        return res.status(400).json({ message: "Status must be 'accepted' or 'declined'" });
+      }
       const inv = await storage.updateClubInvitation(req.params.invId, { status });
       if (!inv) return res.status(404).json({ message: "Invitation not found" });
       if (status === "accepted") {
@@ -320,6 +336,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
             ...inv,
             username: user?.username || "Unknown",
             displayName: user?.displayName || user?.username || "Unknown",
+            avatarId: user?.avatarId || null,
           };
         })
       );
@@ -470,11 +487,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // ─── Profile Routes ──────────────────────────────────────────────────────
   app.put("/api/profile/avatar", requireAuth, async (req, res, next) => {
     try {
-      const { avatarId } = req.body;
-      if (!avatarId || typeof avatarId !== "string") {
-        return res.status(400).json({ message: "avatarId required" });
+      const { avatarId, displayName } = req.body;
+      const updates: Record<string, any> = {};
+      if (avatarId && typeof avatarId === "string") updates.avatarId = avatarId;
+      if (displayName && typeof displayName === "string") updates.displayName = displayName.trim().slice(0, 50);
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "avatarId or displayName required" });
       }
-      await storage.updateUser(req.user!.id, { avatarId });
+      await storage.updateUser(req.user!.id, updates);
       const user = await storage.getUser(req.user!.id);
       res.json(user);
     } catch (err) {
@@ -556,7 +576,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         description: "Daily login bonus",
       });
 
-      res.json({ balance: balanceAfter, bonus });
+      res.json({ balance: balanceAfter, bonus, nextClaimAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) });
     } catch (err) {
       next(err);
     }
@@ -564,7 +584,9 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
   app.get("/api/wallet/transactions", requireAuth, async (req, res, next) => {
     try {
-      const txs = await storage.getTransactions(req.user!.id);
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const txs = await storage.getTransactions(req.user!.id, limit, offset);
       res.json(txs);
     } catch (err) {
       next(err);
@@ -665,6 +687,20 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         pfr: stats.pfr,
         showdownCount: stats.showdownCount,
       });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Leaderboard ─────────────────────────────────────────────────────
+  app.get("/api/leaderboard", requireAuth, async (req, res, next) => {
+    try {
+      const metric = (req.query.metric as string) || "chips";
+      if (!["chips", "wins", "winRate"].includes(metric)) {
+        return res.status(400).json({ error: "Invalid metric. Use chips, wins, or winRate" });
+      }
+      const data = await storage.getLeaderboard(metric as "chips" | "wins" | "winRate", 50);
+      res.json(data);
     } catch (err) {
       next(err);
     }
@@ -986,17 +1022,19 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
   app.post("/api/tournaments", requireAuth, async (req, res, next) => {
     try {
-      const { name, buyIn, startingChips, blindPreset, maxPlayers, clubId, startAt } = req.body;
-      if (!name) return res.status(400).json({ message: "Name required" });
+      const parsed = createTournamentSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message || "Invalid input" });
+      const { name, buyIn, startingChips, maxPlayers, clubId, startAt } = parsed.data;
+      const { blindPreset } = req.body;
 
       const blindSchedule = blindPreset ? getBlindPreset(blindPreset) : getBlindPreset("mtt");
 
       const tourney = await storage.createTournament({
         name,
-        buyIn: buyIn || 100,
-        startingChips: startingChips || 1500,
+        buyIn,
+        startingChips,
         blindSchedule,
-        maxPlayers: maxPlayers || 50,
+        maxPlayers,
         status: "registering",
         prizePool: 0,
         createdById: req.user!.id,
@@ -1017,20 +1055,29 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "Registration closed" });
       }
 
-      // Check if already registered
-      const regs = await storage.getTournamentRegistrations(tourney.id);
-      if (regs.some(r => r.userId === req.user!.id)) {
-        return res.status(400).json({ message: "Already registered" });
-      }
-      if (regs.length >= tourney.maxPlayers) {
-        return res.status(400).json({ message: "Tournament full" });
-      }
-
-      // Deduct buy-in
       const user = await storage.getUser(req.user!.id);
       if (!user || user.chipBalance < tourney.buyIn) {
         return res.status(400).json({ message: "Insufficient chips" });
       }
+
+      // Atomic registration: try to insert with unique constraint + count check
+      // If the user is already registered or tournament is full, the DB will reject it
+      const reg = await storage.registerForTournamentAtomic(
+        tourney.id,
+        req.user!.id,
+        tourney.maxPlayers,
+      );
+
+      if (!reg) {
+        // Re-check to give specific error message
+        const regs = await storage.getTournamentRegistrations(tourney.id);
+        if (regs.some(r => r.userId === req.user!.id)) {
+          return res.status(400).json({ message: "Already registered" });
+        }
+        return res.status(400).json({ message: "Tournament full" });
+      }
+
+      // Deduct buy-in (after successful registration)
       await storage.updateUser(user.id, { chipBalance: user.chipBalance - tourney.buyIn });
       await storage.createTransaction({
         userId: user.id,
@@ -1047,13 +1094,6 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         prizePool: tourney.prizePool + tourney.buyIn,
       });
 
-      const reg = await storage.registerForTournament({
-        tournamentId: tourney.id,
-        userId: req.user!.id,
-        status: "registered",
-        finishPlace: null,
-        prizeAmount: 0,
-      });
       res.status(201).json(reg);
     } catch (err) {
       next(err);
@@ -1061,6 +1101,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // ─── Alliance & League Routes ──────────────────────────────────────────
+
+  // List all alliances
   app.get("/api/alliances", async (_req, res, next) => {
     try {
       const alliances = await storage.getClubAlliances();
@@ -1070,16 +1112,176 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // Alliance detail — enriched with club data
+  app.get("/api/alliances/:id", async (req, res, next) => {
+    try {
+      const alliance = await storage.getClubAlliance(req.params.id);
+      if (!alliance) return res.status(404).json({ message: "Alliance not found" });
+      const allClubs = await storage.getClubs();
+      const clubMap = new Map(allClubs.map((c: any) => [c.id, c]));
+      const clubs = (alliance.clubIds as string[]).map(id => {
+        const club = clubMap.get(id);
+        return club
+          ? { id: club.id, name: club.name, ownerId: club.ownerId, memberCount: 0 }
+          : { id, name: "Unknown Club", ownerId: null, memberCount: 0 };
+      });
+      // Enrich with member counts in parallel
+      await Promise.all(clubs.map(async (c) => {
+        if (c.ownerId) {
+          const members = await storage.getClubMembers(c.id);
+          c.memberCount = members.length;
+        }
+      }));
+      res.json({ ...alliance, clubs });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Create alliance — requires selecting a founding club
   app.post("/api/alliances", requireAuth, async (req, res, next) => {
     try {
-      const { name, clubIds } = req.body;
-      const alliance = await storage.createClubAlliance({ name, clubIds });
+      const parsed = createAllianceSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message || "Invalid input" });
+      const { name, clubId } = parsed.data;
+
+      const club = await storage.getClub(clubId);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+      const members = await storage.getClubMembers(clubId);
+      const member = members.find((m: any) => m.userId === req.user!.id);
+      if (!member || (member.role !== "owner" && member.role !== "admin")) {
+        return res.status(403).json({ message: "You must be an owner or admin of the club" });
+      }
+
+      const existing = await storage.getClubAllianceByClubId(clubId);
+      if (existing) return res.status(409).json({ message: "This club is already in an alliance" });
+
+      const alliance = await storage.createClubAlliance({ name: name.trim(), clubIds: [clubId] });
       res.status(201).json(alliance);
     } catch (err) {
       next(err);
     }
   });
 
+  // Update alliance name
+  app.put("/api/alliances/:id", requireAuth, async (req, res, next) => {
+    try {
+      const alliance = await storage.getClubAlliance(req.params.id);
+      if (!alliance) return res.status(404).json({ message: "Alliance not found" });
+
+      const foundingClubId = (alliance.clubIds as string[])[0];
+      const members = await storage.getClubMembers(foundingClubId);
+      const member = members.find((m: any) => m.userId === req.user!.id);
+      if (!member || (member.role !== "owner" && member.role !== "admin")) {
+        return res.status(403).json({ message: "Only founding club leaders can edit the alliance" });
+      }
+
+      const parsed = updateAllianceSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0].message });
+
+      const updated = await storage.updateClubAlliance(req.params.id, {
+        name: parsed.data.name,
+      });
+      res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Delete alliance
+  app.delete("/api/alliances/:id", requireAuth, async (req, res, next) => {
+    try {
+      const alliance = await storage.getClubAlliance(req.params.id);
+      if (!alliance) return res.status(404).json({ message: "Alliance not found" });
+
+      const foundingClubId = (alliance.clubIds as string[])[0];
+      const members = await storage.getClubMembers(foundingClubId);
+      const member = members.find((m: any) => m.userId === req.user!.id);
+      if (!member || (member.role !== "owner" && member.role !== "admin")) {
+        return res.status(403).json({ message: "Only founding club leaders can delete the alliance" });
+      }
+
+      await storage.deleteClubAlliance(req.params.id);
+      res.json({ message: "Alliance deleted" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Join alliance with a club
+  app.post("/api/alliances/:id/join", requireAuth, async (req, res, next) => {
+    try {
+      const alliance = await storage.getClubAlliance(req.params.id);
+      if (!alliance) return res.status(404).json({ message: "Alliance not found" });
+
+      const { clubId } = req.body;
+      if (!clubId) return res.status(400).json({ message: "clubId is required" });
+
+      const club = await storage.getClub(clubId);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+      const members = await storage.getClubMembers(clubId);
+      const member = members.find((m: any) => m.userId === req.user!.id);
+      if (!member || (member.role !== "owner" && member.role !== "admin")) {
+        return res.status(403).json({ message: "You must be an owner or admin of the club" });
+      }
+
+      const existingAlliance = await storage.getClubAllianceByClubId(clubId);
+      if (existingAlliance) return res.status(409).json({ message: "This club is already in an alliance" });
+
+      const clubIds = alliance.clubIds as string[];
+      if (clubIds.includes(clubId)) return res.status(409).json({ message: "Club is already in this alliance" });
+
+      const updatedClubIds = [...clubIds, clubId];
+      const updated = await storage.updateClubAlliance(req.params.id, { clubIds: updatedClubIds });
+      res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Remove a club from alliance
+  app.post("/api/alliances/:id/remove-club", requireAuth, async (req, res, next) => {
+    try {
+      const alliance = await storage.getClubAlliance(req.params.id);
+      if (!alliance) return res.status(404).json({ message: "Alliance not found" });
+
+      const { clubId } = req.body;
+      const clubIds = alliance.clubIds as string[];
+
+      const foundingClubId = clubIds[0];
+      if (clubId === foundingClubId) {
+        return res.status(400).json({ message: "Cannot remove the founding club. Delete the alliance instead." });
+      }
+
+      const foundingMembers = await storage.getClubMembers(foundingClubId);
+      const isFoundingLeader = foundingMembers.some((m: any) => m.userId === req.user!.id && (m.role === "owner" || m.role === "admin"));
+      const targetMembers = await storage.getClubMembers(clubId);
+      const isTargetLeader = targetMembers.some((m: any) => m.userId === req.user!.id && (m.role === "owner" || m.role === "admin"));
+
+      if (!isFoundingLeader && !isTargetLeader) {
+        return res.status(403).json({ message: "Not authorized to remove this club" });
+      }
+
+      const updatedClubIds = clubIds.filter((id: string) => id !== clubId);
+      const updated = await storage.updateClubAlliance(req.params.id, { clubIds: updatedClubIds });
+      res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Get the alliance a club belongs to
+  app.get("/api/clubs/:id/alliance", async (req, res, next) => {
+    try {
+      const alliance = await storage.getClubAllianceByClubId(req.params.id);
+      if (!alliance) return res.json(null);
+      res.json(alliance);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // List all league seasons
   app.get("/api/leagues", async (_req, res, next) => {
     try {
       const seasons = await storage.getLeagueSeasons();
@@ -1089,16 +1291,123 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // League season detail
+  app.get("/api/leagues/:id", async (req, res, next) => {
+    try {
+      const season = await storage.getLeagueSeason(req.params.id);
+      if (!season) return res.status(404).json({ message: "League season not found" });
+      res.json(season);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Create league season
   app.post("/api/leagues", requireAuth, async (req, res, next) => {
     try {
-      const { name, startDate, endDate, standings } = req.body;
+      const parsed = createLeagueSeasonSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message || "Invalid input" });
+      const { name, startDate, endDate } = parsed.data;
+
       const season = await storage.createLeagueSeason({
         name,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        standings: standings || null,
+        standings: [],
       });
       res.status(201).json(season);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Update league season
+  app.put("/api/leagues/:id", requireAuth, async (req, res, next) => {
+    try {
+      const season = await storage.getLeagueSeason(req.params.id);
+      if (!season) return res.status(404).json({ message: "League season not found" });
+
+      const parsed = updateLeagueSeasonSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0].message });
+
+      const updated = await storage.updateLeagueSeason(req.params.id, {
+        ...(parsed.data.name && { name: parsed.data.name }),
+        ...(parsed.data.startDate && { startDate: new Date(parsed.data.startDate) }),
+        ...(parsed.data.endDate && { endDate: new Date(parsed.data.endDate) }),
+      });
+      res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Delete league season
+  app.delete("/api/leagues/:id", requireAuth, async (req, res, next) => {
+    try {
+      const season = await storage.getLeagueSeason(req.params.id);
+      if (!season) return res.status(404).json({ message: "League season not found" });
+
+      await storage.deleteLeagueSeason(req.params.id);
+      res.json({ message: "League season deleted" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Manually update league standings
+  app.post("/api/leagues/:id/standings", requireAuth, async (req, res, next) => {
+    try {
+      const season = await storage.getLeagueSeason(req.params.id);
+      if (!season) return res.status(404).json({ message: "League season not found" });
+
+      const parsed = leagueStandingsSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0].message });
+
+      await storage.updateLeagueStandings(req.params.id, parsed.data.standings);
+      const updated = await storage.getLeagueSeason(req.params.id);
+      res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Complete a league season (set endDate to now)
+  app.post("/api/leagues/:id/complete", requireAuth, async (req, res, next) => {
+    try {
+      const season = await storage.getLeagueSeason(req.params.id);
+      if (!season) return res.status(404).json({ message: "League season not found" });
+
+      const updated = await storage.updateLeagueSeason(req.params.id, { endDate: new Date() });
+      res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── AI Bot Settings ──────────────────────────────────────────────────────
+  app.get("/api/ai-settings", requireAuth, (_req, res) => {
+    res.json({
+      aiEnabled: hasAIEnabled(),
+      hasKey: !!getAnthropicApiKey(),
+      // Never return the actual key — just whether one is set
+    });
+  });
+
+  app.post("/api/ai-settings", requireAuth, (req, res, next) => {
+    try {
+      if (req.user!.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { apiKey } = req.body;
+      if (typeof apiKey === "string" && apiKey.startsWith("sk-")) {
+        setAnthropicApiKey(apiKey);
+        return res.json({ success: true, aiEnabled: true });
+      } else if (apiKey === null || apiKey === "") {
+        setAnthropicApiKey(null);
+        return res.json({ success: true, aiEnabled: false });
+      } else {
+        return res.status(400).json({ error: "Invalid API key format — must start with 'sk-'" });
+      }
     } catch (err) {
       next(err);
     }

@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { useWallet } from "@/lib/wallet-context";
 import {
   BarChart3, TrendingUp, Target, Gamepad2,
-  Coins, Zap, Trophy, Loader2, Brain,
+  Coins, Trophy, Loader2, Brain,
   ArrowUpRight, ArrowDownRight, Minus
 } from "lucide-react";
 
@@ -19,28 +20,126 @@ interface PlayerStats {
   showdownCount: number;
 }
 
-interface WalletBalance {
-  balance: number;
+interface HandEntry {
+  netResult: number;
 }
+
+/* ── SVG Line Chart ───────────────────────────────────────────────────────── */
+
+function WinningsChart({ data }: { data: number[] }) {
+  const W = 600;
+  const H = 200;
+  const PAD_X = 40;
+  const PAD_Y = 20;
+
+  const chartW = W - PAD_X * 2;
+  const chartH = H - PAD_Y * 2;
+
+  const min = Math.min(...data, 0);
+  const max = Math.max(...data, 0);
+  const range = max - min || 1;
+
+  const points = data.map((v, i) => {
+    const x = PAD_X + (i / Math.max(data.length - 1, 1)) * chartW;
+    const y = PAD_Y + chartH - ((v - min) / range) * chartH;
+    return { x, y };
+  });
+
+  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+
+  // Area fill path
+  const areaD = pathD +
+    ` L ${points[points.length - 1].x.toFixed(1)} ${(PAD_Y + chartH).toFixed(1)}` +
+    ` L ${points[0].x.toFixed(1)} ${(PAD_Y + chartH).toFixed(1)} Z`;
+
+  // Zero line Y
+  const zeroY = PAD_Y + chartH - ((0 - min) / range) * chartH;
+
+  // Y-axis labels
+  const yLabels = [max, max * 0.5, 0, min * 0.5, min].filter((v, i, arr) =>
+    arr.indexOf(v) === i
+  );
+
+  const final = data[data.length - 1] ?? 0;
+  const isPositive = final >= 0;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={isPositive ? "#00f0ff" : "#ff3366"} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={isPositive ? "#00f0ff" : "#ff3366"} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+
+      {/* Grid lines */}
+      {yLabels.map((v) => {
+        const y = PAD_Y + chartH - ((v - min) / range) * chartH;
+        return (
+          <g key={v}>
+            <line x1={PAD_X} y1={y} x2={W - PAD_X} y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 4" />
+            <text x={PAD_X - 6} y={y + 3} textAnchor="end" fill="rgba(255,255,255,0.3)" fontSize="9" fontFamily="monospace">
+              {v >= 1000 || v <= -1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Zero line */}
+      <line x1={PAD_X} y1={zeroY} x2={W - PAD_X} y2={zeroY} stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+
+      {/* Area fill */}
+      {data.length > 1 && <path d={areaD} fill="url(#lineGrad)" />}
+
+      {/* Line */}
+      {data.length > 1 && (
+        <path
+          d={pathD}
+          fill="none"
+          stroke={isPositive ? "#00f0ff" : "#ff3366"}
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      )}
+
+      {/* End dot */}
+      {points.length > 0 && (
+        <circle
+          cx={points[points.length - 1].x}
+          cy={points[points.length - 1].y}
+          r="4"
+          fill={isPositive ? "#00f0ff" : "#ff3366"}
+          stroke="rgba(10,16,34,0.8)"
+          strokeWidth="2"
+        />
+      )}
+
+      {/* X-axis labels */}
+      <text x={PAD_X} y={H - 2} fill="rgba(255,255,255,0.3)" fontSize="9" fontFamily="monospace">Hand 1</text>
+      <text x={W - PAD_X} y={H - 2} fill="rgba(255,255,255,0.3)" fontSize="9" fontFamily="monospace" textAnchor="end">Hand {data.length}</text>
+    </svg>
+  );
+}
+
+/* ── Main Component ───────────────────────────────────────────────────────── */
 
 export default function Analytics() {
   const { user } = useAuth();
+  const { balance } = useWallet();
   const [stats, setStats] = useState<PlayerStats | null>(null);
-  const [balance, setBalance] = useState<number>(0);
+  const [handHistory, setHandHistory] = useState<HandEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [statsRes, balanceRes] = await Promise.all([
+        const [statsRes, handsRes] = await Promise.all([
           fetch("/api/stats/me"),
-          fetch("/api/wallet/balance"),
+          user?.id ? fetch(`/api/players/${user.id}/hands?limit=200`) : Promise.resolve(null),
         ]);
         if (statsRes.ok) setStats(await statsRes.json());
-        if (balanceRes.ok) {
-          const data: WalletBalance = await balanceRes.json();
-          setBalance(data.balance);
-        }
+        if (handsRes?.ok) setHandHistory(await handsRes.json());
       } catch {
         // silently fail
       } finally {
@@ -48,7 +147,7 @@ export default function Analytics() {
       }
     }
     loadData();
-  }, []);
+  }, [user?.id]);
 
   const winRate = stats && stats.handsPlayed > 0
     ? Math.round((stats.potsWon / stats.handsPlayed) * 100)
@@ -56,6 +155,17 @@ export default function Analytics() {
 
   const vpipPct = stats?.vpip ?? 0;
   const pfrPct = stats?.pfr ?? 0;
+
+  // Compute cumulative winnings from hand history (reverse since API returns newest first)
+  const cumulativeWinnings = useMemo(() => {
+    if (handHistory.length === 0) return [];
+    const reversed = [...handHistory].reverse();
+    let running = 0;
+    return reversed.map(h => {
+      running += h.netResult;
+      return running;
+    });
+  }, [handHistory]);
 
   const statCards = [
     {
@@ -165,6 +275,47 @@ export default function Analytics() {
               })}
             </div>
 
+            {/* Winnings Over Time Chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
+                border: "1px solid rgba(0,240,255,0.1)",
+                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+              }}
+            >
+              <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-cyan-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Winnings Over Time</h3>
+                </div>
+                {cumulativeWinnings.length > 0 && (
+                  <span className={`text-xs font-bold ${
+                    cumulativeWinnings[cumulativeWinnings.length - 1] >= 0 ? "text-green-400" : "text-red-400"
+                  }`}>
+                    {cumulativeWinnings[cumulativeWinnings.length - 1] >= 0 ? "+" : ""}
+                    {cumulativeWinnings[cumulativeWinnings.length - 1].toLocaleString()} chips
+                  </span>
+                )}
+              </div>
+              <div className="p-4">
+                {cumulativeWinnings.length >= 2 ? (
+                  <div className="h-[200px]">
+                    <WinningsChart data={cumulativeWinnings} />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <TrendingUp className="w-8 h-8 text-gray-700 mb-3" />
+                    <p className="text-xs text-gray-500 font-medium">Not enough hand data yet</p>
+                    <p className="text-[10px] text-gray-600 mt-1">Play some hands to see your winnings chart</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
             {/* Advanced Stats Grid */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -199,7 +350,7 @@ export default function Analytics() {
                     <div className="text-xl font-bold text-white tracking-tight">
                       {stat.value}
                     </div>
-                    <div className="text-[9px] text-gray-600 mt-0.5">
+                    <div className="text-[9px] text-gray-500 mt-0.5">
                       {stat.desc}
                     </div>
                   </motion.div>
@@ -269,7 +420,7 @@ export default function Analytics() {
                         : vpipPct > 20 && pfrPct <= 15 ? "Loose-Passive (Calling Station)"
                         : "Loose-Aggressive (LAG)"}
                     </div>
-                    <div className="text-[9px] text-gray-600 mt-1">Based on VPIP & PFR</div>
+                    <div className="text-[9px] text-gray-500 mt-1">Based on VPIP & PFR</div>
                   </div>
                 </div>
               </div>

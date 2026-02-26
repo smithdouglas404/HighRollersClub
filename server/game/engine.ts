@@ -1,4 +1,5 @@
 import { type CardType, type Suit, type Rank, determineWinners, evaluateHand, type PlayerResult } from "./hand-evaluator";
+import { calculateEquity } from "./equity-calculator";
 import { encodeCard, evaluate7Fast, getHandCategory } from "./fast-evaluator";
 import { createProvablyFairShuffle, createProvablyFairShuffleMultiParty, type ShuffleProof, type PlayerSeedData } from "./crypto-shuffle";
 import type { VRFClient } from "../blockchain/vrf-client";
@@ -22,6 +23,19 @@ export interface SeatPlayer {
   isSittingOut: boolean;
   totalBetThisHand: number;
   timeBank: number; // remaining time bank seconds
+}
+
+export interface InsuranceOffer {
+  playerId: string;
+  equity: number;
+  cashOutAmount: number;
+  fee: number;
+}
+
+export interface RunItBoard {
+  communityCards: CardType[];
+  winners: string[];
+  potShare: number;
 }
 
 export interface GameEngineState {
@@ -50,6 +64,13 @@ export interface GameEngineState {
   nextLevelIn: number; // seconds until next blind level
   isBombPot: boolean;
   playersRemaining: number;
+  // Insurance offers (all-in equity cash-out)
+  insuranceOffers?: InsuranceOffer[] | null;
+  insuranceResponses?: Map<string, boolean>;
+  // Run it multiple
+  runItPending?: boolean;
+  runItResponses?: Map<string, number>;
+  runItBoards?: RunItBoard[] | null;
 }
 
 export interface HandSummary {
@@ -74,6 +95,7 @@ export interface GameEngineOpts {
   ante?: number;
   rakePercent?: number; // e.g., 5 = 5% rake
   rakeCap?: number; // max rake per hand in chips, 0 = no cap
+  straddleEnabled?: boolean;
 }
 
 // ─── Game Engine ─────────────────────────────────────────────────────────────
@@ -111,6 +133,7 @@ export class GameEngine {
   private blindLevelStartTime = 0;
   private rakePercent: number;
   private rakeCap: number;
+  private straddleEnabled: boolean;
   public lastHandRake: number = 0; // rake taken from last hand (for persistence)
 
   // VPIP/PFR tracking for pre-flop voluntary actions
@@ -142,6 +165,7 @@ export class GameEngine {
     this.baseAnte = opts.ante || 0;
     this.rakePercent = opts.rakePercent || 0;
     this.rakeCap = opts.rakeCap || 0;
+    this.straddleEnabled = opts.straddleEnabled || false;
 
     this.state = {
       phase: "waiting",
@@ -429,6 +453,8 @@ export class GameEngine {
       this.state.dealerSeat = eligible[0].seatIndex;
     }
 
+    let straddleSeat = -1;
+
     if (isBombPot) {
       // Bomb pot: everyone antes, skip pre-flop
       const anteAmount = this.bombPotAnte || this.bigBlind;
@@ -457,6 +483,17 @@ export class GameEngine {
       if (sb) this.postBlind(sb, this.smallBlind);
       if (bb) this.postBlind(bb, this.bigBlind);
 
+      // Post straddle (UTG posts 2x BB, becomes new effective big blind)
+      if (this.straddleEnabled && eligible.length > 2) {
+        const utgSeat = this.nextEligibleSeat(this.state.bigBlindSeat);
+        const utg = this.getPlayerBySeat(utgSeat);
+        if (utg && utg.chips > 0) {
+          const straddleAmount = this.bigBlind * 2;
+          this.postBlind(utg, straddleAmount);
+          straddleSeat = utgSeat;
+        }
+      }
+
       // Post antes from blind schedule or base ante
       const currentAnte = this.baseAnte;
       if (currentAnte > 0) {
@@ -471,8 +508,9 @@ export class GameEngine {
       }
     }
 
-    this.state.minBet = isBombPot ? 0 : this.bigBlind;
-    this.state.minRaise = this.bigBlind * 2;
+    const effectiveBB = (!isBombPot && straddleSeat >= 0) ? this.bigBlind * 2 : this.bigBlind;
+    this.state.minBet = isBombPot ? 0 : effectiveBB;
+    this.state.minRaise = effectiveBB * 2;
 
     // Snapshot chip total after blinds/antes for integrity verification
     this.snapshotChipTotal();
@@ -534,8 +572,10 @@ export class GameEngine {
         this.startTurn(firstSeat);
       }
     } else {
-      // UTG acts first pre-flop
-      const firstToAct = this.nextEligibleSeat(this.state.bigBlindSeat);
+      // First to act pre-flop: after straddler if straddle is active, otherwise after BB (UTG)
+      const firstToAct = straddleSeat >= 0
+        ? this.nextEligibleSeat(straddleSeat)
+        : this.nextEligibleSeat(this.state.bigBlindSeat);
       this.startTurn(firstToAct);
     }
 
@@ -745,6 +785,254 @@ export class GameEngine {
     return { ok: true };
   }
 
+  // ─── Insurance (Equity Cash-Out) ───────────────────────────────────────────
+
+  private insuranceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private offerInsurance() {
+    const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out" && p.cards);
+    if (active.length < 2) return;
+
+    const playerCards = active.map(p => p.cards!);
+    const equities = calculateEquity(playerCards, this.state.communityCards, 3000);
+
+    const offers: InsuranceOffer[] = active.map((p, i) => {
+      const equity = equities[i];
+      const cashOut = Math.floor(this.state.pot * equity * 0.99);
+      const fee = Math.floor(this.state.pot * equity * 0.01);
+      return { playerId: p.id, equity, cashOutAmount: cashOut, fee };
+    });
+
+    this.state.insuranceOffers = offers;
+    this.state.insuranceResponses = new Map();
+    this.emitState();
+
+    // 15 second timer — auto-decline all remaining
+    this.insuranceTimer = setTimeout(() => {
+      this.resolveInsurance();
+    }, 15000);
+  }
+
+  acceptInsurance(playerId: string): { ok: boolean; error?: string } {
+    if (!this.state.insuranceOffers) return { ok: false, error: "No insurance offers" };
+    const offer = this.state.insuranceOffers.find(o => o.playerId === playerId);
+    if (!offer) return { ok: false, error: "No offer for you" };
+    if (this.state.insuranceResponses?.has(playerId)) return { ok: false, error: "Already responded" };
+
+    this.state.insuranceResponses!.set(playerId, true);
+    this.checkInsuranceComplete();
+    return { ok: true };
+  }
+
+  declineInsurance(playerId: string): { ok: boolean; error?: string } {
+    if (!this.state.insuranceOffers) return { ok: false, error: "No insurance offers" };
+    if (this.state.insuranceResponses?.has(playerId)) return { ok: false, error: "Already responded" };
+
+    this.state.insuranceResponses!.set(playerId, false);
+    this.checkInsuranceComplete();
+    return { ok: true };
+  }
+
+  private checkInsuranceComplete() {
+    if (!this.state.insuranceOffers || !this.state.insuranceResponses) return;
+    const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out" && p.cards);
+    if (this.state.insuranceResponses.size >= active.length) {
+      this.resolveInsurance();
+    }
+  }
+
+  private resolveInsurance() {
+    if (this.insuranceTimer) { clearTimeout(this.insuranceTimer); this.insuranceTimer = null; }
+    if (!this.state.insuranceOffers || !this.state.insuranceResponses) {
+      this.state.insuranceOffers = null;
+      this.proceedAfterInsurance();
+      return;
+    }
+
+    const acceptors: string[] = [];
+    for (const offer of this.state.insuranceOffers) {
+      if (this.state.insuranceResponses.get(offer.playerId) === true) {
+        const player = this.getPlayer(offer.playerId);
+        if (player) {
+          player.chips += offer.cashOutAmount;
+          this.state.pot -= offer.cashOutAmount;
+          acceptors.push(offer.playerId);
+          // Remove player from active hand
+          player.status = "folded";
+        }
+      }
+    }
+
+    // If all players took insurance, distribute any remaining dust to last acceptor
+    const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out" && p.cards);
+    if (active.length === 0 && this.state.pot > 0 && acceptors.length > 0) {
+      const lastAcceptor = this.getPlayer(acceptors[acceptors.length - 1]);
+      if (lastAcceptor) {
+        lastAcceptor.chips += this.state.pot;
+        this.state.pot = 0;
+      }
+    }
+
+    this.state.insuranceOffers = null;
+    this.state.insuranceResponses = undefined;
+    this.proceedAfterInsurance();
+  }
+
+  private proceedAfterInsurance() {
+    const active = this.activePlayers();
+    if (active.length <= 1) {
+      this.endHandLastStanding();
+    } else {
+      this.checkRunItMultiple();
+    }
+  }
+
+  // ─── Run It Multiple ────────────────────────────────────────────────────────
+
+  private runItTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private checkRunItMultiple() {
+    const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out");
+    const allAllIn = active.every(p => p.status === "all-in");
+    if (!allAllIn || active.length < 2) {
+      this.runOutBoard();
+      return;
+    }
+
+    this.state.runItPending = true;
+    this.state.runItResponses = new Map();
+    this.emitState();
+
+    this.runItTimer = setTimeout(() => {
+      this.resolveRunIt();
+    }, 10000);
+  }
+
+  proposeRunCount(playerId: string, count: 1 | 2 | 3): { ok: boolean; error?: string } {
+    if (!this.state.runItPending) return { ok: false, error: "No run-it vote active" };
+    if (this.state.runItResponses?.has(playerId)) return { ok: false, error: "Already voted" };
+
+    this.state.runItResponses!.set(playerId, count);
+
+    const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out");
+    if (this.state.runItResponses!.size >= active.length) {
+      this.resolveRunIt();
+    }
+    this.emitState();
+    return { ok: true };
+  }
+
+  private resolveRunIt() {
+    if (this.runItTimer) { clearTimeout(this.runItTimer); this.runItTimer = null; }
+
+    let runCount = 1;
+    if (this.state.runItResponses && this.state.runItResponses.size > 0) {
+      // Take minimum of all votes (if anyone says 1, run once)
+      runCount = Math.min(...Array.from(this.state.runItResponses.values()));
+    }
+
+    this.state.runItPending = false;
+    this.state.runItResponses = undefined;
+
+    if (runCount <= 1) {
+      this.runOutBoard();
+      return;
+    }
+
+    // Run multiple boards — live poker style: deal from same deck, no reshuffle
+    const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out" && p.cards);
+    const savedCommunity = [...this.state.communityCards];
+    const potPerBoard = Math.floor(this.state.pot / runCount);
+    const boards: RunItBoard[] = [];
+
+    // Single deck stub — all runs deal sequentially from here (like live play)
+    const stub = [...this.deck];
+    let deckIdx = 0;
+
+    for (let b = 0; b < runCount; b++) {
+      // Deal remaining community cards for this run (burn + deal per street)
+      const boardCommunity = [...savedCommunity];
+      while (boardCommunity.length < 5) {
+        deckIdx++; // burn card
+        boardCommunity.push(stub[deckIdx]);
+        deckIdx++;
+      }
+
+      // Evaluate each player's hand against this board
+      const boardCommunityEncoded = boardCommunity.map(encodeCard);
+      let bestScore = 0;
+      const scores: { id: string; score: number }[] = [];
+      for (const p of active) {
+        const encoded = [...p.cards!.map(encodeCard), ...boardCommunityEncoded];
+        const score = evaluate7Fast(encoded);
+        scores.push({ id: p.id, score });
+        if (score > bestScore) bestScore = score;
+      }
+      const winners = scores.filter(s => s.score === bestScore).map(s => s.id);
+
+      boards.push({ communityCards: boardCommunity, winners, potShare: potPerBoard });
+
+      // Distribute pot for this board
+      const share = Math.floor(potPerBoard / winners.length);
+      for (const wId of winners) {
+        const player = this.getPlayer(wId);
+        if (player) player.chips += share;
+      }
+    }
+
+    // Handle remainder from pot division
+    const distributed = potPerBoard * runCount;
+    const remainder = this.state.pot - distributed;
+    if (remainder > 0 && boards.length > 0) {
+      const lastWinner = this.getPlayer(boards[boards.length - 1].winners[0]);
+      if (lastWinner) lastWinner.chips += remainder;
+    }
+
+    this.state.runItBoards = boards;
+    // Use the last board's community for display
+    this.state.communityCards = boards[boards.length - 1].communityCards;
+    this.goToShowdown();
+  }
+
+  // Buy extra time with chips (1 big blind = +10 seconds)
+  buyTime(playerId: string): { ok: boolean; error?: string; costChips?: number; extraSeconds?: number } {
+    const player = this.getPlayer(playerId);
+    if (!player) return { ok: false, error: "Player not found" };
+    if (player.seatIndex !== this.state.currentTurnSeat) return { ok: false, error: "Not your turn" };
+    if (player.status !== "thinking") return { ok: false, error: "Not in thinking state" };
+    if (player.chips < this.bigBlind) return { ok: false, error: "Insufficient chips" };
+
+    const cost = this.bigBlind;
+    player.chips -= cost;
+    this.state.pot += cost;
+    player.totalBetThisHand += cost;
+
+    // Extend turn deadline by 10 seconds
+    const extraSeconds = 10;
+    this.state.turnDeadline += extraSeconds * 1000;
+
+    // Reset turn timer
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer);
+    }
+    const remaining = this.state.turnDeadline - Date.now() + (player.timeBank * 1000);
+    this.turnTimer = setTimeout(() => {
+      player.timeBank = 0;
+      if (player.currentBet < this.state.minBet) {
+        this.handleAction(player.id, "fold");
+      } else {
+        this.handleAction(player.id, "check");
+      }
+      if (!player.isBot) {
+        player.isSittingOut = true;
+        player.status = "sitting-out";
+      }
+    }, Math.max(remaining, 1000));
+
+    this.emitState();
+    return { ok: true, costChips: cost, extraSeconds };
+  }
+
   private isRoundComplete(): boolean {
     const eligible = this.state.players.filter(
       p => p.status !== "folded" && p.status !== "sitting-out" && p.status !== "all-in"
@@ -815,6 +1103,14 @@ export class GameEngine {
   }
 
   private runOutBoard() {
+    // Check if insurance should be offered (all-in with community cards remaining)
+    const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out");
+    const allAllIn = active.length >= 2 && active.every(p => p.status === "all-in");
+    if (allAllIn && this.state.communityCards.length < 5 && !this.state.insuranceOffers && !this.state.runItPending) {
+      this.offerInsurance();
+      return;
+    }
+
     // Deal remaining community cards
     while (this.state.communityCards.length < 5) {
       this.deck.pop(); // burn
@@ -1149,6 +1445,8 @@ export class GameEngine {
     this.clearSeedTimer();
     if (this.showdownTimer) { clearTimeout(this.showdownTimer); this.showdownTimer = null; }
     if (this.blindLevelTimer) { clearTimeout(this.blindLevelTimer); this.blindLevelTimer = null; }
+    if (this.insuranceTimer) { clearTimeout(this.insuranceTimer); this.insuranceTimer = null; }
+    if (this.runItTimer) { clearTimeout(this.runItTimer); this.runItTimer = null; }
   }
 
   private emitState() {
@@ -1208,6 +1506,15 @@ export class GameEngine {
       nextLevelIn: state.nextLevelIn,
       isBombPot: state.isBombPot,
       playersRemaining: state.playersRemaining,
+      // Insurance offers (only show hero's offer)
+      insuranceOffer: state.insuranceOffers?.find(o => o.playerId === playerId) || null,
+      insuranceActive: !!state.insuranceOffers,
+      // Run it multiple
+      runItPending: state.runItPending || false,
+      runItBoards: state.runItBoards || null,
+      // Big blind for UI
+      smallBlind: this.smallBlind,
+      bigBlind: this.bigBlind,
       players: state.players.map(p => ({
         id: p.id,
         displayName: p.displayName,

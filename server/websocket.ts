@@ -5,6 +5,7 @@ import type { IncomingMessage } from "http";
 import passport from "passport";
 import { tableManager } from "./game/table-manager";
 import { storage } from "./storage";
+import { isIpBlocked } from "./middleware/geofence";
 
 // Client connection with metadata
 export interface WsClient {
@@ -26,7 +27,13 @@ export type ClientMessage =
   | { type: "chat"; message: string }
   | { type: "emote"; emoteId: string }
   | { type: "seed_commit"; commitmentHash: string }
-  | { type: "seed_reveal"; seed: string };
+  | { type: "seed_reveal"; seed: string }
+  | { type: "buy_time" }
+  | { type: "accept_insurance" }
+  | { type: "decline_insurance" }
+  | { type: "run_it_vote"; count: 1 | 2 | 3 }
+  | { type: "rtc_signal"; targetUserId: string; signal: any }
+  | { type: "rtc_toggle"; video: boolean; audio: boolean };
 
 // Message types: Server → Client
 export type ServerMessage =
@@ -53,7 +60,9 @@ export type ServerMessage =
   | { type: "tournament_complete"; results: any[]; prizePool: number }
   | { type: "bomb_pot_starting" }
   | { type: "tournament_status"; status: string; prizePool: number }
-  | { type: "format_info"; gameFormat: string; currentBlindLevel: number; nextLevelIn: number; playersRemaining: number; isBombPot: boolean };
+  | { type: "format_info"; gameFormat: string; currentBlindLevel: number; nextLevelIn: number; playersRemaining: number; isBombPot: boolean }
+  | { type: "rtc_signal"; fromUserId: string; signal: any }
+  | { type: "rtc_toggle"; userId: string; video: boolean; audio: boolean };
 
 // Global map of connected clients
 const clients = new Map<string, WsClient>();
@@ -154,7 +163,16 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
     });
   });
 
-  wss.on("connection", (ws: WebSocket, _req: IncomingMessage, user: Express.User) => {
+  wss.on("connection", async (ws: WebSocket, _req: IncomingMessage, user: Express.User) => {
+    // Geofence check on WebSocket connection
+    const clientIp = (_req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || _req.socket.remoteAddress || "";
+    try {
+      if (await isIpBlocked(clientIp)) {
+        ws.close(1008, "Service not available in your jurisdiction");
+        return;
+      }
+    } catch {} // graceful: allow on error
+
     console.log(`[ws] client connected: ${user.displayName || user.username} (${user.id})`);
     const client: WsClient = {
       ws,
@@ -380,6 +398,76 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       const seed = msg.seed?.slice(0, 128);
       if (!seed) return;
       tableManager.handleSeedReveal(client.tableId, client.userId, seed);
+      break;
+    }
+
+    case "buy_time": {
+      if (!client.tableId) return;
+      const result = tableManager.handleBuyTime(client.tableId, client.userId);
+      if (!result.ok) {
+        sendToUser(client.userId, { type: "error", message: result.error! });
+        return;
+      }
+      sendGameStateToTable(client.tableId);
+      break;
+    }
+
+    case "accept_insurance": {
+      if (!client.tableId) return;
+      const result = tableManager.handleInsuranceResponse(client.tableId, client.userId, true);
+      if (!result.ok) {
+        sendToUser(client.userId, { type: "error", message: result.error! });
+        return;
+      }
+      sendGameStateToTable(client.tableId);
+      break;
+    }
+
+    case "decline_insurance": {
+      if (!client.tableId) return;
+      const result = tableManager.handleInsuranceResponse(client.tableId, client.userId, false);
+      if (!result.ok) {
+        sendToUser(client.userId, { type: "error", message: result.error! });
+        return;
+      }
+      sendGameStateToTable(client.tableId);
+      break;
+    }
+
+    case "run_it_vote": {
+      if (!client.tableId) return;
+      const count = msg.count;
+      if (count !== 1 && count !== 2 && count !== 3) return;
+      const result = tableManager.handleRunItVote(client.tableId, client.userId, count);
+      if (!result.ok) {
+        sendToUser(client.userId, { type: "error", message: result.error! });
+        return;
+      }
+      sendGameStateToTable(client.tableId);
+      break;
+    }
+
+    case "rtc_signal": {
+      // Relay WebRTC signaling to target peer
+      const targetId = msg.targetUserId;
+      if (!targetId) return;
+      sendToUser(targetId, {
+        type: "rtc_signal",
+        fromUserId: client.userId,
+        signal: msg.signal,
+      });
+      break;
+    }
+
+    case "rtc_toggle": {
+      // Broadcast media toggle to table
+      if (!client.tableId) return;
+      broadcastToTable(client.tableId, {
+        type: "rtc_toggle",
+        userId: client.userId,
+        video: msg.video,
+        audio: msg.audio,
+      }, client.userId);
       break;
     }
   }

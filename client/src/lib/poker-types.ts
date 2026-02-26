@@ -19,9 +19,23 @@ export interface Player {
   isDealer: boolean;
   isSmallBlind?: boolean;
   isBigBlind?: boolean;
+  isBot?: boolean;
   currentBet: number;
   status: 'thinking' | 'folded' | 'all-in' | 'checked' | 'waiting' | 'called' | 'raised';
   timeLeft?: number; // percentage 0-100
+}
+
+export interface InsuranceOfferClient {
+  playerId: string;
+  equity: number;
+  cashOutAmount: number;
+  fee: number;
+}
+
+export interface RunItBoardClient {
+  communityCards: CardType[];
+  winners: string[];
+  potShare: number;
 }
 
 export interface GameState {
@@ -36,4 +50,11 @@ export interface GameState {
   lastAction?: { playerId: string; action: string; amount?: number };
   actionNumber?: number;
   handNumber?: number;
+  // Phase 3 extensions
+  insuranceOffer?: InsuranceOfferClient | null;
+  insuranceActive?: boolean;
+  runItPending?: boolean;
+  runItBoards?: RunItBoardClient[] | null;
+  smallBlind?: number;
+  bigBlind?: number;
 }

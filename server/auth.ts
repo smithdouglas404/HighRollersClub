@@ -2,8 +2,10 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 import { type Express, type Request } from "express";
 import { storage } from "./storage";
+import { hasDatabase, getPool } from "./db";
 import { type User } from "@shared/schema";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -38,7 +40,20 @@ declare module "express-session" {
 }
 
 export function setupAuth(app: Express) {
-  const MemoryStore = createMemoryStore(session);
+  // Use PostgreSQL session store when database is available, otherwise fall back to memory store
+  let store: session.Store;
+  if (hasDatabase()) {
+    const PgSession = connectPgSimple(session);
+    store = new PgSession({
+      pool: getPool(),
+      createTableIfMissing: true,
+    });
+  } else {
+    const MemoryStore = createMemoryStore(session);
+    store = new MemoryStore({
+      checkPeriod: 86400000, // prune expired entries every 24h
+    });
+  }
 
   const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET || "poker-platform-dev-secret-" + randomUUID(),
@@ -49,9 +64,7 @@ export function setupAuth(app: Express) {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
-    store: new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
-    }),
+    store,
   });
 
   app.use(sessionMiddleware);
@@ -116,10 +129,35 @@ const GUEST_AVATAR_IDS = [
   "steel-ghost", "neon-fox", "dark-ace", "bolt-runner",
 ];
 
+// Rate limiting for registration/guest creation
+const registrationAttempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_REG_ATTEMPTS = 5;
+const REG_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function checkRegistrationRate(req: Request): boolean {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const attempts = registrationAttempts.get(ip);
+  if (attempts) {
+    if (now < attempts.resetAt) {
+      if (attempts.count >= MAX_REG_ATTEMPTS) return false;
+      attempts.count++;
+    } else {
+      registrationAttempts.set(ip, { count: 1, resetAt: now + REG_WINDOW_MS });
+    }
+  } else {
+    registrationAttempts.set(ip, { count: 1, resetAt: now + REG_WINDOW_MS });
+  }
+  return true;
+}
+
 // Auth route handlers
 export function registerAuthRoutes(app: Express) {
   // Create guest account
   app.post("/api/auth/guest", async (req, res, next) => {
+    if (!checkRegistrationRate(req)) {
+      return res.status(429).json({ message: "Too many accounts created. Try again later." });
+    }
     try {
       const guestName = generateGuestName();
       const randomAvatar = GUEST_AVATAR_IDS[Math.floor(Math.random() * GUEST_AVATAR_IDS.length)];
@@ -144,6 +182,9 @@ export function registerAuthRoutes(app: Express) {
 
   // Register with username + password
   app.post("/api/auth/register", async (req, res, next) => {
+    if (!checkRegistrationRate(req)) {
+      return res.status(429).json({ message: "Too many registration attempts. Try again later." });
+    }
     try {
       const { username, password, displayName } = req.body;
       if (!username || !password) {

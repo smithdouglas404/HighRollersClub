@@ -19,6 +19,8 @@ import {
   type AmbientHandle,
 } from './sound-synthesizers';
 
+import { AdaptiveMusicEngine } from './adaptive-music';
+
 const STORAGE_KEY = 'poker-sound-muted';
 const VOLUME_KEY = 'poker-sound-volume';
 
@@ -29,6 +31,7 @@ class SoundEngine {
   private _volume: number = 0.7;
   private ambientHandle: AmbientHandle | null = null;
   private initialized = false;
+  private adaptiveMusic: AdaptiveMusicEngine | null = null;
 
   constructor() {
     // Restore persisted settings
@@ -73,6 +76,10 @@ class SoundEngine {
         this.ctx?.currentTime ?? 0
       );
     }
+    if (this.adaptiveMusic) {
+      if (val) this.adaptiveMusic.stop();
+      else this.adaptiveMusic.start();
+    }
     try { localStorage.setItem(STORAGE_KEY, String(val)); } catch {}
   }
 
@@ -91,6 +98,67 @@ class SoundEngine {
   toggleMute(): boolean {
     this.muted = !this._muted;
     return this._muted;
+  }
+
+  // --- Spatial Audio ---
+
+  private createSpatialDest(seatX: number, seatScale: number): AudioNode | null {
+    if (!this.ctx || !this.masterGain) return null;
+    const panner = this.ctx.createStereoPanner();
+    panner.pan.value = Math.max(-1, Math.min(1, (seatX - 50) / 50));
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.4 + 0.6 * seatScale;
+    panner.connect(gain);
+    gain.connect(this.masterGain);
+    setTimeout(() => { try { panner.disconnect(); gain.disconnect(); } catch {} }, 5000);
+    return panner;
+  }
+
+  playChipClinkAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthChipClink(this.ctx, d);
+  }
+
+  playFoldAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthFold(this.ctx, d);
+  }
+
+  playCheckAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthCheck(this.ctx, d);
+  }
+
+  playCallAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthCall(this.ctx, d);
+  }
+
+  playRaiseAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthRaise(this.ctx, d);
+  }
+
+  // --- Adaptive Music ---
+
+  startAdaptiveMusic() {
+    if (this.adaptiveMusic) return;
+    if (!this.ctx || !this.masterGain) return;
+    this.adaptiveMusic = new AdaptiveMusicEngine(this.ctx, this.masterGain);
+    if (!this._muted) this.adaptiveMusic.start();
+  }
+
+  stopAdaptiveMusic() {
+    if (this.adaptiveMusic) {
+      this.adaptiveMusic.stop();
+      this.adaptiveMusic = null;
+    }
+  }
+
+  setMusicState(state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) {
+    if (this.adaptiveMusic) {
+      this.adaptiveMusic.setState(state, opts);
+    }
   }
 
   // --- Sound methods ---

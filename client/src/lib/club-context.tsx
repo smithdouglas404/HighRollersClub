@@ -33,6 +33,7 @@ export interface ClubInvitation {
   userId: string;
   username: string;
   displayName: string;
+  avatarId: string | null;
   type: "invite" | "request";
   status: "pending" | "accepted" | "declined";
   createdAt: string;
@@ -94,6 +95,7 @@ export interface MissionData {
 interface ClubContextType {
   // Core data
   club: ClubData | null;
+  allClubs: ClubData[];
   members: ClubMember[];
   invitations: ClubInvitation[];
   memberStatsMap: Record<string, MemberStats>;
@@ -110,6 +112,7 @@ interface ClubContextType {
 
   // Actions
   reload: () => Promise<void>;
+  switchClub: (clubId: string) => void;
   createClub: (data: { name: string; description?: string; isPublic?: boolean }) => Promise<ClubData | null>;
   updateClub: (data: { name?: string; description?: string; isPublic?: boolean }) => Promise<boolean>;
   deleteClub: () => Promise<boolean>;
@@ -126,13 +129,18 @@ interface ClubContextType {
 
 const ClubContext = createContext<ClubContextType | null>(null);
 
+const ACTIVE_CLUB_KEY = "activeClubId";
+
 /* ── Provider ──────────────────────────────────────────────────────────────── */
 
 export function ClubProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [club, setClub] = useState<ClubData | null>(null);
+  const [allClubs, setAllClubs] = useState<ClubData[]>([]);
+  const [activeClubId, setActiveClubId] = useState<string | null>(() => {
+    try { return localStorage.getItem(ACTIVE_CLUB_KEY); } catch { return null; }
+  });
   const [members, setMembers] = useState<ClubMember[]>([]);
   const [invitations, setInvitations] = useState<ClubInvitation[]>([]);
   const [memberStatsMap, setMemberStatsMap] = useState<Record<string, MemberStats>>({});
@@ -146,13 +154,53 @@ export function ClubProvider({ children }: { children: ReactNode }) {
 
   const isAdminOrOwner = myRole === "owner" || myRole === "admin";
 
+  // Derive active club from allClubs + activeClubId
+  const club = allClubs.find(c => c.id === activeClubId) ?? allClubs[0] ?? null;
+
+  /* ── Switch active club ────────────────────────────────────────────────── */
+
+  const switchClub = useCallback((clubId: string) => {
+    setActiveClubId(clubId);
+    try { localStorage.setItem(ACTIVE_CLUB_KEY, clubId); } catch {}
+  }, []);
+
+  /* ── Load detail data for a specific club ──────────────────────────────── */
+
+  const loadClubDetail = useCallback(async (clubId: string) => {
+    if (!user) return;
+    try {
+      const [membersRes, invRes, memberStatsRes, announcementsRes, eventsRes] = await Promise.all([
+        fetch(`/api/clubs/${clubId}/members`),
+        fetch(`/api/clubs/${clubId}/invitations`),
+        fetch(`/api/clubs/${clubId}/members/stats`),
+        fetch(`/api/clubs/${clubId}/announcements`).catch(() => null),
+        fetch(`/api/clubs/${clubId}/events`).catch(() => null),
+      ]);
+
+      if (membersRes.ok) {
+        const memberData: ClubMember[] = await membersRes.json();
+        setMembers(memberData);
+        const me = memberData.find(m => m.userId === user.id);
+        if (me) setMyRole(me.role);
+        else setMyRole("member");
+      }
+
+      if (invRes.ok) setInvitations(await invRes.json());
+      if (memberStatsRes.ok) setMemberStatsMap(await memberStatsRes.json());
+      if (announcementsRes?.ok) setAnnouncements(await announcementsRes.json());
+      if (eventsRes?.ok) setEvents(await eventsRes.json());
+    } catch {
+      // Detail load failure is non-fatal
+    }
+  }, [user]);
+
   /* ── Fetch all data ──────────────────────────────────────────────────────── */
 
   const reload = useCallback(async () => {
     if (!user) { setLoading(false); return; }
     try {
       const [clubsRes, statsRes, missionsRes] = await Promise.all([
-        fetch("/api/clubs"),
+        fetch("/api/me/clubs"),
         fetch("/api/stats/me"),
         fetch("/api/missions"),
       ]);
@@ -161,48 +209,45 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       if (statsRes.ok) setMyStats(await statsRes.json());
 
       if (!clubsRes.ok) { setLoading(false); return; }
-      const clubs: ClubData[] = await clubsRes.json();
-      if (clubs.length === 0) {
-        setClub(null);
+      const userClubs: ClubData[] = await clubsRes.json();
+      setAllClubs(userClubs);
+
+      // Determine active club
+      const storedId = activeClubId;
+      const resolvedId = userClubs.find(c => c.id === storedId)?.id ?? userClubs[0]?.id ?? null;
+
+      if (resolvedId && resolvedId !== activeClubId) {
+        setActiveClubId(resolvedId);
+        try { localStorage.setItem(ACTIVE_CLUB_KEY, resolvedId); } catch {}
+      }
+
+      if (resolvedId) {
+        await loadClubDetail(resolvedId);
+      } else {
+        // No clubs — clear everything
         setMembers([]);
         setInvitations([]);
         setMemberStatsMap({});
         setAnnouncements([]);
         setEvents([]);
-        setLoading(false);
-        return;
+        setMyRole("member");
       }
-
-      const myClub = clubs[0];
-      setClub(myClub);
-
-      const [membersRes, invRes, memberStatsRes, announcementsRes, eventsRes] = await Promise.all([
-        fetch(`/api/clubs/${myClub.id}/members`),
-        fetch(`/api/clubs/${myClub.id}/invitations`),
-        fetch(`/api/clubs/${myClub.id}/members/stats`),
-        fetch(`/api/clubs/${myClub.id}/announcements`).catch(() => null),
-        fetch(`/api/clubs/${myClub.id}/events`).catch(() => null),
-      ]);
-
-      if (membersRes.ok) {
-        const memberData: ClubMember[] = await membersRes.json();
-        setMembers(memberData);
-        const me = memberData.find(m => m.userId === user.id);
-        if (me) setMyRole(me.role);
-      }
-
-      if (invRes.ok) setInvitations(await invRes.json());
-      if (memberStatsRes.ok) setMemberStatsMap(await memberStatsRes.json());
-      if (announcementsRes?.ok) setAnnouncements(await announcementsRes.json());
-      if (eventsRes?.ok) setEvents(await eventsRes.json());
     } catch (err: any) {
       toast({ title: "Failed to load club data", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [user, toast]);
+  }, [user, toast, activeClubId, loadClubDetail]);
 
   useEffect(() => { reload(); }, [reload]);
+
+  // Reload club detail when active club changes (after initial load)
+  useEffect(() => {
+    if (club && !loading) {
+      loadClubDetail(club.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [club?.id]);
 
   /* ── Poll online status ──────────────────────────────────────────────────── */
 
@@ -212,7 +257,9 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch("/api/online-users");
         if (res.ok) setOnlineUserIds(new Set(await res.json()));
-      } catch {}
+      } catch (err) {
+        console.warn("Failed to fetch online users:", err);
+      }
     };
     fetchOnline();
     const interval = setInterval(fetchOnline, 30_000);
@@ -235,12 +282,13 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       const newClub: ClubData = await res.json();
       toast({ title: "Club created!", description: `"${newClub.name}" is ready to go.` });
       await reload();
+      switchClub(newClub.id);
       return newClub;
     } catch (err: any) {
       toast({ title: "Failed to create club", description: err.message, variant: "destructive" });
       return null;
     }
-  }, [reload, toast]);
+  }, [reload, switchClub, toast]);
 
   const updateClub = useCallback(async (data: { name?: string; description?: string; isPublic?: boolean }) => {
     if (!club) return false;
@@ -255,7 +303,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         throw new Error(d.message);
       }
       const updated = await res.json();
-      setClub(updated);
+      setAllClubs(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c));
       toast({ title: "Settings saved" });
       return true;
     } catch (err: any) {
@@ -273,14 +321,21 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         throw new Error(d.message);
       }
       toast({ title: "Club deleted" });
-      setClub(null);
-      setMembers([]);
+      const remaining = allClubs.filter(c => c.id !== club.id);
+      setAllClubs(remaining);
+      if (remaining.length > 0) {
+        switchClub(remaining[0].id);
+      } else {
+        setActiveClubId(null);
+        try { localStorage.removeItem(ACTIVE_CLUB_KEY); } catch {}
+        setMembers([]);
+      }
       return true;
     } catch (err: any) {
       toast({ title: "Failed to delete club", description: err.message, variant: "destructive" });
       return false;
     }
-  }, [club, toast]);
+  }, [club, allClubs, switchClub, toast]);
 
   const sendInvite = useCallback(async (username: string) => {
     if (!club) return false;
@@ -371,12 +426,13 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       }
       toast({ title: "Joined club!" });
       await reload();
+      switchClub(clubId);
       return true;
     } catch (err: any) {
       toast({ title: "Failed to join club", description: err.message, variant: "destructive" });
       return false;
     }
-  }, [reload, toast]);
+  }, [reload, switchClub, toast]);
 
   const leaveClub = useCallback(async () => {
     if (!club) return false;
@@ -387,14 +443,21 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         throw new Error(d.message);
       }
       toast({ title: "Left club" });
-      setClub(null);
-      setMembers([]);
+      const remaining = allClubs.filter(c => c.id !== club.id);
+      setAllClubs(remaining);
+      if (remaining.length > 0) {
+        switchClub(remaining[0].id);
+      } else {
+        setActiveClubId(null);
+        try { localStorage.removeItem(ACTIVE_CLUB_KEY); } catch {}
+        setMembers([]);
+      }
       return true;
     } catch (err: any) {
       toast({ title: "Failed to leave club", description: err.message, variant: "destructive" });
       return false;
     }
-  }, [club, toast]);
+  }, [club, allClubs, switchClub, toast]);
 
   const requestJoinClub = useCallback(async (clubId: string) => {
     try {
@@ -459,9 +522,9 @@ export function ClubProvider({ children }: { children: ReactNode }) {
 
   return (
     <ClubContext.Provider value={{
-      club, members, invitations, memberStatsMap, myStats, announcements, events,
+      club, allClubs, members, invitations, memberStatsMap, myStats, announcements, events,
       missions, onlineUserIds, myRole, isAdminOrOwner, loading,
-      reload, createClub, updateClub, deleteClub, sendInvite, handleInvitation,
+      reload, switchClub, createClub, updateClub, deleteClub, sendInvite, handleInvitation,
       changeRole, kickMember, joinClub, leaveClub, requestJoinClub,
       createAnnouncement, createEvent,
     }}>

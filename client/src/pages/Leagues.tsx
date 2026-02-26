@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
 import {
   Swords, Trophy, Users, Crown, Shield, Plus,
   Loader2, Calendar, TrendingUp, Medal, ChevronRight,
@@ -33,6 +35,8 @@ interface ClubData {
 
 export default function Leagues() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
   const [alliances, setAlliances] = useState<ClubAlliance[]>([]);
   const [seasons, setSeasons] = useState<LeagueSeason[]>([]);
   const [clubs, setClubs] = useState<ClubData[]>([]);
@@ -44,6 +48,7 @@ export default function Leagues() {
   const [createType, setCreateType] = useState<"alliance" | "league">("alliance");
   const [createName, setCreateName] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
+  const [selectedClubId, setSelectedClubId] = useState("");
 
   // League form extras
   const [leagueStart, setLeagueStart] = useState("");
@@ -59,12 +64,12 @@ export default function Leagues() {
       if (allianceRes.ok) setAlliances(await allianceRes.json());
       if (leagueRes.ok) setSeasons(await leagueRes.json());
       if (clubsRes.ok) setClubs(await clubsRes.json());
-    } catch {
-      // silently fail
+    } catch (err: any) {
+      toast({ title: "Failed to load data", description: err?.message || "Something went wrong", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -75,14 +80,16 @@ export default function Leagues() {
     setCreateLoading(true);
     try {
       if (createType === "alliance") {
-        const myClub = clubs[0];
-        if (!myClub) return;
+        if (!selectedClubId) return;
         const res = await fetch("/api/alliances", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: createName.trim(), clubIds: [myClub.id] }),
+          body: JSON.stringify({ name: createName.trim(), clubId: selectedClubId }),
         });
-        if (!res.ok) throw new Error("Failed to create alliance");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ message: "Failed to create alliance" }));
+          throw new Error(err.message);
+        }
       } else {
         if (!leagueStart || !leagueEnd) return;
         const res = await fetch("/api/leagues", {
@@ -92,18 +99,21 @@ export default function Leagues() {
             name: createName.trim(),
             startDate: leagueStart,
             endDate: leagueEnd,
-            standings: [],
           }),
         });
-        if (!res.ok) throw new Error("Failed to create league");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ message: "Failed to create league" }));
+          throw new Error(err.message);
+        }
       }
       setShowCreate(false);
       setCreateName("");
+      setSelectedClubId("");
       setLeagueStart("");
       setLeagueEnd("");
       await loadData();
-    } catch {
-      // silently fail
+    } catch (err: any) {
+      toast({ title: `Failed to create ${createType}`, description: err?.message || "Something went wrong", variant: "destructive" });
     } finally {
       setCreateLoading(false);
     }
@@ -207,7 +217,8 @@ export default function Leagues() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.05 }}
-                          className="rounded-xl overflow-hidden"
+                          onClick={() => navigate(`/alliances/${alliance.id}`)}
+                          className="rounded-xl overflow-hidden cursor-pointer hover:border-cyan-500/25 transition-all"
                           style={{
                             background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
                             border: "1px solid rgba(0,240,255,0.1)",
@@ -230,8 +241,12 @@ export default function Leagues() {
                                   </span>
                                 </div>
                               </div>
-                              <span className="text-[8px] font-bold uppercase tracking-wider text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
-                                Active
+                              <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                allianceClubs.length >= 2
+                                  ? "text-green-400 bg-green-500/10 border-green-500/20"
+                                  : "text-amber-400 bg-amber-500/10 border-amber-500/20"
+                              }`}>
+                                {allianceClubs.length >= 2 ? "Active" : "Forming"}
                               </span>
                             </div>
 
@@ -299,7 +314,8 @@ export default function Leagues() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
-                        className="rounded-xl overflow-hidden"
+                        onClick={() => navigate(`/leagues/${season.id}`)}
+                        className="rounded-xl overflow-hidden cursor-pointer hover:border-cyan-500/25 transition-all"
                         style={{
                           background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
                           border: "1px solid rgba(0,240,255,0.1)",
@@ -457,6 +473,23 @@ export default function Leagues() {
                   />
                 </div>
 
+                {/* Alliance-specific: club picker */}
+                {createType === "alliance" && (
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">Founding Club</label>
+                    <select
+                      value={selectedClubId}
+                      onChange={(e) => setSelectedClubId(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-cyan-500/20 transition-all [color-scheme:dark]"
+                    >
+                      <option value="">Select a club...</option>
+                      {clubs.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* League-specific: date range */}
                 {createType === "league" && (
                   <div className="grid grid-cols-2 gap-3">
@@ -492,7 +525,7 @@ export default function Leagues() {
                   </button>
                   <button
                     onClick={handleCreate}
-                    disabled={createLoading || !createName.trim() || (createType === "league" && (!leagueStart || !leagueEnd))}
+                    disabled={createLoading || !createName.trim() || (createType === "alliance" && !selectedClubId) || (createType === "league" && (!leagueStart || !leagueEnd))}
                     className="flex-1 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(201,168,76,0.3)]"
                     style={{
                       background: "linear-gradient(135deg, #c9a84c, #f0d078)",

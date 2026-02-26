@@ -1,0 +1,23 @@
+Leagues & Alliances — Complete Problem List:
+
+No detail views at all — You can see a list of alliances and league seasons, but clicking on any of them does nothing. No detail page exists.
+No single-item API routes — Backend only has GET /api/alliances (list all) and GET /api/leagues (list all). No GET /api/alliances/:id or GET /api/leagues/:id for details.
+Alliance cards are dead — The ChevronRight icon on each club inside an alliance is purely decorative. No click handler, no navigation.
+No "Join Alliance" flow — You can only create an alliance. There's no way for another club to join an existing one.
+Alliance creation is blind — It auto-adds clubs[0] as the founding member with no way to invite other clubs.
+No club info shown in alliances — Alliance cards show club names and member counts, but there's no way to click through to see the club's profile or details.
+League standings are empty — Standings are stored as JSON, but there's no mechanism to populate them from actual gameplay. The updateLeagueStandings storage method exists but is never called from any route or game logic.
+No alliance info on Club Dashboard — Your club's alliance membership isn't shown anywhere on the club page. You have to go to /leagues to discover it.
+No way to manage alliances — No edit, delete, add/remove clubs, or any management UI after creation.
+No league lifecycle — Leagues can be created with start/end dates, but nothing happens when they start or end. No auto-status changes, no prize distribution.
+Here's what I found — the Leagues & Alliances system is essentially a skeleton right now. Here's the breakdown:
+
+What's broken:
+
+Alliance and league cards are not clickable — there are no detail pages
+No backend routes exist to get details on a single alliance or league
+No way to join an existing alliance — you can only create one
+League standings are stored but never populated from actual gameplay
+Your club's alliance membership isn't shown anywhere on the club dashboard
+No management (edit/delete/add clubs) after creating an alliance
+Club names inside alliance cards look clickable (chevron icon) but do nothing

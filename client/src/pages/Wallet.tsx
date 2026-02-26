@@ -1,23 +1,15 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { useWallet, type Transaction } from "@/lib/wallet-context";
 import {
   Coins, Gift, ArrowDownRight, ArrowUpRight, Loader2,
-  Clock, Filter, TrendingUp, Sparkles, ChevronDown,
+  Clock, Filter, TrendingUp, Sparkles, ChevronDown, RefreshCw, Download,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────
-interface Transaction {
-  id: string;
-  type: string;
-  amount: number;
-  balanceBefore: number;
-  balanceAfter: number;
-  description: string | null;
-  createdAt: string;
-}
 
 type FilterType = "all" | "bonus" | "buy_in" | "cashout" | "purchase" | "prize";
 
@@ -62,14 +54,6 @@ function getTypeColor(type: string) {
     default:
       return "text-amber-400";
   }
-}
-
-function formatTimeRemaining(ms: number): string {
-  if (ms <= 0) return "0m";
-  const hours = Math.floor(ms / (1000 * 60 * 60));
-  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
 }
 
 function matchesFilter(type: string, filter: FilterType): boolean {
@@ -186,144 +170,60 @@ function AnimatedBalance({ value }: { value: number }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────
 export default function Wallet() {
-  const { user, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const { toast } = useToast();
 
-  const [balance, setBalance] = useState<number>(user?.chipBalance ?? 0);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loadingTx, setLoadingTx] = useState(true);
-  const [claiming, setClaiming] = useState(false);
+  const {
+    balance, canClaim, claiming, bonusAmount, hasElitePass, timeLeft,
+    claimDailyBonus, transactions, loadingTransactions: loadingTx,
+    hasMore, loadMore, refreshTransactions, error,
+  } = useWallet();
+
   const [filter, setFilter] = useState<FilterType>("all");
-  const [cooldownEnd, setCooldownEnd] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState("");
-  const [bonusAmount, setBonusAmount] = useState<number>(1000);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
-  // ── Fetch balance ──────────────────────────────────────────────────
-  const fetchBalance = useCallback(async () => {
-    try {
-      const res = await fetch("/api/wallet/balance");
-      if (res.ok) {
-        const data = await res.json();
-        setBalance(data.balance);
-      }
-    } catch {
-      // silently fail
-    }
-  }, []);
+  const exportCSV = () => {
+    const header = "Date,Type,Amount,Balance After,Description\n";
+    const rows = filtered.map(t =>
+      `${new Date(t.createdAt).toISOString()},${t.type},${t.amount},${t.balanceAfter},"${(t.description || t.type.replace(/_/g, " ")).replace(/"/g, '""')}"`
+    ).join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-  // ── Fetch transactions ─────────────────────────────────────────────
-  const fetchTransactions = useCallback(async () => {
-    setLoadingTx(true);
-    try {
-      const res = await fetch("/api/wallet/transactions");
-      if (res.ok) {
-        const data: Transaction[] = await res.json();
-        setTransactions(data);
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setLoadingTx(false);
-    }
-  }, []);
-
-  // ── Check daily bonus cooldown on mount (GET only, no accidental claim) ──
-  const checkCooldown = useCallback(async () => {
-    try {
-      const res = await fetch("/api/wallet/daily-status");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.bonusAmount) setBonusAmount(data.bonusAmount);
-        if (data.canClaim) {
-          setCooldownEnd(null);
-        } else if (data.nextClaimAt) {
-          setCooldownEnd(new Date(data.nextClaimAt).getTime());
-        }
-      }
-    } catch {
-      // silently fail
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchBalance();
-    fetchTransactions();
-    checkCooldown();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Sync balance from user context
-  useEffect(() => {
-    if (user?.chipBalance != null) setBalance(user.chipBalance);
-  }, [user?.chipBalance]);
-
-  // ── Cooldown timer tick ────────────────────────────────────────────
-  useEffect(() => {
-    if (cooldownEnd == null) {
-      setTimeLeft("");
-      return;
-    }
-    function tick() {
-      const remaining = (cooldownEnd as number) - Date.now();
-      if (remaining <= 0) {
-        setCooldownEnd(null);
-        setTimeLeft("");
-      } else {
-        setTimeLeft(formatTimeRemaining(remaining));
-      }
-    }
-    tick();
-    const interval = setInterval(tick, 10_000);
-    return () => clearInterval(interval);
-  }, [cooldownEnd]);
-
-  // ── Claim daily bonus ──────────────────────────────────────────────
   const handleClaimDaily = async () => {
-    if (claiming || cooldownEnd != null) return;
-    setClaiming(true);
-    try {
-      const res = await fetch("/api/wallet/claim-daily", { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        setBalance(data.balance);
-        toast({
-          title: "Daily Bonus Claimed!",
-          description: `+${data.bonus.toLocaleString()} chips added to your wallet.`,
-        });
-        await refreshUser();
-        fetchTransactions();
-      } else if (res.status === 429) {
-        const data = await res.json();
-        if (data.nextClaimAt) {
-          setCooldownEnd(new Date(data.nextClaimAt).getTime());
-        }
-        toast({
-          title: "Already Claimed",
-          description: data.message || "Come back later for your next bonus.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to claim daily bonus.",
-          variant: "destructive",
-        });
-      }
-    } catch {
-      toast({
-        title: "Error",
-        description: "Network error. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setClaiming(false);
+    const result = await claimDailyBonus();
+    if (result.success) {
+      toast({ title: "Daily Bonus Claimed!", description: `+${result.bonus!.toLocaleString()} chips` });
+      await refreshUser();
+    } else {
+      toast({ title: "Error", description: error || "Failed to claim", variant: "destructive" });
     }
   };
 
   // ── Filter transactions ────────────────────────────────────────────
   const filtered = useMemo(
-    () => transactions.filter((t) => matchesFilter(t.type, filter)),
-    [transactions, filter],
+    () => transactions.filter((t) => {
+      if (!matchesFilter(t.type, filter)) return false;
+      if (startDate) {
+        const txDate = new Date(t.createdAt);
+        if (txDate < new Date(startDate)) return false;
+      }
+      if (endDate) {
+        const txDate = new Date(t.createdAt);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        if (txDate > end) return false;
+      }
+      return true;
+    }),
+    [transactions, filter, startDate, endDate],
   );
 
   // ── Render ─────────────────────────────────────────────────────────
@@ -358,7 +258,7 @@ export default function Wallet() {
 
             {/* Right — daily bonus */}
             <div className="flex flex-col items-start sm:items-end gap-2">
-              {cooldownEnd != null ? (
+              {!canClaim && timeLeft ? (
                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <Clock className="w-4 h-4 text-gray-500" />
                   <div>
@@ -388,7 +288,7 @@ export default function Wallet() {
               )}
               <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
                 <Sparkles className="w-3 h-3 text-amber-500/60" />
-                <span>+{bonusAmount.toLocaleString()} chips daily reward{bonusAmount <= 1000 ? " (2x with Elite Pass)" : ""}</span>
+                <span>+{bonusAmount.toLocaleString()} chips daily reward{hasElitePass ? " (Elite Pass Active)" : " (2x with Elite Pass)"}</span>
               </div>
             </div>
           </div>
@@ -446,8 +346,22 @@ export default function Wallet() {
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
               <Filter className="w-4 h-4 text-cyan-500/70" />
               Transaction History
+              <button
+                onClick={() => refreshTransactions()}
+                className="p-1 rounded-md hover:bg-white/[0.05] transition-colors"
+                title="Refresh transactions"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-gray-500 hover:text-cyan-400 transition-colors" />
+              </button>
+              <button
+                onClick={exportCSV}
+                className="p-1 rounded-md hover:bg-white/[0.05] transition-colors"
+                title="Export as CSV"
+              >
+                <Download className="w-3.5 h-3.5 text-gray-500 hover:text-green-400 transition-colors" />
+              </button>
             </h2>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {FILTER_OPTIONS.map((opt) => (
                 <button
                   key={opt.key}
@@ -461,6 +375,30 @@ export default function Wallet() {
                   {opt.label}
                 </button>
               ))}
+              <span className="text-[9px] text-gray-600 ml-1">|</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-2 py-1 rounded-lg text-[10px] text-gray-400 bg-white/[0.02] border border-white/[0.05] outline-none focus:border-cyan-500/25 transition-all"
+                title="From date"
+              />
+              <span className="text-[9px] text-gray-600">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-2 py-1 rounded-lg text-[10px] text-gray-400 bg-white/[0.02] border border-white/[0.05] outline-none focus:border-cyan-500/25 transition-all"
+                title="To date"
+              />
+              {(startDate || endDate) && (
+                <button
+                  onClick={() => { setStartDate(""); setEndDate(""); }}
+                  className="text-[9px] text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
 
@@ -540,6 +478,14 @@ export default function Wallet() {
                   );
                 })}
               </AnimatePresence>
+              {hasMore && (
+                <button
+                  onClick={loadMore}
+                  className="w-full py-3 text-[10px] font-bold uppercase text-cyan-400 hover:text-white transition-colors"
+                >
+                  Load More
+                </button>
+              )}
             </div>
           )}
         </motion.div>

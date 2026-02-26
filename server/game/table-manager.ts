@@ -1,5 +1,6 @@
 import { GameEngine, type HandSummary, type GameFormat } from "./engine";
-import { BotPlayer } from "./bot-player";
+import { CollusionDetector } from "./collusion-detector";
+import { BotPlayer, getRandomPersonality, getBotDisplayName } from "./bot-player";
 import { storage } from "../storage";
 import { sendGameStateToTable, broadcastToTable } from "../websocket";
 import type { ShuffleProof } from "./crypto-shuffle";
@@ -44,6 +45,8 @@ class TableManager {
   private tables = new Map<string, TableInstance>();
   private vrfClient: VRFClient | null = null;
   private contractClient: ContractClient | null = null;
+  private collusionDetector = new CollusionDetector();
+  private handsTracked = 0;
 
   constructor() {
     if (blockchainConfig.enabled) {
@@ -82,6 +85,7 @@ class TableManager {
       ante: tableRow.ante,
       rakePercent: tableRow.rakePercent || 0,
       rakeCap: tableRow.rakeCap || 0,
+      straddleEnabled: tableRow.straddleEnabled || false,
     });
 
     // Pass VRF client if available
@@ -279,6 +283,27 @@ class TableManager {
         }
       }
 
+      // Feed hand to collusion detector
+      this.collusionDetector.recordHand(summary);
+      this.handsTracked++;
+      if (this.handsTracked % 10 === 0) {
+        const alerts = this.collusionDetector.checkAlerts();
+        for (const alert of alerts) {
+          console.warn(`[COLLUSION ALERT] ${alert.severity.toUpperCase()}: ${alert.reason} between ${alert.player1} and ${alert.player2} — ${alert.details}`);
+        }
+      }
+
+      // Notify bots of hand result for personality chat
+      const winnerIdSet = new Set(winnerIds);
+      if (instance) {
+        for (const bot of instance.bots) {
+          const wasInHand = summary.players.some(p => p.id === bot.id);
+          if (wasInHand) {
+            bot.onHandResult(winnerIdSet.has(bot.id));
+          }
+        }
+      }
+
       // Track heads-up wins (2-player format only)
       if (gameFormat === "heads_up") {
         for (const w of summary.winners) {
@@ -340,15 +365,16 @@ class TableManager {
       }
     };
 
-    // When a bot needs to act
+    // When a bot needs to act — delay varies by personality
     engine.onBotTurn = (botId: string) => {
       const inst = this.tables.get(tableId);
       if (!inst) return;
       const bot = inst.bots.find(b => b.id === botId);
       if (bot) {
+        const delay = bot.getThinkingDelay();
         setTimeout(() => {
-          bot.act(engine);
-        }, 1000 + Math.random() * 2000);
+          bot.actAsync(engine).catch(() => bot.act(engine));
+        }, delay);
       }
     };
 
@@ -422,6 +448,7 @@ class TableManager {
       if (instance) {
         instance.engine.cleanup();
         instance.bots.forEach(b => b.cleanup());
+        this.clearTableTimers(tableId);
         this.tables.delete(tableId);
       }
     }, 10000);
@@ -687,6 +714,7 @@ class TableManager {
     if (instance.engine.state.players.length === 0) {
       instance.engine.cleanup();
       instance.bots.forEach(b => b.cleanup());
+      this.clearTableTimers(tableId);
       this.tables.delete(tableId);
     }
   }
@@ -708,6 +736,26 @@ class TableManager {
     return instance.engine.handleAction(userId, action, amount, actionNumber);
   }
 
+  handleBuyTime(tableId: string, userId: string): { ok: boolean; error?: string; costChips?: number; extraSeconds?: number } {
+    const instance = this.tables.get(tableId);
+    if (!instance) return { ok: false, error: "Table not found" };
+    return instance.engine.buyTime(userId);
+  }
+
+  handleInsuranceResponse(tableId: string, userId: string, accept: boolean): { ok: boolean; error?: string } {
+    const instance = this.tables.get(tableId);
+    if (!instance) return { ok: false, error: "Table not found" };
+    return accept
+      ? instance.engine.acceptInsurance(userId)
+      : instance.engine.declineInsurance(userId);
+  }
+
+  handleRunItVote(tableId: string, userId: string, count: 1 | 2 | 3): { ok: boolean; error?: string } {
+    const instance = this.tables.get(tableId);
+    if (!instance) return { ok: false, error: "Table not found" };
+    return instance.engine.proposeRunCount(userId, count);
+  }
+
   setSitOut(tableId: string, userId: string, sitOut: boolean) {
     const instance = this.tables.get(tableId);
     if (!instance) return;
@@ -720,6 +768,16 @@ class TableManager {
 
   // Track disconnect grace timers for reconnection
   private disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  // Clear all disconnect timers for a table (prevents leaks on table deletion)
+  private clearTableTimers(tableId: string) {
+    for (const [key, timer] of this.disconnectTimers) {
+      if (key.startsWith(`${tableId}:`)) {
+        clearTimeout(timer);
+        this.disconnectTimers.delete(key);
+      }
+    }
+  }
 
   handleDisconnect(tableId: string, userId: string) {
     const instance = this.tables.get(tableId);
@@ -806,14 +864,21 @@ class TableManager {
     const { engine, config } = instance;
 
     const BOT_NAMES = ["CryptoKing", "Satoshi", "Whale_0x", "HODLer", "Degen", "NeonAce"];
+    const BOT_PERSONALITIES = ["shark", "professor", "gambler", "robot", "rookie", "shark"] as const;
     let botIndex = instance.bots.length;
 
     // Collect already-used avatars so bots don't duplicate
     const usedAvatars = new Set(instance.avatarMap.values());
     let avatarOffset = 0;
 
-    while (engine.state.players.length < config.maxPlayers && botIndex < BOT_NAMES.length) {
-      const occupiedSeats = new Set(engine.state.players.map(p => p.seatIndex));
+    // Stagger bot joins to feel more natural (not all at once)
+    const botsToAdd: Array<{ botId: string; botName: string; seat: number; chips: number; personality: typeof BOT_PERSONALITIES[number]; avatar: string }> = [];
+
+    while (engine.state.players.length + botsToAdd.length < config.maxPlayers && botIndex < BOT_NAMES.length) {
+      const occupiedSeats = new Set([
+        ...engine.state.players.map(p => p.seatIndex),
+        ...botsToAdd.map(b => b.seat),
+      ]);
       let seat: number | undefined;
       for (let i = 0; i < config.maxPlayers; i++) {
         if (!occupiedSeats.has(i)) { seat = i; break; }
@@ -828,11 +893,7 @@ class TableManager {
         ? config.startingChips
         : config.minBuyIn + Math.floor(Math.random() * (config.maxBuyIn - config.minBuyIn));
 
-      engine.addPlayer(botId, botName, seat, botChips, true);
-      const bot = new BotPlayer(botId, botName);
-      instance.bots.push(bot);
-
-      // Assign a unique avatar to the bot, starting from BOT_AVATAR_START_INDEX
+      // Assign a unique avatar to the bot
       let botAvatar: string | null = null;
       for (let i = 0; i < AVATAR_IDS.length; i++) {
         const candidateIdx = (BOT_AVATAR_START_INDEX + avatarOffset + i) % AVATAR_IDS.length;
@@ -844,36 +905,65 @@ class TableManager {
           break;
         }
       }
-      // Fallback if all avatars taken (very unlikely with 12 avatars and 6 bots)
       if (!botAvatar) {
         botAvatar = AVATAR_IDS[(BOT_AVATAR_START_INDEX + botIndex) % AVATAR_IDS.length];
       }
-      instance.avatarMap.set(botId, botAvatar);
 
-      // Register bot in SNG lifecycle
-      if (instance.lifecycle && config.gameFormat === "sng") {
-        instance.lifecycle.register(botId, botName, config.buyInAmount);
-      }
-
+      const personality = BOT_PERSONALITIES[botIndex % BOT_PERSONALITIES.length];
+      botsToAdd.push({ botId, botName, seat, chips: botChips, personality, avatar: botAvatar });
       botIndex++;
     }
 
-    // SNG auto-start when full
-    if (config.gameFormat === "sng" && instance.lifecycle && instance.lifecycle.canStart()) {
-      instance.lifecycle.start();
-      engine.startBlindSchedule();
-      broadcastToTable(tableId, {
-        type: "tournament_status",
-        status: "playing",
-        prizePool: instance.lifecycle.prizePool,
-      } as any);
-      setTimeout(() => engine.startHand(), 1000);
-      return;
-    }
+    // Add first bot immediately, stagger the rest with 1.5-4s delays
+    for (let i = 0; i < botsToAdd.length; i++) {
+      const delay = i === 0 ? 0 : 1500 + Math.random() * 2500; // first bot instant, rest staggered
+      const addBot = (b: typeof botsToAdd[0]) => {
+        const inst = this.tables.get(tableId);
+        if (!inst) return; // table may have been deleted
 
-    // Start hand if enough players
-    if (engine.state.phase === "waiting" && engine.canStartHand()) {
-      setTimeout(() => engine.startHand(), 1000);
+        inst.engine.addPlayer(b.botId, b.botName, b.seat, b.chips, true);
+        const bot = new BotPlayer(b.botId, b.botName, b.personality);
+        bot.setTableId(tableId);
+        inst.bots.push(bot);
+        inst.avatarMap.set(b.botId, b.avatar);
+
+        // Register bot in SNG lifecycle
+        if (inst.lifecycle && config.gameFormat === "sng") {
+          inst.lifecycle.register(b.botId, b.botName, config.buyInAmount);
+        }
+
+        // Broadcast join notification
+        broadcastToTable(tableId, {
+          type: "player_joined",
+          player: { id: b.botId, displayName: b.botName, seatIndex: b.seat, chips: b.chips, avatarId: b.avatar },
+        });
+
+        sendGameStateToTable(tableId);
+
+        // SNG auto-start when full
+        if (config.gameFormat === "sng" && inst.lifecycle && inst.lifecycle.canStart()) {
+          inst.lifecycle.start();
+          inst.engine.startBlindSchedule();
+          broadcastToTable(tableId, {
+            type: "tournament_status",
+            status: "playing",
+            prizePool: inst.lifecycle.prizePool,
+          } as any);
+          setTimeout(() => inst.engine.startHand(), 1000);
+          return;
+        }
+
+        // Auto-start hand if enough players and still waiting
+        if (inst.engine.state.phase === "waiting" && inst.engine.canStartHand()) {
+          setTimeout(() => inst.engine.startHand(), 1500);
+        }
+      };
+
+      if (delay === 0) {
+        addBot(botsToAdd[i]);
+      } else {
+        setTimeout(() => addBot(botsToAdd[i]), delay * i);
+      }
     }
   }
 

@@ -9,6 +9,7 @@ interface ChatMessage {
   displayName: string;
   message: string;
   timestamp: number;
+  isSystem?: boolean;
 }
 
 interface ChatPanelProps {
@@ -24,30 +25,83 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Listen for incoming chat messages
+  // Helper to push a message
+  const pushMessage = useCallback((msg: ChatMessage) => {
+    setMessages(prev => [...prev, msg].slice(-100));
+    if (!isOpen) setUnreadCount(prev => prev + 1);
+  }, [isOpen]);
+
+  // Listen for incoming chat messages + system events
   useEffect(() => {
     if (!isMultiplayer) return;
 
-    const unsub = wsClient.on("chat", (msg: any) => {
-      const chatMsg: ChatMessage = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    const unsubChat = wsClient.on("chat", (msg: any) => {
+      pushMessage({
+        id: makeId(),
         userId: msg.userId,
         displayName: msg.displayName,
         message: msg.message,
         timestamp: Date.now(),
-      };
-      setMessages(prev => {
-        const next = [...prev, chatMsg];
-        // Keep last 100 messages
-        return next.slice(-100);
       });
-      if (!isOpen) {
-        setUnreadCount(prev => prev + 1);
+    });
+
+    const unsubJoin = wsClient.on("player_joined", (msg: any) => {
+      pushMessage({
+        id: makeId(),
+        userId: "system",
+        displayName: "System",
+        message: `${msg.displayName || "A player"} joined the table`,
+        timestamp: Date.now(),
+        isSystem: true,
+      });
+    });
+
+    const unsubLeave = wsClient.on("player_left", (msg: any) => {
+      pushMessage({
+        id: makeId(),
+        userId: "system",
+        displayName: "System",
+        message: `${msg.displayName || "A player"} left the table`,
+        timestamp: Date.now(),
+        isSystem: true,
+      });
+    });
+
+    const unsubShowdown = wsClient.on("showdown", (msg: any) => {
+      if (msg.results?.length > 0) {
+        const winner = msg.results[0];
+        pushMessage({
+          id: makeId(),
+          userId: "system",
+          displayName: "System",
+          message: `${winner.displayName || "Winner"} wins ${winner.amount ? "$" + winner.amount.toLocaleString() : "the pot"}`,
+          timestamp: Date.now(),
+          isSystem: true,
+        });
       }
     });
 
-    return unsub;
-  }, [isMultiplayer, isOpen]);
+    const unsubBlind = wsClient.on("blind_increase", (msg: any) => {
+      pushMessage({
+        id: makeId(),
+        userId: "system",
+        displayName: "System",
+        message: `Blinds increased to ${msg.sb}/${msg.bb}${msg.ante ? ` (ante ${msg.ante})` : ""}`,
+        timestamp: Date.now(),
+        isSystem: true,
+      });
+    });
+
+    return () => {
+      unsubChat();
+      unsubJoin();
+      unsubLeave();
+      unsubShowdown();
+      unsubBlind();
+    };
+  }, [isMultiplayer, pushMessage]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -148,17 +202,29 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
                     animate={{ opacity: 1, y: 0 }}
                     className="group"
                   >
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[10px] font-bold text-cyan-400 shrink-0">
-                        {msg.displayName}
-                      </span>
-                      <span className="text-[9px] text-gray-700">
-                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-300 leading-relaxed break-words">
-                      {msg.message}
-                    </p>
+                    {msg.isSystem ? (
+                      <div className="flex items-center gap-1.5 py-0.5">
+                        <div className="flex-1 h-px bg-white/5" />
+                        <span className="text-[9px] italic text-amber-500/60 shrink-0">
+                          {msg.message}
+                        </span>
+                        <div className="flex-1 h-px bg-white/5" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-[10px] font-bold text-cyan-400 shrink-0">
+                            {msg.displayName}
+                          </span>
+                          <span className="text-[9px] text-gray-700">
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-300 leading-relaxed break-words">
+                          {msg.message}
+                        </p>
+                      </>
+                    )}
                   </motion.div>
                 ))
               )}

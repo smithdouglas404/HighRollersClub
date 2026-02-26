@@ -193,11 +193,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const handleProfileContinue = async () => {
     setProfileSaving(true);
     try {
-      if (selectedAvatar) {
+      const payload: Record<string, string> = {};
+      if (selectedAvatar) payload.avatarId = selectedAvatar.id;
+      if (profileDisplayName.trim()) payload.displayName = profileDisplayName.trim();
+      if (Object.keys(payload).length > 0) {
         await fetch("/api/profile/avatar", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ avatarId: selectedAvatar.id }),
+          body: JSON.stringify(payload),
         });
         await refreshUser();
       }

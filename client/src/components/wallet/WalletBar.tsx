@@ -1,70 +1,42 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { Coins, Gift, Loader2 } from "lucide-react";
+import { useWallet } from "@/lib/wallet-context";
+import { Coins, Gift, Loader2, Clock } from "lucide-react";
 
 export function WalletBar() {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
-  const [claiming, setClaiming] = useState(false);
   const [claimResult, setClaimResult] = useState<{ bonus: number } | null>(null);
-  const [balance, setBalance] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (user) setBalance(user.chipBalance);
-  }, [user?.chipBalance]);
-
-  // Fetch fresh balance on mount
-  useEffect(() => {
-    fetch("/api/wallet/balance")
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.balance != null) setBalance(data.balance); })
-      .catch(() => {});
-  }, []);
+  const { balance, canClaim, claiming, claimDailyBonus, timeLeft } = useWallet();
 
   const handleClaimDaily = async () => {
     if (claiming) return;
-    setClaiming(true);
     setClaimResult(null);
-    try {
-      const res = await fetch("/api/wallet/claim-daily", { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        setBalance(data.balance);
-        setClaimResult({ bonus: data.bonus });
-        toast({
-          title: "Daily Bonus Claimed!",
-          description: `+${data.bonus.toLocaleString()} chips added to your wallet.`,
-        });
-        await refreshUser();
-        setTimeout(() => setClaimResult(null), 3000);
-      } else if (res.status === 429) {
-        const data = await res.json();
-        let cooldownMsg = data.message || "You already claimed your daily bonus.";
-        if (data.nextClaimAt) {
-          const remaining = new Date(data.nextClaimAt).getTime() - Date.now();
-          if (remaining > 0) {
-            const hours = Math.floor(remaining / (1000 * 60 * 60));
-            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-            cooldownMsg = `Next bonus available in ${hours > 0 ? `${hours}h ` : ""}${minutes}m`;
-          }
-        }
-        toast({
-          title: "Already Claimed",
-          description: cooldownMsg,
-          variant: "destructive",
-        });
-      }
-    } catch {
+    const result = await claimDailyBonus();
+    if (result.success) {
+      setClaimResult({ bonus: result.bonus! });
+      toast({
+        title: "Daily Bonus Claimed!",
+        description: `+${result.bonus!.toLocaleString()} chips added to your wallet.`,
+      });
+      await refreshUser();
+      setTimeout(() => setClaimResult(null), 3000);
+    } else if (!canClaim) {
+      toast({
+        title: "Already Claimed",
+        description: timeLeft ? `Next bonus available in ${timeLeft}` : "You already claimed your daily bonus.",
+        variant: "destructive",
+      });
+    } else {
       toast({
         title: "Error",
         description: "Failed to claim daily bonus. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setClaiming(false);
     }
   };
 
@@ -77,7 +49,7 @@ export function WalletBar() {
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/15 hover:border-amber-500/30 hover:bg-amber-500/15 transition-all cursor-pointer">
           <Coins className="w-3.5 h-3.5 text-amber-400" />
           <span className="text-xs font-bold text-amber-400 tabular-nums">
-            {(balance ?? user.chipBalance).toLocaleString()}
+            {balance.toLocaleString()}
           </span>
           <span className="text-[8px] text-amber-600 uppercase">chips</span>
         </div>
@@ -88,15 +60,17 @@ export function WalletBar() {
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
         onClick={handleClaimDaily}
-        disabled={claiming}
+        disabled={claiming || !canClaim}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-green-400 bg-green-500/10 border border-green-500/15 hover:bg-green-500/20 transition-colors disabled:opacity-50"
       >
         {claiming ? (
           <Loader2 className="w-3 h-3 animate-spin" />
+        ) : !canClaim && timeLeft ? (
+          <Clock className="w-3 h-3" />
         ) : (
           <Gift className="w-3 h-3" />
         )}
-        Daily Bonus
+        {!canClaim && timeLeft ? timeLeft : "Daily Bonus"}
       </motion.button>
 
       {/* Claim result toast */}

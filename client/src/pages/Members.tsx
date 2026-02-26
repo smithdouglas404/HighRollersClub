@@ -3,59 +3,69 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
+import { useToast } from "@/hooks/use-toast";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { MissionsGrid } from "@/components/shared/MissionsGrid";
 import {
-  Crown, Shield, User, Clock, Loader2,
-  Gamepad2, Coins, Target, Users, UserPlus,
+  Crown, Shield, User, Loader2,
+  Coins, Users, UserPlus,
   ChevronDown, ChevronUp, ShieldCheck,
   UserX, Check, X, Send, Search,
-  TrendingUp, AlertCircle, Filter
+  AlertCircle, Filter, Bell, CalendarDays
 } from "lucide-react";
 
-/* ── Role Badge ────────────────────────────────────────── */
+/* ── Role Label (mockup-style prefix text) ─────────────── */
 
-function RoleBadge({ role }: { role: string }) {
-  const config: Record<string, { color: string; icon: any; bg: string }> = {
-    owner: { color: "text-amber-400", icon: Crown, bg: "bg-amber-500/10 border-amber-500/20" },
-    admin: { color: "text-cyan-400", icon: ShieldCheck, bg: "bg-cyan-500/10 border-cyan-500/20" },
-    manager: { color: "text-cyan-400", icon: Shield, bg: "bg-cyan-500/10 border-cyan-500/20" },
-    member: { color: "text-gray-400", icon: User, bg: "bg-gray-500/10 border-gray-500/20" },
+function RoleLabel({ role }: { role: string }) {
+  const colorMap: Record<string, string> = {
+    owner: "text-amber-400",
+    admin: "text-cyan-400",
+    manager: "text-cyan-400",
+    member: "text-gray-400",
   };
-  const c = config[role] || config.member;
-  const Icon = c.icon;
+  const color = colorMap[role] || colorMap.member;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${c.color} ${c.bg} border`}>
-      <Icon className="w-2.5 h-2.5" />
-      {role}
+    <span className={`text-[11px] font-bold capitalize ${color}`}>
+      {role}:
     </span>
   );
 }
 
-/* ── "Member since" helper ─────────────────────────────── */
+/* ── Time ago helper ─────────────────────────────────── */
 
-function formatMemberSince(dateStr: string): string {
+function formatTimeAgo(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 1) return "Joined today";
-  if (diffDays === 1) return "Joined yesterday";
-  if (diffDays < 30) return `Member for ${diffDays}d`;
-  if (diffDays < 365) return `Member for ${Math.floor(diffDays / 30)}mo`;
-  return `Member for ${Math.floor(diffDays / 365)}y`;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatEventTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+  });
 }
 
 /* ── Main Component ────────────────────────────────────── */
 
 export default function Members() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const {
     club,
     members,
     invitations,
+    announcements,
+    events,
     memberStatsMap,
-    myStats,
     missions,
     onlineUserIds,
     myRole,
@@ -82,6 +92,9 @@ export default function Members() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "owner" | "admin" | "member">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
+
+  // Role editing
+  const [editingRole, setEditingRole] = useState<string | null>(null);
 
   // Filter pending invitations locally
   const pendingInvitations = invitations.filter(inv => inv.status === "pending");
@@ -110,6 +123,7 @@ export default function Members() {
     setActionLoading(`role-${memberId}`);
     await changeRole(memberId, newRole);
     setActionLoading(null);
+    setEditingRole(null);
   };
 
   const handleKick = async (memberId: string, displayName: string) => {
@@ -119,12 +133,17 @@ export default function Members() {
     setActionLoading(null);
   };
 
+  const handleRemindMe = (eventId: string, eventName: string) => {
+    const key = `remind_${eventId}`;
+    localStorage.setItem(key, "true");
+    toast({ title: "Reminder Set", description: `You'll be reminded about "${eventName}"` });
+  };
+
   /* ── Render helpers ────────────────────────────────────── */
 
   const sortedMembers = useMemo(() => {
     let filtered = [...members];
 
-    // Search by name or username
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(m =>
@@ -132,19 +151,16 @@ export default function Members() {
       );
     }
 
-    // Filter by role
     if (roleFilter !== "all") {
       filtered = filtered.filter(m => m.role === roleFilter);
     }
 
-    // Filter by online status
     if (statusFilter === "online") {
       filtered = filtered.filter(m => onlineUserIds.has(m.userId));
     } else if (statusFilter === "offline") {
       filtered = filtered.filter(m => !onlineUserIds.has(m.userId));
     }
 
-    // Sort by role hierarchy
     filtered.sort((a, b) => {
       const order: Record<string, number> = { owner: 0, admin: 1, manager: 1, member: 2 };
       return (order[a.role] ?? 3) - (order[b.role] ?? 3);
@@ -177,6 +193,14 @@ export default function Members() {
 
             {/* ═══ Members List (2 columns) ═══ */}
             <div className="lg:col-span-2 space-y-4">
+              {/* Header with count */}
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-sm font-black uppercase tracking-[0.15em] text-white">Members</h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                  {members.length}
+                </span>
+              </div>
+
               {/* Search & Filter Bar */}
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative flex-1 min-w-[200px]">
@@ -189,7 +213,6 @@ export default function Members() {
                     className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-cyan-500/20 transition-all"
                   />
                 </div>
-                {/* Role Filter */}
                 <div className="flex items-center gap-1">
                   {(["all", "owner", "admin", "member"] as const).map(role => (
                     <button
@@ -205,7 +228,6 @@ export default function Members() {
                     </button>
                   ))}
                 </div>
-                {/* Online/Offline Filter */}
                 <div className="flex items-center gap-1">
                   {(["all", "online", "offline"] as const).map(status => (
                     <button
@@ -223,188 +245,180 @@ export default function Members() {
                     </button>
                   ))}
                 </div>
-                {/* Result count */}
                 <span className="text-[9px] text-gray-600 ml-auto">
                   {sortedMembers.length}/{members.length} shown
                 </span>
               </div>
 
               <div
-                className="glass rounded-xl overflow-hidden border border-cyan-500/10"
-                style={{ boxShadow: "0 0 30px rgba(0,240,255,0.03)" }}
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: "rgba(10,16,34,0.6)",
+                  backdropFilter: "blur(16px)",
+                  border: "1px solid rgba(0,240,255,0.15)",
+                  boxShadow: "0 0 40px rgba(0,240,255,0.06), inset 0 1px 0 rgba(0,240,255,0.08)",
+                }}
               >
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
-                  <div className="grid grid-cols-5 gap-4 flex-1 text-[9px] font-bold uppercase tracking-wider text-gray-500">
-                    <span className="col-span-1">Name / Role</span>
-                    <span>Joined</span>
-                    <span>Stats</span>
-                    <span>Balance</span>
-                    <span className="text-right">Actions</span>
-                  </div>
+                {/* Table Header — 3 columns matching mockup */}
+                <div className="grid grid-cols-12 gap-2 px-6 py-3.5 border-b border-cyan-500/10">
+                  <span className="col-span-5 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400">Name / Role</span>
+                  <span className="col-span-2 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400">Status</span>
+                  <span className="col-span-3 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400">Stats</span>
+                  <span className="col-span-2 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 text-right">Actions</span>
                 </div>
 
-                {/* Member rows */}
+                {/* Empty state */}
                 {sortedMembers.length === 0 && (searchQuery || roleFilter !== "all" || statusFilter !== "all") && (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Search className="w-6 h-6 text-gray-700 mb-2" />
                     <p className="text-[11px] text-gray-600">No members match your filters</p>
                   </div>
                 )}
+
+                {/* Member rows */}
                 {sortedMembers.map((member, i) => {
                   const isMe = member.userId === user?.id;
                   const canManage = isAdminOrOwner && !isMe && member.role !== "owner";
+                  const ms = memberStatsMap[member.userId];
+                  const hands = ms?.handsPlayed ?? 0;
+                  const wins = ms?.potsWon ?? 0;
+                  const winRate = hands > 0 ? Math.round((wins / hands) * 100) : 0;
+                  const isOnline = onlineUserIds.has(member.userId);
 
                   return (
                     <motion.div
                       key={member.userId}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="flex items-center px-5 py-4 border-b border-white/[0.03] hover:bg-white/[0.06] transition-all duration-200 group"
+                      transition={{ delay: i * 0.04 }}
+                      className="grid grid-cols-12 gap-3 items-center px-6 py-5 border-b border-white/[0.04] hover:bg-cyan-500/[0.03] transition-all duration-200 group"
                     >
-                      <div className="grid grid-cols-5 gap-4 flex-1 items-center">
-                        {/* Avatar + Name + Role */}
-                        <div className="flex items-center gap-3 col-span-1">
-                          <div className="relative">
-                            <MemberAvatar
-                              avatarId={member.avatarId}
-                              displayName={member.displayName}
-                              size="md"
-                            />
-                            {/* Online status dot */}
-                            <span
-                              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0a0a1a] ${
-                                onlineUserIds.has(member.userId)
-                                  ? "bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)] animate-pulse"
-                                  : "bg-gray-600"
-                              }`}
-                            />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold text-white truncate">
-                                {member.displayName}
-                              </span>
-                              {isMe && (
-                                <span className="text-[8px] text-cyan-400 font-bold uppercase bg-cyan-500/10 px-1.5 py-0.5 rounded">You</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-gray-600 truncate">@{member.username}</span>
-                              <span className={`text-[9px] font-medium ${
-                                onlineUserIds.has(member.userId) ? "text-green-400" : "text-gray-600"
-                              }`}>
-                                {onlineUserIds.has(member.userId) ? "Online" : "Offline"}
-                              </span>
-                            </div>
-                            <RoleBadge role={member.role} />
+                      {/* Column 1: Avatar + Name + Role */}
+                      <div className="col-span-5 flex items-center gap-4">
+                        <div className="relative shrink-0">
+                          <MemberAvatar
+                            avatarId={member.avatarId}
+                            displayName={member.displayName}
+                            size="xl"
+                          />
+                          <span
+                            className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#0a1022] ${
+                              isOnline
+                                ? "bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.7)]"
+                                : "bg-gray-600"
+                            }`}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <RoleLabel role={member.role} />
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-base font-bold text-white truncate">
+                              {member.displayName}
+                            </span>
+                            {isMe && (
+                              <span className="text-[8px] text-cyan-400 font-bold uppercase bg-cyan-500/10 px-1.5 py-0.5 rounded">You</span>
+                            )}
                           </div>
                         </div>
+                      </div>
 
-                        {/* Member Since */}
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-3 h-3 text-gray-600" />
-                          <span className="text-xs text-gray-500">
-                            {formatMemberSince(member.joinedAt)}
-                          </span>
-                        </div>
+                      {/* Column 2: Status */}
+                      <div className="col-span-2 flex items-center gap-2">
+                        <span
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            isOnline ? "bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]" : "bg-gray-600"
+                          }`}
+                        />
+                        <span className={`text-sm font-medium ${isOnline ? "text-green-400" : "text-gray-500"}`}>
+                          {isOnline ? "Online" : "Offline"}
+                        </span>
+                      </div>
 
-                        {/* Inline Stats */}
-                        <div className="flex flex-col gap-0.5">
-                          {(() => {
-                            const ms = memberStatsMap[member.userId];
-                            const hands = ms?.handsPlayed ?? 0;
-                            const wins = ms?.potsWon ?? 0;
-                            const winRate = hands > 0 ? Math.round((wins / hands) * 100) : 0;
-                            return (
-                              <>
-                                <div className="flex items-center gap-1.5">
-                                  <Gamepad2 className="w-3 h-3 text-gray-600" />
-                                  <span className="text-[10px] text-gray-400">
-                                    {hands} hands
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <TrendingUp className="w-3 h-3 text-gray-600" />
-                                  <span className="text-[10px] text-gray-400">
-                                    {winRate}% win rate
-                                  </span>
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </div>
-
-                        {/* Balance */}
-                        <div className="flex items-center gap-1">
-                          <Coins className="w-3.5 h-3.5 text-amber-500/60" />
-                          <span className="text-sm font-bold text-white">
+                      {/* Column 3: Stats */}
+                      <div className="col-span-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-lg font-bold text-white">
                             {member.chipBalance >= 1000
                               ? `${(member.chipBalance / 1000).toFixed(1)}k`
                               : member.chipBalance.toLocaleString()}
                           </span>
-                          <span className="text-[9px] text-gray-600">$</span>
+                          <span className="text-xs text-gray-500 font-medium">$</span>
                         </div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">
+                          {hands} hands | {winRate}% WR
+                        </div>
+                      </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center justify-end gap-1">
-                          {canManage && (
-                            <>
-                              {/* Promote / Demote */}
-                              {member.role === "member" ? (
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => handleRoleChange(member.userId, "admin")}
-                                  disabled={actionLoading === `role-${member.userId}`}
-                                  className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors group/btn disabled:opacity-50"
-                                  title="Promote to Admin"
-                                >
-                                  {actionLoading === `role-${member.userId}` ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-                                  ) : (
-                                    <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
-                                  )}
-                                </motion.button>
-                              ) : member.role === "admin" ? (
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => handleRoleChange(member.userId, "member")}
-                                  disabled={actionLoading === `role-${member.userId}`}
-                                  className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
-                                  title="Demote to Member"
-                                >
-                                  {actionLoading === `role-${member.userId}` ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                                  ) : (
-                                    <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
-                                  )}
-                                </motion.button>
-                              ) : null}
-
-                              {/* Kick */}
+                      {/* Column 4: Actions */}
+                      <div className="col-span-2 flex items-center justify-end gap-1.5">
+                        {canManage && (
+                          <>
+                            {/* Set Role / Edit Role */}
+                            <div className="relative">
                               <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => handleKick(member.userId, member.displayName)}
-                                disabled={actionLoading === `kick-${member.userId}`}
-                                className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                                title="Remove from Club"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setEditingRole(editingRole === member.userId ? null : member.userId)}
+                                disabled={actionLoading === `role-${member.userId}`}
+                                className="px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
                               >
-                                {actionLoading === `kick-${member.userId}` ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
-                                ) : (
-                                  <UserX className="w-3.5 h-3.5 text-red-400" />
-                                )}
+                                {actionLoading === `role-${member.userId}` ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : member.role === "member" ? "Set Role" : "Edit Role"}
                               </motion.button>
-                            </>
-                          )}
-                          {isMe && !canManage && (
-                            <span className="text-[9px] text-cyan-400/60 font-bold uppercase tracking-wider">--</span>
-                          )}
-                        </div>
+                              {/* Role dropdown */}
+                              <AnimatePresence>
+                                {editingRole === member.userId && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                                    className="absolute right-0 top-full mt-1 z-20 glass rounded-lg border border-white/10 overflow-hidden min-w-[100px]"
+                                  >
+                                    {member.role !== "admin" && (
+                                      <button
+                                        onClick={() => handleRoleChange(member.userId, "admin")}
+                                        className="w-full px-3 py-2 text-left text-[10px] font-bold text-cyan-400 hover:bg-cyan-500/10 transition-colors flex items-center gap-1.5"
+                                      >
+                                        <ChevronUp className="w-3 h-3" /> Promote
+                                      </button>
+                                    )}
+                                    {member.role === "admin" && (
+                                      <button
+                                        onClick={() => handleRoleChange(member.userId, "member")}
+                                        className="w-full px-3 py-2 text-left text-[10px] font-bold text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-1.5"
+                                      >
+                                        <ChevronDown className="w-3 h-3" /> Demote
+                                      </button>
+                                    )}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+
+                            {/* Remove */}
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleKick(member.userId, member.displayName)}
+                              disabled={actionLoading === `kick-${member.userId}`}
+                              className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                              title="Remove from Club"
+                            >
+                              {actionLoading === `kick-${member.userId}` ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
+                              ) : (
+                                <UserX className="w-3.5 h-3.5 text-red-400" />
+                              )}
+                            </motion.button>
+                          </>
+                        )}
+                        {!canManage && !isMe && (
+                          <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">--</span>
+                        )}
+                        {isMe && (
+                          <span className="text-[9px] text-cyan-400/60 font-bold uppercase tracking-wider">--</span>
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -415,52 +429,163 @@ export default function Members() {
             {/* ═══ Right Panel ═══ */}
             <div className="space-y-4">
 
-              {/* ── Club Info ── */}
+              {/* ── Club & Alliance News ── */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="glass rounded-xl p-4 border border-white/5"
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: "rgba(10,16,34,0.6)",
+                  backdropFilter: "blur(16px)",
+                  border: "1px solid rgba(0,240,255,0.12)",
+                  boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+                }}
               >
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-3 flex items-center gap-2">
-                  <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
-                  Club Info
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500">Club Name</span>
-                    <span className="text-xs font-bold text-cyan-400">{club?.name || "\u2014"}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500">Total Members</span>
-                    <span className="text-xs font-bold text-green-400">{members.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500">Pending Invites</span>
-                    <span className="text-xs font-bold text-amber-400">{pendingCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500">Owners</span>
-                    <span className="text-xs font-bold text-amber-400">
-                      {members.filter(m => m.role === "owner").length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500">Admins</span>
-                    <span className="text-xs font-bold text-cyan-400">
-                      {members.filter(m => m.role === "admin" || m.role === "manager").length}
-                    </span>
+                <div className="px-4 py-3 border-b border-cyan-500/10 flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                    Club & Alliance News
+                  </h3>
+                  <div className="relative">
+                    <Bell className="w-4 h-4 text-amber-400" />
+                    {announcements.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">
+                        {announcements.length}
+                      </span>
+                    )}
                   </div>
                 </div>
+                <div className="divide-y divide-white/[0.03] max-h-48 overflow-y-auto">
+                  {announcements.length === 0 ? (
+                    <div className="py-6 text-center">
+                      <Bell className="w-5 h-5 text-gray-700 mx-auto mb-2" />
+                      <p className="text-[10px] text-gray-600">No news yet</p>
+                    </div>
+                  ) : (
+                    announcements.slice(0, 5).map(a => (
+                      <div key={a.id} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                        <div className="text-[10px] font-bold text-cyan-400 mb-0.5">{a.title}</div>
+                        <p className="text-[11px] text-gray-400 line-clamp-2">{a.content}</p>
+                        <span className="text-[9px] text-gray-600 mt-1 block">{formatTimeAgo(a.createdAt)}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </motion.div>
+
+              {/* ── Pending Join Requests ── */}
+              {isAdminOrOwner && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}
+                  className="rounded-xl overflow-hidden"
+                  style={{
+                    background: "rgba(10,16,34,0.6)",
+                    backdropFilter: "blur(16px)",
+                    border: "1px solid rgba(0,240,255,0.12)",
+                    boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+                  }}
+                >
+                  <button
+                    onClick={() => setShowPending(!showPending)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors"
+                  >
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+                      Pending Join Requests
+                      {pendingCount > 0 && (
+                        <span className="bg-amber-500/20 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30">
+                          {pendingCount}
+                        </span>
+                      )}
+                    </h3>
+                    {showPending ? (
+                      <ChevronUp className="w-4 h-4 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {showPending && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        {pendingInvitations.length === 0 ? (
+                          <div className="px-4 pb-4 text-center">
+                            <div className="py-4">
+                              <Users className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                              <p className="text-[10px] text-gray-600">No pending requests</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="px-4 pb-3 space-y-2">
+                            {pendingInvitations.map((inv) => (
+                              <motion.div
+                                key={inv.id}
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]"
+                              >
+                                <MemberAvatar avatarId={inv.avatarId ?? null} displayName={inv.displayName} size="sm" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-semibold text-white truncate">{inv.displayName}</div>
+                                  <div className="text-[9px] text-gray-500">
+                                    {inv.type === "request" ? "Request to Join" : "Pending Invite"}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleInvitationAction(inv.id, "accepted")}
+                                    disabled={actionLoading === inv.id}
+                                    className="px-4 py-1.5 rounded-lg bg-green-500/80 hover:bg-green-500 text-white transition-colors disabled:opacity-50 text-[10px] font-bold uppercase tracking-wider"
+                                    title="Approve"
+                                  >
+                                    {actionLoading === inv.id ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : "APPROVE"}
+                                  </motion.button>
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleInvitationAction(inv.id, "declined")}
+                                    disabled={actionLoading === inv.id}
+                                    className="px-4 py-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-colors disabled:opacity-50 text-[10px] font-bold uppercase tracking-wider"
+                                    title="Decline"
+                                  >
+                                    DECLINE
+                                  </motion.button>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
 
               {/* ── Invite by Username ── */}
               {isAdminOrOwner && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35 }}
-                  className="glass rounded-xl p-4 border border-white/5"
+                  transition={{ delay: 0.4 }}
+                  className="rounded-xl p-4"
+                  style={{
+                    background: "rgba(10,16,34,0.6)",
+                    backdropFilter: "blur(16px)",
+                    border: "1px solid rgba(0,240,255,0.12)",
+                    boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+                  }}
                 >
                   <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-3 flex items-center gap-2">
                     <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
@@ -520,145 +645,6 @@ export default function Members() {
                   </AnimatePresence>
                 </motion.div>
               )}
-
-              {/* ── Pending Join Requests ── */}
-              {isAdminOrOwner && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="glass rounded-xl border border-white/5 overflow-hidden"
-                >
-                  <button
-                    onClick={() => setShowPending(!showPending)}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors"
-                  >
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 flex items-center gap-2">
-                      <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
-                      <Clock className="w-3.5 h-3.5 text-amber-400" />
-                      Pending Join Requests
-                      {pendingCount > 0 && (
-                        <span className="bg-amber-500/20 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30">
-                          {pendingCount}
-                        </span>
-                      )}
-                    </h3>
-                    {showPending ? (
-                      <ChevronUp className="w-4 h-4 text-gray-600" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-gray-600" />
-                    )}
-                  </button>
-
-                  <AnimatePresence>
-                    {showPending && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        {pendingInvitations.length === 0 ? (
-                          <div className="px-4 pb-4 text-center">
-                            <div className="py-4">
-                              <Users className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                              <p className="text-[10px] text-gray-600">No pending requests</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="px-4 pb-3 space-y-2">
-                            {pendingInvitations.map((inv) => (
-                              <motion.div
-                                key={inv.id}
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]"
-                              >
-                                {/* Avatar */}
-                                <MemberAvatar
-                                  avatarId={null}
-                                  displayName={inv.displayName}
-                                  size="sm"
-                                />
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-semibold text-white truncate">{inv.displayName}</div>
-                                  <div className="text-[9px] text-gray-500">
-                                    {inv.type === "request" ? "Request to Join" : "Pending Invite"}
-                                  </div>
-                                </div>
-                                {/* Approve / Decline */}
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <motion.button
-                                    whileHover={{ scale: 1.15 }}
-                                    whileTap={{ scale: 0.85 }}
-                                    onClick={() => handleInvitationAction(inv.id, "accepted")}
-                                    disabled={actionLoading === inv.id}
-                                    className="p-1.5 rounded-md bg-green-500/15 border border-green-500/25 hover:bg-green-500/25 transition-colors disabled:opacity-50"
-                                    title="Approve"
-                                  >
-                                    {actionLoading === inv.id ? (
-                                      <Loader2 className="w-3 h-3 animate-spin text-green-400" />
-                                    ) : (
-                                      <Check className="w-3 h-3 text-green-400" />
-                                    )}
-                                  </motion.button>
-                                  <motion.button
-                                    whileHover={{ scale: 1.15 }}
-                                    whileTap={{ scale: 0.85 }}
-                                    onClick={() => handleInvitationAction(inv.id, "declined")}
-                                    disabled={actionLoading === inv.id}
-                                    className="p-1.5 rounded-md bg-red-500/15 border border-red-500/25 hover:bg-red-500/25 transition-colors disabled:opacity-50"
-                                    title="Decline"
-                                  >
-                                    <X className="w-3 h-3 text-red-400" />
-                                  </motion.button>
-                                </div>
-                              </motion.div>
-                            ))}
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              )}
-
-              {/* ── Your Role ── */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.45 }}
-                className="glass rounded-xl p-4 border border-white/5"
-              >
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-3 flex items-center gap-2">
-                  <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
-                  Your Role
-                </h3>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
-                    {myRole === "owner" ? (
-                      <Crown className="w-5 h-5 text-amber-400" />
-                    ) : myRole === "admin" ? (
-                      <ShieldCheck className="w-5 h-5 text-cyan-400" />
-                    ) : (
-                      <User className="w-5 h-5 text-gray-400" />
-                    )}
-                  </div>
-                  <div>
-                    <RoleBadge role={myRole} />
-                    <div className="text-[10px] text-gray-500 mt-1">
-                      {myRole === "owner"
-                        ? "Full control over club settings and members"
-                        : myRole === "admin"
-                          ? "Can manage members and approve requests"
-                          : "Standard club member"}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
             </div>
           </div>
         )}
@@ -670,7 +656,13 @@ export default function Members() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="glass rounded-xl p-5 border border-white/5"
+            className="rounded-xl p-5"
+            style={{
+              background: "rgba(10,16,34,0.6)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid rgba(0,240,255,0.12)",
+              boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+            }}
           >
             <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-4 flex items-center gap-2">
               <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
@@ -679,35 +671,55 @@ export default function Members() {
             <MissionsGrid missions={missions} />
           </motion.div>
 
-          {/* Your Stats */}
+          {/* Upcoming Private Games */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="glass rounded-xl p-5 border border-white/5"
+            className="rounded-xl p-5"
+            style={{
+              background: "rgba(10,16,34,0.6)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid rgba(0,240,255,0.12)",
+              boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+            }}
           >
             <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-4 flex items-center gap-2">
               <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
-              Your Stats
+              <CalendarDays className="w-3.5 h-3.5 text-cyan-400" />
+              Upcoming Private Games
             </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center p-3 rounded-lg bg-white/5 border border-cyan-500/15" style={{ boxShadow: "0 0 20px rgba(0,240,255,0.05)" }}>
-                <div className="text-lg font-bold text-cyan-400">{myStats?.handsPlayed ?? 0}</div>
-                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Hands Played</div>
+            {events.length === 0 ? (
+              <div className="text-center py-4">
+                <CalendarDays className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                <p className="text-[11px] text-gray-600">No upcoming games scheduled</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-white/5 border border-green-500/15" style={{ boxShadow: "0 0 20px rgba(0,255,157,0.05)" }}>
-                <div className="text-lg font-bold text-green-400">{myStats?.potsWon ?? 0}</div>
-                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Pots Won</div>
+            ) : (
+              <div className="space-y-3">
+                {events.slice(0, 4).map(ev => (
+                  <div key={ev.id} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">{ev.name}</div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">
+                        {formatEventTime(ev.startTime)} | {ev.eventType}
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleRemindMe(ev.id, ev.name)}
+                      className={`px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all shrink-0 ml-3 ${
+                        localStorage.getItem(`remind_${ev.id}`)
+                          ? "bg-green-500/20 text-green-400 border border-green-500/20"
+                          : "bg-green-500 text-white hover:bg-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                      }`}
+                    >
+                      {localStorage.getItem(`remind_${ev.id}`) ? "REMINDED" : "REMIND ME"}
+                    </motion.button>
+                  </div>
+                ))}
               </div>
-              <div className="text-center p-3 rounded-lg bg-white/5 border border-amber-500/15" style={{ boxShadow: "0 0 20px rgba(234,179,8,0.05)" }}>
-                <div className="text-lg font-bold text-amber-400">{myStats?.bestWinStreak ?? 0}</div>
-                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Best Streak</div>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-white/5 border border-purple-500/15" style={{ boxShadow: "0 0 20px rgba(168,85,247,0.05)" }}>
-                <div className="text-lg font-bold text-purple-400">{myStats?.currentWinStreak ?? 0}</div>
-                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Current Streak</div>
-              </div>
-            </div>
+            )}
           </motion.div>
         </div>
       </div>

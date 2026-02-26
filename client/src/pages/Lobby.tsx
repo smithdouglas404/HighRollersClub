@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -7,7 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CreateTableModal } from "@/components/lobby/CreateTable";
 import {
   Plus, Users, Coins, ChevronRight,
-  Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search
+  Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search,
+  Brain, Key, CheckCircle, XCircle
 } from "lucide-react";
 
 type GameFormat = "all" | "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
@@ -60,6 +61,8 @@ function FormatBadge({ format }: { format: string }) {
 function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }) {
   const isFull = table.playerCount >= table.maxPlayers;
   const isPlaying = table.status === "playing";
+  const isHot = table.playerCount > 0 && table.playerCount >= table.maxPlayers * 0.7;
+  const avgPot = table.bigBlind * 10; // heuristic estimate
 
   return (
     <motion.div
@@ -83,6 +86,16 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-bold text-sm text-cyan-400 tracking-wide" style={{ textShadow: "0 0 8px rgba(0,240,255,0.3)" }}>{table.name}</h3>
             <FormatBadge format={table.gameFormat} />
+            {isHot && (
+              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/20 animate-pulse">
+                HOT
+              </span>
+            )}
+            {isFull && (
+              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/20">
+                FULL
+              </span>
+            )}
           </div>
           <p className="text-[10px] text-gray-500 font-mono mt-0.5">
             {table.smallBlind}/{table.bigBlind}
@@ -109,6 +122,9 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
             <Coins className="w-3 h-3" />
             {table.gameFormat === "sng" ? table.buyInAmount : `${table.minBuyIn}-${table.maxBuyIn}`}
           </span>
+          <span className="flex items-center gap-1 text-gray-500" title="Avg Pot">
+            ~{avgPot}
+          </span>
           {table.allowBots && (
             <span className="flex items-center gap-1 text-gray-500">
               <Bot className="w-3 h-3" />
@@ -131,8 +147,14 @@ export default function Lobby() {
   const [defaultPrivate, setDefaultPrivate] = useState(false);
   const [activeFormat, setActiveFormat] = useState<GameFormat>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [passwordModal, setPasswordModal] = useState<{ tableId: string; tableName: string } | null>(null);
   const [passwordInput, setPasswordInput] = useState("");
+  const [showAISettings, setShowAISettings] = useState(false);
+  const [aiKeyInput, setAiKeyInput] = useState("");
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiHasKey, setAiHasKey] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
 
   const fetchTables = async () => {
     try {
@@ -150,12 +172,22 @@ export default function Lobby() {
   useEffect(() => {
     fetchTables();
     const interval = setInterval(fetchTables, 5000);
+    // Fetch AI settings
+    fetch("/api/ai-settings").then(r => r.ok ? r.json() : null).then(data => {
+      if (data) { setAiEnabled(data.aiEnabled); setAiHasKey(data.hasKey); }
+    }).catch(() => {});
     return () => clearInterval(interval);
   }, []);
 
+  // Search debounce (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const filteredTables = tables.filter(t => {
     const matchesFormat = activeFormat === "all" || (t.gameFormat || "cash") === activeFormat;
-    const matchesSearch = !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !debouncedSearch || t.name.toLowerCase().includes(debouncedSearch.toLowerCase());
     return matchesFormat && matchesSearch;
   });
 
@@ -212,6 +244,22 @@ export default function Lobby() {
           </div>
 
           <div className="flex items-center gap-2">
+            {user?.role === "admin" && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowAISettings(!showAISettings)}
+                className={`glass rounded-lg px-4 py-2 text-[10px] font-bold tracking-wider border transition-all flex items-center gap-2 ${
+                  aiEnabled
+                    ? "text-purple-400 border-purple-500/20 hover:border-purple-500/40"
+                    : "text-gray-400 border-white/5 hover:border-white/15 hover:text-white"
+                }`}
+              >
+                <Brain className="w-3.5 h-3.5" />
+                AI BOTS
+                {aiEnabled && <span className="w-1.5 h-1.5 rounded-full bg-green-400" />}
+              </motion.button>
+            )}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -238,6 +286,102 @@ export default function Lobby() {
           </div>
         </motion.div>
 
+        {/* AI Settings Panel (admin only) */}
+        <AnimatePresence>
+          {showAISettings && user?.role === "admin" && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mb-4"
+            >
+              <div
+                className="rounded-xl p-4"
+                style={{
+                  background: "linear-gradient(135deg, rgba(88,28,135,0.1), rgba(15,23,42,0.8))",
+                  border: "1px solid rgba(168,85,247,0.15)",
+                }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="w-4 h-4 text-purple-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-purple-400">AI Bot Configuration</span>
+                  <span className={`ml-2 flex items-center gap-1 text-[9px] font-bold uppercase ${aiEnabled ? "text-green-400" : "text-gray-500"}`}>
+                    {aiEnabled ? <><CheckCircle className="w-3 h-3" /> Active</> : <><XCircle className="w-3 h-3" /> Inactive</>}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500 mb-3">
+                  Provide your Anthropic API key to enable Claude-powered AI bots with unique personalities.
+                  Bots will use Claude Haiku for fast, intelligent decisions and in-character chat.
+                  {!aiHasKey && " Without a key, bots use built-in heuristic logic."}
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                    <input
+                      type="password"
+                      value={aiKeyInput}
+                      onChange={(e) => setAiKeyInput(e.target.value)}
+                      placeholder={aiHasKey ? "Key is set (enter new to replace)" : "sk-ant-..."}
+                      className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-purple-500/30"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!aiKeyInput.trim()) return;
+                      setAiSaving(true);
+                      try {
+                        const res = await fetch("/api/ai-settings", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ apiKey: aiKeyInput.trim() }),
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                          setAiEnabled(data.aiEnabled);
+                          setAiHasKey(true);
+                          setAiKeyInput("");
+                          toast({ title: "AI bots enabled", description: "Claude-powered bots are now active." });
+                        } else {
+                          toast({ title: "Error", description: data.error || "Failed to save", variant: "destructive" });
+                        }
+                      } catch {
+                        toast({ title: "Error", description: "Network error", variant: "destructive" });
+                      } finally {
+                        setAiSaving(false);
+                      }
+                    }}
+                    disabled={aiSaving || !aiKeyInput.trim()}
+                    className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-white bg-purple-600/60 border border-purple-500/30 hover:bg-purple-600/80 transition-all disabled:opacity-40"
+                  >
+                    {aiSaving ? "Saving..." : "Save Key"}
+                  </button>
+                  {aiHasKey && (
+                    <button
+                      onClick={async () => {
+                        setAiSaving(true);
+                        try {
+                          await fetch("/api/ai-settings", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ apiKey: null }),
+                          });
+                          setAiEnabled(false);
+                          setAiHasKey(false);
+                          toast({ title: "AI bots disabled", description: "Bots will use heuristic logic." });
+                        } catch {} finally { setAiSaving(false); }
+                      }}
+                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Search bar */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -250,8 +394,8 @@ export default function Lobby() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search tables..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/30"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-500 outline-none transition-all focus:ring-1 focus:ring-cyan-500/30"
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}
           />
         </motion.div>
 
@@ -284,7 +428,7 @@ export default function Lobby() {
         </motion.div>
 
         {/* Quick play cards */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

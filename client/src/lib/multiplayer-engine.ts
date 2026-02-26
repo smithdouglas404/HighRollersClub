@@ -47,6 +47,13 @@ function serverToClientGameState(serverState: any): GameState {
     lastAction: serverState.lastAction,
     actionNumber: serverState.actionNumber,
     handNumber: serverState.handNumber,
+    // Phase 3 extensions
+    insuranceOffer: serverState.insuranceOffer || null,
+    insuranceActive: serverState.insuranceActive || false,
+    runItPending: serverState.runItPending || false,
+    runItBoards: serverState.runItBoards || null,
+    smallBlind: serverState.smallBlind,
+    bigBlind: serverState.bigBlind,
   };
 }
 
@@ -334,6 +341,8 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     unsubs.push(
       wsClient.on("error", (msg: any) => {
         setError(msg.message);
+        // Reset join state so player can retry
+        joinedRef.current = false;
         setTimeout(() => setError(null), 5000);
       })
     );
@@ -355,6 +364,25 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     },
     []
   );
+
+  // Buy extra time
+  const buyTime = useCallback(() => {
+    wsClient.send({ type: "buy_time" } as any);
+  }, []);
+
+  // Insurance responses
+  const acceptInsurance = useCallback(() => {
+    wsClient.send({ type: "accept_insurance" } as any);
+  }, []);
+
+  const declineInsurance = useCallback(() => {
+    wsClient.send({ type: "decline_insurance" } as any);
+  }, []);
+
+  // Run it vote
+  const voteRunIt = useCallback((count: 1 | 2 | 3) => {
+    wsClient.send({ type: "run_it_vote", count } as any);
+  }, []);
 
   // Join table
   const joinTable = useCallback(
@@ -420,5 +448,10 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     dismissTournamentComplete: () => setTournamentComplete(null),
     bombPotActive,
     notifications,
+    // Phase 3 features
+    buyTime,
+    acceptInsurance,
+    declineInsurance,
+    voteRunIt,
   };
 }

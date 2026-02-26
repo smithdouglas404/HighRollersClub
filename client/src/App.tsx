@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ClubProvider } from "@/lib/club-context";
+import { WalletProvider } from "@/lib/wallet-context";
 import Game from "@/pages/Game";
 import Landing from "@/pages/Landing";
 import Lobby from "@/pages/Lobby";
@@ -15,9 +16,13 @@ import ClubDashboard from "@/pages/ClubDashboard";
 import ClubSettings from "@/pages/ClubSettings";
 import ClubInvitations from "@/pages/ClubInvitations";
 import Leagues from "@/pages/Leagues";
+import AllianceDetail from "@/pages/AllianceDetail";
+import LeagueDetail from "@/pages/LeagueDetail";
 import Analytics from "@/pages/Analytics";
 import HandReplay from "@/pages/HandReplay";
 import BrowseClubs from "@/pages/BrowseClubs";
+import Leaderboard from "@/pages/Leaderboard";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 
@@ -61,12 +66,28 @@ function ProtectedBrowseClubs() {
   return <AuthGate><BrowseClubs /></AuthGate>;
 }
 
+function ProtectedLeaderboard() {
+  return <AuthGate><Leaderboard /></AuthGate>;
+}
+
+function ProtectedProfile() {
+  return <AuthGate><Profile /></AuthGate>;
+}
+
 function GameWithTable({ params }: { params: { tableId: string } }) {
   return <AuthGate><Game tableId={params.tableId} /></AuthGate>;
 }
 
 function HandReplayPage({ params }: { params: { handId: string } }) {
   return <AuthGate><HandReplay handId={params.handId} /></AuthGate>;
+}
+
+function AllianceDetailPage({ params }: { params: { id: string } }) {
+  return <AuthGate><AllianceDetail allianceId={params.id} /></AuthGate>;
+}
+
+function LeagueDetailPage({ params }: { params: { id: string } }) {
+  return <AuthGate><LeagueDetail seasonId={params.id} /></AuthGate>;
 }
 
 function Router() {
@@ -83,9 +104,13 @@ function Router() {
       <Route path="/club/settings" component={ProtectedClubSettings} />
       <Route path="/club/invitations" component={ProtectedClubInvitations} />
       <Route path="/leagues" component={ProtectedLeagues} />
+      <Route path="/alliances/:id">{(params) => <AllianceDetailPage params={params} />}</Route>
+      <Route path="/leagues/:id">{(params) => <LeagueDetailPage params={params} />}</Route>
       <Route path="/analytics" component={ProtectedAnalytics} />
       <Route path="/wallet" component={ProtectedWallet} />
       <Route path="/clubs/browse" component={ProtectedBrowseClubs} />
+      <Route path="/leaderboard" component={ProtectedLeaderboard} />
+      <Route path="/profile" component={ProtectedProfile} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -95,12 +120,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ClubProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </ClubProvider>
+        <WalletProvider>
+          <ClubProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </ClubProvider>
+        </WalletProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

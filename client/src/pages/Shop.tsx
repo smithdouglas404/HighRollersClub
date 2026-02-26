@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { useWallet, type Transaction } from "@/lib/wallet-context";
 import {
   Sparkles, Star, Crown, Wallet, Gift,
   Tag, Zap, Gem, Coins, Clock, Loader2, ArrowUpRight, ArrowDownRight,
@@ -40,32 +41,22 @@ interface InventoryEntry {
   item: ShopItem | null;
 }
 
-interface Transaction {
-  id: string;
-  type: string;
-  amount: number;
-  balanceBefore: number;
-  balanceAfter: number;
-  description: string | null;
-  createdAt: string;
-}
-
 const RARITY_COLORS: Record<string, string> = {
-  mythic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+  mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
   legendary: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
   rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
   uncommon: "text-green-400 bg-green-500/10 border-green-500/20",
   common: "text-gray-400 bg-gray-500/10 border-gray-500/20",
   // Also support capitalized keys for backward compatibility
-  Mythic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+  Mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
   Legendary: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   Epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
   Rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
 };
 
 const RARITY_GRADIENTS: Record<string, string> = {
-  mythic: "from-purple-600/40 via-pink-500/30 to-purple-800/40",
+  mythic: "from-fuchsia-600/40 via-pink-500/30 to-fuchsia-800/40",
   legendary: "from-amber-500/40 via-orange-500/30 to-amber-700/40",
   epic: "from-purple-500/40 via-indigo-500/30 to-purple-700/40",
   rare: "from-cyan-500/40 via-blue-500/30 to-cyan-700/40",
@@ -373,19 +364,13 @@ export default function Shop() {
   const [activeTab, setActiveTab] = useState("Avatars");
   const { user, refreshUser } = useAuth();
   const [, navigate] = useLocation();
-  const [balance, setBalance] = useState<number | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [claiming, setClaiming] = useState(false);
   const [claimResult, setClaimResult] = useState<{ bonus: number } | null>(null);
-  const [loadingTx, setLoadingTx] = useState(true);
 
-  // Cooldown state
-  const [nextClaimAt, setNextClaimAt] = useState<Date | null>(null);
-  const [cooldownText, setCooldownText] = useState("");
-  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Transaction pagination
-  const [txVisible, setTxVisible] = useState(10);
+  const {
+    balance, canClaim, claiming, timeLeft,
+    claimDailyBonus, transactions, loadingTransactions: loadingTx,
+    hasMore, loadMore, refreshTransactions, refreshBalance,
+  } = useWallet();
 
   // Shop state
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
@@ -425,22 +410,6 @@ export default function Shop() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Fetch real balance
-  useEffect(() => {
-    fetch("/api/wallet/balance")
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.balance != null) setBalance(data.balance); })
-      .catch(() => {});
-  }, []);
-
-  // Fetch transactions
-  useEffect(() => {
-    fetch("/api/wallet/transactions")
-      .then((r) => r.ok ? r.json() : [])
-      .then(setTransactions)
-      .catch(() => {})
-      .finally(() => setLoadingTx(false));
-  }, []);
 
   // Fetch shop items
   const fetchShopItems = useCallback(async () => {
@@ -482,68 +451,6 @@ export default function Shop() {
     fetchInventory();
   }, [fetchInventory]);
 
-  // Refresh balance helper
-  const refreshBalance = useCallback(async () => {
-    try {
-      const res = await fetch("/api/wallet/balance");
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.balance != null) setBalance(data.balance);
-      }
-    } catch {
-      // silent
-    }
-  }, []);
-
-  // Check cooldown on mount
-  useEffect(() => {
-    fetch("/api/wallet/daily-status")
-      .then(async (res) => {
-        if (res.ok) {
-          const data = await res.json();
-          if (!data.canClaim && data.nextClaimAt) {
-            setNextClaimAt(new Date(data.nextClaimAt));
-          }
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Cooldown countdown ticker
-  useEffect(() => {
-    if (!nextClaimAt) {
-      setCooldownText("");
-      return;
-    }
-    const tick = () => {
-      const diff = nextClaimAt.getTime() - Date.now();
-      if (diff <= 0) {
-        setNextClaimAt(null);
-        setCooldownText("");
-        return;
-      }
-      const h = Math.floor(diff / 3_600_000);
-      const m = Math.floor((diff % 3_600_000) / 60_000);
-      const s = Math.floor((diff % 60_000) / 1_000);
-      setCooldownText(`${h}h ${m}m ${s}s`);
-    };
-    tick();
-    cooldownRef.current = setInterval(tick, 1_000);
-    return () => { if (cooldownRef.current) clearInterval(cooldownRef.current); };
-  }, [nextClaimAt]);
-
-  // Refresh transactions helper
-  const refreshTransactions = useCallback(async () => {
-    try {
-      const res = await fetch("/api/wallet/transactions");
-      if (res.ok) {
-        const data = await res.json();
-        setTransactions(data);
-      }
-    } catch {
-      // silent
-    }
-  }, []);
 
   // Purchase handler
   const handlePurchase = async () => {
@@ -594,35 +501,18 @@ export default function Shop() {
   };
 
   const handleClaimDaily = async () => {
-    if (claiming || nextClaimAt) return;
-    setClaiming(true);
     setClaimResult(null);
-    try {
-      const res = await fetch("/api/wallet/claim-daily", { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        setBalance(data.balance);
-        setClaimResult({ bonus: data.bonus });
-        // Set 24h cooldown from now
-        setNextClaimAt(new Date(Date.now() + 24 * 60 * 60 * 1000));
-        await refreshUser();
-        await refreshTransactions();
-        setTimeout(() => setClaimResult(null), 3000);
-      } else if (res.status === 429) {
-        const data = await res.json().catch(() => null);
-        if (data?.nextClaimAt) {
-          setNextClaimAt(new Date(data.nextClaimAt));
-        }
-        showToast("Daily bonus already claimed — check the timer!");
-      }
-    } catch {
-      showToast("Network error. Please try again.");
-    } finally {
-      setClaiming(false);
+    const result = await claimDailyBonus();
+    if (result.success) {
+      setClaimResult({ bonus: result.bonus! });
+      await refreshUser();
+      setTimeout(() => setClaimResult(null), 3000);
+    } else {
+      showToast("Daily bonus already claimed — check the timer!");
     }
   };
 
-  const displayBalance = balance ?? user?.chipBalance ?? 0;
+  const displayBalance = balance;
 
   // Owned item IDs for quick lookup
   const ownedItemIds = new Set(inventory.map((inv) => inv.itemId));
@@ -927,7 +817,7 @@ export default function Shop() {
               ) : (
                 <>
                   <div className="divide-y divide-white/[0.03]">
-                    {transactions.slice(0, txVisible).map((tx) => (
+                    {transactions.map((tx) => (
                       <div key={tx.id} className="flex items-center px-5 py-3 hover:bg-white/[0.02] transition-colors">
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mr-3 ${
                           tx.amount > 0 ? "bg-green-500/10 border border-green-500/15" : "bg-red-500/10 border border-red-500/15"
@@ -953,12 +843,12 @@ export default function Shop() {
                       </div>
                     ))}
                   </div>
-                  {transactions.length > txVisible && (
+                  {hasMore && (
                     <button
-                      onClick={() => setTxVisible(v => v + 10)}
+                      onClick={loadMore}
                       className="w-full py-2.5 text-[10px] font-bold uppercase tracking-wider text-cyan-400 hover:text-white transition-colors border-t border-white/[0.03]"
                     >
-                      Show More ({transactions.length - txVisible} remaining)
+                      Load More
                     </button>
                   )}
                 </>
@@ -999,32 +889,32 @@ export default function Shop() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-green-400">Daily Bonus</span>
                 </div>
                 <p className="text-[10px] text-gray-500 mb-3">
-                  {nextClaimAt
+                  {!canClaim
                     ? "Come back when the timer expires!"
                     : "Claim your free chips every 24 hours!"}
                 </p>
-                {nextClaimAt && cooldownText && (
+                {!canClaim && timeLeft && (
                   <div className="flex items-center justify-center gap-2 mb-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                     <Clock className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-sm font-mono font-bold text-amber-400 tabular-nums">{cooldownText}</span>
+                    <span className="text-sm font-mono font-bold text-amber-400 tabular-nums">{timeLeft}</span>
                   </div>
                 )}
                 <motion.button
-                  whileHover={!nextClaimAt ? { scale: 1.02 } : {}}
-                  whileTap={!nextClaimAt ? { scale: 0.98 } : {}}
+                  whileHover={canClaim ? { scale: 1.02 } : {}}
+                  whileTap={canClaim ? { scale: 0.98 } : {}}
                   onClick={handleClaimDaily}
-                  disabled={claiming || !!nextClaimAt}
+                  disabled={claiming || !canClaim}
                   className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2"
                   style={{
-                    background: nextClaimAt
+                    background: !canClaim
                       ? "rgba(255,255,255,0.05)"
                       : "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                    boxShadow: nextClaimAt ? "none" : "0 0 20px rgba(0,255,157,0.2)",
-                    color: nextClaimAt ? "rgba(156,163,175,1)" : "black",
+                    boxShadow: !canClaim ? "none" : "0 0 20px rgba(0,255,157,0.2)",
+                    color: !canClaim ? "rgba(156,163,175,1)" : "black",
                   }}
                 >
                   {claiming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
-                  {nextClaimAt ? "Already Claimed" : "Claim Daily Bonus"}
+                  {!canClaim ? "Already Claimed" : "Claim Daily Bonus"}
                 </motion.button>
                 {claimResult && (
                   <motion.div
@@ -1107,11 +997,11 @@ export default function Shop() {
             {/* Wallet Actions */}
             <div className="flex gap-2">
               <button
-                onClick={() => navigate("/wallet")}
-                className="flex-1 glass rounded-lg py-2.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border border-white/5 hover:border-white/10 hover:text-white transition-all flex items-center justify-center gap-1.5"
+                disabled
+                className="flex-1 glass rounded-lg py-2.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 border border-white/5 opacity-50 cursor-not-allowed flex items-center justify-center gap-1.5"
               >
                 <Wallet className="w-3 h-3" />
-                Deposit
+                Deposit (Soon)
               </button>
             </div>
           </div>

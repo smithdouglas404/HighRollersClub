@@ -1,9 +1,11 @@
 import { execSync } from "child_process";
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { seedData } from "./seed";
+import { csrfProtection } from "./middleware/csrf";
 
 try { execSync("fuser -k -9 5000/tcp 2>/dev/null", { timeout: 3000 }); } catch {}
 await new Promise(r => setTimeout(r, 2000));
@@ -22,8 +24,13 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+app.use(cookieParser());
+
 // Setup auth (session + passport) before routes
 const sessionMiddleware = setupAuth(app);
+
+// CSRF protection (after session, before routes)
+app.use("/api", csrfProtection);
 
 app.use((req, res, next) => {
   const start = Date.now();

@@ -41,6 +41,9 @@ export interface IStorage {
   removeClubMember(clubId: string, userId: string): Promise<void>;
   updateClubMemberRole(clubId: string, userId: string, role: string): Promise<void>;
 
+  // User's Clubs
+  getUserClubs(userId: string): Promise<Club[]>;
+
   // Club Invitations
   getClubInvitations(clubId: string): Promise<ClubInvitation[]>;
   getUserPendingRequests(userId: string): Promise<ClubInvitation[]>;
@@ -70,7 +73,7 @@ export interface IStorage {
 
   // Transactions
   createTransaction(tx: Omit<Transaction, "id" | "createdAt">): Promise<Transaction>;
-  getTransactions(userId: string, limit?: number): Promise<Transaction[]>;
+  getTransactions(userId: string, limit?: number, offset?: number): Promise<Transaction[]>;
 
   // Game Hands
   createGameHand(hand: Omit<GameHand, "id" | "createdAt">): Promise<GameHand>;
@@ -87,6 +90,7 @@ export interface IStorage {
   // Player Stats
   getPlayerStats(userId: string): Promise<PlayerStat | undefined>;
   getPlayerStatsBatch(userIds: string[]): Promise<Map<string, PlayerStat>>;
+  getLeaderboard(metric: "chips" | "wins" | "winRate", limit?: number): Promise<{ userId: string; username: string; displayName: string | null; avatarId: string | null; value: number }[]>;
   incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number): Promise<void>;
   resetDailyStats(userId: string): Promise<void>;
 
@@ -117,13 +121,21 @@ export interface IStorage {
   updateTournament(id: string, data: Partial<Tournament>): Promise<Tournament | undefined>;
   getTournamentRegistrations(tournamentId: string): Promise<TournamentRegistration[]>;
   registerForTournament(data: Omit<TournamentRegistration, "id" | "registeredAt">): Promise<TournamentRegistration>;
+  registerForTournamentAtomic(tournamentId: string, userId: string, maxPlayers: number): Promise<TournamentRegistration | null>;
   updateTournamentRegistration(id: string, data: Partial<TournamentRegistration>): Promise<TournamentRegistration | undefined>;
 
   // Alliances & Leagues
   getClubAlliances(): Promise<ClubAlliance[]>;
+  getClubAlliance(id: string): Promise<ClubAlliance | undefined>;
   createClubAlliance(data: Omit<ClubAlliance, "id" | "createdAt">): Promise<ClubAlliance>;
+  updateClubAlliance(id: string, data: Partial<ClubAlliance>): Promise<ClubAlliance | undefined>;
+  deleteClubAlliance(id: string): Promise<void>;
+  getClubAllianceByClubId(clubId: string): Promise<ClubAlliance | undefined>;
   getLeagueSeasons(): Promise<LeagueSeason[]>;
+  getLeagueSeason(id: string): Promise<LeagueSeason | undefined>;
   createLeagueSeason(data: Omit<LeagueSeason, "id" | "createdAt">): Promise<LeagueSeason>;
+  updateLeagueSeason(id: string, data: Partial<LeagueSeason>): Promise<LeagueSeason | undefined>;
+  deleteLeagueSeason(id: string): Promise<void>;
   getActiveLeagueSeason(): Promise<LeagueSeason | undefined>;
   updateLeagueStandings(seasonId: string, standings: any[]): Promise<void>;
 }
@@ -196,6 +208,12 @@ export class MemStorage implements IStorage {
   // Clubs
   async getClub(id: string) { return this.clubs.get(id); }
   async getClubs() { return Array.from(this.clubs.values()); }
+  async getUserClubs(userId: string): Promise<Club[]> {
+    const memberClubIds = this.clubMembersList
+      .filter(m => m.userId === userId)
+      .map(m => m.clubId);
+    return Array.from(this.clubs.values()).filter(c => memberClubIds.includes(c.id));
+  }
   async createClub(data: InsertClub & { ownerId: string }): Promise<Club> {
     const id = randomUUID();
     const club: Club = {
@@ -326,6 +344,7 @@ export class MemStorage implements IStorage {
       tournamentId: null,
       rakePercent: data.rakePercent ?? 0,
       rakeCap: data.rakeCap ?? 0,
+      straddleEnabled: data.straddleEnabled ?? false,
       createdAt: new Date(),
     };
     this.tablesList.set(id, table);
@@ -382,11 +401,11 @@ export class MemStorage implements IStorage {
     this.transactionsList.push(transaction);
     return transaction;
   }
-  async getTransactions(userId: string, limit = 50) {
+  async getTransactions(userId: string, limit = 50, offset = 0) {
     return this.transactionsList
       .filter(t => t.userId === userId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
+      .slice(offset, offset + limit);
   }
 
   // Game Hands
@@ -446,6 +465,20 @@ export class MemStorage implements IStorage {
       if (stats) result.set(uid, stats);
     }
     return result;
+  }
+  async getLeaderboard(metric: "chips" | "wins" | "winRate", limit = 50) {
+    const allUsers = Array.from(this.users.values());
+    const result: { userId: string; username: string; displayName: string | null; avatarId: string | null; value: number }[] = [];
+    for (const u of allUsers) {
+      const stats = this.playerStatsList.get(u.id);
+      let value = 0;
+      if (metric === "chips") value = u.chipBalance;
+      else if (metric === "wins") value = stats?.potsWon ?? 0;
+      else if (metric === "winRate") value = stats && stats.handsPlayed > 0 ? Math.round((stats.potsWon / stats.handsPlayed) * 100) : 0;
+      result.push({ userId: u.id, username: u.username, displayName: u.displayName, avatarId: u.avatarId, value });
+    }
+    result.sort((a, b) => b.value - a.value);
+    return result.slice(0, limit);
   }
   async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number) {
     let stats = this.playerStatsList.get(userId);
@@ -566,6 +599,12 @@ export class MemStorage implements IStorage {
     this.tournamentRegsList.push(r);
     return r;
   }
+  async registerForTournamentAtomic(tournamentId: string, userId: string, maxPlayers: number): Promise<TournamentRegistration | null> {
+    const existing = this.tournamentRegsList.filter(r => r.tournamentId === tournamentId);
+    if (existing.some(r => r.userId === userId)) return null;
+    if (existing.length >= maxPlayers) return null;
+    return this.registerForTournament({ tournamentId, userId, status: "registered", finishPlace: null, prizeAmount: 0 });
+  }
   async updateTournamentRegistration(id: string, data: Partial<TournamentRegistration>): Promise<TournamentRegistration | undefined> {
     const r = this.tournamentRegsList.find(r => r.id === id);
     if (!r) return undefined;
@@ -575,16 +614,43 @@ export class MemStorage implements IStorage {
 
   // Alliances & Leagues
   async getClubAlliances() { return this.clubAlliancesList; }
+  async getClubAlliance(id: string) {
+    return this.clubAlliancesList.find(a => a.id === id);
+  }
   async createClubAlliance(data: Omit<ClubAlliance, "id" | "createdAt">): Promise<ClubAlliance> {
     const a: ClubAlliance = { ...data, id: randomUUID(), createdAt: new Date() };
     this.clubAlliancesList.push(a);
     return a;
   }
+  async updateClubAlliance(id: string, data: Partial<ClubAlliance>) {
+    const a = this.clubAlliancesList.find(a => a.id === id);
+    if (!a) return undefined;
+    Object.assign(a, data);
+    return a;
+  }
+  async deleteClubAlliance(id: string) {
+    this.clubAlliancesList = this.clubAlliancesList.filter(a => a.id !== id);
+  }
+  async getClubAllianceByClubId(clubId: string) {
+    return this.clubAlliancesList.find(a => (a.clubIds as string[]).includes(clubId));
+  }
   async getLeagueSeasons() { return this.leagueSeasonsList; }
+  async getLeagueSeason(id: string) {
+    return this.leagueSeasonsList.find(s => s.id === id);
+  }
   async createLeagueSeason(data: Omit<LeagueSeason, "id" | "createdAt">): Promise<LeagueSeason> {
     const s: LeagueSeason = { ...data, id: randomUUID(), createdAt: new Date() };
     this.leagueSeasonsList.push(s);
     return s;
+  }
+  async updateLeagueSeason(id: string, data: Partial<LeagueSeason>) {
+    const s = this.leagueSeasonsList.find(s => s.id === id);
+    if (!s) return undefined;
+    Object.assign(s, data);
+    return s;
+  }
+  async deleteLeagueSeason(id: string) {
+    this.leagueSeasonsList = this.leagueSeasonsList.filter(s => s.id !== id);
   }
   async getActiveLeagueSeason(): Promise<LeagueSeason | undefined> {
     const now = new Date();
@@ -648,6 +714,14 @@ export class DatabaseStorage implements IStorage {
   }
   async getClubs() {
     return this.db.select().from(clubs).orderBy(desc(clubs.createdAt));
+  }
+  async getUserClubs(userId: string): Promise<Club[]> {
+    const rows = await this.db
+      .select({ club: clubs })
+      .from(clubMembers)
+      .innerJoin(clubs, eq(clubMembers.clubId, clubs.id))
+      .where(eq(clubMembers.userId, userId));
+    return rows.map(r => r.club);
   }
   async createClub(data: InsertClub & { ownerId: string }): Promise<Club> {
     const [club] = await this.db.insert(clubs).values({
@@ -802,11 +876,12 @@ export class DatabaseStorage implements IStorage {
     const [transaction] = await this.db.insert(transactions).values(tx).returning();
     return transaction;
   }
-  async getTransactions(userId: string, limit = 50) {
+  async getTransactions(userId: string, limit = 50, offset = 0) {
     return this.db.select().from(transactions)
       .where(eq(transactions.userId, userId))
       .orderBy(desc(transactions.createdAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
   }
 
   // Game Hands
@@ -862,6 +937,50 @@ export class DatabaseStorage implements IStorage {
       result.set(row.userId, row);
     }
     return result;
+  }
+  async getLeaderboard(metric: "chips" | "wins" | "winRate", limit = 50) {
+    if (metric === "chips") {
+      const rows = await this.db.select({
+        userId: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarId: users.avatarId,
+        value: users.chipBalance,
+      }).from(users).orderBy(sql`${users.chipBalance} DESC`).limit(limit);
+      return rows.map(r => ({ ...r, displayName: r.displayName, avatarId: r.avatarId }));
+    }
+    // For wins and winRate, join with playerStats and sort in SQL
+    if (metric === "wins") {
+      const rows = await this.db.select({
+        userId: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarId: users.avatarId,
+        value: playerStats.potsWon,
+      }).from(playerStats).innerJoin(users, eq(users.id, playerStats.userId))
+        .orderBy(sql`${playerStats.potsWon} DESC`).limit(limit);
+      return rows;
+    }
+    // winRate: compute in SQL, sort, then limit
+    const rows = await this.db.select({
+      userId: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      avatarId: users.avatarId,
+      handsPlayed: playerStats.handsPlayed,
+      potsWon: playerStats.potsWon,
+    }).from(playerStats).innerJoin(users, eq(users.id, playerStats.userId))
+      .where(sql`${playerStats.handsPlayed} > 0`)
+      .orderBy(sql`(${playerStats.potsWon}::float / ${playerStats.handsPlayed}::float) DESC`)
+      .limit(limit);
+
+    return rows.map(r => ({
+      userId: r.userId,
+      username: r.username,
+      displayName: r.displayName,
+      avatarId: r.avatarId,
+      value: Math.round((r.potsWon / r.handsPlayed) * 100),
+    }));
   }
   async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number) {
     // Use raw SQL upsert to avoid race conditions when two concurrent
@@ -992,6 +1111,22 @@ export class DatabaseStorage implements IStorage {
     const [r] = await this.db.insert(tournamentRegistrations).values(data).returning();
     return r;
   }
+  async registerForTournamentAtomic(tournamentId: string, userId: string, maxPlayers: number): Promise<TournamentRegistration | null> {
+    // Atomic INSERT: only succeeds if count < maxPlayers AND user not already registered
+    // Uses INSERT ... SELECT with a WHERE clause that checks both conditions
+    const result = await this.db.execute(sql`
+      INSERT INTO tournament_registrations (id, tournament_id, user_id, status, prize_amount, registered_at)
+      SELECT gen_random_uuid(), ${tournamentId}, ${userId}, 'registered', 0, NOW()
+      WHERE NOT EXISTS (
+        SELECT 1 FROM tournament_registrations WHERE tournament_id = ${tournamentId} AND user_id = ${userId}
+      )
+      AND (SELECT COUNT(*) FROM tournament_registrations WHERE tournament_id = ${tournamentId}) < ${maxPlayers}
+      RETURNING *
+    `);
+    const rows = result.rows || result;
+    if (!rows || (rows as any[]).length === 0) return null;
+    return (rows as any[])[0] as TournamentRegistration;
+  }
   async updateTournamentRegistration(id: string, data: Partial<TournamentRegistration>): Promise<TournamentRegistration | undefined> {
     const [r] = await this.db.update(tournamentRegistrations).set(data)
       .where(eq(tournamentRegistrations.id, id)).returning();
@@ -1002,16 +1137,44 @@ export class DatabaseStorage implements IStorage {
   async getClubAlliances() {
     return this.db.select().from(clubAlliances);
   }
+  async getClubAlliance(id: string) {
+    const [a] = await this.db.select().from(clubAlliances).where(eq(clubAlliances.id, id));
+    return a;
+  }
   async createClubAlliance(data: Omit<ClubAlliance, "id" | "createdAt">): Promise<ClubAlliance> {
     const [a] = await this.db.insert(clubAlliances).values(data).returning();
     return a;
   }
+  async updateClubAlliance(id: string, data: Partial<ClubAlliance>) {
+    const [a] = await this.db.update(clubAlliances).set(data).where(eq(clubAlliances.id, id)).returning();
+    return a;
+  }
+  async deleteClubAlliance(id: string) {
+    await this.db.delete(clubAlliances).where(eq(clubAlliances.id, id));
+  }
+  async getClubAllianceByClubId(clubId: string) {
+    const [row] = await this.db.select().from(clubAlliances)
+      .where(sql`${clubAlliances.clubIds} @> ${JSON.stringify([clubId])}::jsonb`)
+      .limit(1);
+    return row;
+  }
   async getLeagueSeasons() {
     return this.db.select().from(leagueSeasons).orderBy(desc(leagueSeasons.startDate));
+  }
+  async getLeagueSeason(id: string) {
+    const [s] = await this.db.select().from(leagueSeasons).where(eq(leagueSeasons.id, id));
+    return s;
   }
   async createLeagueSeason(data: Omit<LeagueSeason, "id" | "createdAt">): Promise<LeagueSeason> {
     const [s] = await this.db.insert(leagueSeasons).values(data).returning();
     return s;
+  }
+  async updateLeagueSeason(id: string, data: Partial<LeagueSeason>) {
+    const [s] = await this.db.update(leagueSeasons).set(data).where(eq(leagueSeasons.id, id)).returning();
+    return s;
+  }
+  async deleteLeagueSeason(id: string) {
+    await this.db.delete(leagueSeasons).where(eq(leagueSeasons.id, id));
   }
   async getActiveLeagueSeason(): Promise<LeagueSeason | undefined> {
     const now = new Date();

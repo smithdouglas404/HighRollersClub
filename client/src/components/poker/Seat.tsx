@@ -6,6 +6,9 @@ import { useSoundEngine } from "@/lib/sound-context";
 import { useGameUI } from "@/lib/game-ui-context";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { triggerChipFlight } from "./ChipAnimation";
+import { AvatarStatusRing } from "./AvatarStatusRing";
+import { VideoThumbnail } from "./VideoOverlay";
+import type { AvatarOption } from "./AvatarSelect";
 import type { OpponentHudStats } from "@/lib/useOpponentStats";
 
 
@@ -153,9 +156,13 @@ interface SeatProps {
   /** Hide face-down cards (used in 3D mode where cards are rendered in the 3D scene) */
   hideCards?: boolean;
   hudStats?: OpponentHudStats;
+  avatarTier?: AvatarOption["tier"];
+  winStreak?: number;
+  /** Whether to show video thumbnail for this player */
+  showVideo?: boolean;
 }
 
-export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false, hudStats }: SeatProps) {
+export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false, hudStats, avatarTier, winStreak = 0, showVideo = false }: SeatProps) {
   const { compactMode } = useGameUI();
   const winnerCanvasRef = useWinnerParticles(isWinner && !compactMode);
 
@@ -165,6 +172,41 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   const prevBetRef = useRef(player.currentBet);
   const timerTickRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const seatRef = useRef<HTMLDivElement>(null);
+
+  // Avatar expression reactions
+  const prevStatusRef = useRef(player.status);
+  const [reactionStyle, setReactionStyle] = useState<React.CSSProperties | undefined>(undefined);
+
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    const curr = player.status;
+    prevStatusRef.current = curr;
+    if (prev === curr) return;
+
+    if (curr === "raised" && player.currentBet > 0) {
+      setReactionStyle({ transform: "scale(1.08) translateY(-4px)", transition: "transform 0.3s ease-out" });
+      const t = setTimeout(() => setReactionStyle(undefined), 600);
+      return () => clearTimeout(t);
+    } else if (curr === "folded") {
+      setReactionStyle({ animation: "avatarShake 0.4s ease-in-out" });
+      const t = setTimeout(() => setReactionStyle(undefined), 400);
+      return () => clearTimeout(t);
+    } else if (curr === "all-in") {
+      setReactionStyle({ animation: "avatarAllInPulse 1.5s ease-in-out infinite" });
+      return;
+    } else {
+      setReactionStyle(undefined);
+    }
+  }, [player.status, player.currentBet]);
+
+  // Winner glow reaction
+  useEffect(() => {
+    if (isWinner) {
+      setReactionStyle({ filter: "brightness(1.3) saturate(1.5)", boxShadow: "0 0 20px rgba(255,215,0,0.5)", transition: "all 0.5s ease" });
+      const t = setTimeout(() => setReactionStyle(undefined), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [isWinner]);
 
   // Each seat gets a unique neon glow color
   const glowColor = getSeatColor(seatIndex, isHero);
@@ -183,7 +225,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   // Play chip sound and trigger chip flight when bet increases
   useEffect(() => {
     if (player.currentBet > prevBetRef.current && player.currentBet > 0) {
-      sound.playChipClink();
+      sound.playChipClinkAt(position.x, perspectiveScale);
       if (seatRef.current) {
         const rect = seatRef.current.getBoundingClientRect();
         const fromX = rect.left + rect.width / 2;
@@ -316,6 +358,18 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
 
         {/* ── Avatar portrait with CSS neon ring (square, ~100px, matching reference) ── */}
         <div ref={avatarRef} className="relative z-10 mb-0.5">
+          {/* Video thumbnail overlay */}
+          {showVideo && <VideoThumbnail userId={player.id} isLocal={isHero} size={compactMode ? 36 : 48} />}
+          {/* Avatar Status Ring — tier/streak/classification */}
+          {avatarTier && avatarTier !== "common" && (
+            <AvatarStatusRing
+              tier={avatarTier}
+              winStreak={winStreak}
+              vpipPercent={hudStats ? Math.round((hudStats.vpipCount / Math.max(1, hudStats.handsPlayed)) * 100) : undefined}
+              size={compactMode ? 56 : 100}
+              isActive={isTurn}
+            />
+          )}
           {/* CSS neon glow ring — always visible, intensified on turn */}
           <div
             className="absolute -inset-[6px] z-0 rounded-xl pointer-events-none"
@@ -362,6 +416,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 border: `2px solid ${glowColor}`,
                 boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
                 ...parallaxStyle,
+                ...reactionStyle,
               }}
             />
           ) : (
@@ -374,6 +429,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                   ? "linear-gradient(135deg, #0e7490, #164e63)"
                   : "linear-gradient(135deg, #78716c, #44403c)",
                 ...parallaxStyle,
+                ...reactionStyle,
               }}
             >
               {player.name.charAt(0).toUpperCase()}

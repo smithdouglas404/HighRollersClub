@@ -5,13 +5,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useClub, type ClubData, type ClubInvitation } from "@/lib/club-context";
 import {
   Search, Users, Globe, Lock, Loader2, CalendarDays,
-  UserPlus, Clock, ShieldAlert, FolderSearch,
+  UserPlus, Clock, FolderSearch,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface PublicClub extends ClubData {
   memberCount: number;
@@ -19,7 +14,7 @@ interface PublicClub extends ClubData {
 
 export default function BrowseClubs() {
   const { user } = useAuth();
-  const { club: myClub, joinClub, requestJoinClub, reload } = useClub();
+  const { allClubs: myClubs, joinClub, requestJoinClub, reload } = useClub();
 
   const [allClubs, setAllClubs] = useState<PublicClub[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ClubInvitation[]>([]);
@@ -84,6 +79,7 @@ export default function BrowseClubs() {
               userId: user?.id ?? "",
               username: user?.username ?? "",
               displayName: user?.displayName ?? "",
+              avatarId: user?.avatarId ?? null,
               type: "request",
               status: "pending",
               createdAt: new Date().toISOString(),
@@ -177,8 +173,7 @@ export default function BrowseClubs() {
             <AnimatePresence mode="popLayout">
               {filteredClubs.map((club, i) => {
                 const isPending = pendingClubIds.has(club.id);
-                const isMyClub = myClub?.id === club.id;
-                const hasClub = !!myClub;
+                const isMyClub = myClubs.some(c => c.id === club.id);
 
                 return (
                   <motion.div
@@ -275,27 +270,6 @@ export default function BrowseClubs() {
                           <Clock className="w-3 h-3" />
                           Pending Request
                         </div>
-                      ) : hasClub ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              className="w-full py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-center text-gray-600 cursor-not-allowed flex items-center justify-center gap-1.5"
-                              style={{
-                                background: "rgba(255,255,255,0.02)",
-                                border: "1px solid rgba(255,255,255,0.04)",
-                              }}
-                            >
-                              <ShieldAlert className="w-3 h-3" />
-                              Already in a club
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="top"
-                            className="bg-[#1a2240] text-[10px] text-gray-300 border border-white/10"
-                          >
-                            Leave your current club to join another
-                          </TooltipContent>
-                        </Tooltip>
                       ) : (
                         <motion.button
                           whileHover={{ scale: 1.02 }}

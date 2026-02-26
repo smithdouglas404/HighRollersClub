@@ -15,8 +15,13 @@ import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
 import { EmotePicker } from "../components/poker/EmoteSystem";
 import { ChatPanel } from "../components/poker/ChatPanel";
 import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
+import { VideoControlBar, VideoThumbnail } from "../components/poker/VideoOverlay";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { ChipAnimation } from "../components/poker/ChipAnimation";
+import { InsurancePanel } from "../components/poker/InsurancePanel";
+import { RunItVotePanel, RunItResults } from "../components/poker/RunItMultiple";
+import { CardSqueeze } from "../components/poker/CardSqueeze";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TournamentStatsPanel } from "@/components/game/TournamentStatsPanel";
 import { PlayerAnalyticsPanel } from "@/components/game/PlayerAnalyticsPanel";
 import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
@@ -106,6 +111,7 @@ function GameTable({
   playerSeedStatus, onChainCommitTx, onChainRevealTx,
   formatInfo, bombPotActive, tournamentComplete, dismissTournamentComplete,
   blindIncrease, elimination, startingChips,
+  buyTime, acceptInsurance, declineInsurance, voteRunIt,
 }: {
   players: Player[];
   gameState: any;
@@ -135,23 +141,46 @@ function GameTable({
   blindIncrease?: import("@/lib/multiplayer-engine").BlindIncreaseInfo | null;
   elimination?: import("@/lib/multiplayer-engine").EliminationInfo | null;
   startingChips?: number;
+  buyTime?: () => void;
+  acceptInsurance?: () => void;
+  declineInsurance?: () => void;
+  voteRunIt?: (count: 1 | 2 | 3) => void;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
   const sound = useSoundEngine();
+  const winStreaks = useRef<Map<string, number>>(new Map());
+  const isMobile = useIsMobile();
   const { compactMode, toggleCompactMode, feltPreset, setFeltColor } = useGameUI();
   const { opponentStats, hudEnabled, setHudEnabled } = useOpponentStats(gameState, players, heroId);
   const tableRef = useRef<HTMLDivElement>(null);
   const prevHeroTurn = useRef(false);
 
-  // Fetch real player stats for analytics panel
+  // Fetch real player stats for analytics panel (debounced to avoid rapid re-fetches)
   const [playerStats, setPlayerStats] = useState({ handsPlayed: 0, potsWon: 0, vpip: 0, pfr: 0, showdownCount: 0 });
   useEffect(() => {
     if (!isMultiplayer) return;
-    fetch("/api/stats/me").then(r => r.ok ? r.json() : null).then(s => {
-      if (s) setPlayerStats({ handsPlayed: s.handsPlayed || 0, potsWon: s.potsWon || 0, vpip: s.vpip || 0, pfr: s.pfr || 0, showdownCount: s.showdownCount || 0 });
-    }).catch(() => {});
+    const timer = setTimeout(() => {
+      fetch("/api/stats/me").then(r => r.ok ? r.json() : null).then(s => {
+        if (s) setPlayerStats({ handsPlayed: s.handsPlayed || 0, potsWon: s.potsWon || 0, vpip: s.vpip || 0, pfr: s.pfr || 0, showdownCount: s.showdownCount || 0 });
+      }).catch(() => {});
+    }, 2000);
+    return () => clearTimeout(timer);
   }, [isMultiplayer, gameState.handNumber]);
+
+  // Track win streaks from showdown results
+  useEffect(() => {
+    if (showdown?.results) {
+      const winnerIds = new Set(showdown.results.filter((r: any) => r.isWinner).map((r: any) => r.playerId));
+      for (const p of players) {
+        if (winnerIds.has(p.id)) {
+          winStreaks.current.set(p.id, (winStreaks.current.get(p.id) || 0) + 1);
+        } else {
+          winStreaks.current.set(p.id, 0);
+        }
+      }
+    }
+  }, [showdown, players]);
 
   const hero = players.find((p) => p.id === heroId);
   const isHeroTurn = gameState.currentTurnPlayerId === heroId;
@@ -162,11 +191,54 @@ function GameTable({
     return heroCards.map(c => ({ ...c, hidden: false })) as [typeof heroCards[0], typeof heroCards[1]];
   }, [heroCards]);
 
-  // Ambient drone disabled — too distracting
-  // useEffect(() => {
-  //   sound.startAmbient();
-  //   return () => sound.stopAmbient();
-  // }, [sound]);
+  // Adaptive music — responds to game state
+  useEffect(() => {
+    sound.startAdaptiveMusic();
+    return () => sound.stopAdaptiveMusic();
+  }, [sound]);
+
+  // Adaptive music state tracking
+  const prevPhaseRef = useRef(gameState.phase);
+  useEffect(() => {
+    const heroFolded = hero?.status === "folded";
+    const anyAllIn = players.some(p => p.status === "all-in");
+    const phase = gameState.phase;
+
+    if (phase === "showdown") {
+      sound.setMusicState("showdown");
+    } else if (anyAllIn) {
+      sound.setMusicState("all_in");
+    } else if (!heroFolded && phase !== "pre-flop" && phase !== "waiting") {
+      sound.setMusicState("in_hand", { potSize: gameState.pot, blindLevel: gameState.minBet });
+    } else {
+      sound.setMusicState("idle");
+    }
+    prevPhaseRef.current = phase;
+  }, [gameState.phase, gameState.pot, gameState.minBet, hero?.status, players, sound]);
+
+  // Spatial sound for opponent actions
+  const prevActionNumberRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const la = gameState.lastAction;
+    const actionNum = gameState.actionNumber;
+    if (!la || actionNum === prevActionNumberRef.current) return;
+    prevActionNumberRef.current = actionNum;
+    if (la.playerId === heroId) return; // hero sounds handled by Controls
+
+    // Find the seat position of the acting player
+    const playerIdx = players.findIndex(p => p.id === la.playerId);
+    if (playerIdx < 0) return;
+    const seat = TABLE_SEATS[playerIdx] || TABLE_SEATS[playerIdx % TABLE_SEATS.length];
+    const seatX = seat.x;
+    const seatScale = seat.scale;
+
+    switch (la.action) {
+      case "fold": sound.playFoldAt(seatX, seatScale); break;
+      case "check": sound.playCheckAt(seatX, seatScale); break;
+      case "call": sound.playCallAt(seatX, seatScale); break;
+      case "raise": sound.playRaiseAt(seatX, seatScale); break;
+    }
+  }, [gameState.lastAction, gameState.actionNumber, heroId, players, sound]);
 
   useEffect(() => {
     if (isHeroTurn && !prevHeroTurn.current) {
@@ -412,6 +484,7 @@ function GameTable({
                   {/* Player seats — positioned inside the same container as the table */}
                   {players.map((player, index) => {
                     const seat = TABLE_SEATS[index] || TABLE_SEATS[index % TABLE_SEATS.length];
+                    const avatarOpt = player.avatar ? AVATAR_OPTIONS.find(a => a.image === player.avatar) : undefined;
                     return (
                       <Seat
                         key={player.id}
@@ -422,6 +495,9 @@ function GameTable({
                         seatIndex={index}
                         perspectiveScale={seat.scale}
                         hudStats={player.id !== heroId && hudEnabled ? opponentStats.get(player.id) : undefined}
+                        avatarTier={avatarOpt?.tier}
+                        winStreak={winStreaks.current.get(player.id) || 0}
+                        showVideo={isMultiplayer && !player.isBot}
                       />
                     );
                   })}
@@ -437,18 +513,22 @@ function GameTable({
                         bottom: "1%",
                         transform: "translateX(-50%)",
                         zIndex: 50,
-                        filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.5))",
+                        filter: isMobile ? undefined : "drop-shadow(0 6px 20px rgba(0,0,0,0.5))",
                       }}
                     >
-                      {heroCards.map((card, i) => (
-                        <Card
-                          key={`hero-${i}`}
-                          card={{ ...card, hidden: false }}
-                          size={compactMode ? "lg" : "xl"}
-                          isHero={true}
-                          delay={compactMode ? 0 : 0.3 + i * 0.15}
-                        />
-                      ))}
+                      {isMobile && heroHoleCards ? (
+                        <CardSqueeze cards={heroHoleCards} />
+                      ) : (
+                        heroCards.map((card, i) => (
+                          <Card
+                            key={`hero-${i}`}
+                            card={{ ...card, hidden: false }}
+                            size={compactMode ? "lg" : "xl"}
+                            isHero={true}
+                            delay={compactMode ? 0 : 0.3 + i * 0.15}
+                          />
+                        ))
+                      )}
                     </motion.div>
                   )}
                 </div>
@@ -458,6 +538,13 @@ function GameTable({
         <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
         <ChatPanel isMultiplayer={isMultiplayer} sendChat={sendChat} />
         {isMultiplayer && tableId && <HandHistoryDrawer tableId={tableId} />}
+        {isMultiplayer && heroId && tableId && (
+          <VideoControlBar
+            heroId={heroId}
+            tableId={tableId}
+            playerIds={players.filter(p => !p.isBot).map(p => p.id)}
+          />
+        )}
 
         {/* Format-aware HUD overlays */}
         {formatInfo && (formatInfo.gameFormat === "sng" || formatInfo.gameFormat === "tournament") && (
@@ -557,6 +644,31 @@ function GameTable({
           )}
         </AnimatePresence>
 
+        {/* Insurance Panel — shown when hero has equity offer */}
+        <AnimatePresence>
+          {gameState.insuranceOffer && acceptInsurance && declineInsurance && (
+            <InsurancePanel
+              offer={gameState.insuranceOffer}
+              onAccept={acceptInsurance}
+              onDecline={declineInsurance}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Run It Vote Panel */}
+        <AnimatePresence>
+          {gameState.runItPending && voteRunIt && (
+            <RunItVotePanel onVote={voteRunIt} />
+          )}
+        </AnimatePresence>
+
+        {/* Run It Multiple Boards Results */}
+        <AnimatePresence>
+          {gameState.runItBoards && gameState.runItBoards.length > 1 && (
+            <RunItResults boards={gameState.runItBoards} heroId={heroId} />
+          )}
+        </AnimatePresence>
+
         <HandStrengthMeter
           holeCards={heroHoleCards}
           communityCards={gameState.communityCards}
@@ -574,6 +686,10 @@ function GameTable({
               phase={gameState.phase}
               currentTurnSeat={players.findIndex(p => p.id === gameState.currentTurnPlayerId)}
               isHeroTurn={isHeroTurn}
+              onBuyTime={buyTime}
+              bigBlind={formatInfo?.bigBlind || gameState.minBet || undefined}
+              heroTimeLeft={hero?.timeLeft}
+              heroStatus={hero?.status}
             />
           </div>
         </div>
@@ -603,14 +719,16 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
   const [joined, setJoined] = useState(false);
   const [buyIn, setBuyIn] = useState(500);
   const [tableInfo, setTableInfo] = useState<any>(null);
+  const [selectedSeat, setSelectedSeat] = useState<number | undefined>(undefined);
 
   const {
     players, gameState, handlePlayerAction, showdown,
-    connected, waiting, joinTable, leaveTable, addBots, sendChat,
+    connected, error: mpError, waiting, joinTable, leaveTable, addBots, sendChat,
     commitmentHash, shuffleProof, verificationStatus, playerSeedStatus,
     onChainCommitTx, onChainRevealTx,
     formatInfo, blindIncrease, elimination, tournamentComplete,
     dismissTournamentComplete, bombPotActive, notifications,
+    buyTime, acceptInsurance, declineInsurance, voteRunIt,
   } = useMultiplayerGame(tableId, user?.id || "");
 
   // Fetch table info
@@ -623,9 +741,16 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   const isSNG = tableInfo?.gameFormat === "sng" || tableInfo?.gameFormat === "tournament";
 
+  // Reset joined state if server rejects the join
+  useEffect(() => {
+    if (mpError && joined) {
+      setJoined(false);
+    }
+  }, [mpError, joined]);
+
   const handleJoin = () => {
     const amount = isSNG ? (tableInfo?.buyInAmount || buyIn) : buyIn;
-    joinTable(amount);
+    joinTable(amount, selectedSeat);
     setJoined(true);
     soundEngine.init();
   };
@@ -710,6 +835,45 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
             </div>
           )}
 
+          {/* Seat Selection */}
+          {tableInfo && (
+            <div className="mb-4">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-2">
+                Pick Your Seat (optional)
+              </label>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {Array.from({ length: tableInfo.maxPlayers || 6 }, (_, i) => {
+                  const isOccupied = (tableInfo.occupiedSeats || []).includes(i);
+                  const isSelected = selectedSeat === i;
+                  return (
+                    <motion.button
+                      key={i}
+                      whileHover={!isOccupied ? { scale: 1.1 } : {}}
+                      whileTap={!isOccupied ? { scale: 0.95 } : {}}
+                      onClick={() => {
+                        if (isOccupied) return;
+                        setSelectedSeat(isSelected ? undefined : i);
+                      }}
+                      disabled={isOccupied}
+                      className={`w-10 h-10 rounded-full text-xs font-bold border-2 transition-all ${
+                        isOccupied
+                          ? "bg-red-500/10 border-red-500/20 text-red-400/40 cursor-not-allowed"
+                          : isSelected
+                            ? "bg-cyan-500/25 border-cyan-400 text-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.3)]"
+                            : "bg-white/5 border-white/10 text-gray-400 hover:border-cyan-500/30 hover:text-white"
+                      }`}
+                    >
+                      {i + 1}
+                    </motion.button>
+                  );
+                })}
+              </div>
+              <p className="text-center text-[9px] text-gray-600 mt-1.5">
+                {selectedSeat !== undefined ? `Seat ${selectedSeat + 1} selected` : "Auto-assign if none selected"}
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button
               onClick={() => navigate("/lobby")}
@@ -767,6 +931,10 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         blindIncrease={blindIncrease}
         elimination={elimination}
         startingChips={tableInfo?.startingChips}
+        buyTime={buyTime}
+        acceptInsurance={acceptInsurance}
+        declineInsurance={declineInsurance}
+        voteRunIt={voteRunIt}
       />
       {/* Join/Leave Notifications */}
       <div className="fixed top-16 right-4 z-[60] flex flex-col gap-2 pointer-events-none">

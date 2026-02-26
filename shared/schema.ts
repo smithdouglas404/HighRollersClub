@@ -100,7 +100,7 @@ export const clubEvents = pgTable("club_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clubId: varchar("club_id").notNull().references(() => clubs.id),
   eventType: text("event_type").notNull(), // tournament | cash_game | special
-  tableId: varchar("table_id"),
+  tableId: varchar("table_id"), // FK to tables.id added at DB level (forward ref)
   name: text("name").notNull(),
   description: text("description"),
   startTime: timestamp("start_time"),
@@ -141,12 +141,15 @@ export const tables = pgTable("tables", {
   // Rake configuration
   rakePercent: integer("rake_percent").notNull().default(0), // rake % (e.g., 5 = 5%), 0 = no rake
   rakeCap: integer("rake_cap").notNull().default(0), // max rake per hand in chips, 0 = no cap
+  straddleEnabled: boolean("straddle_enabled").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("tables_club_idx").on(table.clubId),
+]);
 
 export const insertTableSchema = z.object({
   name: z.string().min(1).max(50),
-  maxPlayers: z.number().int().min(2).max(6).default(6),
+  maxPlayers: z.number().int().min(2).max(10).default(6),
   smallBlind: z.number().int().min(1).default(10),
   bigBlind: z.number().int().min(2).default(20),
   minBuyIn: z.number().int().min(1).default(200),
@@ -176,6 +179,7 @@ export const insertTableSchema = z.object({
   })).optional(),
   rakePercent: z.number().int().min(0).max(10).default(0),
   rakeCap: z.number().int().min(0).default(0),
+  straddleEnabled: z.boolean().default(false),
 });
 
 export type TableRow = typeof tables.$inferSelect;
@@ -227,7 +231,7 @@ export type GameHand = typeof gameHands.$inferSelect;
 export const handPlayers = pgTable("hand_players", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   handId: varchar("hand_id").notNull().references(() => gameHands.id),
-  userId: varchar("user_id").notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id),
   seatIndex: integer("seat_index").notNull(),
   holeCards: jsonb("hole_cards"), // [CardType, CardType]
   startStack: integer("start_stack").notNull(),
@@ -246,7 +250,7 @@ export type HandPlayer = typeof handPlayers.$inferSelect;
 export const handActions = pgTable("hand_actions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   handId: varchar("hand_id").notNull().references(() => gameHands.id),
-  playerId: varchar("player_id").notNull(),
+  playerId: varchar("player_id").notNull().references(() => users.id),
   street: text("street").notNull(), // preflop | flop | turn | river | showdown
   actionType: text("action_type").notNull(), // fold | check | call | raise | all_in | blind | ante
   amount: integer("amount").default(0),
@@ -290,14 +294,36 @@ export const tournaments = pgTable("tournaments", {
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   startAt: timestamp("start_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("tournaments_club_idx").on(table.clubId),
+]);
 
 export type Tournament = typeof tournaments.$inferSelect;
+
+export const createTournamentSchema = z.object({
+  name: z.string().min(1).max(100).transform(s => s.trim()),
+  clubId: z.string().optional(),
+  buyIn: z.number().int().min(0).default(100),
+  startingChips: z.number().int().min(100).default(1500),
+  maxPlayers: z.number().int().min(2).max(1000).default(50),
+  startAt: z.string().optional(),
+  blindSchedule: z.array(z.object({
+    level: z.number(),
+    sb: z.number(),
+    bb: z.number(),
+    ante: z.number().default(0),
+    durationSeconds: z.number(),
+  })).optional(),
+  payoutStructure: z.array(z.object({
+    place: z.number(),
+    percentage: z.number(),
+  })).optional(),
+});
 
 // ─── Tournament Registrations ───────────────────────────────────────────────
 export const tournamentRegistrations = pgTable("tournament_registrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tournamentId: varchar("tournament_id").notNull(),
+  tournamentId: varchar("tournament_id").notNull().references(() => tournaments.id),
   userId: varchar("user_id").notNull().references(() => users.id),
   status: text("status").notNull().default("registered"), // registered | playing | eliminated | winner
   finishPlace: integer("finish_place"),
@@ -306,6 +332,7 @@ export const tournamentRegistrations = pgTable("tournament_registrations", {
 }, (table) => [
   index("tournament_reg_tournament_idx").on(table.tournamentId),
   index("tournament_reg_user_idx").on(table.userId),
+  uniqueIndex("tournament_reg_unique").on(table.tournamentId, table.userId),
 ]);
 
 export type TournamentRegistration = typeof tournamentRegistrations.$inferSelect;
@@ -359,6 +386,7 @@ export const userMissions = pgTable("user_missions", {
   periodStart: timestamp("period_start").notNull().defaultNow(),
 }, (table) => [
   index("user_missions_user_idx").on(table.userId),
+  index("user_missions_mission_idx").on(table.missionId),
 ]);
 
 export type UserMission = typeof userMissions.$inferSelect;
@@ -419,6 +447,15 @@ export const clubAlliances = pgTable("club_alliances", {
 
 export type ClubAlliance = typeof clubAlliances.$inferSelect;
 
+export const createAllianceSchema = z.object({
+  name: z.string().min(1).max(100).transform(s => s.trim()),
+  clubId: z.string().min(1),
+});
+
+export const updateAllianceSchema = z.object({
+  name: z.string().min(1).max(100).transform(s => s.trim()),
+});
+
 // ─── League Seasons ─────────────────────────────────────────────────────────
 export const leagueSeasons = pgTable("league_seasons", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -430,3 +467,24 @@ export const leagueSeasons = pgTable("league_seasons", {
 });
 
 export type LeagueSeason = typeof leagueSeasons.$inferSelect;
+
+export const createLeagueSeasonSchema = z.object({
+  name: z.string().min(1).max(100).transform(s => s.trim()),
+  startDate: z.string().refine(d => !isNaN(Date.parse(d)), { message: "Invalid start date" }),
+  endDate: z.string().refine(d => !isNaN(Date.parse(d)), { message: "Invalid end date" }),
+});
+
+export const updateLeagueSeasonSchema = z.object({
+  name: z.string().min(1).max(100).transform(s => s.trim()).optional(),
+  startDate: z.string().refine(d => !isNaN(Date.parse(d)), { message: "Invalid start date" }).optional(),
+  endDate: z.string().refine(d => !isNaN(Date.parse(d)), { message: "Invalid end date" }).optional(),
+});
+
+export const leagueStandingsSchema = z.object({
+  standings: z.array(z.object({
+    clubId: z.string().min(1),
+    points: z.number().int().min(0).default(0),
+    wins: z.number().int().min(0).default(0),
+    losses: z.number().int().min(0).default(0),
+  })).min(1),
+});

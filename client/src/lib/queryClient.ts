@@ -1,5 +1,10 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+function getCsrfToken(): string {
+  const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]*)/);
+  return match ? match[1] : "";
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -12,9 +17,15 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (data) headers["Content-Type"] = "application/json";
+  // Include CSRF token on state-changing requests
+  const csrf = getCsrfToken();
+  if (csrf) headers["x-csrf-token"] = csrf;
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -55,3 +66,9 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+/** Get CSRF headers for direct fetch() calls */
+export function csrfHeaders(): Record<string, string> {
+  const token = getCsrfToken();
+  return token ? { "x-csrf-token": token } : {};
+}

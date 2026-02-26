@@ -20,6 +20,16 @@ interface SoundContextValue {
   stopAmbient: () => void;
   toggleMute: () => boolean;
   isMuted: () => boolean;
+  // Spatial audio
+  playChipClinkAt: (seatX: number, seatScale: number) => void;
+  playFoldAt: (seatX: number, seatScale: number) => void;
+  playCheckAt: (seatX: number, seatScale: number) => void;
+  playCallAt: (seatX: number, seatScale: number) => void;
+  playRaiseAt: (seatX: number, seatScale: number) => void;
+  // Adaptive music
+  startAdaptiveMusic: () => void;
+  stopAdaptiveMusic: () => void;
+  setMusicState: (state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) => void;
 }
 
 const SoundContext = createContext<SoundContextValue | null>(null);
@@ -44,6 +54,16 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     stopAmbient: useCallback(() => soundEngine.stopAmbient(), []),
     toggleMute: useCallback(() => soundEngine.toggleMute(), []),
     isMuted: useCallback(() => soundEngine.muted, []),
+    // Spatial audio
+    playChipClinkAt: useCallback((seatX: number, seatScale: number) => soundEngine.playChipClinkAt(seatX, seatScale), []),
+    playFoldAt: useCallback((seatX: number, seatScale: number) => soundEngine.playFoldAt(seatX, seatScale), []),
+    playCheckAt: useCallback((seatX: number, seatScale: number) => soundEngine.playCheckAt(seatX, seatScale), []),
+    playCallAt: useCallback((seatX: number, seatScale: number) => soundEngine.playCallAt(seatX, seatScale), []),
+    playRaiseAt: useCallback((seatX: number, seatScale: number) => soundEngine.playRaiseAt(seatX, seatScale), []),
+    // Adaptive music
+    startAdaptiveMusic: useCallback(() => soundEngine.startAdaptiveMusic(), []),
+    stopAdaptiveMusic: useCallback(() => soundEngine.stopAdaptiveMusic(), []),
+    setMusicState: useCallback((state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) => soundEngine.setMusicState(state, opts), []),
   };
 
   return (

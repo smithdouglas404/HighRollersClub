@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { History, ChevronLeft, Trophy, Coins, Clock, ExternalLink } from "lucide-react";
+import { History, ChevronLeft, Trophy, Coins, Clock, ExternalLink, Download } from "lucide-react";
 
 interface HandRecord {
   id: string;
@@ -148,9 +148,53 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
               )}
             </div>
 
-            {/* Refresh */}
+            {/* Footer: Export + Refresh */}
             {hands.length > 0 && (
-              <div className="px-4 py-2 border-t border-white/5">
+              <div className="px-4 py-2 border-t border-white/5 space-y-1">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const json = JSON.stringify(hands.map(h => ({
+                        id: h.id,
+                        handNumber: h.handNumber,
+                        potTotal: h.potTotal,
+                        winnerIds: h.winnerIds,
+                        commitmentHash: h.commitmentHash,
+                        createdAt: h.createdAt,
+                        summary: h.summary,
+                      })), null, 2);
+                      const blob = new Blob([json], { type: "application/json" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url; a.download = `hand-history-${tableId.slice(0,8)}.json`;
+                      a.click(); URL.revokeObjectURL(url);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold text-cyan-500 hover:text-cyan-300 transition-colors py-1"
+                  >
+                    <Download className="w-3 h-3" /> JSON
+                  </button>
+                  <div className="w-px h-3 bg-white/10" />
+                  <button
+                    onClick={() => {
+                      const header = "Hand #,Pot,Winner,Commitment Hash,Time\n";
+                      const rows = hands.map(h => {
+                        const winners = h.summary?.winners || [];
+                        const players = h.summary?.players || [];
+                        const pMap = new Map<string, any>(players.map((p: any) => [p.id, p]));
+                        const winnerName = winners[0] ? (pMap.get(winners[0].playerId)?.displayName || "Unknown") : "";
+                        return `${h.handNumber},${h.potTotal || 0},"${winnerName}",${h.commitmentHash || ""},${h.createdAt}`;
+                      }).join("\n");
+                      const blob = new Blob([header + rows], { type: "text/csv" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url; a.download = `hand-history-${tableId.slice(0,8)}.csv`;
+                      a.click(); URL.revokeObjectURL(url);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold text-amber-500 hover:text-amber-300 transition-colors py-1"
+                  >
+                    <Download className="w-3 h-3" /> CSV
+                  </button>
+                </div>
                 <button
                   onClick={fetchHands}
                   disabled={loading}

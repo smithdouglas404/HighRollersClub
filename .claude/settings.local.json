@@ -34,7 +34,9 @@
       "Bash(npm install puppeteer 2>&1 | tail -5)",
       "Bash(npm run build 2>)",
       "Bash(npx tsc --noEmit 2>&1 | head -3022)",
-      "Bash(npx tsc --noEmit 2>&1 | head -20)"
+      "Bash(npx tsc --noEmit 2>&1 | head -20)",
+      "Bash(npx tsc --noEmit 2>&1)",
+      "WebFetch(domain:replit.com)"
     ]
   }
 }

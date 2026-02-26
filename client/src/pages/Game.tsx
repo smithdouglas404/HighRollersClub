@@ -548,7 +548,7 @@ function GameTable({
                     communityCards={gameState.communityCards}
                     pot={gameState.pot}
                     playerCount={players.length}
-                    maxSeats={9}
+                    maxSeats={10}
                     players={players}
                     dealerSeatIndex={players.findIndex(p => p.isDealer)}
                   />

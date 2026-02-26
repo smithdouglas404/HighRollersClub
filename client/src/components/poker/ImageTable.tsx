@@ -5,7 +5,8 @@ import type { Player } from "@/lib/poker-types";
 import { TABLE_SEATS, DEALER_POSITIONS } from "@/lib/table-constants";
 import { useGameUI } from "@/lib/game-ui-context";
 
-import feltTexture from "@assets/generated_images/Dark_Teal_Poker_Felt_Texture_83ec2760.png";
+// Use the full mockup as the table background
+import pokerTableImg from "@assets/Poker/new.jpeg";
 
 interface ImageTableProps {
   communityCards: CardType[];
@@ -20,11 +21,11 @@ export function ImageTable({
   communityCards,
   pot,
   playerCount,
-  maxSeats = 9,
+  maxSeats = 10,
   players,
   dealerSeatIndex = -1,
 }: ImageTableProps) {
-  const { compactMode, feltPreset } = useGameUI();
+  const { compactMode } = useGameUI();
   const occupiedCount = players?.length || playerCount;
   const dealerPos = dealerSeatIndex >= 0 && dealerSeatIndex < DEALER_POSITIONS.length
     ? DEALER_POSITIONS[dealerSeatIndex]
@@ -32,110 +33,29 @@ export function ImageTable({
 
   return (
     <>
-      {/* ── Layer 1: Premium CSS oval table (colors sampled from reference) ── */}
-      {/* Cyan outer glow ring — bright #5ccbdc teal like reference */}
-      <div
-        className="absolute pointer-events-none"
+      {/* ── Full table background image ── */}
+      <img
+        src={pokerTableImg}
+        alt=""
+        draggable={false}
+        className="absolute inset-0 w-full h-full pointer-events-none"
         style={{
           zIndex: 1,
-          left: "4.5%",
-          right: "4.5%",
-          top: "7.5%",
-          bottom: "7.5%",
-          borderRadius: "50%",
-          border: "2px solid rgba(92,203,220,0.6)",
-          boxShadow:
-            "0 0 40px 8px rgba(92,203,220,0.2), 0 0 80px 16px rgba(92,203,220,0.1)",
+          objectFit: "cover",
+          objectPosition: "center",
         }}
       />
 
-      {/* Dark rim band — #1e2b4b dark navy between cyan glow and gold rail */}
+      {/* Darken overlay so real UI elements stand out over the baked-in mockup elements */}
       <div
-        className="absolute pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
           zIndex: 2,
-          left: "5%",
-          right: "5%",
-          top: "8%",
-          bottom: "8%",
-          borderRadius: "50%",
-          background: "linear-gradient(180deg, #1e2b4b 0%, #152036 50%, #0c1a30 100%)",
+          background: "radial-gradient(ellipse 60% 50% at 50% 45%, transparent 0%, rgba(0,0,0,0.6) 100%)",
         }}
       />
 
-      {/* Gold rail border — warm amber #866834 from reference */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          zIndex: 3,
-          left: "7.5%",
-          right: "7.5%",
-          top: "12%",
-          bottom: "12%",
-          borderRadius: "50%",
-          border: "3px solid #866834",
-          boxShadow:
-            "0 0 12px rgba(134,104,52,0.4), 0 0 30px rgba(134,104,52,0.15), inset 0 0 12px rgba(134,104,52,0.2)",
-        }}
-      />
-
-      {/* Inner felt — exact greens from reference: center #19723c, edge #0d4020 */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          zIndex: 4,
-          left: "8%",
-          right: "8%",
-          top: "13%",
-          bottom: "13%",
-          borderRadius: "50%",
-          background: feltPreset.gradient,
-        }}
-      />
-
-      {/* Felt texture overlay — adds realistic fabric grain */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          zIndex: 4,
-          left: "8%",
-          right: "8%",
-          top: "13%",
-          bottom: "13%",
-          borderRadius: "50%",
-          backgroundImage: `url(${feltTexture})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          opacity: 0.35,
-          mixBlendMode: "overlay",
-        }}
-      />
-
-      {/* Center spotlight — subtle brightening like reference overhead light */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          zIndex: 5,
-          left: "8%",
-          right: "8%",
-          top: "13%",
-          bottom: "13%",
-          borderRadius: "50%",
-          background: feltPreset.spotlightOverlay,
-        }}
-      />
-
-      {/* Soft vignette — dark navy edges, not black */}
-      <div
-        className="absolute inset-0 rounded-2xl pointer-events-none"
-        style={{
-          zIndex: 5,
-          background:
-            "radial-gradient(ellipse 62% 58% at 50% 50%, transparent 40%, rgba(10,16,34,0.2) 65%, rgba(10,16,34,0.45) 85%, rgba(10,16,34,0.65) 100%)",
-        }}
-      />
-
-      {/* ── Layer 2: game-overlay (z-index: 10) ── */}
+      {/* ── Game elements overlay (z-index: 10) ── */}
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
 
         {/* Empty seat indicators */}
@@ -155,33 +75,33 @@ export function ImageTable({
             >
               <div
                 className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center"
-                style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.2)" }}
+                style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.3)" }}
               >
-                <span className="text-[9px] text-white/10 font-mono font-bold">{i + 1}</span>
+                <span className="text-[9px] text-white/20 font-mono font-bold">{i + 1}</span>
               </div>
             </div>
           );
         })}
 
-        {/* ── Community cards — prominent center of felt (50%, 48%) ── */}
+        {/* ── Community cards — large, center of felt ── */}
         <AnimatePresence>
           {communityCards.length > 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="absolute flex gap-2.5"
+              className="absolute flex gap-2"
               style={{
                 left: "50%",
-                top: "50%",
+                top: "45%",
                 transform: "translate(-50%, -50%)",
-                filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))",
+                filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.7))",
               }}
             >
               {communityCards.map((card, i) => (
                 <Card
                   key={`cc-${i}-${card.suit}-${card.rank}`}
                   card={card}
-                  size={compactMode ? "md" : "lg"}
+                  size={compactMode ? "lg" : "xl"}
                   delay={compactMode ? 0 : i * 0.15}
                   dealFrom={compactMode ? undefined : { x: 200, y: -100 }}
                 />
@@ -190,7 +110,7 @@ export function ImageTable({
           )}
         </AnimatePresence>
 
-        {/* ── Pot display — chip stack + gold amount above community cards ── */}
+        {/* ── Pot display ── */}
         <AnimatePresence>
           {pot > 0 && (
             <motion.div
@@ -198,24 +118,24 @@ export function ImageTable({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
               transition={compactMode ? { duration: 0 } : undefined}
-              className="absolute flex flex-col items-center gap-0.5"
-              style={{ left: "50%", top: "36%", transform: "translate(-50%, -50%)" }}
+              className="absolute flex items-center gap-2"
+              style={{ left: "50%", top: "35%", transform: "translate(-50%, -50%)" }}
             >
-              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" data-testid="pot-chip-icon">
+              <svg width="36" height="36" viewBox="0 0 48 48" fill="none" data-testid="pot-chip-icon">
                 <circle cx="24" cy="24" r="20" fill="#ffd700" stroke="#b8860b" strokeWidth="3" />
                 <circle cx="24" cy="24" r="14" fill="none" stroke="#b8860b" strokeWidth="1.5" />
                 <circle cx="24" cy="24" r="8" fill="#b8860b" />
                 <text x="24" y="28" textAnchor="middle" fontSize="12" fill="#ffd700" fontWeight="bold">$</text>
               </svg>
               <div
-                className="px-4 py-1 rounded-lg border border-amber-500/30"
+                className="px-3 py-1 rounded-lg border border-amber-500/30"
                 style={{
-                  background: "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.75) 100%)",
-                  backdropFilter: "blur(6px)",
-                  boxShadow: "0 0 20px rgba(255,215,0,0.12), 0 2px 8px rgba(0,0,0,0.4)",
+                  background: "linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.85) 100%)",
+                  backdropFilter: "blur(8px)",
+                  boxShadow: "0 0 20px rgba(255,215,0,0.15), 0 2px 8px rgba(0,0,0,0.5)",
                 }}
               >
-                <span className="text-lg font-mono font-bold text-amber-400" style={{ textShadow: "0 0 8px rgba(255,215,0,0.3)" }}>
+                <span className="text-lg font-mono font-bold text-amber-400" style={{ textShadow: "0 0 10px rgba(255,215,0,0.4)" }}>
                   ${pot.toLocaleString()}
                 </span>
               </div>
@@ -223,7 +143,7 @@ export function ImageTable({
           )}
         </AnimatePresence>
 
-        {/* ── Dealer button — spring-animates between seats ── */}
+        {/* ── Dealer button ── */}
         <AnimatePresence>
           {dealerPos && (
             <motion.div
@@ -240,7 +160,7 @@ export function ImageTable({
                 style={{
                   background: "linear-gradient(145deg, #ffffff, #e8e0d0)",
                   border: "3px solid #c9a84c",
-                  boxShadow: "0 3px 10px rgba(0,0,0,0.5), 0 0 16px rgba(255,255,255,0.2), inset 0 1px 2px rgba(255,255,255,0.5)",
+                  boxShadow: "0 3px 12px rgba(0,0,0,0.5), 0 0 16px rgba(255,255,255,0.2), inset 0 1px 2px rgba(255,255,255,0.5)",
                 }}
               >
                 D
@@ -249,18 +169,6 @@ export function ImageTable({
           )}
         </AnimatePresence>
       </div>
-
-      {/* Top fade — very subtle */}
-      <div
-        className="absolute inset-x-0 top-0 h-10 rounded-t-2xl pointer-events-none"
-        style={{ zIndex: 20, background: "linear-gradient(to bottom, rgba(12,26,48,0.3) 0%, transparent 100%)" }}
-      />
-      {/* Bottom fade — very subtle */}
-      <div
-        className="absolute inset-x-0 bottom-0 h-16 rounded-b-2xl pointer-events-none"
-        style={{ zIndex: 20, background: "linear-gradient(to top, rgba(12,26,48,0.4) 0%, rgba(12,26,48,0.1) 60%, transparent 100%)" }}
-      />
     </>
   );
 }
-

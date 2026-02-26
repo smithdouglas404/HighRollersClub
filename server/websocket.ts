@@ -234,6 +234,12 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
 async function handleMessage(client: WsClient, msg: ClientMessage) {
   switch (msg.type) {
     case "join_table": {
+      // Leave previous table first if switching tables
+      if (client.tableId && client.tableId !== msg.tableId) {
+        await tableManager.leaveTable(client.tableId, client.userId);
+        sendGameStateToTable(client.tableId);
+        client.tableId = null;
+      }
       const result = await tableManager.joinTable(
         msg.tableId,
         client.userId,

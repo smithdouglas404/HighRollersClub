@@ -139,21 +139,28 @@ export function useMultiplayerGame(tableId: string, userId: string) {
   const lastBuyInRef = useRef<number>(0);
   const localSeedRef = useRef<string | null>(null);
   const actionNumberRef = useRef<number>(0);
+  // Keep tableId in a ref so closures always see the latest value
+  const tableIdRef = useRef(tableId);
+  tableIdRef.current = tableId;
 
-  // Connect WebSocket and set up handlers
+  // Connect WebSocket and set up handlers — re-runs when tableId changes
   useEffect(() => {
-    wsClient.connect();
+    // Reset join state for new table
+    joinedRef.current = false;
+    lastBuyInRef.current = 0;
 
+    // Register listeners FIRST, before connect(), to avoid the race where
+    // the WebSocket handshake completes before _connected listener is attached.
     const unsubs: (() => void)[] = [];
 
     unsubs.push(
       wsClient.on("_connected", () => {
         setConnected(true);
         setError(null);
-        // Auto-rejoin table after reconnect (e.g. server restart clears client.tableId)
+        // Auto-rejoin table after reconnect
         if (joinedRef.current && lastBuyInRef.current > 0) {
-          console.log("[ws] reconnected — auto-rejoining table", tableId);
-          wsClient.send({ type: "join_table", tableId, buyIn: lastBuyInRef.current });
+          console.log("[ws] reconnected — auto-rejoining table", tableIdRef.current);
+          wsClient.send({ type: "join_table", tableId: tableIdRef.current, buyIn: lastBuyInRef.current });
         }
       })
     );
@@ -163,6 +170,15 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         setConnected(false);
       })
     );
+
+    // Now connect (or no-op if already connected)
+    wsClient.connect();
+
+    // If already connected (e.g. navigating between tables), set state immediately
+    if (wsClient.connected) {
+      setConnected(true);
+      setError(null);
+    }
 
     unsubs.push(
       wsClient.on("game_state", (msg: any) => {
@@ -348,9 +364,14 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     );
 
     return () => {
+      // Cleanup: leave current table and unsubscribe
+      if (joinedRef.current) {
+        wsClient.send({ type: "leave_table" });
+        joinedRef.current = false;
+      }
       unsubs.forEach((u) => u());
     };
-  }, []);
+  }, [tableId]);
 
   // Handle actions
   const handlePlayerAction = useCallback(
@@ -392,12 +413,12 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       lastBuyInRef.current = buyIn;
       wsClient.send({
         type: "join_table",
-        tableId,
+        tableId: tableIdRef.current,
         buyIn,
         seatIndex,
       });
     },
-    [tableId]
+    []
   );
 
   // Leave table

@@ -30,6 +30,15 @@ interface SoundContextValue {
   startAdaptiveMusic: () => void;
   stopAdaptiveMusic: () => void;
   setMusicState: (state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) => void;
+  // Background music
+  getBgmUrl: () => string;
+  getBgmVolume: () => number;
+  isBgmPlaying: () => boolean;
+  setBgmUrl: (url: string) => void;
+  setBgmVolume: (vol: number) => void;
+  playBgm: () => void;
+  stopBgm: () => void;
+  toggleBgm: () => boolean;
 }
 
 const SoundContext = createContext<SoundContextValue | null>(null);
@@ -64,6 +73,15 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     startAdaptiveMusic: useCallback(() => soundEngine.startAdaptiveMusic(), []),
     stopAdaptiveMusic: useCallback(() => soundEngine.stopAdaptiveMusic(), []),
     setMusicState: useCallback((state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) => soundEngine.setMusicState(state, opts), []),
+    // Background music
+    getBgmUrl: useCallback(() => soundEngine.bgmUrl, []),
+    getBgmVolume: useCallback(() => soundEngine.bgmVolume, []),
+    isBgmPlaying: useCallback(() => soundEngine.bgmPlaying, []),
+    setBgmUrl: useCallback((url: string) => soundEngine.setBgmUrl(url), []),
+    setBgmVolume: useCallback((vol: number) => soundEngine.setBgmVolume(vol), []),
+    playBgm: useCallback(() => soundEngine.playBgm(), []),
+    stopBgm: useCallback(() => soundEngine.stopBgm(), []),
+    toggleBgm: useCallback(() => soundEngine.toggleBgm(), []),
   };
 
   return (

@@ -35,7 +35,7 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2 } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X } from "lucide-react";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
 import { TournamentResults } from "@/components/game/TournamentResults";
@@ -148,6 +148,10 @@ function GameTable({
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
+  const [showBgmPanel, setShowBgmPanel] = useState(false);
+  const [bgmUrl, setBgmUrl] = useState(() => soundEngine.bgmUrl);
+  const [bgmPlaying, setBgmPlaying] = useState(() => soundEngine.bgmPlaying);
+  const [bgmVolume, setBgmVolume] = useState(() => soundEngine.bgmVolume);
   const sound = useSoundEngine();
   const winStreaks = useRef<Map<string, number>>(new Map());
   const isMobile = useIsMobile();
@@ -411,6 +415,85 @@ function GameTable({
                 <Volume2 className="w-4 h-4 text-gray-500" />
               )}
             </button>
+
+            {/* BGM button + panel */}
+            <div className="relative">
+              <button
+                onClick={() => setShowBgmPanel(!showBgmPanel)}
+                className={`glass rounded-lg p-2 transition-colors ${
+                  bgmPlaying ? "neon-border-green" : "hover:bg-white/5"
+                }`}
+                title="Background Music"
+              >
+                <Music className={`w-4 h-4 ${bgmPlaying ? "text-green-400" : "text-gray-500"}`} />
+              </button>
+              {showBgmPanel && (
+                <div
+                  className="absolute right-0 top-full mt-2 z-50 w-72 rounded-xl p-3 space-y-2"
+                  style={{
+                    background: "rgba(10,16,34,0.95)",
+                    border: "1px solid rgba(0,240,255,0.15)",
+                    backdropFilter: "blur(12px)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                      Background Music
+                    </span>
+                    <button onClick={() => setShowBgmPanel(false)} className="p-0.5 hover:bg-white/10 rounded">
+                      <X className="w-3 h-3 text-gray-500" />
+                    </button>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={bgmUrl}
+                      onChange={(e) => setBgmUrl(e.target.value)}
+                      onBlur={() => sound.setBgmUrl(bgmUrl)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { sound.setBgmUrl(bgmUrl); sound.playBgm(); setBgmPlaying(true); } }}
+                      placeholder="Paste audio URL..."
+                      className="flex-1 text-[10px] px-2 py-1.5 rounded-lg text-white placeholder-gray-600 outline-none"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    />
+                    <button
+                      onClick={() => {
+                        sound.setBgmUrl(bgmUrl);
+                        if (bgmPlaying) { sound.stopBgm(); setBgmPlaying(false); }
+                        else { sound.playBgm(); setBgmPlaying(true); }
+                      }}
+                      className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                        bgmPlaying
+                          ? "bg-red-500/20 text-red-400 border border-red-500/20 hover:bg-red-500/30"
+                          : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/30"
+                      }`}
+                    >
+                      {bgmPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] text-gray-500 shrink-0">Vol</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={Math.round(bgmVolume * 100)}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value) / 100;
+                        setBgmVolume(v);
+                        sound.setBgmVolume(v);
+                      }}
+                      className="flex-1 h-1 accent-cyan-400"
+                    />
+                    <span className="text-[9px] text-gray-500 w-6 text-right">{Math.round(bgmVolume * 100)}%</span>
+                  </div>
+                  <div className="text-[8px] text-gray-600 leading-relaxed">
+                    Paste a direct link to an MP3, OGG, or streaming audio URL. Hit Enter or Play to start.
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setShowProvablyFair(!showProvablyFair)}
               className={`glass rounded-lg px-3 py-1.5 flex items-center gap-2 transition-all ${

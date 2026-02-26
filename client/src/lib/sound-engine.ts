@@ -23,6 +23,8 @@ import { AdaptiveMusicEngine } from './adaptive-music';
 
 const STORAGE_KEY = 'poker-sound-muted';
 const VOLUME_KEY = 'poker-sound-volume';
+const BGM_URL_KEY = 'poker-bgm-url';
+const BGM_VOL_KEY = 'poker-bgm-volume';
 
 class SoundEngine {
   private ctx: AudioContext | null = null;
@@ -33,6 +35,12 @@ class SoundEngine {
   private initialized = false;
   private adaptiveMusic: AdaptiveMusicEngine | null = null;
 
+  // BGM (background music from URL)
+  private bgmAudio: HTMLAudioElement | null = null;
+  private _bgmUrl: string = '';
+  private _bgmVolume: number = 0.3;
+  private _bgmPlaying: boolean = false;
+
   constructor() {
     // Restore persisted settings
     try {
@@ -40,6 +48,10 @@ class SoundEngine {
       if (storedMuted !== null) this._muted = storedMuted === 'true';
       const storedVol = localStorage.getItem(VOLUME_KEY);
       if (storedVol !== null) this._volume = parseFloat(storedVol);
+      const storedBgmUrl = localStorage.getItem(BGM_URL_KEY);
+      if (storedBgmUrl) this._bgmUrl = storedBgmUrl;
+      const storedBgmVol = localStorage.getItem(BGM_VOL_KEY);
+      if (storedBgmVol !== null) this._bgmVolume = parseFloat(storedBgmVol);
     } catch {}
   }
 
@@ -79,6 +91,10 @@ class SoundEngine {
     if (this.adaptiveMusic) {
       if (val) this.adaptiveMusic.stop();
       else this.adaptiveMusic.start();
+    }
+    // Mute/unmute BGM too
+    if (this.bgmAudio) {
+      this.bgmAudio.volume = val ? 0 : this._bgmVolume;
     }
     try { localStorage.setItem(STORAGE_KEY, String(val)); } catch {}
   }
@@ -241,6 +257,75 @@ class SoundEngine {
       this.ambientHandle.stop();
       this.ambientHandle = null;
     }
+  }
+
+  // --- Background Music (URL-based) ---
+
+  get bgmUrl() { return this._bgmUrl; }
+  get bgmVolume() { return this._bgmVolume; }
+  get bgmPlaying() { return this._bgmPlaying; }
+
+  setBgmUrl(url: string) {
+    this._bgmUrl = url;
+    try { localStorage.setItem(BGM_URL_KEY, url); } catch {}
+
+    // If currently playing, switch to new URL
+    if (this._bgmPlaying) {
+      this.stopBgm();
+      if (url) this.playBgm();
+    }
+  }
+
+  setBgmVolume(val: number) {
+    this._bgmVolume = Math.max(0, Math.min(1, val));
+    if (this.bgmAudio && !this._muted) {
+      this.bgmAudio.volume = this._bgmVolume;
+    }
+    try { localStorage.setItem(BGM_VOL_KEY, String(this._bgmVolume)); } catch {}
+  }
+
+  playBgm() {
+    if (!this._bgmUrl) return;
+
+    // Create or reuse audio element
+    if (!this.bgmAudio || this.bgmAudio.src !== this._bgmUrl) {
+      this.stopBgm();
+      this.bgmAudio = new Audio(this._bgmUrl);
+      this.bgmAudio.crossOrigin = 'anonymous';
+      this.bgmAudio.loop = true;
+      this.bgmAudio.volume = this._muted ? 0 : this._bgmVolume;
+
+      this.bgmAudio.addEventListener('error', () => {
+        console.warn('BGM failed to load:', this._bgmUrl);
+        this._bgmPlaying = false;
+      });
+    }
+
+    this.bgmAudio.volume = this._muted ? 0 : this._bgmVolume;
+    this.bgmAudio.play().then(() => {
+      this._bgmPlaying = true;
+    }).catch((e) => {
+      console.warn('BGM play failed:', e);
+      this._bgmPlaying = false;
+    });
+  }
+
+  stopBgm() {
+    if (this.bgmAudio) {
+      this.bgmAudio.pause();
+      this.bgmAudio.src = '';
+      this.bgmAudio = null;
+    }
+    this._bgmPlaying = false;
+  }
+
+  toggleBgm(): boolean {
+    if (this._bgmPlaying) {
+      this.stopBgm();
+    } else {
+      this.playBgm();
+    }
+    return this._bgmPlaying;
   }
 }
 

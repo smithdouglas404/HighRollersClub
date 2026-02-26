@@ -3,82 +3,19 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { useClub } from "@/lib/club-context";
+import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { MissionsGrid } from "@/components/shared/MissionsGrid";
 import {
   Trophy, Brain, TrendingUp, CheckCircle,
   AlertTriangle, Play, Clock, Users, Zap,
   Target, Gamepad2, Coins, ChevronRight, X, Plus, Loader2,
-  Settings, Bell, CalendarDays, MessageSquare, Megaphone
+  Settings, Bell, CalendarDays, MessageSquare, Megaphone,
+  Globe, Lock, Search
 } from "lucide-react";
 
 import feltTexture from "@assets/generated_images/poker_table_top_cinematic.png";
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
-
-interface MissionData {
-  id: string;
-  type: string;
-  label: string;
-  description: string | null;
-  target: number;
-  reward: number;
-  progress: number;
-  completed: boolean;
-  claimed: boolean;
-}
-
-const MISSION_ICON_MAP: Record<string, any> = {
-  hands_played: Gamepad2,
-  pots_won: Coins,
-  win_streak: Target,
-  consecutive_wins: Zap,
-  sng_win: Trophy,
-  bomb_pot: Target,
-  heads_up_win: Users,
-};
-
-interface PlayerStats {
-  handsPlayed: number;
-  potsWon: number;
-  bestWinStreak: number;
-  currentWinStreak: number;
-  totalWinnings: number;
-}
-
-interface ClubData {
-  id: string;
-  name: string;
-  description: string | null;
-  ownerId: string;
-  memberCount: number;
-  createdAt: string;
-}
-
-interface ClubMember {
-  userId: string;
-  username: string;
-  displayName: string;
-  avatarId: string | null;
-  role: string;
-  joinedAt: string;
-}
-
-interface Announcement {
-  id: string;
-  authorId: string;
-  title: string;
-  content: string;
-  pinned: boolean;
-  createdAt: string;
-}
-
-interface ClubEvent {
-  id: string;
-  eventType: string;
-  tableId: string | null;
-  name: string;
-  description: string | null;
-  startTime: string;
-  createdAt: string;
-}
 
 // AI Analysis Modal - fetches real data from /api/analyses
 interface AnalysisResult {
@@ -282,63 +219,30 @@ export default function ClubDashboard() {
   const [showAI, setShowAI] = useState(false);
   const { user } = useAuth();
   const [, navigate] = useLocation();
-  const [club, setClub] = useState<ClubData | null>(null);
-  const [members, setMembers] = useState<ClubMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { club, members, announcements, events, missions, myStats, loading, createClub, isAdminOrOwner, createAnnouncement, createEvent } = useClub();
+
   const [creatingTable, setCreatingTable] = useState(false);
-  const [stats, setStats] = useState<PlayerStats | null>(null);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [events, setEvents] = useState<ClubEvent[]>([]);
-  const [missions, setMissions] = useState<MissionData[]>([]);
 
-  // Fetch first club the user might belong to (or first club available)
-  useEffect(() => {
-    async function loadClub() {
-      try {
-        const [res, statsRes, missionsRes] = await Promise.all([
-          fetch("/api/clubs"),
-          fetch("/api/stats/me"),
-          fetch("/api/missions"),
-        ]);
+  // Announcement form state
+  const [showNewAnnouncement, setShowNewAnnouncement] = useState(false);
+  const [annTitle, setAnnTitle] = useState("");
+  const [annContent, setAnnContent] = useState("");
+  const [annPinned, setAnnPinned] = useState(false);
+  const [postingAnnouncement, setPostingAnnouncement] = useState(false);
 
-        if (missionsRes.ok) {
-          setMissions(await missionsRes.json());
-        }
+  // Event form state
+  const [showNewEvent, setShowNewEvent] = useState(false);
+  const [evName, setEvName] = useState("");
+  const [evType, setEvType] = useState("tournament");
+  const [evDescription, setEvDescription] = useState("");
+  const [evStartTime, setEvStartTime] = useState("");
+  const [postingEvent, setPostingEvent] = useState(false);
 
-        if (statsRes.ok) {
-          setStats(await statsRes.json());
-        }
-
-        if (!res.ok) return;
-        const clubs: ClubData[] = await res.json();
-        if (clubs.length === 0) {
-          setLoading(false);
-          return;
-        }
-        const myClub = clubs[0]; // Use first club
-        setClub(myClub);
-
-        // Fetch members, announcements, events in parallel
-        const [membersRes, announcementsRes, eventsRes] = await Promise.all([
-          fetch(`/api/clubs/${myClub.id}/members`),
-          fetch(`/api/clubs/${myClub.id}/announcements`).catch(() => null),
-          fetch(`/api/clubs/${myClub.id}/events`).catch(() => null),
-        ]);
-        if (membersRes.ok) {
-          setMembers(await membersRes.json());
-        }
-        if (announcementsRes?.ok) {
-          setAnnouncements(await announcementsRes.json());
-        }
-        if (eventsRes?.ok) {
-          setEvents(await eventsRes.json());
-        }
-      } catch {} finally {
-        setLoading(false);
-      }
-    }
-    loadClub();
-  }, []);
+  // Create Club form state
+  const [newClubName, setNewClubName] = useState("");
+  const [newClubDescription, setNewClubDescription] = useState("");
+  const [newClubIsPublic, setNewClubIsPublic] = useState(true);
+  const [creatingClub, setCreatingClub] = useState(false);
 
   const handleCreateTable = async () => {
     if (creatingTable || !club) return;
@@ -366,6 +270,20 @@ export default function ClubDashboard() {
     }
   };
 
+  const handleCreateClub = async () => {
+    if (creatingClub || !newClubName.trim()) return;
+    setCreatingClub(true);
+    try {
+      await createClub({
+        name: newClubName.trim(),
+        description: newClubDescription.trim() || undefined,
+        isPublic: newClubIsPublic,
+      });
+    } finally {
+      setCreatingClub(false);
+    }
+  };
+
   return (
     <DashboardLayout title="Club Dashboard">
       <div className="px-8 pb-8">
@@ -373,7 +291,161 @@ export default function ClubDashboard() {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
           </div>
+        ) : !club ? (
+          /* ─── No Club — Create Club Flow ─────────────────────────────── */
+          <div className="max-w-lg mx-auto pt-8 space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
+                border: "1px solid rgba(0,240,255,0.1)",
+                boxShadow: "0 10px 40px rgba(0,0,0,0.3), 0 0 60px rgba(201,168,76,0.05)",
+              }}
+            >
+              {/* Header */}
+              <div className="px-6 pt-6 pb-4 text-center">
+                <div className="w-16 h-16 rounded-xl bg-amber-500/15 border border-amber-500/20 flex items-center justify-center mx-auto mb-4">
+                  <Trophy className="w-8 h-8 text-amber-400" />
+                </div>
+                <h2 className="text-lg font-bold tracking-wide gold-text mb-1">
+                  Create Your Club
+                </h2>
+                <p className="text-[11px] text-gray-500 leading-relaxed max-w-xs mx-auto">
+                  Start your own poker club, invite friends, and compete together.
+                </p>
+              </div>
+
+              {/* Form */}
+              <div className="px-6 pb-6 space-y-4">
+                {/* Club Name */}
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">
+                    Club Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newClubName}
+                    onChange={(e) => setNewClubName(e.target.value)}
+                    placeholder="Enter club name..."
+                    maxLength={50}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/30"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">
+                    Description <span className="text-gray-600">(optional)</span>
+                  </label>
+                  <textarea
+                    value={newClubDescription}
+                    onChange={(e) => setNewClubDescription(e.target.value)}
+                    placeholder="What's your club about?"
+                    rows={3}
+                    maxLength={300}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none resize-none transition-all focus:ring-1 focus:ring-cyan-500/30"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  />
+                </div>
+
+                {/* Public / Private Toggle */}
+                <div
+                  className="flex items-center justify-between p-3 rounded-lg"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {newClubIsPublic ? (
+                      <Globe className="w-4 h-4 text-cyan-400" />
+                    ) : (
+                      <Lock className="w-4 h-4 text-amber-400" />
+                    )}
+                    <div>
+                      <div className="text-xs font-bold text-white">
+                        {newClubIsPublic ? "Public Club" : "Private Club"}
+                      </div>
+                      <div className="text-[9px] text-gray-500">
+                        {newClubIsPublic
+                          ? "Anyone can find and join your club"
+                          : "Members join by invitation only"}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setNewClubIsPublic(!newClubIsPublic)}
+                    className="relative w-10 h-5 rounded-full transition-colors"
+                    style={{
+                      background: newClubIsPublic
+                        ? "linear-gradient(135deg, rgba(0,240,255,0.4), rgba(0,200,220,0.6))"
+                        : "rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    <div
+                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all"
+                      style={{
+                        left: newClubIsPublic ? "calc(100% - 18px)" : "2px",
+                      }}
+                    />
+                  </button>
+                </div>
+
+                {/* Create Button */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleCreateClub}
+                  disabled={creatingClub || !newClubName.trim()}
+                  className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: "linear-gradient(135deg, #c9a84c, #f0d078)",
+                    boxShadow: "0 0 25px rgba(201,168,76,0.3)",
+                  }}
+                >
+                  {creatingClub ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  Create Club
+                </motion.button>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                  <span className="text-[9px] text-gray-600 uppercase tracking-wider">or</span>
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                </div>
+
+                {/* Browse Clubs */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate("/clubs/browse")}
+                  className="w-full py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  Browse Clubs
+                </motion.button>
+              </div>
+            </motion.div>
+          </div>
         ) : (
+          /* ─── Has Club — Full Dashboard ──────────────────────────────── */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* ─── Main Content (2 cols) ──────────────────────── */}
             <div className="lg:col-span-2 space-y-6">
@@ -395,55 +467,47 @@ export default function ClubDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-base font-bold tracking-wide gold-text">
-                      {club?.name || "No Club Yet"}
+                      {club.name}
                     </h2>
-                    {club ? (
-                      <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3 h-3" /> {club.memberCount} members
-                        </span>
-                        <span>|</span>
-                        <span>{members.filter(m => m.role === "owner").map(m => m.displayName).join(", ") || "—"} (Owner)</span>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-500 mt-1">Join or create a club to get started</p>
-                    )}
+                    <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3" /> {club.memberCount} members
+                      </span>
+                      <span>|</span>
+                      <span>{members.filter(m => m.role === "owner").map(m => m.displayName).join(", ") || "—"} (Owner)</span>
+                    </div>
                   </div>
                   <div className="flex flex-col gap-2 shrink-0">
-                    {club && (
-                      <>
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={handleCreateTable}
-                          disabled={creatingTable}
-                          className="px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black flex items-center gap-1.5 disabled:opacity-50"
-                          style={{
-                            background: "linear-gradient(135deg, #c9a84c, #f0d078)",
-                            boxShadow: "0 0 20px rgba(201,168,76,0.3)",
-                          }}
-                        >
-                          {creatingTable ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                          Create Table
-                        </motion.button>
-                        <div className="flex gap-1.5">
-                          <button
-                            onClick={() => navigate("/club/settings")}
-                            className="flex-1 glass rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-white border border-white/5 hover:border-white/15 transition-all flex items-center justify-center gap-1"
-                          >
-                            <Settings className="w-3 h-3" />
-                            Settings
-                          </button>
-                          <button
-                            onClick={() => navigate("/club/invitations")}
-                            className="flex-1 glass rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-white border border-white/5 hover:border-white/15 transition-all flex items-center justify-center gap-1"
-                          >
-                            <Bell className="w-3 h-3" />
-                            Invites
-                          </button>
-                        </div>
-                      </>
-                    )}
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleCreateTable}
+                      disabled={creatingTable}
+                      className="px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black flex items-center gap-1.5 disabled:opacity-50"
+                      style={{
+                        background: "linear-gradient(135deg, #c9a84c, #f0d078)",
+                        boxShadow: "0 0 20px rgba(201,168,76,0.3)",
+                      }}
+                    >
+                      {creatingTable ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                      Create Table
+                    </motion.button>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => navigate("/club/settings")}
+                        className="flex-1 glass rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-white border border-white/5 hover:border-white/15 transition-all flex items-center justify-center gap-1"
+                      >
+                        <Settings className="w-3 h-3" />
+                        Settings
+                      </button>
+                      <button
+                        onClick={() => navigate("/club/invitations")}
+                        className="flex-1 glass rounded-lg px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-white border border-white/5 hover:border-white/15 transition-all flex items-center justify-center gap-1"
+                      >
+                        <Bell className="w-3 h-3" />
+                        Invites
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -470,26 +534,20 @@ export default function ClubDashboard() {
 
                   {/* Real members preview */}
                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-12">
-                    {members.slice(0, 4).map((m, i) => (
+                    {members.slice(0, 4).map((m) => (
                       <div key={m.userId} className="flex flex-col items-center">
-                        <div
-                          className="w-10 h-10 rounded-full overflow-hidden border-2 flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-purple-500/30"
-                          style={{
-                            borderColor: i === 0 ? "rgba(0,240,255,0.4)" : "rgba(255,255,255,0.1)",
-                            boxShadow: i === 0 ? "0 0 12px rgba(0,240,255,0.2)" : "none",
-                          }}
-                        >
-                          <span className="text-[10px] font-bold text-white">
-                            {m.displayName.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        <MemberAvatar
+                          avatarId={m.avatarId}
+                          displayName={m.displayName}
+                          size="sm"
+                        />
                         <span className="text-[8px] text-gray-500 mt-1 truncate max-w-[60px]">{m.displayName}</span>
                       </div>
                     ))}
                   </div>
 
                   <div className="absolute bottom-2 left-3 text-[9px] text-gray-500 font-mono">
-                    {club?.name || "No active tables"} | {members.length} Members
+                    {club.name} | {members.length} Members
                   </div>
                 </div>
               </motion.div>
@@ -506,9 +564,73 @@ export default function ClubDashboard() {
                     <Megaphone className="w-3.5 h-3.5 text-cyan-400" />
                     Club News
                   </h3>
-                  <span className="text-[9px] text-gray-600">{announcements.length} posts</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] text-gray-600">{announcements.length} posts</span>
+                    {isAdminOrOwner && (
+                      <button
+                        onClick={() => setShowNewAnnouncement(!showNewAnnouncement)}
+                        className="text-[9px] font-bold uppercase tracking-wider text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        New Post
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {announcements.length === 0 ? (
+                {showNewAnnouncement && (
+                  <div className="px-5 py-4 border-b border-white/5 space-y-3">
+                    <input
+                      type="text"
+                      value={annTitle}
+                      onChange={(e) => setAnnTitle(e.target.value)}
+                      placeholder="Announcement title..."
+                      className="w-full px-3 py-2 rounded-lg text-xs text-white placeholder-gray-600 outline-none"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    />
+                    <textarea
+                      value={annContent}
+                      onChange={(e) => setAnnContent(e.target.value)}
+                      placeholder="Announcement content..."
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-lg text-xs text-white placeholder-gray-600 outline-none resize-none"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    />
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-[10px] text-gray-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={annPinned}
+                          onChange={(e) => setAnnPinned(e.target.checked)}
+                          className="rounded"
+                        />
+                        Pin to top
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setShowNewAnnouncement(false); setAnnTitle(""); setAnnContent(""); setAnnPinned(false); }}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold text-gray-400 border border-white/10"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!annTitle.trim() || !annContent.trim()) return;
+                            setPostingAnnouncement(true);
+                            const ok = await createAnnouncement({ title: annTitle.trim(), content: annContent.trim(), pinned: annPinned });
+                            setPostingAnnouncement(false);
+                            if (ok) { setShowNewAnnouncement(false); setAnnTitle(""); setAnnContent(""); setAnnPinned(false); }
+                          }}
+                          disabled={postingAnnouncement || !annTitle.trim() || !annContent.trim()}
+                          className="px-4 py-1.5 rounded-lg text-[10px] font-bold text-black disabled:opacity-50"
+                          style={{ background: "linear-gradient(135deg, #c9a84c, #e8c566)" }}
+                        >
+                          {postingAnnouncement ? <Loader2 className="w-3 h-3 animate-spin" /> : "Post"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {announcements.length === 0 && !showNewAnnouncement ? (
                   <div className="py-6 text-center">
                     <MessageSquare className="w-6 h-6 text-gray-700 mx-auto mb-2" />
                     <p className="text-[11px] text-gray-600">No announcements yet</p>
@@ -532,19 +654,93 @@ export default function ClubDashboard() {
               </motion.div>
 
               {/* Upcoming Events */}
-              {events.length > 0 && (
+              {(events.length > 0 || isAdminOrOwner) && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.25 }}
                   className="glass rounded-xl border border-white/5 overflow-hidden"
                 >
-                  <div className="px-5 py-3 border-b border-white/5">
+                  <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
                       <CalendarDays className="w-3.5 h-3.5 text-amber-400" />
                       Upcoming Events
                     </h3>
+                    {isAdminOrOwner && (
+                      <button
+                        onClick={() => setShowNewEvent(!showNewEvent)}
+                        className="text-[9px] font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Schedule Event
+                      </button>
+                    )}
                   </div>
+                  {showNewEvent && (
+                    <div className="px-5 py-4 border-b border-white/5 space-y-3">
+                      <input
+                        type="text"
+                        value={evName}
+                        onChange={(e) => setEvName(e.target.value)}
+                        placeholder="Event name..."
+                        className="w-full px-3 py-2 rounded-lg text-xs text-white placeholder-gray-600 outline-none"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      />
+                      <select
+                        value={evType}
+                        onChange={(e) => setEvType(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-xs text-white outline-none"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      >
+                        <option value="tournament">Tournament</option>
+                        <option value="cash_game">Cash Game</option>
+                        <option value="sit_n_go">Sit & Go</option>
+                        <option value="special">Special Event</option>
+                      </select>
+                      <textarea
+                        value={evDescription}
+                        onChange={(e) => setEvDescription(e.target.value)}
+                        placeholder="Description (optional)..."
+                        rows={2}
+                        className="w-full px-3 py-2 rounded-lg text-xs text-white placeholder-gray-600 outline-none resize-none"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      />
+                      <input
+                        type="datetime-local"
+                        value={evStartTime}
+                        onChange={(e) => setEvStartTime(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-xs text-white outline-none"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => { setShowNewEvent(false); setEvName(""); setEvDescription(""); setEvStartTime(""); }}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold text-gray-400 border border-white/10"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!evName.trim()) return;
+                            setPostingEvent(true);
+                            const ok = await createEvent({
+                              name: evName.trim(),
+                              eventType: evType,
+                              description: evDescription.trim() || undefined,
+                              startTime: evStartTime || undefined,
+                            });
+                            setPostingEvent(false);
+                            if (ok) { setShowNewEvent(false); setEvName(""); setEvDescription(""); setEvStartTime(""); }
+                          }}
+                          disabled={postingEvent || !evName.trim()}
+                          className="px-4 py-1.5 rounded-lg text-[10px] font-bold text-black disabled:opacity-50"
+                          style={{ background: "linear-gradient(135deg, #c9a84c, #e8c566)" }}
+                        >
+                          {postingEvent ? <Loader2 className="w-3 h-3 animate-spin" /> : "Schedule"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <div className="divide-y divide-white/[0.03]">
                     {events.slice(0, 4).map((ev) => (
                       <div key={ev.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors">
@@ -573,50 +769,11 @@ export default function ClubDashboard() {
                 transition={{ delay: 0.3 }}
                 className="glass rounded-xl p-5 border border-white/5"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
-                    Daily Missions
-                  </h3>
-                  <span className="text-[9px] text-cyan-400 font-bold uppercase tracking-wider">
-                    {missions.filter(m => m.completed).length}/{missions.length} Complete
-                  </span>
-                </div>
-                {missions.length === 0 ? (
-                  <div className="text-center py-4">
-                    <Target className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                    <p className="text-[11px] text-gray-600">No missions available</p>
-                  </div>
-                ) : (
-                <div className="grid grid-cols-3 gap-4">
-                  {missions.slice(0, 6).map((mission) => {
-                    const Icon = MISSION_ICON_MAP[mission.type] || Target;
-                    const progressPct = Math.min(Math.round((mission.progress / mission.target) * 100), 100);
-                    return (
-                      <div key={mission.id} className="text-center">
-                        <div className={`w-10 h-10 rounded-lg ${mission.completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2`}>
-                          <Icon className={`w-4 h-4 ${mission.completed ? "text-green-400" : "text-cyan-400"}`} />
-                        </div>
-                        <div className="text-[10px] font-medium text-gray-300 mb-1">{mission.label}</div>
-                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-1">
-                          <div
-                            className={`h-full rounded-full transition-all ${mission.completed ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-cyan-500 to-green-500"}`}
-                            style={{ width: `${progressPct}%` }}
-                          />
-                        </div>
-                        <div className="text-[9px] text-gray-500">
-                          {mission.progress}/{mission.target}
-                          {mission.completed
-                            ? mission.claimed
-                              ? <span className="text-gray-500 ml-1">Claimed</span>
-                              : <span className="text-green-400 ml-1">Done!</span>
-                            : <span className="text-amber-400 ml-1">+{mission.reward}</span>
-                          }
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                )}
+                <MissionsGrid
+                  missions={missions}
+                  showHeader
+                  completedCount={missions.filter(m => m.completed).length}
+                />
               </motion.div>
             </div>
 
@@ -740,11 +897,11 @@ export default function ClubDashboard() {
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-500">Total Members</span>
-                    <span className="text-xs font-bold text-green-400">{club?.memberCount ?? 0}</span>
+                    <span className="text-xs font-bold text-green-400">{club.memberCount}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-500">Club Name</span>
-                    <span className="text-xs font-bold text-cyan-400">{club?.name || "—"}</span>
+                    <span className="text-xs font-bold text-cyan-400">{club.name}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-500">Your Balance</span>

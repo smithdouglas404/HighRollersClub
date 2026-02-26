@@ -21,14 +21,16 @@ import { TournamentStatsPanel } from "@/components/game/TournamentStatsPanel";
 import { PlayerAnalyticsPanel } from "@/components/game/PlayerAnalyticsPanel";
 import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
 import { Player } from "../lib/poker-types";
-import { QualityLevel, TABLE_SEATS } from "@/lib/table-constants";
+import { TABLE_SEATS } from "@/lib/table-constants";
 import { useGameEngine, type GameEngineConfig } from "@/lib/game-engine";
 import { useMultiplayerGame } from "@/lib/multiplayer-engine";
 import { useAuth } from "@/lib/auth-context";
 import { SoundProvider, useSoundEngine } from "@/lib/sound-context";
 import { soundEngine } from "@/lib/sound-engine";
+import { GameUIProvider, useGameUI, FELT_PRESETS } from "@/lib/game-ui-context";
+import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Download, Play, ExternalLink } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2 } from "lucide-react";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
 import { TournamentResults } from "@/components/game/TournamentResults";
@@ -55,32 +57,6 @@ const phaseLabels: Record<string, string> = {
   river: "RIVER",
   showdown: "SHOWDOWN",
 };
-
-function buildPlayers(heroAvatar: AvatarOption, heroName: string): Player[] {
-  return [
-    {
-      id: HERO_ID,
-      name: heroName,
-      chips: 1540,
-      isActive: true,
-      isDealer: false,
-      currentBet: 0,
-      status: "waiting",
-      timeLeft: 100,
-      avatar: heroAvatar.image || undefined,
-    },
-    ...BOT_NAMES.map((name, i) => ({
-      id: `player-${i + 2}`,
-      name,
-      chips: BOT_CHIPS[i],
-      isActive: true,
-      isDealer: i === 0,
-      currentBet: 0,
-      status: "waiting" as const,
-      avatar: BOT_AVATARS[i],
-    })),
-  ];
-}
 
 function buildPlayersFromConfig(heroAvatar: AvatarOption, heroName: string, config: GameSetupConfig): Player[] {
   const playerCount = config.maxPlayers;
@@ -129,7 +105,7 @@ function GameTable({
   commitmentHash, shuffleProof, verificationStatus, sendChat,
   playerSeedStatus, onChainCommitTx, onChainRevealTx,
   formatInfo, bombPotActive, tournamentComplete, dismissTournamentComplete,
-  blindIncrease, elimination,
+  blindIncrease, elimination, startingChips,
 }: {
   players: Player[];
   gameState: any;
@@ -158,13 +134,13 @@ function GameTable({
   dismissTournamentComplete?: () => void;
   blindIncrease?: import("@/lib/multiplayer-engine").BlindIncreaseInfo | null;
   elimination?: import("@/lib/multiplayer-engine").EliminationInfo | null;
+  startingChips?: number;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
-  const [quality, setQuality] = useState<QualityLevel>(() => {
-    return (localStorage.getItem("poker-quality") as QualityLevel) || "high";
-  });
   const sound = useSoundEngine();
+  const { compactMode, toggleCompactMode, feltPreset, setFeltColor } = useGameUI();
+  const { opponentStats, hudEnabled, setHudEnabled } = useOpponentStats(gameState, players, heroId);
   const tableRef = useRef<HTMLDivElement>(null);
   const prevHeroTurn = useRef(false);
 
@@ -176,13 +152,6 @@ function GameTable({
       if (s) setPlayerStats({ handsPlayed: s.handsPlayed || 0, potsWon: s.potsWon || 0, vpip: s.vpip || 0, pfr: s.pfr || 0, showdownCount: s.showdownCount || 0 });
     }).catch(() => {});
   }, [isMultiplayer, gameState.handNumber]);
-
-  const cycleQuality = () => {
-    const next: Record<QualityLevel, QualityLevel> = { low: "medium", medium: "high", high: "low" };
-    const q = next[quality];
-    setQuality(q);
-    localStorage.setItem("poker-quality", q);
-  };
 
   const hero = players.find((p) => p.id === heroId);
   const isHeroTurn = gameState.currentTurnPlayerId === heroId;
@@ -216,17 +185,19 @@ function GameTable({
       <div className="absolute inset-0">
         <img src={casinoBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-45" style={{ filter: "brightness(0.6) saturate(1.5) blur(1px)" }} />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.25)_0%,rgba(10,16,34,0.7)_80%)]" />
-        <AmbientParticles />
+        {!compactMode && <AmbientParticles />}
       </div>
 
       {/* Matrix rain on edges */}
-      <MatrixRain
-        side="both"
-        color="#00ff9d"
-        opacity={0.08}
-        density={0.25}
-        className="absolute inset-0 z-[1]"
-      />
+      {!compactMode && (
+        <MatrixRain
+          side="both"
+          color="#00ff9d"
+          opacity={0.08}
+          density={0.25}
+          className="absolute inset-0 z-[1]"
+        />
+      )}
 
       <ChipAnimation containerRef={tableRef} />
 
@@ -242,10 +213,10 @@ function GameTable({
       <div className="flex-1 relative flex flex-col h-screen overflow-hidden">
         {/* Top bar */}
         <motion.div
-          initial={{ y: -60, opacity: 0 }}
+          initial={compactMode ? { y: 0, opacity: 1 } : { y: -60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 25 }}
-          className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-5 z-50 bg-black/40 backdrop-blur-md border-b border-white/5"
+          transition={compactMode ? { duration: 0 } : { delay: 0.2, type: "spring", stiffness: 200, damping: 25 }}
+          className={`absolute top-0 left-0 right-0 ${compactMode ? 'h-8' : 'h-12'} flex items-center justify-between px-5 z-50 bg-black/40 backdrop-blur-md border-b border-white/5`}
         >
           <div className="flex items-center gap-3">
             {onBack && (
@@ -262,19 +233,19 @@ function GameTable({
             </div>
             <div>
               <div className="font-display font-bold text-xs tracking-widest gold-text leading-none">
-                {tableName || "HIGH ROLLERS"}
+                {tableName || "Poker Table"}
               </div>
               <div className="text-[9px] text-gray-500 tracking-[0.2em] font-mono mt-0.5">
                 {formatInfo?.smallBlind && formatInfo?.bigBlind
-                  ? <span className="text-emerald-400/80">${formatInfo.smallBlind}/${formatInfo.bigBlind} NLH</span>
-                  : <>{players.length}-MAX NLH</>
+                  ? <span className="text-emerald-400/80">${formatInfo.smallBlind}/${formatInfo.bigBlind}</span>
+                  : <>{players.length}-MAX</>
                 }
                 <span className="mx-1.5 text-gray-700">|</span>
                 <span className="text-cyan-500/70">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
                 <span className="mx-1.5 text-gray-700">|</span>
                 {(gameState as any).handNumber
                   ? <span className="text-gray-400">Hand #{(gameState as any).handNumber}</span>
-                  : <>{tableId ? `TABLE #${tableId.slice(0, 6).toUpperCase()}` : "TABLE #802"}</>
+                  : <>{tableId ? `TABLE #${tableId.slice(0, 6).toUpperCase()}` : ""}</>
                 }
                 {formatInfo && formatInfo.gameFormat !== "cash" && (
                   <>
@@ -316,6 +287,47 @@ function GameTable({
               </>
             )}
 
+            {/* Compact mode toggle */}
+            <button
+              onClick={toggleCompactMode}
+              className={`glass rounded-lg p-2 hover:bg-white/5 transition-colors ${compactMode ? 'neon-border-green' : ''}`}
+              title={compactMode ? "Normal mode" : "Compact mode (multi-tabling)"}
+            >
+              {compactMode ? (
+                <Maximize2 className="w-3.5 h-3.5 text-green-400" />
+              ) : (
+                <Minimize2 className="w-3.5 h-3.5 text-gray-500" />
+              )}
+            </button>
+
+            {/* Felt color swatches */}
+            <div className="flex items-center gap-1">
+              {FELT_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => setFeltColor(preset.id)}
+                  className="relative w-[14px] h-[14px] rounded-full transition-all hover:scale-125"
+                  title={preset.label}
+                  style={{
+                    background: preset.swatch,
+                    boxShadow: feltPreset.id === preset.id ? `0 0 0 2px #0a1022, 0 0 0 3.5px ${preset.swatch}` : 'none',
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* HUD toggle */}
+            <button
+              onClick={() => setHudEnabled(!hudEnabled)}
+              className={`glass rounded-lg px-2 py-1.5 flex items-center gap-1 transition-all ${hudEnabled ? 'neon-border-green' : 'hover:bg-white/5'}`}
+              title={hudEnabled ? "Disable opponent HUD" : "Enable opponent HUD"}
+            >
+              <BarChart2 className={`w-3.5 h-3.5 ${hudEnabled ? 'text-green-400' : 'text-gray-500'}`} />
+              <span className={`text-[9px] font-bold uppercase tracking-wider ${hudEnabled ? 'text-green-400' : 'text-gray-500'}`}>
+                HUD
+              </span>
+            </button>
+
             <button
               onClick={handleMuteToggle}
               className="glass rounded-lg p-2 hover:bg-white/5 transition-colors"
@@ -326,17 +338,6 @@ function GameTable({
               ) : (
                 <Volume2 className="w-4 h-4 text-gray-500" />
               )}
-            </button>
-            <button
-              onClick={cycleQuality}
-              className="glass rounded-lg px-2.5 py-1.5 hover:bg-white/5 transition-colors flex items-center gap-1.5"
-              title={`Quality: ${quality}`}
-            >
-              <span className={`text-[9px] font-bold tracking-wider ${
-                quality === "high" ? "text-green-400" : quality === "medium" ? "text-yellow-400" : "text-red-400"
-              }`}>
-                {quality.toUpperCase()}
-              </span>
             </button>
             <button
               onClick={() => setShowProvablyFair(!showProvablyFair)}
@@ -420,6 +421,7 @@ function GameTable({
                         isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
                         seatIndex={index}
                         perspectiveScale={seat.scale}
+                        hudStats={player.id !== heroId && hudEnabled ? opponentStats.get(player.id) : undefined}
                       />
                     );
                   })}
@@ -442,9 +444,9 @@ function GameTable({
                         <Card
                           key={`hero-${i}`}
                           card={{ ...card, hidden: false }}
-                          size="xl"
+                          size={compactMode ? "lg" : "xl"}
                           isHero={true}
-                          delay={0.3 + i * 0.15}
+                          delay={compactMode ? 0 : 0.3 + i * 0.15}
                         />
                       ))}
                     </motion.div>
@@ -477,6 +479,7 @@ function GameTable({
             bb={gameState.minBet || 20}
             ante={0}
             totalPlayers={players.length}
+            startingChips={startingChips}
           />
         )}
 
@@ -567,6 +570,10 @@ function GameTable({
               onAction={handlePlayerAction}
               minBet={gameState.minBet}
               maxBet={hero?.chips || 1000}
+              pot={gameState.pot}
+              phase={gameState.phase}
+              currentTurnSeat={players.findIndex(p => p.id === gameState.currentTurnPlayerId)}
+              isHeroTurn={isHeroTurn}
             />
           </div>
         </div>
@@ -650,7 +657,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
             </h2>
             {tableInfo && (
               <p className="text-xs text-gray-500 font-mono">
-                {tableInfo.smallBlind}/{tableInfo.bigBlind} NLH &middot; {tableInfo.maxPlayers} seats
+                {tableInfo.smallBlind}/{tableInfo.bigBlind} &middot; {tableInfo.maxPlayers} seats
                 {isSNG && (
                   <span className="ml-2 text-amber-400">
                     &middot; {tableInfo.gameFormat === "sng" ? "Sit & Go" : "Tournament"}
@@ -731,6 +738,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   return (
     <SoundProvider>
+      <GameUIProvider>
       <GameTable
         players={players}
         gameState={gameState}
@@ -758,6 +766,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         dismissTournamentComplete={dismissTournamentComplete}
         blindIncrease={blindIncrease}
         elimination={elimination}
+        startingChips={tableInfo?.startingChips}
       />
       {/* Join/Leave Notifications */}
       <div className="fixed top-16 right-4 z-[60] flex flex-col gap-2 pointer-events-none">
@@ -781,6 +790,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
           ))}
         </AnimatePresence>
       </div>
+      </GameUIProvider>
     </SoundProvider>
   );
 }
@@ -837,7 +847,9 @@ export default function Game({ tableId }: { tableId?: string }) {
 
   return (
     <SoundProvider>
-      <OfflineGameTable initialPlayers={initialPlayers} engineConfig={engineConfig} />
+      <GameUIProvider>
+        <OfflineGameTable initialPlayers={initialPlayers} engineConfig={engineConfig} />
+      </GameUIProvider>
     </SoundProvider>
   );
 }

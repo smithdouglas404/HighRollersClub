@@ -3,10 +3,11 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
 import { CreateTableModal } from "@/components/lobby/CreateTable";
 import {
   Plus, Users, Coins, ChevronRight,
-  Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid
+  Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search
 } from "lucide-react";
 
 type GameFormat = "all" | "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
@@ -84,7 +85,7 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
             <FormatBadge format={table.gameFormat} />
           </div>
           <p className="text-[10px] text-gray-500 font-mono mt-0.5">
-            {table.smallBlind}/{table.bigBlind} NLH
+            {table.smallBlind}/{table.bigBlind}
             {table.gameFormat === "sng" && ` | Buy-in: ${table.buyInAmount}`}
           </p>
         </div>
@@ -122,12 +123,16 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
 
 export default function Lobby() {
   const { user, refreshUser } = useAuth();
+  const { toast } = useToast();
   const [, navigate] = useLocation();
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateTable, setShowCreateTable] = useState(false);
   const [defaultPrivate, setDefaultPrivate] = useState(false);
   const [activeFormat, setActiveFormat] = useState<GameFormat>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [passwordModal, setPasswordModal] = useState<{ tableId: string; tableName: string } | null>(null);
+  const [passwordInput, setPasswordInput] = useState("");
 
   const fetchTables = async () => {
     try {
@@ -136,7 +141,7 @@ export default function Lobby() {
         setTables(await res.json());
       }
     } catch {
-      // ignore
+      toast({ title: "Connection error", description: "Failed to load tables.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -148,12 +153,26 @@ export default function Lobby() {
     return () => clearInterval(interval);
   }, []);
 
-  const filteredTables = activeFormat === "all"
-    ? tables
-    : tables.filter(t => (t.gameFormat || "cash") === activeFormat);
+  const filteredTables = tables.filter(t => {
+    const matchesFormat = activeFormat === "all" || (t.gameFormat || "cash") === activeFormat;
+    const matchesSearch = !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFormat && matchesSearch;
+  });
 
   const handleTableClick = (table: TableInfo) => {
+    if (table.isPrivate) {
+      setPasswordModal({ tableId: table.id, tableName: table.name });
+      setPasswordInput("");
+      return;
+    }
     navigate(`/game/${table.id}`);
+  };
+
+  const handlePasswordSubmit = () => {
+    if (!passwordModal) return;
+    sessionStorage.setItem(`table-password-${passwordModal.tableId}`, passwordInput);
+    setPasswordModal(null);
+    navigate(`/game/${passwordModal.tableId}`);
   };
 
   const handleCreateTable = async (config: any) => {
@@ -167,9 +186,12 @@ export default function Lobby() {
         const table = await res.json();
         setShowCreateTable(false);
         navigate(`/game/${table.id}`);
+      } else {
+        const err = await res.json().catch(() => ({ message: "Unknown error" }));
+        toast({ title: "Table creation failed", description: err.message, variant: "destructive" });
       }
     } catch {
-      // ignore
+      toast({ title: "Network error", description: "Could not create table.", variant: "destructive" });
     }
   };
 
@@ -214,6 +236,23 @@ export default function Lobby() {
               CREATE TABLE
             </motion.button>
           </div>
+        </motion.div>
+
+        {/* Search bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative max-w-xs mb-4"
+        >
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search tables..."
+            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/30"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+          />
         </motion.div>
 
         {/* Format tab bar */}
@@ -396,6 +435,64 @@ export default function Lobby() {
             onCreate={handleCreateTable}
             defaultPrivate={defaultPrivate}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Private table password modal */}
+      <AnimatePresence>
+        {passwordModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPasswordModal(null)} />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-sm rounded-xl p-6"
+              style={{
+                background: "linear-gradient(135deg, rgba(12,20,40,0.98), rgba(10,16,34,0.99))",
+                border: "1px solid rgba(255,255,255,0.1)",
+                boxShadow: "0 25px 80px rgba(0,0,0,0.5)",
+              }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <Lock className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Private Table</h3>
+                  <p className="text-[10px] text-gray-500">{passwordModal.tableName}</p>
+                </div>
+              </div>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
+                placeholder="Enter table password..."
+                autoFocus
+                className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none mb-4"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPasswordModal(null)}
+                  className="flex-1 py-2 rounded-lg text-xs font-bold text-gray-400 border border-white/10 hover:border-white/20 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePasswordSubmit}
+                  className="flex-1 py-2 rounded-lg text-xs font-bold text-black"
+                  style={{ background: "linear-gradient(135deg, #c9a84c, #e8c566)" }}
+                >
+                  Join Table
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </DashboardLayout>

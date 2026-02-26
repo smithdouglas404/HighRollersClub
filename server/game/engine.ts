@@ -99,6 +99,7 @@ export class GameEngine {
   private bigBlind: number;
   private timeBankSeconds: number;
   private actedThisRound: Set<string> = new Set();
+  private lastRaiseSize: number = 0;
 
   // Format options
   private gameFormat: GameFormat;
@@ -402,6 +403,7 @@ export class GameEngine {
     this.state.actionNumber = 0;
     this.state.turnDeadline = 0;
     this.actedThisRound.clear();
+    this.lastRaiseSize = this.bigBlind;
     this.actionLog = [];
     this.vpipPlayers.clear();
     this.pfrPlayers.clear();
@@ -675,13 +677,25 @@ export class GameEngine {
         player.totalBetThisHand += toAdd;
         this.state.pot += toAdd;
         this.state.minBet = player.currentBet;
-        const raiseIncrement = Math.max(player.currentBet - previousMinBet, this.bigBlind);
-        this.state.minRaise = player.currentBet + raiseIncrement;
-        player.status = player.chips === 0 ? "all-in" : "raised";
 
-        // Reset acted set since a raise reopens action
-        this.actedThisRound.clear();
-        this.actedThisRound.add(playerId);
+        // Determine if this is a full raise (reopens action) or short all-in
+        const actualRaiseSize = player.currentBet - previousMinBet;
+        const isFullRaise = actualRaiseSize >= this.lastRaiseSize;
+
+        if (isFullRaise) {
+          this.lastRaiseSize = actualRaiseSize;
+          const raiseIncrement = Math.max(actualRaiseSize, this.bigBlind);
+          this.state.minRaise = player.currentBet + raiseIncrement;
+          // Full raise reopens action for all players
+          this.actedThisRound.clear();
+          this.actedThisRound.add(playerId);
+        } else {
+          // Short all-in: does NOT reopen action
+          this.state.minRaise = player.currentBet + this.lastRaiseSize;
+          this.actedThisRound.add(playerId);
+        }
+
+        player.status = player.chips === 0 ? "all-in" : "raised";
         break;
       }
 
@@ -750,6 +764,7 @@ export class GameEngine {
 
   private advancePhase() {
     this.actedThisRound.clear();
+    this.lastRaiseSize = this.bigBlind;
 
     // Reset current bets for new round
     for (const p of this.state.players) {

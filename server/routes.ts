@@ -67,8 +67,17 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // REST endpoint for joining a table (professional: REST for join/leave, WS for gameplay)
   app.post("/api/tables/:id/join", requireAuth, async (req, res, next) => {
     try {
-      const { buyIn, seatIndex } = req.body;
+      const { buyIn, seatIndex, password } = req.body;
       if (!buyIn || buyIn <= 0) return res.status(400).json({ message: "Invalid buy-in amount" });
+
+      // Check private table password
+      const tableForAuth = await storage.getTable(req.params.id);
+      if (tableForAuth?.isPrivate && tableForAuth.password) {
+        if (password !== tableForAuth.password) {
+          return res.status(403).json({ message: "Incorrect table password" });
+        }
+      }
+
       const result = await tableManager.joinTable(req.params.id, req.user!.id, req.user!.displayName || req.user!.username, buyIn, seatIndex);
       if (!result.ok) return res.status(400).json({ message: result.error });
       sendGameStateToTable(req.params.id);
@@ -129,6 +138,16 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     try {
       const allClubs = await storage.getClubs();
       res.json(allClubs);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // User's pending club join requests (must be before /api/clubs/:id)
+  app.get("/api/clubs/my-pending-requests", requireAuth, async (req, res, next) => {
+    try {
+      const requests = await storage.getUserPendingRequests(req.user!.id);
+      res.json(requests);
     } catch (err) {
       next(err);
     }
@@ -227,6 +246,21 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const { name, description, isPublic, avatarUrl } = req.body;
       const updated = await storage.updateClub(club.id, { name, description, isPublic, avatarUrl });
       res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Delete club (owner only)
+  app.delete("/api/clubs/:id", requireAuth, async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+      if (club.ownerId !== req.user!.id) {
+        return res.status(403).json({ message: "Only the club owner can delete the club" });
+      }
+      await storage.deleteClub(club.id);
+      res.json({ message: "Club deleted" });
     } catch (err) {
       next(err);
     }
@@ -458,6 +492,30 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  app.get("/api/wallet/daily-status", requireAuth, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Determine bonus amount (2x with Elite Pass)
+      const inv = await storage.getUserInventory(user.id);
+      const items = await storage.getShopItems();
+      const elitePass = items.find(i => i.category === "premium" && i.rarity === "legendary");
+      const hasElitePass = elitePass ? inv.some(i => i.itemId === elitePass.id) : false;
+      const bonusAmount = hasElitePass ? 2000 : 1000;
+
+      if (user.lastDailyClaim) {
+        const nextClaimAt = new Date(user.lastDailyClaim.getTime() + 24 * 60 * 60 * 1000);
+        if (nextClaimAt.getTime() > Date.now()) {
+          return res.json({ canClaim: false, nextClaimAt, bonusAmount });
+        }
+      }
+      res.json({ canClaim: true, nextClaimAt: null, bonusAmount });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   app.post("/api/wallet/claim-daily", requireAuth, async (req, res, next) => {
     try {
       const user = await storage.getUser(req.user!.id);
@@ -474,7 +532,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         }
       }
 
-      const bonus = 1000;
+      // Check if user has Elite Pass for 2x bonus
+      const userInventory = await storage.getUserInventory(user.id);
+      const allShopItems = await storage.getShopItems();
+      const elitePass = allShopItems.find(i => i.category === "premium" && i.rarity === "legendary");
+      const hasElitePass = elitePass ? userInventory.some(inv => inv.itemId === elitePass.id) : false;
+      const bonus = hasElitePass ? 2000 : 1000;
       const balanceBefore = user.chipBalance;
       const balanceAfter = balanceBefore + bonus;
 
@@ -845,6 +908,29 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       });
 
       const inv = await storage.addToInventory(user.id, itemId);
+
+      // Grant bonus chips if item description mentions chips (e.g., VIP Chip Bundle)
+      const chipMatch = item.description?.match(/(\d[\d,]*)\s*chips/i);
+      if (chipMatch) {
+        const bonusChips = parseInt(chipMatch[1].replace(/,/g, ""), 10);
+        if (bonusChips > 0) {
+          const updatedUser = await storage.getUser(user.id);
+          if (updatedUser) {
+            const newBalance = updatedUser.chipBalance + bonusChips;
+            await storage.updateUser(user.id, { chipBalance: newBalance });
+            await storage.createTransaction({
+              userId: user.id,
+              type: "deposit",
+              amount: bonusChips,
+              balanceBefore: updatedUser.chipBalance,
+              balanceAfter: newBalance,
+              tableId: null,
+              description: `Bonus chips from: ${item.name}`,
+            });
+          }
+        }
+      }
+
       res.json({ message: "Purchased", item: inv });
     } catch (err) {
       next(err);

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
@@ -371,11 +372,20 @@ function InventoryItemCard({
 export default function Shop() {
   const [activeTab, setActiveTab] = useState("Avatars");
   const { user, refreshUser } = useAuth();
+  const [, navigate] = useLocation();
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [claiming, setClaiming] = useState(false);
   const [claimResult, setClaimResult] = useState<{ bonus: number } | null>(null);
   const [loadingTx, setLoadingTx] = useState(true);
+
+  // Cooldown state
+  const [nextClaimAt, setNextClaimAt] = useState<Date | null>(null);
+  const [cooldownText, setCooldownText] = useState("");
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Transaction pagination
+  const [txVisible, setTxVisible] = useState(10);
 
   // Shop state
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
@@ -485,6 +495,43 @@ export default function Shop() {
     }
   }, []);
 
+  // Check cooldown on mount
+  useEffect(() => {
+    fetch("/api/wallet/daily-status")
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.canClaim && data.nextClaimAt) {
+            setNextClaimAt(new Date(data.nextClaimAt));
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Cooldown countdown ticker
+  useEffect(() => {
+    if (!nextClaimAt) {
+      setCooldownText("");
+      return;
+    }
+    const tick = () => {
+      const diff = nextClaimAt.getTime() - Date.now();
+      if (diff <= 0) {
+        setNextClaimAt(null);
+        setCooldownText("");
+        return;
+      }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setCooldownText(`${h}h ${m}m ${s}s`);
+    };
+    tick();
+    cooldownRef.current = setInterval(tick, 1_000);
+    return () => { if (cooldownRef.current) clearInterval(cooldownRef.current); };
+  }, [nextClaimAt]);
+
   // Refresh transactions helper
   const refreshTransactions = useCallback(async () => {
     try {
@@ -547,7 +594,7 @@ export default function Shop() {
   };
 
   const handleClaimDaily = async () => {
-    if (claiming) return;
+    if (claiming || nextClaimAt) return;
     setClaiming(true);
     setClaimResult(null);
     try {
@@ -556,11 +603,21 @@ export default function Shop() {
         const data = await res.json();
         setBalance(data.balance);
         setClaimResult({ bonus: data.bonus });
+        // Set 24h cooldown from now
+        setNextClaimAt(new Date(Date.now() + 24 * 60 * 60 * 1000));
         await refreshUser();
         await refreshTransactions();
         setTimeout(() => setClaimResult(null), 3000);
+      } else if (res.status === 429) {
+        const data = await res.json().catch(() => null);
+        if (data?.nextClaimAt) {
+          setNextClaimAt(new Date(data.nextClaimAt));
+        }
+        showToast("Daily bonus already claimed — check the timer!");
       }
-    } catch {} finally {
+    } catch {
+      showToast("Network error. Please try again.");
+    } finally {
       setClaiming(false);
     }
   };
@@ -868,33 +925,43 @@ export default function Shop() {
                   <p className="text-[11px] text-gray-600">No transactions yet. Claim your daily bonus to get started!</p>
                 </div>
               ) : (
-                <div className="divide-y divide-white/[0.03]">
-                  {transactions.slice(0, 10).map((tx) => (
-                    <div key={tx.id} className="flex items-center px-5 py-3 hover:bg-white/[0.02] transition-colors">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mr-3 ${
-                        tx.amount > 0 ? "bg-green-500/10 border border-green-500/15" : "bg-red-500/10 border border-red-500/15"
-                      }`}>
-                        {tx.amount > 0 ? (
-                          <ArrowDownRight className="w-3.5 h-3.5 text-green-400" />
-                        ) : (
-                          <ArrowUpRight className="w-3.5 h-3.5 text-red-400" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-white capitalize">{tx.type}</div>
-                        <div className="text-[9px] text-gray-600">{tx.description || tx.type}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-xs font-bold ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
-                          {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()}
+                <>
+                  <div className="divide-y divide-white/[0.03]">
+                    {transactions.slice(0, txVisible).map((tx) => (
+                      <div key={tx.id} className="flex items-center px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mr-3 ${
+                          tx.amount > 0 ? "bg-green-500/10 border border-green-500/15" : "bg-red-500/10 border border-red-500/15"
+                        }`}>
+                          {tx.amount > 0 ? (
+                            <ArrowDownRight className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <ArrowUpRight className="w-3.5 h-3.5 text-red-400" />
+                          )}
                         </div>
-                        <div className="text-[9px] text-gray-600">
-                          {new Date(tx.createdAt).toLocaleDateString()}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-white capitalize">{tx.type}</div>
+                          <div className="text-[9px] text-gray-600">{tx.description || tx.type}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-xs font-bold ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
+                            {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()}
+                          </div>
+                          <div className="text-[9px] text-gray-600">
+                            {new Date(tx.createdAt).toLocaleDateString()}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                  {transactions.length > txVisible && (
+                    <button
+                      onClick={() => setTxVisible(v => v + 10)}
+                      className="w-full py-2.5 text-[10px] font-bold uppercase tracking-wider text-cyan-400 hover:text-white transition-colors border-t border-white/[0.03]"
+                    >
+                      Show More ({transactions.length - txVisible} remaining)
+                    </button>
+                  )}
+                </>
               )}
             </motion.div>
           </div>
@@ -931,20 +998,33 @@ export default function Shop() {
                   <Gift className="w-4 h-4 text-green-400" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-green-400">Daily Bonus</span>
                 </div>
-                <p className="text-[10px] text-gray-500 mb-3">Claim your free chips every 24 hours!</p>
+                <p className="text-[10px] text-gray-500 mb-3">
+                  {nextClaimAt
+                    ? "Come back when the timer expires!"
+                    : "Claim your free chips every 24 hours!"}
+                </p>
+                {nextClaimAt && cooldownText && (
+                  <div className="flex items-center justify-center gap-2 mb-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-sm font-mono font-bold text-amber-400 tabular-nums">{cooldownText}</span>
+                  </div>
+                )}
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={!nextClaimAt ? { scale: 1.02 } : {}}
+                  whileTap={!nextClaimAt ? { scale: 0.98 } : {}}
                   onClick={handleClaimDaily}
-                  disabled={claiming}
-                  className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-2"
+                  disabled={claiming || !!nextClaimAt}
+                  className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2"
                   style={{
-                    background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                    boxShadow: "0 0 20px rgba(0,255,157,0.2)",
+                    background: nextClaimAt
+                      ? "rgba(255,255,255,0.05)"
+                      : "linear-gradient(135deg, #00ff9d, #00d4aa)",
+                    boxShadow: nextClaimAt ? "none" : "0 0 20px rgba(0,255,157,0.2)",
+                    color: nextClaimAt ? "rgba(156,163,175,1)" : "black",
                   }}
                 >
                   {claiming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
-                  Claim Daily Bonus
+                  {nextClaimAt ? "Already Claimed" : "Claim Daily Bonus"}
                 </motion.button>
                 {claimResult && (
                   <motion.div
@@ -961,7 +1041,7 @@ export default function Shop() {
             {/* Limited Time Offer — Elite Player's Pass */}
             {(() => {
               const elitePass = shopItems.find(
-                (item) => item.name.includes("Elite Player") && item.name.includes("Pass")
+                (item) => item.category === "premium" && item.rarity === "legendary"
               );
               const eliteOwned = elitePass ? ownedItemIds.has(elitePass.id) : false;
               return (
@@ -982,7 +1062,7 @@ export default function Shop() {
                     </div>
                     <div className="text-[9px] text-gray-600 mb-3">
                       <span className="text-amber-400/60 font-bold uppercase flex items-center gap-1">
-                        <Coins className="w-3 h-3" /> 5,000 Chips
+                        <Coins className="w-3 h-3" /> {elitePass?.price.toLocaleString() ?? "5,000"} Chips
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mb-3">
@@ -1016,7 +1096,7 @@ export default function Shop() {
                         }}
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
-                        Buy Now — 5,000 Chips
+                        Buy Now — {elitePass?.price.toLocaleString() ?? "5,000"} Chips
                       </motion.button>
                     )}
                   </div>
@@ -1026,7 +1106,10 @@ export default function Shop() {
 
             {/* Wallet Actions */}
             <div className="flex gap-2">
-              <button className="flex-1 glass rounded-lg py-2.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border border-white/5 hover:border-white/10 hover:text-white transition-all flex items-center justify-center gap-1.5">
+              <button
+                onClick={() => navigate("/wallet")}
+                className="flex-1 glass rounded-lg py-2.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border border-white/5 hover:border-white/10 hover:text-white transition-all flex items-center justify-center gap-1.5"
+              >
                 <Wallet className="w-3 h-3" />
                 Deposit
               </button>

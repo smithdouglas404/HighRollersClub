@@ -10,6 +10,7 @@ interface TournamentStatsPanelProps {
   bb: number;
   ante: number;
   totalPlayers: number;
+  startingChips?: number;
 }
 
 export function TournamentStatsPanel({
@@ -20,11 +21,12 @@ export function TournamentStatsPanel({
   bb,
   ante,
   totalPlayers,
+  startingChips = 1500,
 }: TournamentStatsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const avgStack = totalPlayers > 0 && playersRemaining > 0
-    ? Math.round((totalPlayers * 1500) / playersRemaining)
+    ? Math.round((totalPlayers * startingChips) / playersRemaining)
     : 0;
   const bbCount = bb > 0 ? Math.round(chips / bb) : 0;
   const stackRatio = avgStack > 0 ? (chips / avgStack) : 0;

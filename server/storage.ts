@@ -27,11 +27,15 @@ export interface IStorage {
   createUser(user: Partial<User> & Pick<User, "username" | "password">): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
 
+  // Users (atomic)
+  atomicDeductChips(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }>;
+
   // Clubs
   getClub(id: string): Promise<Club | undefined>;
   getClubs(): Promise<Club[]>;
   createClub(club: InsertClub & { ownerId: string }): Promise<Club>;
   updateClub(id: string, data: Partial<Club>): Promise<Club | undefined>;
+  deleteClub(id: string): Promise<void>;
   getClubMembers(clubId: string): Promise<(ClubMember & { user?: User })[]>;
   addClubMember(clubId: string, userId: string, role?: string): Promise<ClubMember>;
   removeClubMember(clubId: string, userId: string): Promise<void>;
@@ -39,6 +43,7 @@ export interface IStorage {
 
   // Club Invitations
   getClubInvitations(clubId: string): Promise<ClubInvitation[]>;
+  getUserPendingRequests(userId: string): Promise<ClubInvitation[]>;
   createClubInvitation(data: Omit<ClubInvitation, "id" | "createdAt">): Promise<ClubInvitation>;
   updateClubInvitation(id: string, data: Partial<ClubInvitation>): Promise<ClubInvitation | undefined>;
 
@@ -179,6 +184,15 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
+  async atomicDeductChips(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    const user = this.users.get(userId);
+    if (!user || user.chipBalance < amount) {
+      return { success: false, newBalance: user?.chipBalance ?? 0 };
+    }
+    user.chipBalance -= amount;
+    return { success: true, newBalance: user.chipBalance };
+  }
+
   // Clubs
   async getClub(id: string) { return this.clubs.get(id); }
   async getClubs() { return Array.from(this.clubs.values()); }
@@ -203,6 +217,17 @@ export class MemStorage implements IStorage {
     const updated = { ...club, ...data };
     this.clubs.set(id, updated);
     return updated;
+  }
+  async deleteClub(id: string) {
+    this.clubAnnouncementsList = this.clubAnnouncementsList.filter(a => a.clubId !== id);
+    this.clubEventsList = this.clubEventsList.filter(e => e.clubId !== id);
+    this.clubInvitationsList = this.clubInvitationsList.filter(i => i.clubId !== id);
+    this.clubMembersList = this.clubMembersList.filter(m => m.clubId !== id);
+    // Nullify tables associated with this club
+    for (const [, table] of this.tablesList) {
+      if (table.clubId === id) table.clubId = null;
+    }
+    this.clubs.delete(id);
   }
   async getClubMembers(clubId: string) {
     return this.clubMembersList.filter(m => m.clubId === clubId);
@@ -229,6 +254,11 @@ export class MemStorage implements IStorage {
   // Club Invitations
   async getClubInvitations(clubId: string) {
     return this.clubInvitationsList.filter(i => i.clubId === clubId);
+  }
+  async getUserPendingRequests(userId: string) {
+    return this.clubInvitationsList.filter(
+      i => i.userId === userId && i.type === "request" && i.status === "pending"
+    );
   }
   async createClubInvitation(data: Omit<ClubInvitation, "id" | "createdAt">): Promise<ClubInvitation> {
     const inv: ClubInvitation = { ...data, id: randomUUID(), createdAt: new Date() };
@@ -597,6 +627,20 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async atomicDeductChips(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    const result = await this.db.execute(sql`
+      UPDATE users SET chip_balance = chip_balance - ${amount}
+      WHERE id = ${userId} AND chip_balance >= ${amount}
+      RETURNING chip_balance
+    `);
+    const rows = result.rows as any[];
+    if (rows.length === 0) {
+      const user = await this.getUser(userId);
+      return { success: false, newBalance: user?.chipBalance ?? 0 };
+    }
+    return { success: true, newBalance: Number(rows[0].chip_balance) };
+  }
+
   // Clubs
   async getClub(id: string) {
     const [club] = await this.db.select().from(clubs).where(eq(clubs.id, id));
@@ -618,6 +662,14 @@ export class DatabaseStorage implements IStorage {
   async updateClub(id: string, data: Partial<Club>) {
     const [club] = await this.db.update(clubs).set(data).where(eq(clubs.id, id)).returning();
     return club;
+  }
+  async deleteClub(id: string) {
+    await this.db.delete(clubAnnouncements).where(eq(clubAnnouncements.clubId, id));
+    await this.db.delete(clubEvents).where(eq(clubEvents.clubId, id));
+    await this.db.delete(clubInvitations).where(eq(clubInvitations.clubId, id));
+    await this.db.delete(clubMembers).where(eq(clubMembers.clubId, id));
+    await this.db.update(tables).set({ clubId: null }).where(eq(tables.clubId, id));
+    await this.db.delete(clubs).where(eq(clubs.id, id));
   }
   async getClubMembers(clubId: string) {
     return this.db.select().from(clubMembers).where(eq(clubMembers.clubId, clubId));
@@ -641,6 +693,15 @@ export class DatabaseStorage implements IStorage {
   async getClubInvitations(clubId: string) {
     return this.db.select().from(clubInvitations).where(eq(clubInvitations.clubId, clubId))
       .orderBy(desc(clubInvitations.createdAt));
+  }
+  async getUserPendingRequests(userId: string) {
+    return this.db.select().from(clubInvitations).where(
+      and(
+        eq(clubInvitations.userId, userId),
+        eq(clubInvitations.type, "request"),
+        eq(clubInvitations.status, "pending"),
+      )
+    );
   }
   async createClubInvitation(data: Omit<ClubInvitation, "id" | "createdAt">): Promise<ClubInvitation> {
     const [inv] = await this.db.insert(clubInvitations).values(data).returning();

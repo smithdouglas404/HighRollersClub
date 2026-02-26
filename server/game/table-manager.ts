@@ -449,26 +449,21 @@ class TableManager {
         return { ok: false, error: "Tournament already started" };
       }
 
-      // Deduct fixed buy-in from user balance
+      // Atomically deduct fixed buy-in from user balance
       const user = await storage.getUser(userId);
       if (!user) return { ok: false, error: "User not found" };
-      if (user.chipBalance < fixedBuyIn) {
+
+      const deductResult = await storage.atomicDeductChips(userId, fixedBuyIn);
+      if (!deductResult.success) {
         return { ok: false, error: "Insufficient chips for buy-in" };
       }
 
-      // Re-read to prevent race condition (optimistic locking)
-      const freshUser = await storage.getUser(userId);
-      if (!freshUser || freshUser.chipBalance < fixedBuyIn) {
-        return { ok: false, error: "Insufficient chips for buy-in" };
-      }
-
-      await storage.updateUser(userId, { chipBalance: freshUser.chipBalance - fixedBuyIn });
       await storage.createTransaction({
         userId,
         type: "buyin",
         amount: -fixedBuyIn,
-        balanceBefore: freshUser.chipBalance,
-        balanceAfter: freshUser.chipBalance - fixedBuyIn,
+        balanceBefore: deductResult.newBalance + fixedBuyIn,
+        balanceAfter: deductResult.newBalance,
         tableId,
         description: `SNG buy-in`,
       });
@@ -492,8 +487,8 @@ class TableManager {
 
       // Use the player's profile avatar if set, otherwise assign first unused
       const usedAvatarsSNG = new Set(instance.avatarMap.values());
-      const sngAvatar = (freshUser.avatarId && AVATAR_IDS.includes(freshUser.avatarId as any))
-        ? freshUser.avatarId
+      const sngAvatar = (user.avatarId && AVATAR_IDS.includes(user.avatarId as any))
+        ? user.avatarId
         : AVATAR_IDS.find(a => !usedAvatarsSNG.has(a)) || AVATAR_IDS[0];
       instance.avatarMap.set(userId, sngAvatar);
 
@@ -557,26 +552,21 @@ class TableManager {
       return { ok: false, error: "Table is full" };
     }
 
-    // Deduct from user balance
+    // Atomically deduct from user balance
     const user = await storage.getUser(userId);
     if (!user) return { ok: false, error: "User not found" };
-    if (user.chipBalance < buyIn) {
+
+    const deductResult = await storage.atomicDeductChips(userId, buyIn);
+    if (!deductResult.success) {
       return { ok: false, error: "Insufficient chips" };
     }
 
-    // Re-read to prevent race condition (optimistic locking)
-    const freshUser = await storage.getUser(userId);
-    if (!freshUser || freshUser.chipBalance < buyIn) {
-      return { ok: false, error: "Insufficient chips" };
-    }
-
-    await storage.updateUser(userId, { chipBalance: freshUser.chipBalance - buyIn });
     await storage.createTransaction({
       userId,
       type: "buyin",
       amount: -buyIn,
-      balanceBefore: freshUser.chipBalance,
-      balanceAfter: freshUser.chipBalance - buyIn,
+      balanceBefore: deductResult.newBalance + buyIn,
+      balanceAfter: deductResult.newBalance,
       tableId,
       description: `Buy-in at table`,
     });

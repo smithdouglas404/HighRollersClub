@@ -544,7 +544,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                         disabled={gameFormat === "heads_up"}
                         className={`${inputClass} disabled:opacity-50`}
                       >
-                        {[2, 3, 4, 5, 6].map((n) => (
+                        {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                           <option key={n} value={n} className="bg-gray-900">{n} Players</option>
                         ))}
                       </select>

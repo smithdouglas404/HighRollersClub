@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useAuth } from "./auth-context";
 import { useToast } from "@/hooks/use-toast";
 
@@ -141,6 +141,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const [activeClubId, setActiveClubId] = useState<string | null>(() => {
     try { return localStorage.getItem(ACTIVE_CLUB_KEY); } catch { return null; }
   });
+  const activeClubIdRef = useRef(activeClubId);
   const [members, setMembers] = useState<ClubMember[]>([]);
   const [invitations, setInvitations] = useState<ClubInvitation[]>([]);
   const [memberStatsMap, setMemberStatsMap] = useState<Record<string, MemberStats>>({});
@@ -160,6 +161,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   /* ── Switch active club ────────────────────────────────────────────────── */
 
   const switchClub = useCallback((clubId: string) => {
+    activeClubIdRef.current = clubId;
     setActiveClubId(clubId);
     try { localStorage.setItem(ACTIVE_CLUB_KEY, clubId); } catch {}
   }, []);
@@ -212,11 +214,12 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       const userClubs: ClubData[] = await clubsRes.json();
       setAllClubs(userClubs);
 
-      // Determine active club
-      const storedId = activeClubId;
+      // Determine active club using ref to avoid re-render loop
+      const storedId = activeClubIdRef.current;
       const resolvedId = userClubs.find(c => c.id === storedId)?.id ?? userClubs[0]?.id ?? null;
 
-      if (resolvedId && resolvedId !== activeClubId) {
+      if (resolvedId && resolvedId !== storedId) {
+        activeClubIdRef.current = resolvedId;
         setActiveClubId(resolvedId);
         try { localStorage.setItem(ACTIVE_CLUB_KEY, resolvedId); } catch {}
       }
@@ -237,7 +240,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [user, toast, activeClubId, loadClubDetail]);
+  }, [user, toast, loadClubDetail]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -326,6 +329,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       if (remaining.length > 0) {
         switchClub(remaining[0].id);
       } else {
+        activeClubIdRef.current = null;
         setActiveClubId(null);
         try { localStorage.removeItem(ACTIVE_CLUB_KEY); } catch {}
         setMembers([]);
@@ -448,6 +452,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       if (remaining.length > 0) {
         switchClub(remaining[0].id);
       } else {
+        activeClubIdRef.current = null;
         setActiveClubId(null);
         try { localStorage.removeItem(ACTIVE_CLUB_KEY); } catch {}
         setMembers([]);

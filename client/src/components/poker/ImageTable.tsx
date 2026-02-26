@@ -5,8 +5,7 @@ import type { Player } from "@/lib/poker-types";
 import { TABLE_SEATS, DEALER_POSITIONS } from "@/lib/table-constants";
 import { useGameUI } from "@/lib/game-ui-context";
 
-// Use the full mockup as the table background
-import pokerTableImg from "@assets/Poker/new.jpeg";
+import pokerTableImg from "@assets/generated_images/poker_table_clean_topdown.png";
 
 interface ImageTableProps {
   communityCards: CardType[];
@@ -33,7 +32,7 @@ export function ImageTable({
 
   return (
     <>
-      {/* ── Full table background image ── */}
+      {/* ── Clean table background ── */}
       <img
         src={pokerTableImg}
         alt=""
@@ -41,17 +40,8 @@ export function ImageTable({
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{
           zIndex: 1,
-          objectFit: "cover",
+          objectFit: "contain",
           objectPosition: "center",
-        }}
-      />
-
-      {/* Darken overlay so real UI elements stand out over the baked-in mockup elements */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          zIndex: 2,
-          background: "radial-gradient(ellipse 60% 50% at 50% 45%, transparent 0%, rgba(0,0,0,0.6) 100%)",
         }}
       />
 
@@ -75,9 +65,9 @@ export function ImageTable({
             >
               <div
                 className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center"
-                style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.3)" }}
+                style={{ borderColor: "rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.4)" }}
               >
-                <span className="text-[9px] text-white/20 font-mono font-bold">{i + 1}</span>
+                <span className="text-[9px] text-white/25 font-mono font-bold">{i + 1}</span>
               </div>
             </div>
           );

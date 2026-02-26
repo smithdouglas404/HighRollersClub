@@ -33,12 +33,12 @@ export interface GameSetupConfig {
   bombPotAnte: number;
 }
 
-const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string; color: string; rgb: string }[] = [
-  { key: "cash",       label: "Cash Game",  icon: Coins,  desc: "Standard ring game",     color: "cyan",    rgb: "34,211,238" },
-  { key: "sng",        label: "Sit & Go",   icon: Clock,  desc: "Fixed buy-in, rising blinds", color: "amber",   rgb: "245,158,11" },
-  { key: "tournament", label: "Tournament",  icon: Trophy, desc: "Multi-table, scheduled",  color: "emerald", rgb: "52,211,153" },
-  { key: "heads_up",   label: "Heads Up",   icon: Swords, desc: "1v1 match",               color: "purple",  rgb: "168,85,247" },
-  { key: "bomb_pot",   label: "Bomb Pot",   icon: Bomb,   desc: "Periodic bomb pots",      color: "red",     rgb: "239,68,68" },
+const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string; color: string; rgb: string; tooltip: string }[] = [
+  { key: "cash",       label: "Cash Game",  icon: Coins,  desc: "Standard ring game — join and leave anytime",     color: "cyan",    rgb: "34,211,238", tooltip: "Cash Game — Play with chips worth real value. You can join or leave the table at any time." },
+  { key: "sng",        label: "Sit & Go",   icon: Clock,  desc: "Fixed buy-in, rising blinds", color: "amber",   rgb: "245,158,11", tooltip: "Sit & Go (SNG) — A mini-tournament that starts when enough players join. Blinds increase over time." },
+  { key: "tournament", label: "Tournament",  icon: Trophy, desc: "Multi-table, scheduled",  color: "emerald", rgb: "52,211,153", tooltip: "Tournament (MTT) — Compete against many players. Last one standing wins the prize pool." },
+  { key: "heads_up",   label: "Heads Up",   icon: Swords, desc: "1v1 match",               color: "purple",  rgb: "168,85,247", tooltip: "Heads Up — A 1-on-1 match between two players. Great for practicing." },
+  { key: "bomb_pot",   label: "Bomb Pot",   icon: Bomb,   desc: "Periodic bomb pots",      color: "red",     rgb: "239,68,68", tooltip: "Bomb Pot — Every few hands, all players put in extra chips and see a flop together. High action!" },
 ];
 
 const TIER_CONFIG: Record<string, { bg: string; text: string; label: string; icon: any }> = {
@@ -419,6 +419,52 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                 {/* Avatar Preview Strip */}
                 <AvatarPreview />
 
+                {/* Quick Start — Beginner Practice Mode */}
+                <motion.button
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.08 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setGameFormat("cash");
+                    setMaxPlayers(4);
+                    setSmallBlind(1);
+                    setBigBlind(2);
+                    setAnte(0);
+                    setTimeBankSeconds(60);
+                    setMinBuyIn(100);
+                    setMaxBuyIn(500);
+                    setAllowBots(true);
+                    handleStart();
+                  }}
+                  className="w-full rounded-xl px-5 py-4 text-left flex items-center gap-4 transition-all"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(52,211,153,0.08), rgba(0,240,255,0.05))",
+                    border: "1px solid rgba(52,211,153,0.2)",
+                    boxShadow: "0 0 20px rgba(52,211,153,0.08)",
+                  }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.25)" }}
+                  >
+                    <Gamepad2 className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-bold text-emerald-300">Practice Mode</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">Micro stakes, slow timer, 4 players — perfect for learning</div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-emerald-500/50" />
+                </motion.button>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-white/[0.06]" />
+                  <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">or customize</span>
+                  <div className="flex-1 h-px bg-white/[0.06]" />
+                </div>
+
                 {/* Settings Card */}
                 <motion.div
                   initial={{ y: 15, opacity: 0 }}
@@ -438,6 +484,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                           <button
                             key={opt.key}
                             type="button"
+                            title={opt.tooltip}
                             onClick={() => {
                               setGameFormat(opt.key);
                               if (opt.key === "heads_up") setMaxPlayers(2);
@@ -521,7 +568,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                   {/* Blinds + Ante */}
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className={`${labelClass} flex items-center gap-1`}>
+                      <label className={`${labelClass} flex items-center gap-1`} title="Small Blind (SB) — The smaller forced bet posted by the player to the dealer's left before cards are dealt">
                         <Coins className="w-3 h-3" /> Small Blind
                       </label>
                       <input
@@ -537,7 +584,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                       />
                     </div>
                     <div>
-                      <label className={`${labelClass} flex items-center gap-1`}>
+                      <label className={`${labelClass} flex items-center gap-1`} title="Big Blind (BB) — The larger forced bet, usually 2x the small blind, posted before cards are dealt">
                         <Coins className="w-3 h-3" /> Big Blind
                       </label>
                       <input
@@ -549,7 +596,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                       />
                     </div>
                     <div>
-                      <label className={`${labelClass} flex items-center gap-1`}>
+                      <label className={`${labelClass} flex items-center gap-1`} title="Ante — A small forced bet every player pays each hand. Usually 0 for beginners.">
                         <Zap className="w-3 h-3" /> Ante
                       </label>
                       <input

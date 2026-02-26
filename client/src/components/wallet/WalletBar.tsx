@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
 import { Coins, Gift, Loader2 } from "lucide-react";
 
 export function WalletBar() {
   const { user, refreshUser } = useAuth();
+  const { toast } = useToast();
   const [claiming, setClaiming] = useState(false);
   const [claimResult, setClaimResult] = useState<{ bonus: number } | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
@@ -31,10 +34,36 @@ export function WalletBar() {
         const data = await res.json();
         setBalance(data.balance);
         setClaimResult({ bonus: data.bonus });
+        toast({
+          title: "Daily Bonus Claimed!",
+          description: `+${data.bonus.toLocaleString()} chips added to your wallet.`,
+        });
         await refreshUser();
         setTimeout(() => setClaimResult(null), 3000);
+      } else if (res.status === 429) {
+        const data = await res.json();
+        let cooldownMsg = data.message || "You already claimed your daily bonus.";
+        if (data.nextClaimAt) {
+          const remaining = new Date(data.nextClaimAt).getTime() - Date.now();
+          if (remaining > 0) {
+            const hours = Math.floor(remaining / (1000 * 60 * 60));
+            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            cooldownMsg = `Next bonus available in ${hours > 0 ? `${hours}h ` : ""}${minutes}m`;
+          }
+        }
+        toast({
+          title: "Already Claimed",
+          description: cooldownMsg,
+          variant: "destructive",
+        });
       }
-    } catch {} finally {
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to claim daily bonus. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setClaiming(false);
     }
   };
@@ -43,14 +72,16 @@ export function WalletBar() {
 
   return (
     <div className="flex items-center gap-2">
-      {/* Chip balance */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/15">
-        <Coins className="w-3.5 h-3.5 text-amber-400" />
-        <span className="text-xs font-bold text-amber-400 tabular-nums">
-          {(balance ?? user.chipBalance).toLocaleString()}
-        </span>
-        <span className="text-[8px] text-amber-600 uppercase">chips</span>
-      </div>
+      {/* Chip balance — clickable link to /wallet */}
+      <Link href="/wallet">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/15 hover:border-amber-500/30 hover:bg-amber-500/15 transition-all cursor-pointer">
+          <Coins className="w-3.5 h-3.5 text-amber-400" />
+          <span className="text-xs font-bold text-amber-400 tabular-nums">
+            {(balance ?? user.chipBalance).toLocaleString()}
+          </span>
+          <span className="text-[8px] text-amber-600 uppercase">chips</span>
+        </div>
+      </Link>
 
       {/* Daily claim */}
       <motion.button

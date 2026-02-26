@@ -3,111 +3,53 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { useClub } from "@/lib/club-context";
 import {
   Settings, Save, Trash2, Shield, Globe, Lock,
   Users, Crown, Loader2, AlertTriangle, CheckCircle, X,
 } from "lucide-react";
 
-interface ClubData {
-  id: string;
-  name: string;
-  description: string | null;
-  ownerId: string;
-  memberCount: number;
-  createdAt: string;
-}
-
-interface ClubMember {
-  userId: string;
-  username: string;
-  displayName: string;
-  avatarId: string | null;
-  role: string;
-  joinedAt: string;
-}
-
 export default function ClubSettings() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const {
+    club, members, loading, updateClub, deleteClub,
+  } = useClub();
 
-  const [club, setClub] = useState<ClubData | null>(null);
-  const [members, setMembers] = useState<ClubMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  // Form state
+  // Form state — initialized from context
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [transferTarget, setTransferTarget] = useState("");
 
-  // Feedback
-  const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
+  // Local UI state
+  const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
+  // Sync form when club data arrives
   useEffect(() => {
-    async function loadClub() {
-      try {
-        const res = await fetch("/api/clubs");
-        if (!res.ok) return;
-        const clubs: ClubData[] = await res.json();
-        if (clubs.length === 0) {
-          setLoading(false);
-          return;
-        }
-        const myClub = clubs[0];
-        setClub(myClub);
-        setName(myClub.name);
-        setDescription(myClub.description || "");
-
-        const membersRes = await fetch(`/api/clubs/${myClub.id}/members`);
-        if (membersRes.ok) {
-          setMembers(await membersRes.json());
-        }
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
+    if (club) {
+      setName(club.name);
+      setDescription(club.description || "");
+      setIsPublic(club.isPublic);
     }
-    loadClub();
-  }, []);
-
-  const clearMessages = () => {
-    setSuccessMsg("");
-    setErrorMsg("");
-  };
+  }, [club]);
 
   const handleSave = async () => {
-    if (!club || saving) return;
-    clearMessages();
+    if (saving || !name.trim()) return;
     setSaving(true);
-    try {
-      const res = await fetch(`/api/clubs/${club.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to save settings");
-      }
-      const updated = await res.json();
-      setClub(updated);
+    const ok = await updateClub({ name, description, isPublic });
+    if (ok) {
       setSuccessMsg("Club settings saved successfully.");
       setTimeout(() => setSuccessMsg(""), 3000);
-    } catch (err: any) {
-      setErrorMsg(err.message);
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   };
 
   const handleTransferOwnership = async () => {
-    if (!club || !transferTarget) return;
-    clearMessages();
+    if (!club || !transferTarget || saving) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/clubs/${club.id}`, {
@@ -121,31 +63,23 @@ export default function ClubSettings() {
       }
       setSuccessMsg("Ownership transferred. Redirecting...");
       setTimeout(() => navigate("/club"), 2000);
-    } catch (err: any) {
-      setErrorMsg(err.message);
+    } catch {
+      // toast handles via context
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!club || deleting) return;
-    clearMessages();
+    if (deleting) return;
     setDeleting(true);
-    try {
-      const res = await fetch(`/api/clubs/${club.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to delete club");
-      }
-      setSuccessMsg("Club deleted. Redirecting...");
-      setTimeout(() => navigate("/lobby"), 2000);
-    } catch (err: any) {
-      setErrorMsg(err.message);
+    const ok = await deleteClub();
+    if (ok) {
+      setTimeout(() => navigate("/lobby"), 1500);
+    } else {
       setShowDeleteConfirm(false);
-    } finally {
-      setDeleting(false);
     }
+    setDeleting(false);
   };
 
   const isOwner = club && user && club.ownerId === user.id;
@@ -194,24 +128,6 @@ export default function ClubSettings() {
                 >
                   <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
                   <span className="text-xs text-green-300">{successMsg}</span>
-                </motion.div>
-              )}
-              {errorMsg && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                  style={{
-                    background: "rgba(255,60,60,0.08)",
-                    border: "1px solid rgba(255,60,60,0.2)",
-                  }}
-                >
-                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                  <span className="text-xs text-red-300">{errorMsg}</span>
-                  <button onClick={() => setErrorMsg("")} className="ml-auto p-1 hover:bg-white/5 rounded">
-                    <X className="w-3 h-3 text-gray-500" />
-                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -282,7 +198,7 @@ export default function ClubSettings() {
                   <div className="text-right text-[9px] text-gray-600">{description.length}/300</div>
                 </div>
 
-                {/* Public / Private Toggle */}
+                {/* Public / Private Toggle — NOW WIRED TO SERVER */}
                 <div className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-3">
                     {isPublic ? (

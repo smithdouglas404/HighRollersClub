@@ -6,7 +6,7 @@ import { MatrixRain } from "./MatrixRain";
 import { WalletBar } from "./wallet/WalletBar";
 import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
-  BarChart3, Coins, LogOut, User, ChevronRight
+  BarChart3, Coins, LogOut, User, ChevronRight, Search, Wallet
 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
@@ -24,6 +24,8 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Users, label: "Members", href: "/members", match: ["/members"] },
   { icon: Trophy, label: "Games & Tournaments", href: "/lobby", match: ["/lobby", "/game"] },
   { icon: ShoppingBag, label: "Shop", href: "/shop", match: ["/shop"] },
+  { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
+  { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse"] },
   { icon: Swords, label: "League & Alliances", href: "/leagues" },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
 ];

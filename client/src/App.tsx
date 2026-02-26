@@ -4,17 +4,20 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ClubProvider } from "@/lib/club-context";
 import Game from "@/pages/Game";
 import Landing from "@/pages/Landing";
 import Lobby from "@/pages/Lobby";
 import Members from "@/pages/Members";
 import Shop from "@/pages/Shop";
+import Wallet from "@/pages/Wallet";
 import ClubDashboard from "@/pages/ClubDashboard";
 import ClubSettings from "@/pages/ClubSettings";
 import ClubInvitations from "@/pages/ClubInvitations";
 import Leagues from "@/pages/Leagues";
 import Analytics from "@/pages/Analytics";
 import HandReplay from "@/pages/HandReplay";
+import BrowseClubs from "@/pages/BrowseClubs";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 
@@ -50,6 +53,14 @@ function ProtectedAnalytics() {
   return <AuthGate><Analytics /></AuthGate>;
 }
 
+function ProtectedWallet() {
+  return <AuthGate><Wallet /></AuthGate>;
+}
+
+function ProtectedBrowseClubs() {
+  return <AuthGate><BrowseClubs /></AuthGate>;
+}
+
 function GameWithTable({ params }: { params: { tableId: string } }) {
   return <AuthGate><Game tableId={params.tableId} /></AuthGate>;
 }
@@ -73,6 +84,8 @@ function Router() {
       <Route path="/club/invitations" component={ProtectedClubInvitations} />
       <Route path="/leagues" component={ProtectedLeagues} />
       <Route path="/analytics" component={ProtectedAnalytics} />
+      <Route path="/wallet" component={ProtectedWallet} />
+      <Route path="/clubs/browse" component={ProtectedBrowseClubs} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -82,10 +95,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <ClubProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ClubProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

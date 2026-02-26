@@ -58,7 +58,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
       percentage: stats.vpip,
       barColor: stats.vpip >= 20 && stats.vpip <= 35 ? "#06b6d4" : stats.vpip > 50 ? "#ef4444" : "#eab308",
       color: getStatColor(stats.vpip, { high: 20, mid: 15 }),
-      tooltip: "Voluntarily put $ in pot",
+      tooltip: "VPIP — How often you voluntarily put chips in the pot (play a hand). 20-30% is solid.",
     },
     {
       icon: Crosshair,
@@ -67,7 +67,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
       percentage: stats.pfr,
       barColor: stats.pfr >= 15 && stats.pfr <= 25 ? "#06b6d4" : stats.pfr > 35 ? "#ef4444" : "#eab308",
       color: getStatColor(stats.pfr, { high: 15, mid: 10 }),
-      tooltip: "Pre-flop raise percentage",
+      tooltip: "PFR — How often you raise before any community cards are dealt. Higher = more aggressive.",
     },
     {
       icon: BarChart2,
@@ -76,7 +76,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
       percentage: showdownPct,
       barColor: showdownPct >= 25 && showdownPct <= 40 ? "#06b6d4" : "#eab308",
       color: "text-gray-300",
-      tooltip: "Went to showdown",
+      tooltip: "Showdown — How often your hands go to the final reveal. Lower = you fold weak hands wisely.",
     },
   ];
 
@@ -146,6 +146,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.06 }}
                       className="pt-1.5"
+                      title={stat.tooltip}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-1.5">

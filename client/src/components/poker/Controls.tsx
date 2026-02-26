@@ -1,33 +1,45 @@
-import { useState, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { useSoundEngine } from "@/lib/sound-context";
+import { useGameUI } from "@/lib/game-ui-context";
 
 interface ControlsProps {
   onAction: (action: string, amount?: number) => void;
   minBet: number;
   maxBet: number;
+  pot?: number;
   /** Current game phase (preflop, flop, etc.) — used to reset pending state */
   phase?: string;
   /** Current turn seat index — used to reset pending state */
   currentTurnSeat?: number;
+  /** Whether it's currently the hero's turn */
+  isHeroTurn?: boolean;
 }
 
-export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat }: ControlsProps) {
+export function PokerControls({ onAction, minBet, maxBet, pot = 0, phase, currentTurnSeat, isHeroTurn }: ControlsProps) {
   const [betAmount, setBetAmount] = useState(minBet);
   const [isPending, setIsPending] = useState(false);
+  const [foldConfirm, setFoldConfirm] = useState(false);
+  const foldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sound = useSoundEngine();
+  let compactMode = false;
+  try { compactMode = useGameUI().compactMode; } catch {}
 
   // Reset pending state when game state advances (server confirmed the action)
   useEffect(() => {
     setIsPending(false);
+    setFoldConfirm(false);
   }, [phase, currentTurnSeat]);
+
+  // Scale slider step with blind level
+  const sliderStep = Math.max(1, Math.floor(minBet / 2)) || 1;
 
   const presets = [
     { label: "Min", value: minBet },
     { label: "2x", value: Math.min(minBet * 2, maxBet) },
     { label: "3x", value: Math.min(minBet * 3, maxBet) },
-    { label: "Pot", value: Math.min(minBet * 4, maxBet) },
+    { label: "Pot", value: Math.min(pot > 0 ? pot : minBet * 4, maxBet) },
     { label: "ALL IN", value: maxBet },
   ];
 
@@ -38,9 +50,22 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
   const handleFold = useCallback(() => {
     if (isPending) return;
     setIsPending(true);
+    setFoldConfirm(false);
     sound.playFold();
     onAction("fold");
   }, [sound, onAction, isPending]);
+
+  // Keyboard fold requires double-tap: first press shows confirm, second press folds
+  const handleFoldKeyboard = useCallback(() => {
+    if (isPending) return;
+    if (foldConfirm) {
+      handleFold();
+    } else {
+      setFoldConfirm(true);
+      if (foldTimerRef.current) clearTimeout(foldTimerRef.current);
+      foldTimerRef.current = setTimeout(() => setFoldConfirm(false), 2000);
+    }
+  }, [isPending, foldConfirm, handleFold]);
 
   const handleCheck = useCallback(() => {
     if (isPending) return;
@@ -72,48 +97,120 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
 
   const isAllIn = betAmount >= maxBet;
 
+  // Keyboard shortcuts: F=fold (double-tap), C=check/call, R=raise, A=all-in
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isPending) return;
+      // Don't capture when typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      switch (e.key.toLowerCase()) {
+        case "f":
+          handleFoldKeyboard();
+          break;
+        case "c":
+          if (minBet > 0) handleCall();
+          else handleCheck();
+          break;
+        case "r":
+          if (isAllIn) handleAllIn();
+          else handleRaise();
+          break;
+        case "a":
+          handleAllIn();
+          break;
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isPending, minBet, isAllIn, handleFoldKeyboard, handleCall, handleCheck, handleRaise, handleAllIn]);
+
+  // Clean up fold timer
+  useEffect(() => {
+    return () => { if (foldTimerRef.current) clearTimeout(foldTimerRef.current); };
+  }, []);
+
   return (
     <motion.div
-      initial={{ y: 80, opacity: 0 }}
+      initial={compactMode ? { y: 0, opacity: 1 } : { y: 80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 200, damping: 25 }}
+      transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 25 }}
       className="fixed bottom-0 left-0 right-0 z-50"
     >
       {/* Gradient fade above controls */}
       <div className="h-8 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+
+      {/* YOUR TURN banner */}
+      <AnimatePresence>
+        {isHeroTurn && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="flex justify-center mb-1"
+          >
+            <div
+              className="px-4 py-1 rounded-full text-[11px] font-bold uppercase tracking-[0.2em]"
+              style={{
+                background: "linear-gradient(135deg, rgba(0,240,255,0.15), rgba(0,255,157,0.1))",
+                border: "1px solid rgba(0,240,255,0.3)",
+                color: "#00f0ff",
+                boxShadow: "0 0 20px rgba(0,240,255,0.15)",
+                animation: compactMode ? "none" : "neonPulse 2s ease-in-out infinite",
+              }}
+            >
+              Your Turn — Make Your Move
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="py-3 px-6 bg-black/70 backdrop-blur-xl border-t border-white/10">
         <div className="max-w-3xl mx-auto space-y-2.5">
 
           {/* ─── Action Buttons Row ──────────────────────────── */}
           <div className="flex items-center gap-2.5 justify-center">
-            {/* FOLD */}
+            {/* FOLD (F — double-tap to confirm) */}
             <motion.button
               whileHover={isPending ? {} : { scale: 1.02, y: -1 }}
               whileTap={isPending ? {} : { scale: 0.97 }}
               onClick={handleFold}
               disabled={isPending}
+              title="Fold — Give up your hand and sit out this round"
               className={`
-                relative overflow-hidden rounded-xl min-w-[90px] py-3.5 px-6
+                relative overflow-hidden rounded-xl min-w-[90px] ${compactMode ? 'py-2 px-4' : 'py-3.5 px-6'}
                 font-bold text-sm uppercase tracking-wider transition-all
-                bg-red-600/80 text-white border border-red-500/30
+                ${foldConfirm
+                  ? "bg-red-700 text-white border-2 border-red-400 animate-pulse"
+                  : "bg-red-600/80 text-white border border-red-500/30"
+                }
                 ${isPending ? "opacity-50 pointer-events-none" : "hover:bg-red-600/90"}
               `}
               style={{
-                boxShadow: "0 0 20px rgba(220,38,38,0.25), 0 0 8px rgba(220,38,38,0.15)",
+                boxShadow: foldConfirm
+                  ? "0 0 30px rgba(220,38,38,0.5), 0 0 12px rgba(220,38,38,0.3)"
+                  : "0 0 20px rgba(220,38,38,0.25), 0 0 8px rgba(220,38,38,0.15)",
               }}
             >
-              FOLD
+              <span className="flex items-center justify-center gap-1.5">
+                {foldConfirm ? "CONFIRM?" : "FOLD"}
+                <kbd className="text-[9px] font-mono opacity-50 bg-white/10 px-1 rounded">{foldConfirm ? "F F" : "F"}</kbd>
+              </span>
             </motion.button>
 
-            {/* CHECK / CALL */}
+            {/* CHECK / CALL (C) */}
             <motion.button
               whileHover={isPending ? {} : { scale: 1.02, y: -1 }}
               whileTap={isPending ? {} : { scale: 0.97 }}
               onClick={minBet > 0 ? handleCall : handleCheck}
               disabled={isPending}
+              title={minBet > 0
+                ? `Call — Match the current bet of $${minBet} to stay in the hand`
+                : "Check — Stay in the hand without betting (no cost)"
+              }
               className={`
-                relative overflow-hidden rounded-xl min-w-[90px] py-3.5 px-6
+                relative overflow-hidden rounded-xl min-w-[90px] ${compactMode ? 'py-2 px-4' : 'py-3.5 px-6'}
                 font-bold text-sm uppercase tracking-wider transition-all
                 bg-emerald-600/80 text-white border border-emerald-500/30
                 ${isPending ? "opacity-50 pointer-events-none" : "hover:bg-emerald-600/90"}
@@ -129,17 +226,22 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
                     ${minBet}
                   </span>
                 )}
+                <kbd className="text-[9px] font-mono opacity-50 bg-white/10 px-1 rounded">C</kbd>
               </span>
             </motion.button>
 
-            {/* RAISE (becomes ALL-IN text when slider is at max) */}
+            {/* RAISE / ALL-IN (R) */}
             <motion.button
               whileHover={isPending ? {} : { scale: 1.02, y: -1 }}
               whileTap={isPending ? {} : { scale: 0.97 }}
               onClick={isAllIn ? handleAllIn : handleRaise}
               disabled={isPending}
+              title={isAllIn
+                ? "All-In — Bet all your remaining chips"
+                : `Raise — Increase the bet to $${betAmount}`
+              }
               className={`
-                relative overflow-hidden rounded-xl min-w-[90px] py-3.5 px-6
+                relative overflow-hidden rounded-xl min-w-[90px] ${compactMode ? 'py-2 px-4' : 'py-3.5 px-6'}
                 font-bold text-sm uppercase tracking-wider transition-all
                 ${isAllIn
                   ? "bg-gray-800/90 text-amber-400 border border-amber-500/40"
@@ -158,26 +260,8 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
                 <span className={`font-mono text-xs px-2 py-0.5 rounded ${isAllIn ? "bg-amber-500/15 text-amber-300" : "bg-white/15 text-white"}`}>
                   ${betAmount}
                 </span>
+                <kbd className="text-[9px] font-mono opacity-50 bg-white/10 px-1 rounded">{isAllIn ? "A" : "R"}</kbd>
               </span>
-            </motion.button>
-
-            {/* ALL-IN (always-visible dedicated button) */}
-            <motion.button
-              whileHover={isPending ? {} : { scale: 1.02, y: -1 }}
-              whileTap={isPending ? {} : { scale: 0.97 }}
-              onClick={handleAllIn}
-              disabled={isPending}
-              className={`
-                relative overflow-hidden rounded-xl min-w-[90px] py-3.5 px-6
-                font-bold text-sm uppercase tracking-wider transition-all
-                bg-gray-800/90 text-amber-400 border border-amber-500/40
-                ${isPending ? "opacity-50 pointer-events-none" : "hover:bg-gray-700/90"}
-              `}
-              style={{
-                boxShadow: "0 0 20px rgba(245,158,11,0.2), 0 0 8px rgba(245,158,11,0.1)",
-              }}
-            >
-              ALL-IN
             </motion.button>
           </div>
 
@@ -189,6 +273,12 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
                 <button
                   key={p.label}
                   onClick={() => handlePreset(p.value)}
+                  title={
+                    p.label === "Min" ? "Minimum allowed bet" :
+                    p.label === "Pot" ? `Bet the size of the pot ($${pot > 0 ? pot : '?'})` :
+                    p.label === "ALL IN" ? "Bet all your chips" :
+                    `Bet ${p.label} the minimum`
+                  }
                   className={`
                     px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all
                     ${betAmount === p.value
@@ -209,7 +299,7 @@ export function PokerControls({ onAction, minBet, maxBet, phase, currentTurnSeat
                 value={[betAmount]}
                 max={maxBet}
                 min={minBet}
-                step={10}
+                step={sliderStep}
                 onValueChange={(val) => setBetAmount(val[0])}
                 className="flex-1"
               />

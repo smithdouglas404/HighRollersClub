@@ -46,6 +46,9 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [deck, setDeck] = useState<CardType[]>([]);
   const [showdown, setShowdown] = useState<ShowdownData | null>(null);
+  const handNumberRef = useRef(0);
+  const actionNumberRef = useRef(0);
+
   const [gameState, setGameState] = useState<GameState>({
     pot: 0,
     communityCards: [],
@@ -54,6 +57,8 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     phase: 'pre-flop',
     minBet: bb,
     dealingPhase: 'idle',
+    handNumber: 0,
+    actionNumber: 0,
   });
 
   const showdownTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -92,6 +97,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       ] as [CardType, CardType] : undefined,
     }));
 
+    handNumberRef.current++;
     setPlayers(finalPlayers);
     setDeck(newDeck);
     setShowdown(null);
@@ -104,6 +110,8 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       minBet: bb,
       lastAggressorId: undefined,
       dealingPhase: 'dealing',
+      handNumber: handNumberRef.current,
+      lastAction: undefined,
     }));
 
     // Transition to 'dealt' after dealing animation completes
@@ -221,6 +229,8 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     const currentPlayerIndex = players.findIndex(p => p.id === gameState.currentTurnPlayerId);
     if (currentPlayerIndex === -1) return;
 
+    actionNumberRef.current++;
+
     const player = players[currentPlayerIndex];
     const newPlayers = [...players];
     let newPot = gameState.pot;
@@ -261,7 +271,13 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
         chips: winner.chips + newPot,
       };
       setPlayers(newPlayers);
-      setGameState(prev => ({ ...prev, pot: 0, phase: 'showdown' }));
+      setGameState(prev => ({
+        ...prev,
+        pot: 0,
+        phase: 'showdown',
+        lastAction: { playerId: player.id, action, amount },
+        actionNumber: actionNumberRef.current,
+      }));
 
       setTimeout(() => startGame(), 3000);
       return;
@@ -283,7 +299,13 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
 
     if (isRoundOver) {
       setPlayers(newPlayers);
-      setGameState(prev => ({ ...prev, pot: newPot, minBet: newMinBet }));
+      setGameState(prev => ({
+        ...prev,
+        pot: newPot,
+        minBet: newMinBet,
+        lastAction: { playerId: player.id, action, amount },
+        actionNumber: actionNumberRef.current,
+      }));
       setTimeout(nextPhase, 1000);
       return;
     }
@@ -296,6 +318,8 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       pot: newPot,
       minBet: newMinBet,
       currentTurnPlayerId: newPlayers[nextIndex].id,
+      lastAction: { playerId: player.id, action, amount },
+      actionNumber: actionNumberRef.current,
     }));
 
   }, [players, gameState, nextPhase, startGame]);

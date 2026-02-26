@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CardType, Suit } from "@/lib/poker-types";
+import { useGameUI } from "@/lib/game-ui-context";
 
 interface CardProps {
   card?: CardType;
@@ -37,8 +38,16 @@ const sizeConfig = {
 export function Card({ card, className, size = "md", delay = 0, isHero = false, dealFrom, onDealt }: CardProps) {
   const s = sizeConfig[size];
   const [holoActive, setHoloActive] = useState(false);
+  let compactMode = false;
+  try { compactMode = useGameUI().compactMode; } catch {}
 
-  const dealAnimation = dealFrom
+  const dealAnimation = compactMode
+    ? {
+        initial: { scale: 1, opacity: 1, x: 0, y: 0, rotate: 0 },
+        animate: { scale: 1, opacity: 1, x: 0, y: 0, rotate: 0 },
+        transition: { duration: 0 },
+      }
+    : dealFrom
     ? {
         initial: { x: dealFrom.x, y: dealFrom.y, scale: 0.2, opacity: 0, rotate: -20 },
         animate: { x: 0, y: 0, scale: 1, opacity: 1, rotate: 0 },
@@ -97,10 +106,10 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
 
   return (
     <motion.div
-      initial={{ rotateY: 180, scale: 0.6, opacity: 0 }}
+      initial={compactMode ? { rotateY: 0, scale: 1, opacity: 1 } : { rotateY: 180, scale: 0.6, opacity: 0 }}
       animate={{ rotateY: 0, scale: 1, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 180, damping: 16, delay }}
-      whileHover={isHero ? {
+      transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 180, damping: 16, delay }}
+      whileHover={isHero && !compactMode ? {
         rotateY: -12,
         rotateX: 8,
         y: -14,
@@ -108,7 +117,7 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
         transition: { duration: 0.25 },
       } : undefined}
       onAnimationComplete={() => {
-        setHoloActive(true);
+        if (!compactMode) setHoloActive(true);
         onDealt?.();
       }}
       className={cn(

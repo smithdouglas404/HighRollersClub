@@ -3,6 +3,7 @@ import { Card } from "./Card";
 import type { CardType } from "@/lib/poker-types";
 import type { Player } from "@/lib/poker-types";
 import { TABLE_SEATS, DEALER_POSITIONS } from "@/lib/table-constants";
+import { useGameUI } from "@/lib/game-ui-context";
 
 import feltTexture from "@assets/generated_images/Dark_Teal_Poker_Felt_Texture_83ec2760.png";
 
@@ -23,6 +24,7 @@ export function ImageTable({
   players,
   dealerSeatIndex = -1,
 }: ImageTableProps) {
+  const { compactMode, feltPreset } = useGameUI();
   const occupiedCount = players?.length || playerCount;
   const dealerPos = dealerSeatIndex >= 0 && dealerSeatIndex < DEALER_POSITIONS.length
     ? DEALER_POSITIONS[dealerSeatIndex]
@@ -87,7 +89,7 @@ export function ImageTable({
           top: "13%",
           bottom: "13%",
           borderRadius: "50%",
-          background: "radial-gradient(ellipse at 50% 48%, #19723c 0%, #16592d 30%, #0f4724 55%, #0d4020 75%, #0b3c1e 100%)",
+          background: feltPreset.gradient,
         }}
       />
 
@@ -119,8 +121,7 @@ export function ImageTable({
           top: "13%",
           bottom: "13%",
           borderRadius: "50%",
-          background:
-            "radial-gradient(ellipse 45% 40% at 50% 48%, rgba(255,255,240,0.08) 0%, transparent 60%)",
+          background: feltPreset.spotlightOverlay,
         }}
       />
 
@@ -180,9 +181,9 @@ export function ImageTable({
                 <Card
                   key={`cc-${i}-${card.suit}-${card.rank}`}
                   card={card}
-                  size="lg"
-                  delay={i * 0.15}
-                  dealFrom={{ x: 200, y: -100 }}
+                  size={compactMode ? "md" : "lg"}
+                  delay={compactMode ? 0 : i * 0.15}
+                  dealFrom={compactMode ? undefined : { x: 200, y: -100 }}
                 />
               ))}
             </motion.div>
@@ -193,9 +194,10 @@ export function ImageTable({
         <AnimatePresence>
           {pot > 0 && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.85 }}
+              initial={compactMode ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
+              transition={compactMode ? { duration: 0 } : undefined}
               className="absolute flex flex-col items-center gap-0.5"
               style={{ left: "50%", top: "36%", transform: "translate(-50%, -50%)" }}
             >
@@ -228,7 +230,7 @@ export function ImageTable({
               key="dealer-btn"
               initial={false}
               animate={{ left: `${dealerPos.x}%`, top: `${dealerPos.y}%`, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 25 }}
+              transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 25 }}
               className="absolute"
               style={{ transform: "translate(-50%, -50%)", zIndex: 15 }}
             >

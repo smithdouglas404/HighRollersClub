@@ -31,7 +31,10 @@
       "Bash(OPENAI_API_KEY=\"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\" node scripts/generate-table-images.mjs)",
       "Bash(fuser 5000/tcp 2>/dev/null)",
       "Bash(ss -tlnp 'sport = :5000' 2>/dev/null || netstat -tlnp 2>/dev/null | grep 5000)",
-      "Bash(npm install puppeteer 2>&1 | tail -5)"
+      "Bash(npm install puppeteer 2>&1 | tail -5)",
+      "Bash(npm run build 2>)",
+      "Bash(npx tsc --noEmit 2>&1 | head -3022)",
+      "Bash(npx tsc --noEmit 2>&1 | head -20)"
     ]
   }
 }

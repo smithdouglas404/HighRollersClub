@@ -33,4 +33,7 @@ export interface GameState {
   minBet: number;
   lastAggressorId?: string;
   dealingPhase?: 'idle' | 'dealing' | 'dealt';
+  lastAction?: { playerId: string; action: string; amount?: number };
+  actionNumber?: number;
+  handNumber?: number;
 }

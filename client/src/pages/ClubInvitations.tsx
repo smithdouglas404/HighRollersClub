@@ -1,40 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { useClub } from "@/lib/club-context";
 import {
   Mail, Send, UserPlus, Check, X, Loader2,
   Clock, CheckCircle, XCircle, AlertTriangle, Users, Inbox,
 } from "lucide-react";
 
-interface ClubData {
-  id: string;
-  name: string;
-  description: string | null;
-  ownerId: string;
-  memberCount: number;
-  createdAt: string;
-}
-
-interface Invitation {
-  id: string;
-  clubId: string;
-  userId: string;
-  username: string;
-  displayName: string;
-  type: "invite" | "request";
-  status: "pending" | "accepted" | "declined";
-  createdAt: string;
-}
-
 export default function ClubInvitations() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
-
-  const [club, setClub] = useState<ClubData | null>(null);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { club, invitations, loading, sendInvite, handleInvitation } = useClub();
 
   // Invite form
   const [inviteUsername, setInviteUsername] = useState("");
@@ -45,52 +23,19 @@ export default function ClubInvitations() {
   // Action loading
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch("/api/clubs");
-        if (!res.ok) return;
-        const clubs: ClubData[] = await res.json();
-        if (clubs.length === 0) {
-          setLoading(false);
-          return;
-        }
-        const myClub = clubs[0];
-        setClub(myClub);
-
-        const invRes = await fetch(`/api/clubs/${myClub.id}/invitations`);
-        if (invRes.ok) {
-          setInvitations(await invRes.json());
-        }
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
   const handleSendInvite = async () => {
     if (!club || !inviteUsername.trim() || sending) return;
     setSendSuccess("");
     setSendError("");
     setSending(true);
     try {
-      const res = await fetch(`/api/clubs/${club.id}/invite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: inviteUsername.trim(), type: "invite" }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to send invitation");
+      const username = inviteUsername.trim();
+      const ok = await sendInvite(username);
+      if (ok) {
+        setInviteUsername("");
+        setSendSuccess(`Invitation sent to ${username}`);
+        setTimeout(() => setSendSuccess(""), 3000);
       }
-      const newInv = await res.json();
-      setInvitations((prev) => [newInv, ...prev]);
-      setInviteUsername("");
-      setSendSuccess(`Invitation sent to ${inviteUsername.trim()}`);
-      setTimeout(() => setSendSuccess(""), 3000);
     } catch (err: any) {
       setSendError(err.message);
     } finally {
@@ -102,26 +47,14 @@ export default function ClubInvitations() {
     if (!club) return;
     setActionLoading((prev) => ({ ...prev, [invId]: true }));
     try {
-      const res = await fetch(`/api/clubs/${club.id}/invitations/${invId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Action failed");
-      }
-      setInvitations((prev) =>
-        prev.map((inv) => (inv.id === invId ? { ...inv, status } : inv))
-      );
+      await handleInvitation(invId, status);
     } catch {
-      // ignore
+      // toast handled by context
     } finally {
       setActionLoading((prev) => ({ ...prev, [invId]: false }));
     }
   };
 
-  const pendingInvitations = invitations.filter((inv) => inv.status === "pending");
   const sentInvitations = invitations.filter((inv) => inv.type === "invite");
   const pendingRequests = invitations.filter(
     (inv) => inv.type === "request" && inv.status === "pending"

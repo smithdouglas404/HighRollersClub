@@ -3,8 +3,10 @@ import { cn } from "@/lib/utils";
 import { Player } from "@/lib/poker-types";
 import { EmoteBubble } from "./EmoteSystem";
 import { useSoundEngine } from "@/lib/sound-context";
+import { useGameUI } from "@/lib/game-ui-context";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { triggerChipFlight } from "./ChipAnimation";
+import type { OpponentHudStats } from "@/lib/useOpponentStats";
 
 
 // ─── Winner Particle Burst System ────────────────────────────────────────────
@@ -150,10 +152,12 @@ interface SeatProps {
   perspectiveScale?: number;
   /** Hide face-down cards (used in 3D mode where cards are rendered in the 3D scene) */
   hideCards?: boolean;
+  hudStats?: OpponentHudStats;
 }
 
-export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false }: SeatProps) {
-  const winnerCanvasRef = useWinnerParticles(isWinner);
+export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false, hudStats }: SeatProps) {
+  const { compactMode } = useGameUI();
+  const winnerCanvasRef = useWinnerParticles(isWinner && !compactMode);
 
   const isTurn = player.status === "thinking";
   const isFolded = player.status === "folded";
@@ -223,13 +227,13 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   }, []);
 
   useEffect(() => {
-    if (!isHero || isFolded) {
+    if (!isHero || isFolded || compactMode) {
       setMouseOffset({ x: 0, y: 0 });
       return;
     }
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [isHero, isFolded, handleMouseMove]);
+  }, [isHero, isFolded, handleMouseMove, compactMode]);
 
   const parallaxStyle = isHero && !isFolded
     ? {
@@ -321,12 +325,12 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 ? `0 0 12px ${hexToRgba(glowColor, 0.6)}, 0 0 24px ${hexToRgba(glowColor, 0.3)}, inset 0 0 8px ${hexToRgba(glowColor, 0.2)}`
                 : `0 0 6px ${hexToRgba(glowColor, 0.2)}`,
               transition: "all 0.3s ease",
-              animation: isTurn ? "avatarGlowPulse 1.5s ease-in-out infinite" : "none",
+              animation: isTurn && !compactMode ? "avatarGlowPulse 1.5s ease-in-out infinite" : "none",
             }}
           />
 
           {/* Active turn: pulsing outer glow */}
-          {isTurn && (
+          {isTurn && !compactMode && (
             <div
               className="absolute -inset-[12px] rounded-xl"
               style={{
@@ -336,7 +340,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             />
           )}
           {/* Radial pulse glow behind avatar on turn */}
-          {isTurn && (
+          {isTurn && !compactMode && (
             <div className="absolute -inset-6 z-0">
               <div
                 className="w-full h-full rounded-xl"
@@ -348,12 +352,12 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             </div>
           )}
 
-          {/* The avatar image / fallback — 100px square portrait to match reference */}
+          {/* The avatar image / fallback */}
           {player.avatar ? (
             <img
               src={player.avatar}
               alt={player.name}
-              className="w-[100px] h-[100px] rounded-xl object-cover relative z-[1]"
+              className={`${compactMode ? 'w-[56px] h-[56px]' : 'w-[100px] h-[100px]'} rounded-xl object-cover relative z-[1]`}
               style={{
                 border: `2px solid ${glowColor}`,
                 boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
@@ -362,7 +366,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             />
           ) : (
             <div
-              className="w-[100px] h-[100px] rounded-xl flex items-center justify-center text-2xl font-bold text-white/70 relative z-[1]"
+              className={`${compactMode ? 'w-[56px] h-[56px]' : 'w-[100px] h-[100px]'} rounded-xl flex items-center justify-center text-2xl font-bold text-white/70 relative z-[1]`}
               style={{
                 border: `2px solid ${glowColor}`,
                 boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
@@ -453,6 +457,43 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           </div>
         </div>
 
+        {/* ── Opponent HUD stats ── */}
+        {hudStats && hudStats.handsPlayed > 0 && (
+          <div
+            className="relative z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-b-md"
+            style={{
+              background: "rgba(0,0,0,0.70)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderTop: "none",
+              fontSize: perspectiveScale < 0.7 ? "9px" : "8px",
+              transform: perspectiveScale < 0.7 ? `scale(${1 / perspectiveScale * 0.8})` : undefined,
+              transformOrigin: "top center",
+            }}
+          >
+            <HudStat
+              label="V"
+              value={Math.round((hudStats.vpipCount / hudStats.handsPlayed) * 100)}
+              good={[20, 35]}
+            />
+            <span className="text-gray-600">/</span>
+            <HudStat
+              label="P"
+              value={Math.round((hudStats.pfrCount / hudStats.handsPlayed) * 100)}
+              good={[15, 25]}
+            />
+            <span className="text-gray-600">/</span>
+            <HudStat
+              label="A"
+              value={hudStats.passiveActions > 0
+                ? Math.round((hudStats.aggressiveActions / hudStats.passiveActions) * 10) / 10
+                : hudStats.aggressiveActions > 0 ? 99 : 0}
+              good={[1.0, 3.0]}
+              isFloat
+            />
+            <span className="text-gray-600 font-mono">({hudStats.handsPlayed})</span>
+          </div>
+        )}
+
         {/* ── Current bet chip badge (offset toward table center) ── */}
         <AnimatePresence>
           {player.currentBet > 0 && (
@@ -517,5 +558,23 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         </motion.div>
       )}
     </div>
+  );
+}
+
+// Color-coded HUD stat value
+function HudStat({ label, value, good, isFloat }: { label: string; value: number; good: [number, number]; isFloat?: boolean }) {
+  const display = isFloat ? value.toFixed(1) : `${value}`;
+  let color = "text-yellow-400"; // default: outside range
+  if (value >= good[0] && value <= good[1]) {
+    color = "text-green-400";
+  } else if (value > good[1]) {
+    color = "text-red-400";
+  }
+
+  return (
+    <span className="font-mono font-bold">
+      <span className="text-gray-500">{label}:</span>
+      <span className={`${color} ml-0.5`}>{display}</span>
+    </span>
   );
 }

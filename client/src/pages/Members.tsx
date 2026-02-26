@@ -1,62 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { useClub } from "@/lib/club-context";
+import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { MissionsGrid } from "@/components/shared/MissionsGrid";
 import {
   Crown, Shield, User, Clock, Loader2,
   Gamepad2, Coins, Target, Users, UserPlus,
   ChevronDown, ChevronUp, ShieldCheck,
   UserX, Check, X, Send, Search,
-  TrendingUp, AlertCircle
+  TrendingUp, AlertCircle, Filter
 } from "lucide-react";
-
-/* ── Types ─────────────────────────────────────────────── */
-
-interface ClubMember {
-  userId: string;
-  username: string;
-  displayName: string;
-  avatarId: string | null;
-  chipBalance: number;
-  role: string;
-  joinedAt: string;
-}
-
-interface ClubData {
-  id: string;
-  name: string;
-  memberCount: number;
-}
-
-interface PlayerStats {
-  handsPlayed: number;
-  potsWon: number;
-  bestWinStreak: number;
-  currentWinStreak: number;
-  totalWinnings: number;
-}
-
-interface MemberStats {
-  handsPlayed: number;
-  potsWon: number;
-  bestWinStreak: number;
-  currentWinStreak: number;
-  totalWinnings: number;
-  vpip: number;
-  pfr: number;
-  showdownCount: number;
-}
-
-interface Invitation {
-  id: string;
-  clubId: string;
-  userId: string;
-  username: string;
-  displayName: string;
-  type: string;
-  status: string;
-  createdAt: string;
-}
 
 /* ── Role Badge ────────────────────────────────────────── */
 
@@ -91,45 +46,26 @@ function formatMemberSince(dateStr: string): string {
   return `Member for ${Math.floor(diffDays / 365)}y`;
 }
 
-/* ── Mission types ─────────────────────────────────────── */
-
-interface MissionData {
-  id: string;
-  type: string;
-  label: string;
-  description: string | null;
-  target: number;
-  reward: number;
-  progress: number;
-  completed: boolean;
-  claimed: boolean;
-}
-
-const MISSION_ICON_MAP: Record<string, any> = {
-  hands_played: Gamepad2,
-  pots_won: Coins,
-  win_streak: Target,
-  consecutive_wins: TrendingUp,
-  sng_win: Clock,
-  bomb_pot: Target,
-  heads_up_win: Users,
-};
-
 /* ── Main Component ────────────────────────────────────── */
 
 export default function Members() {
   const { user } = useAuth();
-  const [club, setClub] = useState<ClubData | null>(null);
-  const [members, setMembers] = useState<ClubMember[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<PlayerStats | null>(null);
-  const [memberStatsMap, setMemberStatsMap] = useState<Record<string, MemberStats>>({});
-  const [missions, setMissions] = useState<MissionData[]>([]);
-  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
-
-  // My role in the club
-  const [myRole, setMyRole] = useState<string>("member");
+  const {
+    club,
+    members,
+    invitations,
+    memberStatsMap,
+    myStats,
+    missions,
+    onlineUserIds,
+    myRole,
+    isAdminOrOwner,
+    loading,
+    sendInvite,
+    handleInvitation,
+    changeRole,
+    kickMember,
+  } = useClub();
 
   // Invite input
   const [inviteUsername, setInviteUsername] = useState("");
@@ -142,85 +78,13 @@ export default function Members() {
   // Collapsible sections
   const [showPending, setShowPending] = useState(true);
 
-  const isAdminOrOwner = myRole === "owner" || myRole === "admin";
+  // Search and filter
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "owner" | "admin" | "member">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
 
-  /* ── Data Loading ──────────────────────────────────────── */
-
-  const loadData = useCallback(async () => {
-    try {
-      const [clubsRes, statsRes, missionsRes] = await Promise.all([
-        fetch("/api/clubs"),
-        fetch("/api/stats/me"),
-        fetch("/api/missions"),
-      ]);
-
-      if (missionsRes.ok) {
-        setMissions(await missionsRes.json());
-      }
-
-      if (statsRes.ok) {
-        setStats(await statsRes.json());
-      }
-
-      if (!clubsRes.ok) return;
-      const clubs: ClubData[] = await clubsRes.json();
-      if (clubs.length === 0) { setLoading(false); return; }
-
-      const myClub = clubs[0];
-      setClub(myClub);
-
-      const [membersRes, invRes, memberStatsRes] = await Promise.all([
-        fetch(`/api/clubs/${myClub.id}/members`),
-        fetch(`/api/clubs/${myClub.id}/invitations`),
-        fetch(`/api/clubs/${myClub.id}/members/stats`),
-      ]);
-
-      if (membersRes.ok) {
-        const memberData: ClubMember[] = await membersRes.json();
-        setMembers(memberData);
-        // Determine my role
-        const me = memberData.find(m => m.userId === user?.id);
-        if (me) setMyRole(me.role);
-      }
-
-      if (invRes.ok) {
-        const invData: Invitation[] = await invRes.json();
-        setInvitations(invData.filter(inv => inv.status === "pending"));
-      }
-
-      if (memberStatsRes.ok) {
-        setMemberStatsMap(await memberStatsRes.json());
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  /* ── Poll online status ─────────────────────────────────── */
-
-  useEffect(() => {
-    const fetchOnline = async () => {
-      try {
-        const res = await fetch("/api/online-users");
-        if (res.ok) {
-          const ids: string[] = await res.json();
-          setOnlineUserIds(new Set(ids));
-        }
-      } catch {
-        // silently fail
-      }
-    };
-
-    fetchOnline();
-    const interval = setInterval(fetchOnline, 30_000);
-    return () => clearInterval(interval);
-  }, []);
+  // Filter pending invitations locally
+  const pendingInvitations = invitations.filter(inv => inv.status === "pending");
 
   /* ── Actions ───────────────────────────────────────────── */
 
@@ -228,84 +92,68 @@ export default function Members() {
     if (!inviteUsername.trim() || !club) return;
     setInviteLoading(true);
     setInviteMsg(null);
-    try {
-      const res = await fetch(`/api/clubs/${club.id}/invite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: inviteUsername.trim(), type: "invite" }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ message: "Failed to send invite" }));
-        throw new Error(data.message || "Failed to send invite");
-      }
+    const success = await sendInvite(inviteUsername.trim());
+    if (success) {
       setInviteMsg({ text: `Invite sent to "${inviteUsername.trim()}"`, type: "success" });
       setInviteUsername("");
-      await loadData();
-    } catch (err: any) {
-      setInviteMsg({ text: err.message, type: "error" });
-    } finally {
-      setInviteLoading(false);
     }
+    setInviteLoading(false);
   };
 
   const handleInvitationAction = async (invId: string, status: "accepted" | "declined") => {
-    if (!club) return;
     setActionLoading(invId);
-    try {
-      await fetch(`/api/clubs/${club.id}/invitations/${invId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      await loadData();
-    } catch {
-      // silently fail
-    } finally {
-      setActionLoading(null);
-    }
+    await handleInvitation(invId, status);
+    setActionLoading(null);
   };
 
   const handleRoleChange = async (memberId: string, newRole: "admin" | "member") => {
-    if (!club) return;
     setActionLoading(`role-${memberId}`);
-    try {
-      await fetch(`/api/clubs/${club.id}/members/${memberId}/role`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newRole }),
-      });
-      await loadData();
-    } catch {
-      // silently fail
-    } finally {
-      setActionLoading(null);
-    }
+    await changeRole(memberId, newRole);
+    setActionLoading(null);
   };
 
   const handleKick = async (memberId: string, displayName: string) => {
-    if (!club) return;
     if (!window.confirm(`Remove ${displayName} from the club?`)) return;
     setActionLoading(`kick-${memberId}`);
-    try {
-      await fetch(`/api/clubs/${club.id}/members/${memberId}`, {
-        method: "DELETE",
-      });
-      await loadData();
-    } catch {
-      // silently fail
-    } finally {
-      setActionLoading(null);
-    }
+    await kickMember(memberId);
+    setActionLoading(null);
   };
 
   /* ── Render helpers ────────────────────────────────────── */
 
-  const sortedMembers = [...members].sort((a, b) => {
-    const order: Record<string, number> = { owner: 0, admin: 1, manager: 1, member: 2 };
-    return (order[a.role] ?? 3) - (order[b.role] ?? 3);
-  });
+  const sortedMembers = useMemo(() => {
+    let filtered = [...members];
 
-  const pendingCount = invitations.length;
+    // Search by name or username
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(m =>
+        m.displayName.toLowerCase().includes(q) || m.username.toLowerCase().includes(q)
+      );
+    }
+
+    // Filter by role
+    if (roleFilter !== "all") {
+      filtered = filtered.filter(m => m.role === roleFilter);
+    }
+
+    // Filter by online status
+    if (statusFilter === "online") {
+      filtered = filtered.filter(m => onlineUserIds.has(m.userId));
+    } else if (statusFilter === "offline") {
+      filtered = filtered.filter(m => !onlineUserIds.has(m.userId));
+    }
+
+    // Sort by role hierarchy
+    filtered.sort((a, b) => {
+      const order: Record<string, number> = { owner: 0, admin: 1, manager: 1, member: 2 };
+      return (order[a.role] ?? 3) - (order[b.role] ?? 3);
+    });
+
+    return filtered;
+  }, [members, searchQuery, roleFilter, statusFilter, onlineUserIds]);
+
+  const pendingCount = pendingInvitations.length;
 
   /* ── Component ─────────────────────────────────────────── */
 
@@ -329,6 +177,58 @@ export default function Members() {
 
             {/* ═══ Members List (2 columns) ═══ */}
             <div className="lg:col-span-2 space-y-4">
+              {/* Search & Filter Bar */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search members..."
+                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                  />
+                </div>
+                {/* Role Filter */}
+                <div className="flex items-center gap-1">
+                  {(["all", "owner", "admin", "member"] as const).map(role => (
+                    <button
+                      key={role}
+                      onClick={() => setRoleFilter(role)}
+                      className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
+                        roleFilter === role
+                          ? "bg-cyan-500/15 border-cyan-500/25 text-cyan-400"
+                          : "border-white/5 text-gray-600 hover:text-gray-400 hover:border-white/10"
+                      }`}
+                    >
+                      {role === "all" ? "All Roles" : role}
+                    </button>
+                  ))}
+                </div>
+                {/* Online/Offline Filter */}
+                <div className="flex items-center gap-1">
+                  {(["all", "online", "offline"] as const).map(status => (
+                    <button
+                      key={status}
+                      onClick={() => setStatusFilter(status)}
+                      className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
+                        statusFilter === status
+                          ? status === "online"
+                            ? "bg-green-500/15 border-green-500/25 text-green-400"
+                            : "bg-cyan-500/15 border-cyan-500/25 text-cyan-400"
+                          : "border-white/5 text-gray-600 hover:text-gray-400 hover:border-white/10"
+                      }`}
+                    >
+                      {status === "all" ? "All" : status}
+                    </button>
+                  ))}
+                </div>
+                {/* Result count */}
+                <span className="text-[9px] text-gray-600 ml-auto">
+                  {sortedMembers.length}/{members.length} shown
+                </span>
+              </div>
+
               <div
                 className="glass rounded-xl overflow-hidden border border-cyan-500/10"
                 style={{ boxShadow: "0 0 30px rgba(0,240,255,0.03)" }}
@@ -345,6 +245,12 @@ export default function Members() {
                 </div>
 
                 {/* Member rows */}
+                {sortedMembers.length === 0 && (searchQuery || roleFilter !== "all" || statusFilter !== "all") && (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Search className="w-6 h-6 text-gray-700 mb-2" />
+                    <p className="text-[11px] text-gray-600">No members match your filters</p>
+                  </div>
+                )}
                 {sortedMembers.map((member, i) => {
                   const isMe = member.userId === user?.id;
                   const canManage = isAdminOrOwner && !isMe && member.role !== "owner";
@@ -361,14 +267,11 @@ export default function Members() {
                         {/* Avatar + Name + Role */}
                         <div className="flex items-center gap-3 col-span-1">
                           <div className="relative">
-                            <div
-                              className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/10 flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-purple-500/30 shadow-[0_0_12px_rgba(0,200,255,0.15)]"
-                              style={{ boxShadow: "0 0 15px rgba(0,240,255,0.1), 0 0 12px rgba(0,200,255,0.15)" }}
-                            >
-                              <span className="text-sm font-bold text-white">
-                                {member.displayName.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
+                            <MemberAvatar
+                              avatarId={member.avatarId}
+                              displayName={member.displayName}
+                              size="md"
+                            />
                             {/* Online status dot */}
                             <span
                               className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0a0a1a] ${
@@ -656,7 +559,7 @@ export default function Members() {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        {invitations.length === 0 ? (
+                        {pendingInvitations.length === 0 ? (
                           <div className="px-4 pb-4 text-center">
                             <div className="py-4">
                               <Users className="w-6 h-6 text-gray-700 mx-auto mb-2" />
@@ -665,7 +568,7 @@ export default function Members() {
                           </div>
                         ) : (
                           <div className="px-4 pb-3 space-y-2">
-                            {invitations.map((inv) => (
+                            {pendingInvitations.map((inv) => (
                               <motion.div
                                 key={inv.id}
                                 initial={{ opacity: 0, y: -10 }}
@@ -674,11 +577,11 @@ export default function Members() {
                                 className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]"
                               >
                                 {/* Avatar */}
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-orange-500/30 flex items-center justify-center border border-white/10 shrink-0">
-                                  <span className="text-[10px] font-bold text-white">
-                                    {inv.displayName.charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
+                                <MemberAvatar
+                                  avatarId={null}
+                                  displayName={inv.displayName}
+                                  size="sm"
+                                />
                                 {/* Info */}
                                 <div className="flex-1 min-w-0">
                                   <div className="text-xs font-semibold text-white truncate">{inv.displayName}</div>
@@ -773,42 +676,7 @@ export default function Members() {
               <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
               Daily Missions
             </h3>
-            {missions.length === 0 ? (
-              <div className="text-center py-4">
-                <Target className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                <p className="text-[11px] text-gray-600">No missions available</p>
-              </div>
-            ) : (
-            <div className="grid grid-cols-3 gap-3">
-              {missions.slice(0, 6).map((mission) => {
-                const Icon = MISSION_ICON_MAP[mission.type] || Target;
-                const progressPct = Math.min(Math.round((mission.progress / mission.target) * 100), 100);
-                return (
-                  <div key={mission.id} className="text-center">
-                    <div className={`w-10 h-10 rounded-lg ${mission.completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2`}>
-                      <Icon className={`w-4 h-4 ${mission.completed ? "text-green-400" : "text-cyan-400"}`} />
-                    </div>
-                    <div className="text-[10px] font-medium text-gray-300 mb-1">{mission.label}</div>
-                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-1">
-                      <div
-                        className={`h-full rounded-full transition-all ${mission.completed ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-cyan-500 to-green-500"}`}
-                        style={{ width: `${progressPct}%` }}
-                      />
-                    </div>
-                    <div className="text-[9px] text-gray-500">
-                      {mission.progress}/{mission.target}
-                      {mission.completed
-                        ? mission.claimed
-                          ? <span className="text-gray-500 ml-1">Claimed</span>
-                          : <span className="text-green-400 ml-1">Done!</span>
-                        : <span className="text-amber-400 ml-1">+{mission.reward}</span>
-                      }
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            )}
+            <MissionsGrid missions={missions} />
           </motion.div>
 
           {/* Your Stats */}
@@ -824,19 +692,19 @@ export default function Members() {
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="text-center p-3 rounded-lg bg-white/5 border border-cyan-500/15" style={{ boxShadow: "0 0 20px rgba(0,240,255,0.05)" }}>
-                <div className="text-lg font-bold text-cyan-400">{stats?.handsPlayed ?? 0}</div>
+                <div className="text-lg font-bold text-cyan-400">{myStats?.handsPlayed ?? 0}</div>
                 <div className="text-[9px] text-gray-500 uppercase tracking-wider">Hands Played</div>
               </div>
               <div className="text-center p-3 rounded-lg bg-white/5 border border-green-500/15" style={{ boxShadow: "0 0 20px rgba(0,255,157,0.05)" }}>
-                <div className="text-lg font-bold text-green-400">{stats?.potsWon ?? 0}</div>
+                <div className="text-lg font-bold text-green-400">{myStats?.potsWon ?? 0}</div>
                 <div className="text-[9px] text-gray-500 uppercase tracking-wider">Pots Won</div>
               </div>
               <div className="text-center p-3 rounded-lg bg-white/5 border border-amber-500/15" style={{ boxShadow: "0 0 20px rgba(234,179,8,0.05)" }}>
-                <div className="text-lg font-bold text-amber-400">{stats?.bestWinStreak ?? 0}</div>
+                <div className="text-lg font-bold text-amber-400">{myStats?.bestWinStreak ?? 0}</div>
                 <div className="text-[9px] text-gray-500 uppercase tracking-wider">Best Streak</div>
               </div>
               <div className="text-center p-3 rounded-lg bg-white/5 border border-purple-500/15" style={{ boxShadow: "0 0 20px rgba(168,85,247,0.05)" }}>
-                <div className="text-lg font-bold text-purple-400">{stats?.currentWinStreak ?? 0}</div>
+                <div className="text-lg font-bold text-purple-400">{myStats?.currentWinStreak ?? 0}</div>
                 <div className="text-[9px] text-gray-500 uppercase tracking-wider">Current Streak</div>
               </div>
             </div>

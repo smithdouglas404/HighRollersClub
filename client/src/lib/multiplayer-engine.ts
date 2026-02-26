@@ -44,6 +44,9 @@ function serverToClientGameState(serverState: any): GameState {
     phase: serverState.phase === "waiting" ? "pre-flop" : serverState.phase,
     minBet: serverState.minBet || 0,
     dealingPhase: "dealt",
+    lastAction: serverState.lastAction,
+    actionNumber: serverState.actionNumber,
+    handNumber: serverState.handNumber,
   };
 }
 

@@ -130,133 +130,33 @@ class SoundEngine {
     return panner;
   }
 
-  playChipClinkAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthChipClink(this.ctx, d);
-  }
+  // All synthesized sound effects disabled — only BGM plays
+  playChipClinkAt(_seatX: number, _seatScale: number) {}
+  playFoldAt(_seatX: number, _seatScale: number) {}
+  playCheckAt(_seatX: number, _seatScale: number) {}
+  playCallAt(_seatX: number, _seatScale: number) {}
+  playRaiseAt(_seatX: number, _seatScale: number) {}
 
-  playFoldAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthFold(this.ctx, d);
-  }
+  startAdaptiveMusic() {}
+  stopAdaptiveMusic() {}
+  setMusicState(_state: "idle" | "in_hand" | "all_in" | "showdown", _opts?: { potSize?: number; blindLevel?: number }) {}
 
-  playCheckAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthCheck(this.ctx, d);
-  }
+  playCardDeal() {}
+  playCardFlip() {}
+  playChipClink() {}
+  playChipSlide() {}
+  playFold() {}
+  playCheck() {}
+  playCall() {}
+  playRaise() {}
+  playPhaseReveal() {}
+  playShowdownFanfare() {}
+  playWinCelebration() {}
+  playTimerTick(_urgency: number = 0) {}
+  playTurnNotify() {}
 
-  playCallAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthCall(this.ctx, d);
-  }
-
-  playRaiseAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthRaise(this.ctx, d);
-  }
-
-  // --- Adaptive Music ---
-
-  startAdaptiveMusic() {
-    if (this.adaptiveMusic) return;
-    if (!this.ctx || !this.masterGain) return;
-    this.adaptiveMusic = new AdaptiveMusicEngine(this.ctx, this.masterGain);
-    if (!this._muted) this.adaptiveMusic.start();
-  }
-
-  stopAdaptiveMusic() {
-    if (this.adaptiveMusic) {
-      this.adaptiveMusic.stop();
-      this.adaptiveMusic = null;
-    }
-  }
-
-  setMusicState(state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) {
-    if (this.adaptiveMusic) {
-      this.adaptiveMusic.setState(state, opts);
-    }
-  }
-
-  // --- Sound methods ---
-
-  playCardDeal() {
-    const d = this.dest;
-    if (d && this.ctx) synthCardDeal(this.ctx, d);
-  }
-
-  playCardFlip() {
-    const d = this.dest;
-    if (d && this.ctx) synthCardFlip(this.ctx, d);
-  }
-
-  playChipClink() {
-    const d = this.dest;
-    if (d && this.ctx) synthChipClink(this.ctx, d);
-  }
-
-  playChipSlide() {
-    const d = this.dest;
-    if (d && this.ctx) synthChipSlide(this.ctx, d);
-  }
-
-  playFold() {
-    const d = this.dest;
-    if (d && this.ctx) synthFold(this.ctx, d);
-  }
-
-  playCheck() {
-    const d = this.dest;
-    if (d && this.ctx) synthCheck(this.ctx, d);
-  }
-
-  playCall() {
-    const d = this.dest;
-    if (d && this.ctx) synthCall(this.ctx, d);
-  }
-
-  playRaise() {
-    const d = this.dest;
-    if (d && this.ctx) synthRaise(this.ctx, d);
-  }
-
-  playPhaseReveal() {
-    const d = this.dest;
-    if (d && this.ctx) synthPhaseReveal(this.ctx, d);
-  }
-
-  playShowdownFanfare() {
-    const d = this.dest;
-    if (d && this.ctx) synthShowdownFanfare(this.ctx, d);
-  }
-
-  playWinCelebration() {
-    const d = this.dest;
-    if (d && this.ctx) synthWinCelebration(this.ctx, d);
-  }
-
-  playTimerTick(urgency: number = 0) {
-    const d = this.dest;
-    if (d && this.ctx) synthTimerTick(this.ctx, d, urgency);
-  }
-
-  playTurnNotify() {
-    const d = this.dest;
-    if (d && this.ctx) synthTurnNotify(this.ctx, d);
-  }
-
-  startAmbient() {
-    if (this.ambientHandle) return; // already playing
-    const d = this.dest;
-    if (d && this.ctx) {
-      this.ambientHandle = synthAmbient(this.ctx, d);
-    }
-  }
-
+  startAmbient() {}
   stopAmbient() {
-    if (this.ambientHandle) {
-      this.ambientHandle.stop();
-      this.ambientHandle = null;
-    }
   }
 
   // --- Background Music (URL-based) ---

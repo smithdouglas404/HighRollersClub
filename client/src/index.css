@@ -369,3 +369,71 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
+
+/* === RESPONSIVE SCREEN SYSTEM === */
+
+/* Avatar size — driven by CSS custom property set by useScreenInfo hook */
+.avatar-size {
+  width: var(--avatar-size, 80px);
+  height: var(--avatar-size, 80px);
+}
+
+/* Sidebar width — driven by CSS custom property */
+.sidebar-responsive {
+  width: var(--sidebar-w, 208px);
+}
+
+/* Responsive font sizes using calc with --font-scale */
+.text-responsive-xs {
+  font-size: calc(9px * var(--font-scale, 1));
+}
+.text-responsive-sm {
+  font-size: calc(10px * var(--font-scale, 1));
+}
+.text-responsive-base {
+  font-size: calc(12px * var(--font-scale, 1));
+}
+.text-responsive-lg {
+  font-size: calc(14px * var(--font-scale, 1));
+}
+
+/* Small screens: stack layout, hide sidebars */
+@media (max-width: 1023px) {
+  .sidebar-responsive {
+    display: none;
+  }
+  .avatar-size {
+    width: clamp(48px, 5vw, 72px);
+    height: clamp(48px, 5vw, 72px);
+  }
+}
+
+/* Medium screens: 1024-1599px */
+@media (min-width: 1024px) and (max-width: 1599px) {
+  .avatar-size {
+    width: clamp(64px, 5.5vw, 90px);
+    height: clamp(64px, 5.5vw, 90px);
+  }
+}
+
+/* Large screens: 1600-2559px */
+@media (min-width: 1600px) and (max-width: 2559px) {
+  .avatar-size {
+    width: clamp(80px, 5vw, 110px);
+    height: clamp(80px, 5vw, 110px);
+  }
+}
+
+/* Ultrawide / 4K: 2560px+ */
+@media (min-width: 2560px) {
+  .avatar-size {
+    width: clamp(100px, 4vw, 140px);
+    height: clamp(100px, 4vw, 140px);
+  }
+}
+
+/* Nameplate responsive width — scales with avatar */
+.nameplate-responsive {
+  min-width: calc(var(--avatar-size, 80px) * 0.9);
+  max-width: calc(var(--avatar-size, 80px) * 1.6);
+}

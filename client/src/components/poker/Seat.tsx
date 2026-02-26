@@ -359,14 +359,14 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         {/* ── Avatar portrait with CSS neon ring (square, ~100px, matching reference) ── */}
         <div ref={avatarRef} className="relative z-10 mb-0.5">
           {/* Video thumbnail overlay */}
-          {showVideo && <VideoThumbnail userId={player.id} isLocal={isHero} size={compactMode ? 36 : 48} />}
+          {showVideo && <VideoThumbnail userId={player.id} isLocal={isHero} size={48} />}
           {/* Avatar Status Ring — tier/streak/classification */}
           {avatarTier && avatarTier !== "common" && (
             <AvatarStatusRing
               tier={avatarTier}
               winStreak={winStreak}
               vpipPercent={hudStats ? Math.round((hudStats.vpipCount / Math.max(1, hudStats.handsPlayed)) * 100) : undefined}
-              size={compactMode ? 56 : 100}
+              size={100}
               isActive={isTurn}
             />
           )}
@@ -411,7 +411,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <img
               src={player.avatar}
               alt={player.name}
-              className={`${compactMode ? 'w-[56px] h-[56px]' : 'w-[100px] h-[100px]'} rounded-xl object-cover relative z-[1]`}
+              className={`rounded-xl object-cover relative z-[1] avatar-size`}
               style={{
                 border: `2px solid ${glowColor}`,
                 boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
@@ -421,7 +421,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             />
           ) : (
             <div
-              className={`${compactMode ? 'w-[56px] h-[56px]' : 'w-[100px] h-[100px]'} rounded-xl flex items-center justify-center text-2xl font-bold text-white/70 relative z-[1]`}
+              className={`rounded-xl flex items-center justify-center text-2xl font-bold text-white/70 relative z-[1] avatar-size`}
               style={{
                 border: `2px solid ${glowColor}`,
                 boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
@@ -462,7 +462,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
 
         {/* ── Nameplate panel (dark glass, below avatar) ── */}
         <div
-          className="relative z-10 flex flex-col items-center min-w-[80px] rounded-lg overflow-hidden backdrop-blur-md"
+          className="relative z-10 flex flex-col items-center nameplate-responsive rounded-lg overflow-hidden backdrop-blur-md"
           style={{
             background: "rgba(0,0,0,0.60)",
             borderTop: `2px solid ${glowColor}`,

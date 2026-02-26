@@ -130,33 +130,131 @@ class SoundEngine {
     return panner;
   }
 
-  // All synthesized sound effects disabled — only BGM plays
-  playChipClinkAt(_seatX: number, _seatScale: number) {}
-  playFoldAt(_seatX: number, _seatScale: number) {}
-  playCheckAt(_seatX: number, _seatScale: number) {}
-  playCallAt(_seatX: number, _seatScale: number) {}
-  playRaiseAt(_seatX: number, _seatScale: number) {}
+  // --- Spatial sound effects (positional audio for opponent actions) ---
 
-  startAdaptiveMusic() {}
-  stopAdaptiveMusic() {}
-  setMusicState(_state: "idle" | "in_hand" | "all_in" | "showdown", _opts?: { potSize?: number; blindLevel?: number }) {}
+  playChipClinkAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthChipClink(this.ctx, d);
+  }
 
-  playCardDeal() {}
-  playCardFlip() {}
-  playChipClink() {}
-  playChipSlide() {}
-  playFold() {}
-  playCheck() {}
-  playCall() {}
-  playRaise() {}
-  playPhaseReveal() {}
-  playShowdownFanfare() {}
-  playWinCelebration() {}
-  playTimerTick(_urgency: number = 0) {}
-  playTurnNotify() {}
+  playFoldAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthFold(this.ctx, d);
+  }
 
-  startAmbient() {}
+  playCheckAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthCheck(this.ctx, d);
+  }
+
+  playCallAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthCall(this.ctx, d);
+  }
+
+  playRaiseAt(seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (d && this.ctx) synthRaise(this.ctx, d);
+  }
+
+  // --- Adaptive Music ---
+
+  startAdaptiveMusic() {
+    if (!this.ctx || !this.masterGain || this._muted) return;
+    if (!this.adaptiveMusic) {
+      this.adaptiveMusic = new AdaptiveMusicEngine(this.ctx, this.masterGain);
+    }
+    this.adaptiveMusic.start();
+  }
+
+  stopAdaptiveMusic() {
+    this.adaptiveMusic?.stop();
+  }
+
+  setMusicState(state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) {
+    this.adaptiveMusic?.setState(state, opts);
+  }
+
+  // --- Direct (non-spatial) sound effects ---
+
+  playCardDeal() {
+    const d = this.dest;
+    if (d && this.ctx) synthCardDeal(this.ctx, d);
+  }
+
+  playCardFlip() {
+    const d = this.dest;
+    if (d && this.ctx) synthCardFlip(this.ctx, d);
+  }
+
+  playChipClink() {
+    const d = this.dest;
+    if (d && this.ctx) synthChipClink(this.ctx, d);
+  }
+
+  playChipSlide() {
+    const d = this.dest;
+    if (d && this.ctx) synthChipSlide(this.ctx, d);
+  }
+
+  playFold() {
+    const d = this.dest;
+    if (d && this.ctx) synthFold(this.ctx, d);
+  }
+
+  playCheck() {
+    const d = this.dest;
+    if (d && this.ctx) synthCheck(this.ctx, d);
+  }
+
+  playCall() {
+    const d = this.dest;
+    if (d && this.ctx) synthCall(this.ctx, d);
+  }
+
+  playRaise() {
+    const d = this.dest;
+    if (d && this.ctx) synthRaise(this.ctx, d);
+  }
+
+  playPhaseReveal() {
+    const d = this.dest;
+    if (d && this.ctx) synthPhaseReveal(this.ctx, d);
+  }
+
+  playShowdownFanfare() {
+    const d = this.dest;
+    if (d && this.ctx) synthShowdownFanfare(this.ctx, d);
+  }
+
+  playWinCelebration() {
+    const d = this.dest;
+    if (d && this.ctx) synthWinCelebration(this.ctx, d);
+  }
+
+  playTimerTick(urgency: number = 0) {
+    const d = this.dest;
+    if (d && this.ctx) synthTimerTick(this.ctx, d, urgency);
+  }
+
+  playTurnNotify() {
+    const d = this.dest;
+    if (d && this.ctx) synthTurnNotify(this.ctx, d);
+  }
+
+  startAmbient() {
+    if (this.ambientHandle) return;
+    const d = this.dest;
+    if (d && this.ctx) {
+      this.ambientHandle = synthAmbient(this.ctx, d);
+    }
+  }
+
   stopAmbient() {
+    if (this.ambientHandle) {
+      this.ambientHandle.stop();
+      this.ambientHandle = null;
+    }
   }
 
   // --- Background Music (URL-based) ---

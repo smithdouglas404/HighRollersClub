@@ -432,6 +432,22 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   }
 }
 
+/* Timer urgency pulse animations */
+@keyframes timerUrgentPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+@keyframes timerCriticalPulse {
+  0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.75; transform: translate(-50%, -50%) scale(1.03); }
+}
+.timer-urgent-pulse {
+  animation: timerUrgentPulse 1.5s ease-in-out infinite;
+}
+.timer-critical-pulse {
+  animation: timerCriticalPulse 0.8s ease-in-out infinite;
+}
+
 /* Nameplate responsive width — scales with avatar */
 .nameplate-responsive {
   min-width: calc(var(--avatar-size, 80px) * 0.9);

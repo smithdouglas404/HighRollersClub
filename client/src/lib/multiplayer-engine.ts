@@ -26,7 +26,7 @@ function serverToClientPlayers(serverPlayers: any[]): Player[] {
     currentBet: p.currentBet || 0,
     status: p.status || "waiting",
     timeLeft: p.status === "thinking" ? Math.max(0, Math.round((p.timeBank || 30) * 100 / 30)) : undefined,
-    timeBank: p.timeBank ?? 30,
+    timeBankSeconds: p.timeBank ?? 30,
   };
   });
 }
@@ -54,6 +54,9 @@ function serverToClientGameState(serverState: any): GameState {
     runItBoards: serverState.runItBoards || null,
     smallBlind: serverState.smallBlind,
     bigBlind: serverState.bigBlind,
+    // Timer data
+    turnDeadline: serverState.turnDeadline || 0,
+    turnTimerDuration: serverState.turnTimerDuration || 30,
   };
 }
 

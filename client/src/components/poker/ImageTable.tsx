@@ -14,6 +14,12 @@ interface ImageTableProps {
   maxSeats?: number;
   players?: Player[];
   dealerSeatIndex?: number;
+  /** Number of community cards to visually show (from dealing sequence) */
+  visibleCommunityCards?: number;
+  /** Whether visible community cards have flipped face-up */
+  communityFlipped?: boolean;
+  /** Show burn card visual before dealing */
+  showBurnCard?: boolean;
 }
 
 export function ImageTable({
@@ -23,6 +29,9 @@ export function ImageTable({
   maxSeats = 10,
   players,
   dealerSeatIndex = -1,
+  visibleCommunityCards,
+  communityFlipped = true,
+  showBurnCard = false,
 }: ImageTableProps) {
   const { compactMode } = useGameUI();
   const occupiedCount = players?.length || playerCount;
@@ -73,31 +82,66 @@ export function ImageTable({
           );
         })}
 
-        {/* ── Community cards — large, center of felt ── */}
+        {/* ── Burn card visual ── */}
         <AnimatePresence>
-          {communityCards.length > 0 && (
+          {showBurnCard && !compactMode && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute flex gap-2"
+              initial={{ opacity: 0, x: 80, y: -40, scale: 0.5 }}
+              animate={{ opacity: 0.8, x: 0, y: 0, scale: 0.7 }}
+              exit={{ opacity: 0, scale: 0.3 }}
+              transition={{ duration: 0.25 }}
+              className="absolute"
               style={{
-                left: "50%",
-                top: "45%",
-                transform: "translate(-50%, -50%)",
-                filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.7))",
+                left: "42%",
+                top: "42%",
+                transform: "translate(-50%, -50%) rotate(-5deg)",
+                zIndex: 11,
               }}
             >
-              {communityCards.map((card, i) => (
-                <Card
-                  key={`cc-${i}-${card.suit}-${card.rank}`}
-                  card={card}
-                  size={compactMode ? "lg" : "xl"}
-                  delay={compactMode ? 0 : i * 0.15}
-                  dealFrom={compactMode ? undefined : { x: 200, y: -100 }}
-                />
-              ))}
+              <div className="w-[50px] h-[70px] rounded-md overflow-hidden"
+                style={{
+                  background: "linear-gradient(145deg, #1a1040 0%, #0d0820 40%, #1a0a30 70%, #0a0618 100%)",
+                  border: "1.5px solid rgba(201,168,76,0.4)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
+                }}
+              />
             </motion.div>
           )}
+        </AnimatePresence>
+
+        {/* ── Community cards — large, center of felt ── */}
+        <AnimatePresence>
+          {(() => {
+            const count = visibleCommunityCards !== undefined
+              ? Math.min(visibleCommunityCards, communityCards.length)
+              : communityCards.length;
+            if (count <= 0) return null;
+            const cardsToShow = communityCards.slice(0, count);
+            return (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute flex gap-2"
+                style={{
+                  left: "50%",
+                  top: "45%",
+                  transform: "translate(-50%, -50%)",
+                  filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.7))",
+                }}
+              >
+                {cardsToShow.map((card, i) => (
+                  <Card
+                    key={`cc-${i}-${card.suit}-${card.rank}`}
+                    card={card}
+                    size={compactMode ? "lg" : "xl"}
+                    delay={compactMode ? 0 : i * 0.12}
+                    dealFrom={compactMode ? undefined : { x: 200, y: -100 }}
+                    faceDown={!communityFlipped && !compactMode}
+                  />
+                ))}
+              </motion.div>
+            );
+          })()}
         </AnimatePresence>
 
         {/* ── Pot display ── */}
@@ -139,8 +183,8 @@ export function ImageTable({
             <motion.div
               key="dealer-btn"
               initial={false}
-              animate={{ left: `${dealerPos.x}%`, top: `${dealerPos.y}%`, opacity: 1 }}
-              transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 25 }}
+              animate={{ left: `${dealerPos.x}%`, top: `${dealerPos.y}%`, opacity: 1, scale: [1, 1.15, 1] }}
+              transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 25, scale: { duration: 0.4, ease: "easeOut" } }}
               className="absolute"
               style={{ transform: "translate(-50%, -50%)", zIndex: 15 }}
             >

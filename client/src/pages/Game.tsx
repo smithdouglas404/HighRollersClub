@@ -23,6 +23,7 @@ import { RunItVotePanel, RunItResults } from "../components/poker/RunItMultiple"
 import { CardSqueeze } from "../components/poker/CardSqueeze";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useScreenInfo } from "@/hooks/use-screen-info";
+import { useDealingSequence } from "@/hooks/useDealingSequence";
 import { TournamentStatsPanel } from "@/components/game/TournamentStatsPanel";
 import { PlayerAnalyticsPanel } from "@/components/game/PlayerAnalyticsPanel";
 import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
@@ -158,6 +159,7 @@ function GameTable({
   const isMobile = useIsMobile();
   const screen = useScreenInfo();
   const { compactMode, toggleCompactMode, feltPreset, setFeltColor } = useGameUI();
+  const dealing = useDealingSequence(players, gameState, heroId, compactMode);
   const { opponentStats, hudEnabled, setHudEnabled } = useOpponentStats(gameState, players, heroId);
   const tableRef = useRef<HTMLDivElement>(null);
   const prevHeroTurn = useRef(false);
@@ -523,6 +525,9 @@ function GameTable({
                   maxSeats={10}
                   players={players}
                   dealerSeatIndex={players.findIndex(p => p.isDealer)}
+                  visibleCommunityCards={dealing.visibleCommunityCards}
+                  communityFlipped={dealing.communityFlipped}
+                  showBurnCard={dealing.showBurnCard}
                 />
 
                 {isMultiplayer && waiting && players.length < 2 && (
@@ -535,32 +540,42 @@ function GameTable({
                   </div>
                 )}
 
-                {players.map((player, index) => {
-                  const seat = TABLE_SEATS[index] || TABLE_SEATS[index % TABLE_SEATS.length];
-                  const avatarOpt = player.avatar ? AVATAR_OPTIONS.find(a => a.image === player.avatar) : undefined;
-                  return (
-                    <Seat
-                      key={player.id}
-                      player={player}
-                      position={{ x: seat.x, y: seat.y }}
-                      isHero={player.id === heroId}
-                      isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
-                      seatIndex={index}
-                      perspectiveScale={seat.scale}
-                      hudStats={player.id !== heroId && hudEnabled ? opponentStats.get(player.id) : undefined}
-                      avatarTier={avatarOpt?.tier}
-                      winStreak={winStreaks.current.get(player.id) || 0}
-                      showVideo={isMultiplayer && !player.isBot}
-                    />
-                  );
-                })}
+                {(() => {
+                  // Rotate seating so hero always appears at seat 0 (bottom center / first-person view)
+                  const heroIdx = players.findIndex(p => p.id === heroId);
+                  const totalSeats = players.length;
+                  return players.map((player, index) => {
+                    // Rotate: hero goes to visual seat 0, everyone else shifts accordingly
+                    const visualSeat = (index - heroIdx + totalSeats) % totalSeats;
+                    const seat = TABLE_SEATS[visualSeat] || TABLE_SEATS[visualSeat % TABLE_SEATS.length];
+                    const avatarOpt = player.avatar ? AVATAR_OPTIONS.find(a => a.image === player.avatar) : undefined;
+                    return (
+                      <Seat
+                        key={player.id}
+                        player={player}
+                        position={{ x: seat.x, y: seat.y }}
+                        isHero={player.id === heroId}
+                        isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
+                        seatIndex={visualSeat}
+                        perspectiveScale={seat.scale}
+                        hudStats={player.id !== heroId && hudEnabled ? opponentStats.get(player.id) : undefined}
+                        avatarTier={avatarOpt?.tier}
+                        winStreak={winStreaks.current.get(player.id) || 0}
+                        showVideo={isMultiplayer && !player.isBot}
+                        dealCardCount={dealing.visiblePlayerCards.get(player.id)}
+                        turnDeadline={gameState.turnDeadline}
+                        turnTimerDuration={gameState.turnTimerDuration}
+                      />
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>
 
           {/* Hero hole cards — below the table */}
           <div className="relative z-20 flex justify-center py-1 shrink-0" style={{ minHeight: heroCards && gameState.phase !== "waiting" ? 80 : 0 }}>
-            {heroCards && gameState.phase !== "waiting" && (
+            {heroCards && gameState.phase !== "waiting" && (dealing.visiblePlayerCards.get(heroId) ?? 2) > 0 && (
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -571,7 +586,7 @@ function GameTable({
                 {isMobile && heroHoleCards ? (
                   <CardSqueeze cards={heroHoleCards} />
                 ) : (
-                  heroCards.map((card, i) => (
+                  heroCards.filter((_, i) => i < (dealing.visiblePlayerCards.get(heroId) ?? 2)).map((card, i) => (
                     <Card
                       key={`hero-${i}`}
                       card={{ ...card, hidden: false }}
@@ -587,7 +602,7 @@ function GameTable({
 
           {/* Bottom controls — inline, not fixed */}
           <div className="relative z-30 shrink-0">
-            <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
+            <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" || !dealing.controlsReady ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
               <PokerControls
                 onAction={handlePlayerAction}
                 minBet={gameState.minBet}

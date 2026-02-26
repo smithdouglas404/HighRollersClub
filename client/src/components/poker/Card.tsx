@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CardType, Suit } from "@/lib/poker-types";
 import { useGameUI } from "@/lib/game-ui-context";
+import { useSoundEngine } from "@/lib/sound-context";
 
 interface CardProps {
   card?: CardType;
@@ -12,6 +13,10 @@ interface CardProps {
   isHero?: boolean;
   dealFrom?: { x: number; y: number };
   onDealt?: () => void;
+  /** Render face-down initially; when set to false, card flips to reveal face */
+  faceDown?: boolean;
+  /** Delay before flip animation starts (used with faceDown) */
+  flipDelay?: number;
 }
 
 const suitSymbols: Record<Suit, string> = {
@@ -35,11 +40,35 @@ const sizeConfig = {
   xl: { w: "w-[95px]",  h: "h-[136px]", rank: "text-3xl", suit: "text-lg",   centerPx: "50px", padTop: "8px", padLeft: "9px" },
 };
 
-export function Card({ card, className, size = "md", delay = 0, isHero = false, dealFrom, onDealt }: CardProps) {
+export function Card({ card, className, size = "md", delay = 0, isHero = false, dealFrom, onDealt, faceDown = false, flipDelay = 0 }: CardProps) {
   const s = sizeConfig[size];
   const [holoActive, setHoloActive] = useState(false);
+  const [hasFlipped, setHasFlipped] = useState(false);
   let compactMode = false;
   try { compactMode = useGameUI().compactMode; } catch {}
+  let sound: ReturnType<typeof useSoundEngine> | null = null;
+  try { sound = useSoundEngine(); } catch {}
+
+  // Track when faceDown transitions from true → false to trigger flip
+  const rotateY = useMotionValue(faceDown ? 0 : 180);
+  const backOpacity = useTransform(rotateY, [0, 90, 91, 180], [1, 1, 0, 0]);
+  const frontOpacity = useTransform(rotateY, [0, 89, 90, 180], [0, 0, 1, 1]);
+
+  useEffect(() => {
+    if (!faceDown && !hasFlipped && card && !card.hidden) {
+      const timer = setTimeout(() => {
+        animate(rotateY, 180, {
+          type: "spring",
+          stiffness: 200,
+          damping: 22,
+          mass: 0.8,
+        });
+        sound?.playCardFlip();
+        setHasFlipped(true);
+      }, flipDelay * 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [faceDown, hasFlipped, flipDelay, rotateY, card, sound]);
 
   const dealAnimation = compactMode
     ? {
@@ -64,6 +93,92 @@ export function Card({ card, className, size = "md", delay = 0, isHero = false, 
         animate: { scale: 1, opacity: 1, y: 0 },
         transition: { type: "spring" as const, stiffness: 280, damping: 20, delay },
       };
+
+  // Face-down mode: render card with 3D flip (back → front)
+  if ((faceDown || !hasFlipped) && card && !card.hidden && !compactMode) {
+    const colors = suitColors[card.suit];
+    return (
+      <motion.div
+        {...dealAnimation}
+        onAnimationComplete={() => {
+          onDealt?.();
+          sound?.playCardDeal();
+        }}
+        className={cn(
+          "relative select-none",
+          s.w, s.h,
+          className
+        )}
+        style={{ perspective: 800 }}
+      >
+        <motion.div
+          className="w-full h-full relative"
+          style={{
+            rotateY,
+            transformStyle: "preserve-3d",
+          }}
+        >
+          {/* Card back (visible at rotateY: 0) */}
+          <motion.div
+            className="absolute inset-0 rounded-lg overflow-hidden"
+            style={{ backfaceVisibility: "hidden", opacity: backOpacity }}
+          >
+            <div className="absolute inset-0 rounded-lg p-[1.5px]"
+              style={{ background: "linear-gradient(135deg, #c9a84c, #8b6914, #c9a84c)" }}
+            >
+              <div className="w-full h-full rounded-[6px] overflow-hidden relative"
+                style={{ background: "linear-gradient(145deg, #1a1040 0%, #0d0820 40%, #1a0a30 70%, #0a0618 100%)" }}
+              >
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full border-2 border-amber-600/40"
+                    style={{ background: "radial-gradient(circle, rgba(201,168,76,0.15) 0%, transparent 70%)" }}
+                  />
+                </div>
+                <div className="absolute inset-2 rounded border border-amber-700/20" />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Card front (visible at rotateY: 180) */}
+          <motion.div
+            className="absolute inset-0 rounded-lg"
+            style={{
+              backfaceVisibility: "hidden",
+              rotateY: 180,
+              opacity: frontOpacity,
+            }}
+          >
+            <div className="absolute inset-0 rounded-lg"
+              style={{
+                background: "linear-gradient(180deg, #ffffff 0%, #f8f6f0 100%)",
+                border: "2px solid #c9a84c",
+              }}
+            />
+            <div className="absolute inset-0 rounded-lg">
+              <div className="absolute flex flex-col items-center leading-none font-black"
+                style={{ top: s.padTop, left: s.padLeft, color: colors.css, textShadow: "0 1px 2px rgba(0,0,0,0.15)" }}
+              >
+                <span className={s.rank}>{card.rank}</span>
+                <span className={s.suit}>{suitSymbols[card.suit]}</span>
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center" style={{ color: colors.css, opacity: 0.3 }}>
+                <span style={{ fontSize: s.centerPx, fontWeight: 900 }}>{suitSymbols[card.suit]}</span>
+              </div>
+              <div className="absolute flex flex-col items-center leading-none font-black rotate-180"
+                style={{ bottom: s.padTop, right: s.padLeft, color: colors.css, textShadow: "0 1px 2px rgba(0,0,0,0.15)" }}
+              >
+                <span className={s.rank}>{card.rank}</span>
+                <span className={s.suit}>{suitSymbols[card.suit]}</span>
+              </div>
+              <div className="absolute inset-0 rounded-lg pointer-events-none"
+                style={{ background: "linear-gradient(160deg, rgba(255,255,255,0.3) 0%, transparent 35%, transparent 70%, rgba(255,255,255,0.08) 100%)" }}
+              />
+            </div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+    );
+  }
 
   if (!card || card.hidden) {
     return (

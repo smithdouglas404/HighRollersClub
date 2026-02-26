@@ -23,6 +23,7 @@ export interface Player {
   currentBet: number;
   status: 'thinking' | 'folded' | 'all-in' | 'checked' | 'waiting' | 'called' | 'raised';
   timeLeft?: number; // percentage 0-100
+  timeBankSeconds?: number; // personal time bank remaining (seconds)
 }
 
 export interface InsuranceOfferClient {
@@ -57,4 +58,7 @@ export interface GameState {
   runItBoards?: RunItBoardClient[] | null;
   smallBlind?: number;
   bigBlind?: number;
+  // Timer data from server
+  turnDeadline?: number; // server timestamp (ms) when current turn expires
+  turnTimerDuration?: number; // base turn duration in seconds
 }

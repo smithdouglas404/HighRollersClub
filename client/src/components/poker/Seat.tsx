@@ -7,7 +7,9 @@ import { useGameUI } from "@/lib/game-ui-context";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { triggerChipFlight } from "./ChipAnimation";
 import { AvatarStatusRing } from "./AvatarStatusRing";
+import { TimerRing } from "./TimerRing";
 import { VideoThumbnail } from "./VideoOverlay";
+import { useTimerCountdown } from "@/hooks/useTimerCountdown";
 import type { AvatarOption } from "./AvatarSelect";
 import type { OpponentHudStats } from "@/lib/useOpponentStats";
 
@@ -160,9 +162,15 @@ interface SeatProps {
   winStreak?: number;
   /** Whether to show video thumbnail for this player */
   showVideo?: boolean;
+  /** Number of cards to visually show (0, 1, or 2) during dealing animation */
+  dealCardCount?: number;
+  /** Server turn deadline for timer (multiplayer) */
+  turnDeadline?: number;
+  /** Server turn timer duration in seconds */
+  turnTimerDuration?: number;
 }
 
-export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false, hudStats, avatarTier, winStreak = 0, showVideo = false }: SeatProps) {
+export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false, hudStats, avatarTier, winStreak = 0, showVideo = false, dealCardCount, turnDeadline, turnTimerDuration = 30 }: SeatProps) {
   const { compactMode } = useGameUI();
   const winnerCanvasRef = useWinnerParticles(isWinner && !compactMode);
 
@@ -172,6 +180,15 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   const prevBetRef = useRef(player.currentBet);
   const timerTickRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const seatRef = useRef<HTMLDivElement>(null);
+
+  // Smooth timer countdown
+  const timer = useTimerCountdown(
+    turnDeadline,
+    turnTimerDuration,
+    player.timeBankSeconds ?? 30,
+    isTurn,
+    player.timeLeft,
+  );
 
   // Avatar expression reactions
   const prevStatusRef = useRef(player.status);
@@ -239,17 +256,33 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   }, [player.currentBet, sound]);
 
   // Timer tick sound when it's this player's turn (hero only)
+  // Tick rate increases with urgency: 3s >50%, 1.5s 25-50%, 800ms 10-25%, 400ms <10%
   useEffect(() => {
     if (isTurn && isHero) {
-      timerTickRef.current = setInterval(() => {
-        const urgency = 1 - (player.timeLeft || 100) / 100;
+      const getInterval = () => {
+        const pct = timer.percent;
+        if (pct > 50) return 3000;
+        if (pct > 25) return 1500;
+        if (pct > 10) return 800;
+        return 400;
+      };
+      let currentInterval = getInterval();
+      const tick = () => {
+        const urgency = 1 - timer.percent / 100;
         sound.playTimerTick(urgency);
-      }, 2000);
+        const newInterval = getInterval();
+        if (newInterval !== currentInterval) {
+          currentInterval = newInterval;
+          if (timerTickRef.current) clearInterval(timerTickRef.current);
+          timerTickRef.current = setInterval(tick, currentInterval);
+        }
+      };
+      timerTickRef.current = setInterval(tick, currentInterval);
     }
     return () => {
       if (timerTickRef.current) clearInterval(timerTickRef.current);
     };
-  }, [isTurn, isHero, player.timeLeft, sound]);
+  }, [isTurn, isHero, timer.percent, sound]);
 
   // Parallax depth effect for hero avatar only
   const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
@@ -406,6 +439,19 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             </div>
           )}
 
+          {/* Circular countdown timer ring around avatar */}
+          {isTurn && (
+            <TimerRing
+              percent={timer.percent}
+              secondsLeft={timer.secondsLeft}
+              size={110}
+              strokeWidth={4}
+              inTimeBank={timer.inTimeBank}
+              timeBankRemaining={timer.timeBankRemaining}
+              isHero={isHero}
+            />
+          )}
+
           {/* The avatar image / fallback */}
           {player.avatar ? (
             <img
@@ -472,25 +518,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             boxShadow: `0 0 12px ${hexToRgba(glowColor, 0.08)}`,
           }}
         >
-          {/* Timer arc — SVG border around the nameplate */}
-          {isTurn && (
-            <svg
-              className="absolute -inset-[2px] w-[calc(100%+4px)] h-[calc(100%+4px)] z-20 pointer-events-none"
-              viewBox="0 0 110 46"
-              preserveAspectRatio="none"
-            >
-              <rect
-                x="1" y="1" width="108" height="44" rx="8"
-                fill="none"
-                stroke={glowColor}
-                strokeWidth="1.5"
-                strokeDasharray="316"
-                strokeDashoffset={316 - (316 * (player.timeLeft || 100)) / 100}
-                className="transition-all duration-1000 ease-linear"
-                style={{ filter: `drop-shadow(0 0 4px ${hexToRgba(glowColor, 0.6)})` }}
-              />
-            </svg>
-          )}
+          {/* Timer arc removed — circular TimerRing is rendered around avatar above */}
 
           <div className="px-3 py-1.5 flex flex-col items-center gap-0">
             {/* Player name */}
@@ -589,7 +617,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 20 }}
           className="flex -mt-1"
         >
-          {player.cards.map((_, i) => (
+          {player.cards.filter((_, i) => dealCardCount === undefined || i < dealCardCount).map((_, i) => (
             <div
               key={`card-back-${i}`}
               className="rounded-md overflow-hidden"

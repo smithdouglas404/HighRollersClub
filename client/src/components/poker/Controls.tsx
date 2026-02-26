@@ -175,7 +175,7 @@ export function PokerControls({ onAction, minBet, maxBet, pot = 0, phase, curren
       initial={compactMode ? { y: 0, opacity: 1 } : { y: 80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 25 }}
-      className="fixed bottom-0 left-0 right-0 z-50"
+      className="relative z-50"
     >
       {/* Gradient fade above controls */}
       <div className="h-8 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />

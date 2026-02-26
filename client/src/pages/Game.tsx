@@ -257,526 +257,418 @@ function GameTable({
   };
 
   return (
-    <div className="min-h-screen bg-[#0a1022] text-white overflow-hidden relative font-sans flex">
+    <div className="h-screen bg-[#0a1022] text-white overflow-hidden relative font-sans flex flex-col">
+      {/* Background layers */}
       <div className="absolute inset-0">
         <img src={casinoBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-45" style={{ filter: "brightness(0.6) saturate(1.5) blur(1px)" }} />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.25)_0%,rgba(10,16,34,0.7)_80%)]" />
         {!compactMode && <AmbientParticles />}
       </div>
 
-      {/* Matrix rain on edges */}
       {!compactMode && (
-        <MatrixRain
-          side="both"
-          color="#00ff9d"
-          opacity={0.08}
-          density={0.25}
-          className="absolute inset-0 z-[1]"
-        />
+        <MatrixRain side="both" color="#00ff9d" opacity={0.08} density={0.25} className="absolute inset-0 z-[1]" />
       )}
 
       <ChipAnimation containerRef={tableRef} />
 
       {showdown && (
-        <ShowdownOverlay
-          visible={!!showdown}
-          results={showdown.results}
-          players={players}
-          pot={showdown.pot}
-        />
+        <ShowdownOverlay visible={!!showdown} results={showdown.results} players={players} pot={showdown.pot} />
       )}
 
-      <div className="flex-1 relative flex flex-col h-screen overflow-hidden">
-        {/* Top bar */}
-        <motion.div
-          initial={compactMode ? { y: 0, opacity: 1 } : { y: -60, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={compactMode ? { duration: 0 } : { delay: 0.2, type: "spring", stiffness: 200, damping: 25 }}
-          className={`absolute top-0 left-0 right-0 ${compactMode ? 'h-8' : 'h-12'} flex items-center justify-between px-5 z-50 bg-black/40 backdrop-blur-md border-b border-white/5`}
-        >
-          <div className="flex items-center gap-3">
-            {onBack && (
-              <button
-                onClick={leaveTable || onBack}
-                className="rounded-lg p-2 hover:bg-white/10 transition-colors mr-1"
-                title="Back to lobby"
-              >
-                <ArrowLeft className="w-4 h-4 text-gray-400" />
-              </button>
-            )}
-            <div className="w-8 h-8 rounded-lg gold-gradient flex items-center justify-center shadow-[0_0_15px_rgba(201,168,76,0.3)]">
-              <Trophy className="w-4 h-4 text-black" />
-            </div>
-            <div>
-              <div className="font-display font-bold text-xs tracking-widest gold-text leading-none">
-                {tableName || "Poker Table"}
-              </div>
-              <div className="text-[9px] text-gray-500 tracking-[0.2em] font-mono mt-0.5">
-                {formatInfo?.smallBlind && formatInfo?.bigBlind
-                  ? <span className="text-emerald-400/80">${formatInfo.smallBlind}/${formatInfo.bigBlind}</span>
-                  : <>{players.length}-MAX</>
-                }
-                <span className="mx-1.5 text-gray-700">|</span>
-                <span className="text-cyan-500/70">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
-                <span className="mx-1.5 text-gray-700">|</span>
-                {(gameState as any).handNumber
-                  ? <span className="text-gray-400">Hand #{(gameState as any).handNumber}</span>
-                  : <>{tableId ? `TABLE #${tableId.slice(0, 6).toUpperCase()}` : ""}</>
-                }
-                {formatInfo && formatInfo.gameFormat !== "cash" && (
-                  <>
-                    <span className="mx-1.5 text-gray-700">|</span>
-                    <span className="text-amber-400/70">
-                      {formatInfo.gameFormat === "sng" ? "SIT & GO" :
-                       formatInfo.gameFormat === "heads_up" ? "HEADS UP" :
-                       formatInfo.gameFormat === "tournament" ? "MTT" :
-                       formatInfo.gameFormat === "bomb_pot" ? "BOMB POT" : ""}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <WalletBar />
-            {/* Multiplayer indicators */}
-            {isMultiplayer && (
-              <>
-                <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold ${
-                  connected ? "text-green-400 bg-green-500/10" : "text-red-400 bg-red-500/10"
-                }`}>
-                  {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                  {connected ? "LIVE" : "OFFLINE"}
-                </div>
-                {waiting && addBots && (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={addBots}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
-                  >
-                    <Bot className="w-3 h-3" />
-                    FILL WITH BOTS
-                  </motion.button>
-                )}
-              </>
-            )}
-
-            {/* Compact mode toggle */}
-            <button
-              onClick={toggleCompactMode}
-              className={`glass rounded-lg p-2 hover:bg-white/5 transition-colors ${compactMode ? 'neon-border-green' : ''}`}
-              title={compactMode ? "Normal mode" : "Compact mode (multi-tabling)"}
-            >
-              {compactMode ? (
-                <Maximize2 className="w-3.5 h-3.5 text-green-400" />
-              ) : (
-                <Minimize2 className="w-3.5 h-3.5 text-gray-500" />
-              )}
+      {/* ═══ TOP BAR ═══ */}
+      <div className="relative z-50 h-10 flex items-center justify-between px-4 bg-black/60 backdrop-blur-md border-b border-white/5 shrink-0">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button onClick={leaveTable || onBack} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Back to lobby">
+              <ArrowLeft className="w-4 h-4 text-gray-400" />
             </button>
-
-            {/* Felt color swatches */}
-            <div className="flex items-center gap-1">
-              {FELT_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  onClick={() => setFeltColor(preset.id)}
-                  className="relative w-[14px] h-[14px] rounded-full transition-all hover:scale-125"
-                  title={preset.label}
-                  style={{
-                    background: preset.swatch,
-                    boxShadow: feltPreset.id === preset.id ? `0 0 0 2px #0a1022, 0 0 0 3.5px ${preset.swatch}` : 'none',
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* HUD toggle */}
-            <button
-              onClick={() => setHudEnabled(!hudEnabled)}
-              className={`glass rounded-lg px-2 py-1.5 flex items-center gap-1 transition-all ${hudEnabled ? 'neon-border-green' : 'hover:bg-white/5'}`}
-              title={hudEnabled ? "Disable opponent HUD" : "Enable opponent HUD"}
-            >
-              <BarChart2 className={`w-3.5 h-3.5 ${hudEnabled ? 'text-green-400' : 'text-gray-500'}`} />
-              <span className={`text-[9px] font-bold uppercase tracking-wider ${hudEnabled ? 'text-green-400' : 'text-gray-500'}`}>
-                HUD
-              </span>
-            </button>
-
-            <button
-              onClick={handleMuteToggle}
-              className="glass rounded-lg p-2 hover:bg-white/5 transition-colors"
-              title={isMuted ? "Unmute" : "Mute"}
-            >
-              {isMuted ? (
-                <VolumeX className="w-4 h-4 text-red-400" />
-              ) : (
-                <Volume2 className="w-4 h-4 text-gray-500" />
-              )}
-            </button>
-
-            {/* BGM button + panel */}
-            <div className="relative">
-              <button
-                onClick={() => setShowBgmPanel(!showBgmPanel)}
-                className={`glass rounded-lg p-2 transition-colors ${
-                  bgmPlaying ? "neon-border-green" : "hover:bg-white/5"
-                }`}
-                title="Background Music"
-              >
-                <Music className={`w-4 h-4 ${bgmPlaying ? "text-green-400" : "text-gray-500"}`} />
-              </button>
-              {showBgmPanel && (
-                <div
-                  className="absolute right-0 top-full mt-2 z-50 w-72 rounded-xl p-3 space-y-2"
-                  style={{
-                    background: "rgba(10,16,34,0.95)",
-                    border: "1px solid rgba(0,240,255,0.15)",
-                    backdropFilter: "blur(12px)",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                      Background Music
-                    </span>
-                    <button onClick={() => setShowBgmPanel(false)} className="p-0.5 hover:bg-white/10 rounded">
-                      <X className="w-3 h-3 text-gray-500" />
-                    </button>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      value={bgmUrl}
-                      onChange={(e) => setBgmUrl(e.target.value)}
-                      onBlur={() => sound.setBgmUrl(bgmUrl)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { sound.setBgmUrl(bgmUrl); sound.playBgm(); setBgmPlaying(true); } }}
-                      placeholder="Paste audio URL..."
-                      className="flex-1 text-[10px] px-2 py-1.5 rounded-lg text-white placeholder-gray-600 outline-none"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
-                    />
-                    <button
-                      onClick={() => {
-                        sound.setBgmUrl(bgmUrl);
-                        if (bgmPlaying) { sound.stopBgm(); setBgmPlaying(false); }
-                        else { sound.playBgm(); setBgmPlaying(true); }
-                      }}
-                      className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        bgmPlaying
-                          ? "bg-red-500/20 text-red-400 border border-red-500/20 hover:bg-red-500/30"
-                          : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/30"
-                      }`}
-                    >
-                      {bgmPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] text-gray-500 shrink-0">Vol</span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={Math.round(bgmVolume * 100)}
-                      onChange={(e) => {
-                        const v = parseInt(e.target.value) / 100;
-                        setBgmVolume(v);
-                        sound.setBgmVolume(v);
-                      }}
-                      className="flex-1 h-1 accent-cyan-400"
-                    />
-                    <span className="text-[9px] text-gray-500 w-6 text-right">{Math.round(bgmVolume * 100)}%</span>
-                  </div>
-                  <div className="text-[8px] text-gray-600 leading-relaxed">
-                    Paste a direct link to an MP3, OGG, or streaming audio URL. Hit Enter or Play to start.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => setShowProvablyFair(!showProvablyFair)}
-              className={`glass rounded-lg px-3 py-1.5 flex items-center gap-2 transition-all ${
-                showProvablyFair ? "neon-border-green" : "hover:bg-white/5"
-              }`}
-            >
-              <ShieldCheck className={`w-3.5 h-3.5 ${
-                verificationStatus === "verified" ? "text-green-400" :
-                verificationStatus === "failed" ? "text-red-400" :
-                verificationStatus === "verifying" ? "text-blue-400" :
-                showProvablyFair ? "text-green-400" : "text-gray-500"
-              }`} />
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                verificationStatus === "verified" ? "text-green-400" :
-                verificationStatus === "failed" ? "text-red-400" :
-                verificationStatus === "verifying" ? "text-blue-400" :
-                showProvablyFair ? "text-green-400" : "text-gray-500"
-              }`}>
-                {verificationStatus === "verified" ? "Verified" :
-                 verificationStatus === "failed" ? "Failed" :
-                 verificationStatus === "verifying" ? "Verifying" :
-                 "Fair Play"}
-              </span>
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Table Area */}
-        <div className="flex-1 relative flex items-center justify-center overflow-hidden">
-              {/* ── The full table (background + game overlay + seats) ── */}
-              {/*
-                Engineer spec: Responsive aspect-ratio container with
-                table-background (z:1) → game-overlay (z:10) → seats (z:20)
-                All coordinates are % of the container.
-              */}
-              <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-                {/* Room bg — dark navy like reference (#0a1022 → #1e2b4b) */}
-                <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, #1e2b4b 0%, #0a1022 70%)" }} />
-
-                {/* Aspect-ratio locked table container */}
-                <div
-                  ref={tableRef}
-                  className="relative w-full"
-                  style={{
-                    aspectRatio: "16 / 9",
-                    maxHeight: "90vh",
-                    maxWidth: "min(100%, 160vh)",
-                  }}
-                >
-                  {/* ImageTable renders: background image + community cards + pot + dealer btn + empty seats */}
-                  <ImageTable
-                    communityCards={gameState.communityCards}
-                    pot={gameState.pot}
-                    playerCount={players.length}
-                    maxSeats={10}
-                    players={players}
-                    dealerSeatIndex={players.findIndex(p => p.isDealer)}
-                  />
-
-                  {/* Waiting overlay */}
-                  {isMultiplayer && waiting && players.length < 2 && (
-                    <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 30 }}>
-                      <div className="glass rounded-xl px-6 py-4 text-center border border-white/10 pointer-events-auto">
-                        <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
-                        <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Player seats — positioned inside the same container as the table */}
-                  {players.map((player, index) => {
-                    const seat = TABLE_SEATS[index] || TABLE_SEATS[index % TABLE_SEATS.length];
-                    const avatarOpt = player.avatar ? AVATAR_OPTIONS.find(a => a.image === player.avatar) : undefined;
-                    return (
-                      <Seat
-                        key={player.id}
-                        player={player}
-                        position={{ x: seat.x, y: seat.y }}
-                        isHero={player.id === heroId}
-                        isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
-                        seatIndex={index}
-                        perspectiveScale={seat.scale}
-                        hudStats={player.id !== heroId && hudEnabled ? opponentStats.get(player.id) : undefined}
-                        avatarTier={avatarOpt?.tier}
-                        winStreak={winStreaks.current.get(player.id) || 0}
-                        showVideo={isMultiplayer && !player.isBot}
-                      />
-                    );
-                  })}
-
-                  {/* Hero hole cards — displayed ABOVE hero seat, z-index above everything */}
-                  {heroCards && gameState.phase !== "waiting" && (
-                    <motion.div
-                      initial={{ y: 30, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.5, type: "spring", stiffness: 200, damping: 22 }}
-                      className="absolute left-1/2 flex gap-3"
-                      style={{
-                        bottom: "1%",
-                        transform: "translateX(-50%)",
-                        zIndex: 50,
-                        filter: isMobile ? undefined : "drop-shadow(0 6px 20px rgba(0,0,0,0.5))",
-                      }}
-                    >
-                      {isMobile && heroHoleCards ? (
-                        <CardSqueeze cards={heroHoleCards} />
-                      ) : (
-                        heroCards.map((card, i) => (
-                          <Card
-                            key={`hero-${i}`}
-                            card={{ ...card, hidden: false }}
-                            size={compactMode ? "lg" : "xl"}
-                            isHero={true}
-                            delay={compactMode ? 0 : 0.3 + i * 0.15}
-                          />
-                        ))
-                      )}
-                    </motion.div>
-                  )}
-                </div>
-              </div>
+          )}
+          <span className="font-bold text-sm tracking-wider" style={{ background: "linear-gradient(135deg, #ff4444, #ff8800)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            CYBERPOKER
+          </span>
+          <span className="text-xs font-bold gold-text tracking-wider">{tableName || "HIGH ROLLERS MAIN"}</span>
+          <span className="text-[10px] text-gray-500 font-mono">
+            {formatInfo?.smallBlind && formatInfo?.bigBlind
+              ? <span className="text-emerald-400/80">${formatInfo.smallBlind}/${formatInfo.bigBlind} NLH</span>
+              : <>{players.length}-MAX</>
+            }
+          </span>
+          <span className="text-[10px] text-cyan-500/80 font-mono">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
+          <span className="text-[10px] text-gray-400 font-mono">
+            {(gameState as any).handNumber
+              ? <>Hand: ${gameState.pot?.toLocaleString() || "0"}</>
+              : <>{tableId ? `#${tableId.slice(0, 6).toUpperCase()}` : ""}</>
+            }
+          </span>
         </div>
 
-        <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
-        <ChatPanel isMultiplayer={isMultiplayer} sendChat={sendChat} />
-        {isMultiplayer && tableId && <HandHistoryDrawer tableId={tableId} />}
-        {isMultiplayer && heroId && tableId && (
-          <VideoControlBar
-            heroId={heroId}
-            tableId={tableId}
-            playerIds={players.filter(p => !p.isBot).map(p => p.id)}
-          />
-        )}
-
-        {/* Format-aware HUD overlays */}
-        {formatInfo && (formatInfo.gameFormat === "sng" || formatInfo.gameFormat === "tournament") && (
-          <BlindLevelIndicator
-            currentLevel={formatInfo.currentBlindLevel}
-            sb={gameState.minBet ? Math.floor(gameState.minBet / 2) : 10}
-            bb={gameState.minBet || 20}
-            ante={0}
-            nextLevelIn={formatInfo.nextLevelIn}
-          />
-        )}
-
-        {formatInfo && (formatInfo.gameFormat === "sng" || formatInfo.gameFormat === "tournament") && hero && (
-          <TournamentStatsPanel
-            chips={hero.chips}
-            playersRemaining={formatInfo.playersRemaining || players.length}
-            currentBlindLevel={formatInfo.currentBlindLevel}
-            sb={gameState.minBet ? Math.floor(gameState.minBet / 2) : 10}
-            bb={gameState.minBet || 20}
-            ante={0}
-            totalPlayers={players.length}
-            startingChips={startingChips}
-          />
-        )}
-
-        {isMultiplayer && hero && (
-          <PlayerAnalyticsPanel
-            stats={playerStats}
-          />
-        )}
-
-        {isMultiplayer && hero && heroCards && heroCards.length > 0 && gameState.phase !== "waiting" && (
-          <div className="fixed bottom-4 right-4 z-40">
-            <AIAnalysisPanel
-              holeCards={heroCards}
-              communityCards={gameState.communityCards || []}
-              pot={gameState.pot || 0}
-              position={hero.isDealer ? "button" : hero.isBigBlind ? "early" : "late"}
-            />
+        <div className="flex items-center gap-3">
+          <div className="px-3 py-1 rounded-lg bg-black/40 border border-amber-500/20">
+            <span className="text-[10px] text-gray-400 mr-1">POT:</span>
+            <span className="text-sm font-bold text-amber-400 font-mono">${gameState.pot?.toLocaleString() || "0"}</span>
           </div>
-        )}
 
-        <AnimatePresence>
-          {bombPotActive && <BombPotIndicator visible={bombPotActive} />}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {blindIncrease && (
-            <motion.div
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -50, opacity: 0 }}
-              className="fixed top-20 left-1/2 -translate-x-1/2 z-50 glass rounded-xl px-6 py-3 border border-amber-500/30"
-              style={{ boxShadow: "0 0 20px rgba(245,158,11,0.2)" }}
-            >
-              <div className="text-center">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1">Blinds Increased</div>
-                <div className="text-sm font-bold text-white font-mono">
-                  Level {blindIncrease.level}: {blindIncrease.sb}/{blindIncrease.bb}
-                  {blindIncrease.ante > 0 && <span className="text-gray-400 ml-1">(ante {blindIncrease.ante})</span>}
-                </div>
-              </div>
-            </motion.div>
+          {showdown?.results?.some((r: any) => r.isWinner && r.playerId === heroId) && (
+            <span className="text-[10px] font-bold text-cyan-400">
+              WINNER: YOU ({showdown.results.find((r: any) => r.isWinner && r.playerId === heroId)?.handName || ""})
+            </span>
           )}
-        </AnimatePresence>
 
-        <AnimatePresence>
-          {elimination && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="fixed top-1/3 left-1/2 -translate-x-1/2 z-50 glass rounded-xl px-8 py-4 border border-red-500/30"
-              style={{ boxShadow: "0 0 30px rgba(239,68,68,0.2)" }}
-            >
-              <div className="text-center">
-                <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                <div className="text-sm font-bold text-white mb-1">{elimination.displayName} Eliminated</div>
-                <div className="text-xs text-gray-400">
-                  Finished #{elimination.finishPlace}
-                  {elimination.prizeAmount > 0 && (
-                    <span className="text-amber-400 ml-2">Won {elimination.prizeAmount} chips</span>
+          {isMultiplayer && (
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+              connected ? "text-green-400 bg-green-500/10" : "text-red-400 bg-red-500/10"
+            }`}>
+              {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              {connected ? "LIVE" : "OFF"}
+            </div>
+          )}
+
+          {waiting && addBots && (
+            <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20">
+              <Bot className="w-3 h-3" /> BOTS
+            </button>
+          )}
+
+          <button onClick={handleMuteToggle} className="p-1.5 hover:bg-white/5 rounded transition-colors" title={isMuted ? "Unmute" : "Mute"}>
+            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-gray-500" />}
+          </button>
+
+          <button onClick={() => setShowProvablyFair(!showProvablyFair)} className="p-1.5 hover:bg-white/5 rounded transition-colors">
+            <ShieldCheck className={`w-3.5 h-3.5 ${verificationStatus === "verified" ? "text-green-400" : "text-gray-500"}`} />
+          </button>
+
+          {gameState.phase === "showdown" && (
+            <button className="px-3 py-1 rounded-lg border border-green-500/30 text-[10px] font-bold text-green-400 hover:bg-green-500/10 transition-colors">
+              + NEW HAND
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ═══ 3-COLUMN BODY ═══ */}
+      <div className="flex-1 relative z-10 flex overflow-hidden">
+
+        {/* ── LEFT SIDEBAR: Hand History ── */}
+        <div className="w-52 shrink-0 bg-black/40 backdrop-blur-sm border-r border-white/5 flex flex-col overflow-hidden">
+          <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              Hand #{(gameState as any).handNumber || "—"}
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3 text-[10px] scrollbar-thin">
+            {["pre-flop", "flop", "turn", "river", "showdown"].map((street) => {
+              const actions = (gameState as any).actionLog?.filter((a: any) => a.street === street) || [];
+              const isCurrentStreet = gameState.phase === street;
+              if (actions.length === 0 && !isCurrentStreet) return null;
+              return (
+                <div key={street}>
+                  <div className="font-bold uppercase tracking-wider text-red-400 mb-1">
+                    <span className="mr-1">&bull;</span>{street.replace("-", "-").toUpperCase()}
+                  </div>
+                  {actions.length > 0 ? actions.map((a: any, i: number) => (
+                    <div key={i} className="text-gray-400 leading-relaxed pl-2">
+                      <span className="text-white font-medium">{a.playerName || "Player"}</span>{" "}
+                      <span className={a.action === "fold" ? "text-red-400" : a.action === "raise" ? "text-cyan-400" : "text-green-400"}>
+                        {a.action?.toUpperCase()}
+                      </span>
+                      {a.amount > 0 && <span className="text-amber-400 ml-1">${a.amount}</span>}
+                    </div>
+                  )) : (
+                    <div className="text-gray-600 pl-2 italic">...</div>
                   )}
                 </div>
+              );
+            })}
+            {showdown?.results && (
+              <div>
+                <div className="font-bold uppercase tracking-wider text-red-400 mb-1">
+                  <span className="mr-1">&bull;</span>SHOWDOWN
+                </div>
+                {showdown.results.filter((r: any) => r.isWinner).map((r: any, i: number) => (
+                  <div key={i} className="text-green-400 pl-2 font-bold">
+                    {r.playerId === heroId ? "YOU" : players.find(p => p.id === r.playerId)?.name || "Player"} WIN!
+                    <div className="text-gray-400 font-normal text-[9px]">({r.handName})</div>
+                  </div>
+                ))}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </div>
+        </div>
 
-        <AnimatePresence>
-          {tournamentComplete && dismissTournamentComplete && (
-            <TournamentResults
-              results={tournamentComplete.results}
-              prizePool={tournamentComplete.prizePool}
-              onClose={dismissTournamentComplete}
-            />
-          )}
-        </AnimatePresence>
+        {/* ── CENTER: Table + Hero Cards + Controls ── */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Table area */}
+          <div className="flex-1 relative overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, #1e2b4b 0%, #0a1022 70%)" }} />
 
-        {/* Insurance Panel — shown when hero has equity offer */}
-        <AnimatePresence>
-          {gameState.insuranceOffer && acceptInsurance && declineInsurance && (
-            <InsurancePanel
-              offer={gameState.insuranceOffer}
-              onAccept={acceptInsurance}
-              onDecline={declineInsurance}
-            />
-          )}
-        </AnimatePresence>
+              <div
+                ref={tableRef}
+                className="relative w-full"
+                style={{ aspectRatio: "16 / 9", maxHeight: "85vh", maxWidth: "min(100%, 160vh)" }}
+              >
+                <ImageTable
+                  communityCards={gameState.communityCards}
+                  pot={gameState.pot}
+                  playerCount={players.length}
+                  maxSeats={10}
+                  players={players}
+                  dealerSeatIndex={players.findIndex(p => p.isDealer)}
+                />
 
-        {/* Run It Vote Panel */}
-        <AnimatePresence>
-          {gameState.runItPending && voteRunIt && (
-            <RunItVotePanel onVote={voteRunIt} />
-          )}
-        </AnimatePresence>
+                {isMultiplayer && waiting && players.length < 2 && (
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 30 }}>
+                    <div className="glass rounded-xl px-6 py-4 text-center border border-white/10 pointer-events-auto">
+                      <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
+                      <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
+                    </div>
+                  </div>
+                )}
 
-        {/* Run It Multiple Boards Results */}
-        <AnimatePresence>
-          {gameState.runItBoards && gameState.runItBoards.length > 1 && (
-            <RunItResults boards={gameState.runItBoards} heroId={heroId} />
-          )}
-        </AnimatePresence>
+                {players.map((player, index) => {
+                  const seat = TABLE_SEATS[index] || TABLE_SEATS[index % TABLE_SEATS.length];
+                  const avatarOpt = player.avatar ? AVATAR_OPTIONS.find(a => a.image === player.avatar) : undefined;
+                  return (
+                    <Seat
+                      key={player.id}
+                      player={player}
+                      position={{ x: seat.x, y: seat.y }}
+                      isHero={player.id === heroId}
+                      isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
+                      seatIndex={index}
+                      perspectiveScale={seat.scale}
+                      hudStats={player.id !== heroId && hudEnabled ? opponentStats.get(player.id) : undefined}
+                      avatarTier={avatarOpt?.tier}
+                      winStreak={winStreaks.current.get(player.id) || 0}
+                      showVideo={isMultiplayer && !player.isBot}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          </div>
 
-        <HandStrengthMeter
-          holeCards={heroHoleCards}
-          communityCards={gameState.communityCards}
-          visible={gameState.phase !== "showdown" && !!heroCards}
-        />
+          {/* Hero hole cards — below the table */}
+          <div className="relative z-20 flex justify-center py-1 shrink-0" style={{ minHeight: heroCards && gameState.phase !== "waiting" ? 80 : 0 }}>
+            {heroCards && gameState.phase !== "waiting" && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 22 }}
+                className="flex gap-3"
+                style={{ filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.5))" }}
+              >
+                {isMobile && heroHoleCards ? (
+                  <CardSqueeze cards={heroHoleCards} />
+                ) : (
+                  heroCards.map((card, i) => (
+                    <Card
+                      key={`hero-${i}`}
+                      card={{ ...card, hidden: false }}
+                      size={compactMode ? "lg" : "xl"}
+                      isHero={true}
+                      delay={compactMode ? 0 : 0.3 + i * 0.15}
+                    />
+                  ))
+                )}
+              </motion.div>
+            )}
+          </div>
 
-        {/* Bottom controls */}
-        <div className="z-50 relative">
-          <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
-            <PokerControls
-              onAction={handlePlayerAction}
-              minBet={gameState.minBet}
-              maxBet={hero?.chips || 1000}
-              pot={gameState.pot}
-              phase={gameState.phase}
-              currentTurnSeat={players.findIndex(p => p.id === gameState.currentTurnPlayerId)}
-              isHeroTurn={isHeroTurn}
-              onBuyTime={buyTime}
-              bigBlind={formatInfo?.bigBlind || gameState.minBet || undefined}
-              heroTimeLeft={hero?.timeLeft}
-              heroStatus={hero?.status}
-            />
+          {/* Bottom controls — inline, not fixed */}
+          <div className="relative z-30 shrink-0">
+            <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
+              <PokerControls
+                onAction={handlePlayerAction}
+                minBet={gameState.minBet}
+                maxBet={hero?.chips || 1000}
+                pot={gameState.pot}
+                phase={gameState.phase}
+                currentTurnSeat={players.findIndex(p => p.id === gameState.currentTurnPlayerId)}
+                isHeroTurn={isHeroTurn}
+                onBuyTime={buyTime}
+                bigBlind={formatInfo?.bigBlind || gameState.minBet || undefined}
+                heroTimeLeft={hero?.timeLeft}
+                heroStatus={hero?.status}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT SIDEBAR: Chat + Analytics + Stats ── */}
+        <div className="w-52 shrink-0 bg-black/40 backdrop-blur-sm border-l border-white/5 flex flex-col overflow-hidden">
+          {/* Chat section */}
+          <div className="flex-1 flex flex-col border-b border-white/5 min-h-0">
+            <div className="px-3 py-2 border-b border-white/5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Chat</span>
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 text-[10px] scrollbar-thin">
+              {(gameState as any).chatMessages?.map((msg: any, i: number) => (
+                <div key={i} className="leading-relaxed">
+                  <span className="font-bold text-cyan-400">{msg.playerName}:</span>{" "}
+                  <span className="text-gray-300">{msg.message}</span>
+                </div>
+              )) || <div className="text-gray-600 italic">No messages yet</div>}
+            </div>
+            {sendChat && (
+              <div className="px-2 py-2 border-t border-white/5">
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const input = (e.target as HTMLFormElement).elements.namedItem("chatInput") as HTMLInputElement;
+                  if (input.value.trim()) { sendChat(input.value.trim()); input.value = ""; }
+                }} className="flex gap-1">
+                  <input
+                    name="chatInput"
+                    placeholder="Type a message..."
+                    className="flex-1 text-[10px] px-2 py-1.5 rounded bg-white/5 border border-white/8 text-white placeholder-gray-600 outline-none"
+                  />
+                  <button type="submit" className="px-2 py-1.5 rounded bg-cyan-500/20 text-cyan-400 text-[10px] font-bold hover:bg-cyan-500/30">
+                    &gt;
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+
+          {/* Player Analytics section */}
+          <div className="border-b border-white/5">
+            <div className="px-3 py-2 border-b border-white/5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Player Analytics</span>
+            </div>
+            <div className="px-3 py-2 space-y-1.5">
+              {players.filter(p => p.id !== heroId).slice(0, 3).map((p, i) => {
+                const stats = opponentStats.get(p.id);
+                const vpip = stats && stats.handsPlayed > 0 ? Math.round((stats.vpipCount / stats.handsPlayed) * 100) : 0;
+                return (
+                  <div key={p.id} className="flex items-center gap-2 text-[10px]">
+                    <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-700 shrink-0">
+                      {p.avatar ? <img src={p.avatar} alt="" className="w-full h-full object-cover" /> : (
+                        <div className="w-full h-full flex items-center justify-center text-[8px] text-gray-400">{p.name[0]}</div>
+                      )}
+                    </div>
+                    <span className="text-gray-300 truncate flex-1">{p.name}</span>
+                    <span className="text-amber-400 font-mono font-bold">{vpip}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Tournament Stats section */}
+          <div>
+            <div className="px-3 py-2 border-b border-white/5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Tournament Stats</span>
+            </div>
+            <div className="px-3 py-2 space-y-1 text-[10px]">
+              <div className="flex justify-between"><span className="text-gray-500">Chips</span><span className="text-white font-mono">{hero?.chips?.toLocaleString() || "—"}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Players</span><span className="text-white font-mono">{formatInfo?.playersRemaining || players.length}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Current Bet</span><span className="text-white font-mono">${gameState.minBet || 0}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Round</span><span className="text-cyan-400 font-mono uppercase">{gameState.phase}</span></div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ═══ FLOATING OVERLAYS (keep existing) ═══ */}
+      <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
+
+      {formatInfo && (formatInfo.gameFormat === "sng" || formatInfo.gameFormat === "tournament") && (
+        <BlindLevelIndicator
+          currentLevel={formatInfo.currentBlindLevel}
+          sb={gameState.minBet ? Math.floor(gameState.minBet / 2) : 10}
+          bb={gameState.minBet || 20}
+          ante={0}
+          nextLevelIn={formatInfo.nextLevelIn}
+        />
+      )}
+
+      <AnimatePresence>
+        {bombPotActive && <BombPotIndicator visible={bombPotActive} />}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {blindIncrease && (
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 glass rounded-xl px-6 py-3 border border-amber-500/30"
+            style={{ boxShadow: "0 0 20px rgba(245,158,11,0.2)" }}
+          >
+            <div className="text-center">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1">Blinds Increased</div>
+              <div className="text-sm font-bold text-white font-mono">
+                Level {blindIncrease.level}: {blindIncrease.sb}/{blindIncrease.bb}
+                {blindIncrease.ante > 0 && <span className="text-gray-400 ml-1">(ante {blindIncrease.ante})</span>}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {elimination && (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            className="fixed top-1/3 left-1/2 -translate-x-1/2 z-50 glass rounded-xl px-8 py-4 border border-red-500/30"
+            style={{ boxShadow: "0 0 30px rgba(239,68,68,0.2)" }}
+          >
+            <div className="text-center">
+              <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+              <div className="text-sm font-bold text-white mb-1">{elimination.displayName} Eliminated</div>
+              <div className="text-xs text-gray-400">
+                Finished #{elimination.finishPlace}
+                {elimination.prizeAmount > 0 && (
+                  <span className="text-amber-400 ml-2">Won {elimination.prizeAmount} chips</span>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {tournamentComplete && dismissTournamentComplete && (
+          <TournamentResults
+            results={tournamentComplete.results}
+            prizePool={tournamentComplete.prizePool}
+            onClose={dismissTournamentComplete}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {gameState.insuranceOffer && acceptInsurance && declineInsurance && (
+          <InsurancePanel
+            offer={gameState.insuranceOffer}
+            onAccept={acceptInsurance}
+            onDecline={declineInsurance}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Run It Vote Panel */}
+      <AnimatePresence>
+        {gameState.runItPending && voteRunIt && (
+          <RunItVotePanel onVote={voteRunIt} />
+        )}
+      </AnimatePresence>
+
+      {/* Run It Multiple Boards Results */}
+      <AnimatePresence>
+        {gameState.runItBoards && gameState.runItBoards.length > 1 && (
+          <RunItResults boards={gameState.runItBoards} heroId={heroId} />
+        )}
+      </AnimatePresence>
+
+      <HandStrengthMeter
+        holeCards={heroHoleCards}
+        communityCards={gameState.communityCards}
+        visible={gameState.phase !== "showdown" && !!heroCards}
+      />
 
       <AnimatePresence>
         {showProvablyFair && (

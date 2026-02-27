@@ -25,14 +25,14 @@ export function HandStrengthMeter({ holeCards, communityCards, visible }: HandSt
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -20 }}
-        className="fixed bottom-[140px] right-4 z-50"
+        className="fixed bottom-[120px] right-3 z-40 opacity-80 hover:opacity-100 transition-opacity"
       >
         <div className="glass rounded-xl p-3 space-y-2" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
 
           {/* Label */}
           <div className="flex items-center gap-1.5">
             <TrendingUp className="w-3 h-3 text-gray-500" />
-            <span className="text-[9px] text-gray-500 uppercase tracking-wider font-bold">Hand Strength</span>
+            <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-bold">Hand Strength</span>
           </div>
 
           {/* Semicircle gauge */}
@@ -83,7 +83,7 @@ export function HandStrengthMeter({ holeCards, communityCards, visible }: HandSt
             animate={{ opacity: 1 }}
             className="text-center"
           >
-            <span className="text-[10px] font-bold" style={{ color: strength.color }}>
+            <span className="text-[0.625rem] font-bold" style={{ color: strength.color }}>
               {strength.label}
             </span>
           </motion.div>

@@ -103,15 +103,15 @@ export function CardSqueeze({ cards }: CardSqueezeProps) {
                 className="w-full h-full flex items-center justify-center"
                 style={{
                   background: "linear-gradient(145deg, #1a1040 0%, #0d0820 40%, #1a0a30 70%, #0a0618 100%)",
-                  border: "2px solid rgba(201,168,76,0.4)",
+                  border: "2px solid rgba(0,212,255,0.4)",
                   borderRadius: "8px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(201,168,76,0.3)",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(0,212,255,0.3)",
                 }}
               >
                 <div
-                  className="w-6 h-6 rounded-full border border-amber-600/30"
+                  className="w-6 h-6 rounded-full border border-cyan-600/30"
                   style={{
-                    background: "radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%)",
+                    background: "radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%)",
                   }}
                 />
               </div>

@@ -589,6 +589,79 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // ─── Club Tournaments ───────────────────────────────────────────────────
+  app.get("/api/clubs/:id/tournaments", requireAuth, async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+      const tourneys = await storage.getClubTournaments(club.id);
+      const enriched = await Promise.all(
+        tourneys.map(async (t) => {
+          const regs = await storage.getTournamentRegistrations(t.id);
+          return { ...t, registeredCount: regs.length, registrations: regs };
+        })
+      );
+      res.json(enriched);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Club Leaderboard ─────────────────────────────────────────────────
+  app.get("/api/clubs/:id/leaderboard", requireAuth, async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+
+      const metric = (req.query.metric as string) || "chips";
+      const validMetrics = ["chips", "wins", "winRate", "handsPlayed", "tournamentsWon"];
+      if (!validMetrics.includes(metric)) return res.status(400).json({ message: "Invalid metric" });
+
+      const members = await storage.getClubMembers(club.id);
+      const userIds = members.map(m => m.userId);
+      if (userIds.length === 0) return res.json([]);
+
+      const statsMap = await storage.getPlayerStatsBatch(userIds);
+      const userData = await Promise.all(userIds.map(id => storage.getUser(id)));
+      const userMap = new Map<string, any>();
+      userData.forEach(u => { if (u) userMap.set(u.id, u); });
+
+      let tournamentWinsMap = new Map<string, number>();
+      if (metric === "tournamentsWon") {
+        const clubTourneys = await storage.getClubTournaments(club.id);
+        for (const t of clubTourneys) {
+          if (t.status === "complete") {
+            const regs = await storage.getTournamentRegistrations(t.id);
+            for (const r of regs) {
+              if (r.finishPlace === 1 && userIds.includes(r.userId)) {
+                tournamentWinsMap.set(r.userId, (tournamentWinsMap.get(r.userId) || 0) + 1);
+              }
+            }
+          }
+        }
+      }
+
+      const entries = userIds.map(uid => {
+        const user = userMap.get(uid);
+        const stats = statsMap.get(uid);
+        if (!user) return null;
+        let value = 0;
+        switch (metric) {
+          case "chips": value = user.chipBalance; break;
+          case "wins": value = stats?.potsWon ?? 0; break;
+          case "winRate":
+            value = stats && stats.handsPlayed >= 10
+              ? Math.round((stats.potsWon / stats.handsPlayed) * 100) : 0;
+            break;
+          case "handsPlayed": value = stats?.handsPlayed ?? 0; break;
+          case "tournamentsWon": value = tournamentWinsMap.get(uid) || 0; break;
+        }
+        return { userId: uid, username: user.username, displayName: user.displayName, avatarId: user.avatarId, value };
+      }).filter(Boolean);
+
+      entries.sort((a: any, b: any) => b.value - a.value);
+      res.json(entries);
+    } catch (err) { next(err); }
+  });
+
   // ─── Profile Routes ──────────────────────────────────────────────────────
   app.put("/api/profile/avatar", requireAuth, async (req, res, next) => {
     try {
@@ -1063,6 +1136,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // Returns true if any missions were reset.
   async function resetStaleMissions(userId: string, allMissions: any[], userMs: any[]): Promise<boolean> {
     let didReset = false;
+    let resetDaily = false;
     for (const um of userMs) {
       const mission = allMissions.find((m: any) => m.id === um.missionId);
       if (!mission) continue;
@@ -1074,11 +1148,15 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
           periodStart: new Date(),
         });
         didReset = true;
+        // Only reset stats when daily missions expire (weekly missions
+        // rely on cumulative stats that shouldn't be wiped mid-week)
+        if (mission.periodType === "daily") {
+          resetDaily = true;
+        }
       }
     }
-    // If any mission was reset, also reset the player's tracked stats so
-    // progress counters start fresh for the new period
-    if (didReset) {
+    // Reset tracked stats only when a daily mission period has elapsed
+    if (resetDaily) {
       await storage.resetDailyStats(userId);
     }
     return didReset;
@@ -1380,6 +1458,17 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       const blindSchedule = blindPreset ? getBlindPreset(blindPreset) : getBlindPreset("mtt");
 
+      // If club tournament, verify user is admin/owner
+      if (clubId) {
+        const club = await storage.getClub(clubId);
+        if (!club) return res.status(404).json({ message: "Club not found" });
+        const members = await storage.getClubMembers(clubId);
+        const member = members.find((m: any) => m.userId === req.user!.id);
+        if (!member || (member.role !== "owner" && member.role !== "admin")) {
+          return res.status(403).json({ message: "Only club admins can create club tournaments" });
+        }
+      }
+
       const tourney = await storage.createTournament({
         name,
         buyIn,
@@ -1392,6 +1481,19 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         clubId: clubId || null,
         startAt: startAt ? new Date(startAt) : null,
       });
+
+      // Auto-create club event for club tournaments
+      if (clubId) {
+        await storage.createClubEvent({
+          clubId,
+          eventType: "tournament",
+          name: tourney.name,
+          description: `Tournament: ${tourney.name} | Buy-in: ${tourney.buyIn} chips`,
+          startTime: tourney.startAt,
+          tableId: null,
+        });
+      }
+
       res.status(201).json(tourney);
     } catch (err) {
       next(err);
@@ -1863,10 +1965,11 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       // Money in: deposits, bonuses, prizes (created from thin air)
       const moneyIn = (totalsMap.get("deposit") || 0) + (totalsMap.get("bonus") || 0);
-      // Money in escrow at tables (buyins - cashouts - added chips)
+      // Money in escrow at tables (buyins - cashouts)
       const escrowedAtTables = Math.abs(totalsMap.get("buyin") || 0)
-        - (totalsMap.get("cashout") || 0)
-        + Math.abs(totalsMap.get("withdraw") || 0);
+        - (totalsMap.get("cashout") || 0);
+      // Withdrawals are money leaving the system, tracked separately
+      const totalWithdrawals = Math.abs(totalsMap.get("withdraw") || 0);
       // Rake taken by the house
       const totalRake = Math.abs(totalsMap.get("rake") || 0);
       // Rakeback returned to players
@@ -1874,10 +1977,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       // Prizes paid out
       const totalPrizes = totalsMap.get("prize") || 0;
 
-      // Expected balance: all money that went IN, minus what was taken OUT (rake)
-      // Player wallets should equal: moneyIn - totalRake + totalRakeback
+      // Expected balance: all money IN, minus money OUT (rake, withdrawals)
+      // Player wallets should equal: moneyIn - totalRake + totalRakeback - totalWithdrawals
       // Minus any chips currently sitting at tables (escrow)
-      const expectedBalance = moneyIn - totalRake + totalRakeback;
+      const expectedBalance = moneyIn - totalRake + totalRakeback - totalWithdrawals;
       const discrepancy = playerBalanceSum + escrowedAtTables - expectedBalance;
 
       const healthy = Math.abs(discrepancy) <= 1; // allow 1 chip rounding
@@ -1886,6 +1989,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         playerBalanceSum,
         escrowedAtTables,
         moneyIn,
+        totalWithdrawals,
         totalRake,
         totalRakeback,
         totalPrizes,
@@ -1973,9 +2077,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // ─── Admin: Payments & Withdrawals ──────────────────────────────────────
   app.get("/api/admin/payments", requireAuth, requireAdmin, async (req, res, next) => {
     try {
-      // Return all payments (admin view) - using raw SQL since we need all users
-      const allPayments = await storage.getUserPayments("", 200, 0).catch(() => []);
-      // For admin, we'll use a broader approach
+      // Return all payments (admin view)
+      const allPayments = await storage.getAllPayments(200, 0);
       res.json(allPayments);
     } catch (err) {
       next(err);

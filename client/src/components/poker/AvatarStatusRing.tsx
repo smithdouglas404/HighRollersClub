@@ -29,8 +29,7 @@ function getTierRingStyle(tier: AvatarOption["tier"], isActive: boolean): React.
     case "legendary":
       return {
         ...base,
-        background: "conic-gradient(from 0deg, #ffd700, #f5e6a3, #c9a84c, #8b6914, #ffd700)",
-        animation: "tierRingRotate 4s linear infinite",
+        background: "conic-gradient(from 0deg, #00d4ff, #66e5ff, #009ec2, #006680, #00d4ff)",
         opacity: isActive ? 1 : 0.7,
         padding: "2px",
       };
@@ -38,15 +37,14 @@ function getTierRingStyle(tier: AvatarOption["tier"], isActive: boolean): React.
       return {
         ...base,
         background: "conic-gradient(from 0deg, #b44dff, #8b2fd0, #d580ff, #b44dff)",
-        animation: "tierRingPulse 2s ease-in-out infinite",
         opacity: isActive ? 1 : 0.6,
         padding: "2px",
       };
     case "rare":
       return {
         ...base,
-        border: "2px solid #00f0ff",
-        boxShadow: "0 0 8px rgba(0,240,255,0.3), inset 0 0 4px rgba(0,240,255,0.1)",
+        border: "2px solid #00d4ff",
+        boxShadow: "0 0 8px rgba(0,212,255,0.3), inset 0 0 4px rgba(0,212,255,0.1)",
         opacity: isActive ? 1 : 0.5,
       };
     default: // common
@@ -72,7 +70,7 @@ export function AvatarStatusRing({ tier = "common", winStreak = 0, vpipPercent, 
             width: "100%",
             height: "100%",
             borderRadius: "12px",
-            background: "rgba(10,16,34,0.9)",
+            background: "rgba(20,31,40,0.88)",
           }} />
         </div>
       ) : (

@@ -45,16 +45,16 @@ interface InventoryEntry {
 
 const RARITY_COLORS: Record<string, string> = {
   mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
-  legendary: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  legendary: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
   epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  rare: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
   uncommon: "text-green-400 bg-green-500/10 border-green-500/20",
   common: "text-gray-400 bg-gray-500/10 border-gray-500/20",
   // Also support capitalized keys for backward compatibility
   Mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
-  Legendary: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  Legendary: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
   Epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  Rare: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  Rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
 };
 
 const RARITY_GRADIENTS: Record<string, string> = {
@@ -148,7 +148,7 @@ function PurchaseModal({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[0.625rem] text-gray-500 uppercase tracking-wider">Price</div>
-              <div className="text-lg font-black text-amber-400 flex items-center gap-1.5">
+              <div className="text-lg font-black text-cyan-400 flex items-center gap-1.5">
                 <Coins className="w-4 h-4" />
                 {item.price.toLocaleString()} {item.currency}
               </div>
@@ -182,9 +182,9 @@ function PurchaseModal({
               className="flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
                 background: canAfford
-                  ? "linear-gradient(135deg, #c9a84c, #00d4aa)"
+                  ? "linear-gradient(135deg, #00d4ff, #00d4aa)"
                   : "linear-gradient(135deg, #666, #555)",
-                boxShadow: canAfford ? "0 0 20px rgba(201,168,76,0.2)" : "none",
+                boxShadow: canAfford ? "0 0 20px rgba(0,212,255,0.2)" : "none",
               }}
             >
               {purchasing ? (
@@ -208,7 +208,7 @@ function SuccessToast({ message }: { message: string }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
       className="fixed bottom-6 right-6 z-50 glass rounded-xl border border-green-500/20 px-5 py-3 flex items-center gap-3"
-      style={{ boxShadow: "0 10px 40px rgba(201,168,76,0.15)" }}
+      style={{ boxShadow: "0 10px 40px rgba(0,212,255,0.15)" }}
     >
       <div className="w-8 h-8 rounded-full bg-green-500/15 border border-green-500/20 flex items-center justify-center">
         <Check className="w-4 h-4 text-green-400" />
@@ -234,7 +234,7 @@ function ShopItemCard({
   return (
     <motion.div
       whileHover={{ scale: 1.03, y: -4 }}
-      className="glass rounded-xl overflow-hidden border border-white/5 hover:border-amber-500/20 transition-all cursor-pointer group"
+      className="glass rounded-xl overflow-hidden border border-white/5 hover:border-cyan-500/20 transition-all cursor-pointer group"
       style={{ boxShadow: "0 10px 40px rgba(0,0,0,0.3)" }}
       onClick={() => !owned && onPurchase(item)}
     >
@@ -282,7 +282,7 @@ function ShopItemCard({
               <Check className="w-3 h-3" /> Purchased
             </span>
           ) : (
-            <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
+            <span className="text-xs font-bold text-cyan-400 flex items-center gap-1">
               <Coins className="w-3 h-3" /> {item.price.toLocaleString()}
             </span>
           )}
@@ -312,9 +312,9 @@ function InventoryItemCard({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={`glass rounded-xl overflow-hidden border transition-all ${
-        isEquipped ? "border-amber-500/30" : "border-white/5 hover:border-white/10"
+        isEquipped ? "border-cyan-500/30" : "border-white/5 hover:border-white/10"
       }`}
-      style={{ boxShadow: isEquipped ? "0 0 25px rgba(212,168,67,0.08)" : "0 10px 40px rgba(0,0,0,0.3)" }}
+      style={{ boxShadow: isEquipped ? "0 0 25px rgba(0,212,255,0.08)" : "0 10px 40px rgba(0,0,0,0.3)" }}
     >
       <div className="aspect-square relative overflow-hidden">
         <ItemImage item={item} />
@@ -323,7 +323,7 @@ function InventoryItemCard({
           {item.rarity}
         </div>
         {isEquipped && (
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center gap-1">
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center gap-1">
             <Shield className="w-2.5 h-2.5" /> Equipped
           </div>
         )}
@@ -341,7 +341,7 @@ function InventoryItemCard({
           disabled={isEquipped || isEquipping}
           className={`w-full mt-2 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
             isEquipped
-              ? "bg-amber-500/10 border border-amber-500/20 text-amber-400 cursor-default"
+              ? "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 cursor-default"
               : "bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white"
           }`}
         >
@@ -547,7 +547,7 @@ export default function Shop() {
     <DashboardLayout>
       <div className="px-8 pb-8 relative">
         {/* Shop banner with chip pile accent */}
-        <div className="relative mb-6 overflow-hidden rounded-xl glass border border-amber-500/10 p-5">
+        <div className="relative mb-6 overflow-hidden rounded-xl glass border border-cyan-500/10 p-5">
           <img
             src={chipPile}
             alt=""
@@ -556,7 +556,7 @@ export default function Shop() {
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent pointer-events-none" />
           <div className="relative z-10">
             <h2 className="text-lg font-black tracking-[0.12em] uppercase gold-text flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-amber-400" />
+              <ShoppingCart className="w-5 h-5 text-cyan-400" />
               Shop
             </h2>
             <p className="text-xs text-gray-400 mt-1">Premium avatars, table themes, emotes and more</p>
@@ -570,7 +570,7 @@ export default function Shop() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                 activeTab === tab
-                  ? "bg-amber-500/15 text-amber-400 border border-amber-500/20"
+                  ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20"
                   : "text-gray-500 hover:text-gray-300 border border-transparent"
               }`}
             >
@@ -583,7 +583,7 @@ export default function Shop() {
                 </span>
               )}
               {tab === "Inventory" && inventory.length > 0 && (
-                <span className="ml-1 text-[0.5625rem] bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">
+                <span className="ml-1 text-[0.5625rem] bg-cyan-500/15 text-cyan-400 px-1.5 py-0.5 rounded-full">
                   {inventory.length}
                 </span>
               )}
@@ -599,7 +599,7 @@ export default function Shop() {
               <h2 className="text-lg font-black uppercase tracking-wider text-white flex items-center gap-2">
                 {isInventoryTab ? (
                   <>
-                    <Package className="w-5 h-5 text-amber-400" />
+                    <Package className="w-5 h-5 text-cyan-400" />
                     Your Collection
                   </>
                 ) : isWishlistTab ? (
@@ -626,7 +626,7 @@ export default function Shop() {
               <>
                 {loadingInventory ? (
                   <div className="flex items-center justify-center py-16">
-                    <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+                    <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
                   </div>
                 ) : inventory.length === 0 ? (
                   <motion.div
@@ -643,8 +643,8 @@ export default function Shop() {
                       onClick={() => setActiveTab("Avatars")}
                       className="mt-4 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
                       style={{
-                        background: "linear-gradient(135deg, #c9a84c, #00d4aa)",
-                        boxShadow: "0 0 20px rgba(201,168,76,0.15)",
+                        background: "linear-gradient(135deg, #00d4ff, #00d4aa)",
+                        boxShadow: "0 0 20px rgba(0,212,255,0.15)",
                       }}
                     >
                       Browse Shop
@@ -716,7 +716,7 @@ export default function Shop() {
                     {!isWishlistTab && filteredItems.length >= 3 && (
                       <div>
                         <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-amber-400" />
+                          <Sparkles className="w-4 h-4 text-cyan-400" />
                           Featured
                         </h3>
                         <div className="grid grid-cols-3 gap-4">
@@ -781,7 +781,7 @@ export default function Shop() {
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-4 h-4 text-amber-400" />
+                            <Sparkles className="w-4 h-4 text-cyan-400" />
                             {filteredItems.length >= 3 ? "All Items" : activeTab}
                           </>
                         )}
@@ -864,7 +864,7 @@ export default function Shop() {
                   {hasMore && (
                     <button
                       onClick={loadMore}
-                      className="w-full py-2.5 text-[0.625rem] font-bold uppercase tracking-wider text-amber-400 hover:text-white transition-colors border-t border-white/[0.03]"
+                      className="w-full py-2.5 text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 hover:text-white transition-colors border-t border-white/[0.03]"
                     >
                       Load More
                     </button>
@@ -881,13 +881,13 @@ export default function Shop() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="glass rounded-xl p-4 border border-amber-500/15"
+              className="glass rounded-xl p-4 border border-cyan-500/15"
             >
               <div className="flex items-center gap-2 mb-3">
-                <Coins className="w-4 h-4 text-amber-400" />
+                <Coins className="w-4 h-4 text-cyan-400" />
                 <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Your Balance</span>
               </div>
-              <div className="text-2xl font-black text-amber-400 tabular-nums">
+              <div className="text-2xl font-black text-cyan-400 tabular-nums">
                 {displayBalance.toLocaleString()}
               </div>
               <div className="text-[0.5625rem] text-gray-600 uppercase">chips</div>
@@ -913,8 +913,8 @@ export default function Shop() {
                 </p>
                 {!canClaim && timeLeft && (
                   <div className="flex items-center justify-center gap-2 mb-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                    <Clock className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-sm font-mono font-bold text-amber-400 tabular-nums">{timeLeft}</span>
+                    <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="text-sm font-mono font-bold text-cyan-400 tabular-nums">{timeLeft}</span>
                   </div>
                 )}
                 <motion.button
@@ -926,8 +926,8 @@ export default function Shop() {
                   style={{
                     background: !canClaim
                       ? "rgba(255,255,255,0.05)"
-                      : "linear-gradient(135deg, #c9a84c, #00d4aa)",
-                    boxShadow: !canClaim ? "none" : "0 0 20px rgba(201,168,76,0.2)",
+                      : "linear-gradient(135deg, #00d4ff, #00d4aa)",
+                    boxShadow: !canClaim ? "none" : "0 0 20px rgba(0,212,255,0.2)",
                     color: !canClaim ? "rgba(156,163,175,1)" : "black",
                   }}
                 >
@@ -957,26 +957,26 @@ export default function Shop() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="glass rounded-xl p-4 border border-amber-500/15 overflow-hidden relative"
-                  style={{ boxShadow: "0 0 30px rgba(201,168,76,0.05)" }}
+                  className="glass rounded-xl p-4 border border-cyan-500/15 overflow-hidden relative"
+                  style={{ boxShadow: "0 0 30px rgba(0,212,255,0.05)" }}
                 >
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 blur-3xl rounded-full" />
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/10 blur-3xl rounded-full" />
                   <div className="relative">
-                    <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-amber-400 mb-1">
+                    <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-cyan-400 mb-1">
                       Limited-Time Offer:
                     </div>
                     <div className="text-sm font-black text-white uppercase tracking-wider mb-1">
                       Elite Player's Pass
                     </div>
                     <div className="text-[0.5625rem] text-gray-600 mb-3">
-                      <span className="text-amber-400/60 font-bold uppercase flex items-center gap-1">
+                      <span className="text-cyan-400/60 font-bold uppercase flex items-center gap-1">
                         <Coins className="w-3 h-3" /> {elitePass?.price.toLocaleString() ?? "5,000"} Chips
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mb-3">
                       {[Star, Crown, Zap].map((Icon, i) => (
-                        <div key={i} className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/15 flex items-center justify-center">
-                          <Icon className="w-3 h-3 text-amber-400" />
+                        <div key={i} className="w-6 h-6 rounded bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
+                          <Icon className="w-3 h-3 text-cyan-400" />
                         </div>
                       ))}
                     </div>
@@ -985,8 +985,8 @@ export default function Shop() {
                         disabled
                         className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-green-400 flex items-center justify-center gap-1.5"
                         style={{
-                          background: "linear-gradient(135deg, rgba(201,168,76,0.1), rgba(0,212,170,0.1))",
-                          border: "1px solid rgba(201,168,76,0.2)",
+                          background: "linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,212,170,0.1))",
+                          border: "1px solid rgba(0,212,255,0.2)",
                         }}
                       >
                         <Check className="w-3.5 h-3.5" /> Purchased
@@ -999,8 +999,8 @@ export default function Shop() {
                         disabled={!elitePass}
                         className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-1.5"
                         style={{
-                          background: "linear-gradient(135deg, #c9a84c, #e8c566)",
-                          boxShadow: "0 0 20px rgba(201,168,76,0.2)",
+                          background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
+                          boxShadow: "0 0 20px rgba(0,212,255,0.2)",
                         }}
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />

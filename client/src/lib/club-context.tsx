@@ -78,6 +78,20 @@ export interface ClubEvent {
   createdAt: string;
 }
 
+export interface ClubTournament {
+  id: string;
+  name: string;
+  clubId: string;
+  status: string;
+  buyIn: number;
+  startingChips: number;
+  maxPlayers: number;
+  prizePool: number;
+  registeredCount: number;
+  startAt: string | null;
+  createdAt: string;
+}
+
 export interface MissionData {
   id: string;
   type: string;
@@ -102,6 +116,7 @@ interface ClubContextType {
   myStats: PlayerStats | null;
   announcements: Announcement[];
   events: ClubEvent[];
+  clubTournaments: ClubTournament[];
   missions: MissionData[];
   onlineUserIds: Set<string>;
   myRole: string;
@@ -125,6 +140,7 @@ interface ClubContextType {
   requestJoinClub: (clubId: string) => Promise<boolean>;
   createAnnouncement: (data: { title: string; content: string; pinned?: boolean }) => Promise<boolean>;
   createEvent: (data: { name: string; eventType: string; description?: string; startTime?: string }) => Promise<boolean>;
+  createClubTournament: (data: { name: string; buyIn: number; startingChips: number; maxPlayers: number; startAt?: string }) => Promise<boolean>;
 }
 
 const ClubContext = createContext<ClubContextType | null>(null);
@@ -148,6 +164,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const [myStats, setMyStats] = useState<PlayerStats | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<ClubEvent[]>([]);
+  const [clubTournaments, setClubTournaments] = useState<ClubTournament[]>([]);
   const [missions, setMissions] = useState<MissionData[]>([]);
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const [myRole, setMyRole] = useState<string>("member");
@@ -171,12 +188,13 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const loadClubDetail = useCallback(async (clubId: string) => {
     if (!user) return;
     try {
-      const [membersRes, invRes, memberStatsRes, announcementsRes, eventsRes] = await Promise.all([
+      const [membersRes, invRes, memberStatsRes, announcementsRes, eventsRes, tournamentsRes] = await Promise.all([
         fetch(`/api/clubs/${clubId}/members`),
         fetch(`/api/clubs/${clubId}/invitations`),
         fetch(`/api/clubs/${clubId}/members/stats`),
         fetch(`/api/clubs/${clubId}/announcements`).catch(() => null),
         fetch(`/api/clubs/${clubId}/events`).catch(() => null),
+        fetch(`/api/clubs/${clubId}/tournaments`).catch(() => null),
       ]);
 
       if (membersRes.ok) {
@@ -191,6 +209,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       if (memberStatsRes.ok) setMemberStatsMap(await memberStatsRes.json());
       if (announcementsRes?.ok) setAnnouncements(await announcementsRes.json());
       if (eventsRes?.ok) setEvents(await eventsRes.json());
+      if (tournamentsRes?.ok) setClubTournaments(await tournamentsRes.json());
     } catch {
       // Detail load failure is non-fatal
     }
@@ -233,6 +252,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         setMemberStatsMap({});
         setAnnouncements([]);
         setEvents([]);
+        setClubTournaments([]);
         setMyRole("member");
       }
     } catch (err: any) {
@@ -509,6 +529,27 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     }
   }, [club, reload, toast]);
 
+  const createClubTournament = useCallback(async (data: { name: string; buyIn: number; startingChips: number; maxPlayers: number; startAt?: string }) => {
+    if (!club) return false;
+    try {
+      const res = await fetch("/api/tournaments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, clubId: club.id }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ message: "Failed to create tournament" }));
+        throw new Error(d.message);
+      }
+      toast({ title: "Tournament created!" });
+      await loadClubDetail(club.id);
+      return true;
+    } catch (err: any) {
+      toast({ title: "Failed to create tournament", description: err.message, variant: "destructive" });
+      return false;
+    }
+  }, [club, toast, loadClubDetail]);
+
   const createEvent = useCallback(async (data: { name: string; eventType: string; description?: string; startTime?: string }) => {
     if (!club) return false;
     try {
@@ -533,10 +574,10 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   return (
     <ClubContext.Provider value={{
       club, allClubs, members, invitations, memberStatsMap, myStats, announcements, events,
-      missions, onlineUserIds, myRole, isAdminOrOwner, loading,
+      clubTournaments, missions, onlineUserIds, myRole, isAdminOrOwner, loading,
       reload, switchClub, createClub, updateClub, deleteClub, sendInvite, handleInvitation,
       changeRole, kickMember, joinClub, leaveClub, requestJoinClub,
-      createAnnouncement, createEvent,
+      createAnnouncement, createEvent, createClubTournament,
     }}>
       {children}
     </ClubContext.Provider>

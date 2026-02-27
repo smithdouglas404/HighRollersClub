@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Zap, Shield, Crown, Star, Trophy, Flame } from "lucide-react";
-import { MatrixRain } from "../MatrixRain";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 
@@ -30,14 +29,14 @@ export interface AvatarOption {
 
 export const AVATAR_OPTIONS: AvatarOption[] = [
   // Legendary (4)
-  { id: "neon-viper",    name: "Neon Viper",    image: avNeonViper,    tier: "legendary", borderColor: "#00f0ff", glowColor: "rgba(0,240,255,0.3)" },
+  { id: "neon-viper",    name: "Neon Viper",    image: avNeonViper,    tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
   { id: "chrome-siren",  name: "Chrome Siren",  image: avChromeSiren,  tier: "legendary", borderColor: "#b44dff", glowColor: "rgba(180,77,255,0.3)" },
   { id: "gold-phantom",  name: "Gold Phantom",  image: avGoldPhantom,  tier: "legendary", borderColor: "#ffd700", glowColor: "rgba(255,215,0,0.3)" },
-  { id: "shadow-king",   name: "Shadow King",   image: avShadowKing,   tier: "legendary", borderColor: "#c9a84c", glowColor: "rgba(201,168,76,0.3)" },
+  { id: "shadow-king",   name: "Shadow King",   image: avShadowKing,   tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
   // Epic (4)
   { id: "red-wolf",      name: "Red Wolf",      image: avRedWolf,      tier: "epic", borderColor: "#ff3366", glowColor: "rgba(255,51,102,0.3)" },
   { id: "ice-queen",     name: "Ice Queen",     image: avIceQueen,     tier: "epic", borderColor: "#67e8f9", glowColor: "rgba(103,232,249,0.3)" },
-  { id: "tech-monk",     name: "Tech Monk",     image: avTechMonk,     tier: "epic", borderColor: "#00ff9d", glowColor: "rgba(0,255,157,0.3)" },
+  { id: "tech-monk",     name: "Tech Monk",     image: avTechMonk,     tier: "epic", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
   { id: "cyber-punk",    name: "Cyber Punk",    image: avCyberPunk,    tier: "epic", borderColor: "#ff69b4", glowColor: "rgba(255,105,180,0.3)" },
   // Rare (4)
   { id: "steel-ghost",   name: "Steel Ghost",   image: avSteelGhost,   tier: "rare", borderColor: "#8ecae6", glowColor: "rgba(142,202,230,0.25)" },
@@ -47,7 +46,7 @@ export const AVATAR_OPTIONS: AvatarOption[] = [
 ];
 
 const TIER_CONFIG: Record<string, { bg: string; text: string; label: string; icon: any }> = {
-  legendary: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", label: "LEGENDARY", icon: Crown },
+  legendary: { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "LEGENDARY", icon: Crown },
   epic:      { bg: "bg-purple-500/10 border-purple-500/20", text: "text-purple-400", label: "EPIC", icon: Star },
   rare:      { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "RARE", icon: Zap },
   common:    { bg: "bg-gray-500/10 border-gray-500/20", text: "text-gray-400", label: "COMMON", icon: Shield },
@@ -83,14 +82,12 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.1 }}
           transition={{ duration: 0.5 }}
-          className="min-h-screen bg-[#0a1022] text-white flex flex-col items-center justify-center relative overflow-hidden"
+          className="min-h-screen bg-[#111b2a] text-white flex flex-col items-center justify-center relative overflow-hidden"
         >
           {/* Background */}
           <div className="absolute inset-0">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,20,30,0.4)_0%,rgba(0,0,0,0.95)_70%)]" />
           </div>
-          <MatrixRain side="both" color="#00ff9d" opacity={0.08} density={0.2} className="absolute inset-0 z-[1]" />
-
           {/* Dynamic glow for selected avatar */}
           <div className="absolute inset-0 z-[2] pointer-events-none">
             <div
@@ -108,8 +105,8 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
               className="text-center space-y-2"
             >
               <div className="w-14 h-14 mx-auto relative">
-                <div className="absolute inset-[-6px] bg-amber-500/20 blur-xl rounded-full animate-pulse" />
-                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(201,168,76,0.5)]" />
+                <div className="absolute inset-[-6px] bg-cyan-500/20 blur-xl rounded-full animate-pulse" />
+                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(0,212,255,0.5)]" />
               </div>
               <h1 className="font-display text-xl font-bold tracking-[0.2em] gold-text">CHOOSE YOUR AVATAR</h1>
               <p className="text-xs text-gray-500">Your avatar carries your win history and total earnings</p>
@@ -126,7 +123,7 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
                 <button
                   key={tier}
                   onClick={() => setTierFilter(tier)}
-                  className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
                     tierFilter === tier
                       ? tier === "all"
                         ? "bg-white/10 text-white border border-white/15"
@@ -196,7 +193,7 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
 
                       {/* Name at bottom */}
                       <div className="absolute bottom-0 left-0 right-0 px-2 pb-1.5">
-                        <div className="text-[10px] font-bold text-white truncate drop-shadow-lg">{av.name}</div>
+                        <div className="text-[0.625rem] font-bold text-white truncate drop-shadow-lg">{av.name}</div>
                       </div>
                     </div>
                   </motion.button>
@@ -220,7 +217,7 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
                 </div>
                 <div>
                   <div className="text-sm font-bold text-white">{selected.name}</div>
-                  <div className={`text-[9px] font-bold uppercase tracking-wider ${TIER_CONFIG[selected.tier].text}`}>
+                  <div className={`text-[0.5625rem] font-bold uppercase tracking-wider ${TIER_CONFIG[selected.tier].text}`}>
                     {TIER_CONFIG[selected.tier].label}
                   </div>
                 </div>
@@ -230,15 +227,15 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
               <div className="flex items-center gap-4">
                 <div className="text-center">
                   <div className="text-xs font-bold text-white">0</div>
-                  <div className="text-[8px] text-gray-600 uppercase tracking-wider">Wins</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs font-bold text-amber-400">0</div>
-                  <div className="text-[8px] text-gray-600 uppercase tracking-wider">Chips Won</div>
+                  <div className="text-[0.5rem] text-gray-600 uppercase tracking-wider">Wins</div>
                 </div>
                 <div className="text-center">
                   <div className="text-xs font-bold text-cyan-400">0</div>
-                  <div className="text-[8px] text-gray-600 uppercase tracking-wider">Hands</div>
+                  <div className="text-[0.5rem] text-gray-600 uppercase tracking-wider">Chips Won</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs font-bold text-cyan-400">0</div>
+                  <div className="text-[0.5rem] text-gray-600 uppercase tracking-wider">Hands</div>
                 </div>
               </div>
             </motion.div>
@@ -264,7 +261,7 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
                     boxShadow: playerName.trim() ? `0 0 15px ${selected.glowColor.replace("0.3", "0.1")}` : "none",
                   }}
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 font-mono">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.625rem] text-gray-600 font-mono">
                   {playerName.length}/16
                 </div>
               </div>
@@ -294,7 +291,7 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
           initial={{ opacity: 1 }}
           animate={{ opacity: 0, scale: 1.2 }}
           transition={{ duration: 0.8 }}
-          className="min-h-screen bg-[#0a1022] flex items-center justify-center"
+          className="min-h-screen bg-[#111b2a] flex items-center justify-center"
         >
           <motion.div
             initial={{ scale: 1 }}

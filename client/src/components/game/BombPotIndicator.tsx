@@ -70,7 +70,7 @@ export function BombPotIndicator({ visible }: BombPotIndicatorProps) {
                     rotate: `${deg}deg`,
                   }}
                 >
-                  <Flame className="w-5 h-5 text-amber-400 opacity-60" />
+                  <Flame className="w-5 h-5 text-cyan-400 opacity-60" />
                 </motion.div>
               ))}
             </motion.div>
@@ -89,7 +89,7 @@ export function BombPotIndicator({ visible }: BombPotIndicatorProps) {
                   boxShadow: "0 0 60px rgba(255,170,0,0.3), 0 0 120px rgba(255,100,0,0.15)",
                 }}
               >
-                <Flame className="w-10 h-10 text-amber-400" style={{ filter: "drop-shadow(0 0 8px rgba(255,170,0,0.6))" }} />
+                <Flame className="w-10 h-10 text-cyan-400" style={{ filter: "drop-shadow(0 0 8px rgba(255,170,0,0.6))" }} />
               </div>
             </motion.div>
 
@@ -117,7 +117,7 @@ export function BombPotIndicator({ visible }: BombPotIndicatorProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="text-sm font-bold uppercase tracking-wider text-amber-500/60 mt-1"
+                className="text-sm font-bold uppercase tracking-wider text-cyan-500/60 mt-1"
               >
                 Everyone is in the pot
               </motion.p>

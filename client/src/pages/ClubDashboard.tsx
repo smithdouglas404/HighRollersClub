@@ -9,8 +9,10 @@ import {
   Trophy, Crown, TrendingUp,
   Users, Coins, Plus, Loader2,
   Settings, Search, Check, X,
-  Shield
+  Shield, Medal, Gamepad2
 } from "lucide-react";
+import { ClubTournaments } from "@/components/club/ClubTournaments";
+import { ClubLeaderboard } from "@/components/club/ClubLeaderboard";
 import pokerTableImg from "@assets/generated_images/poker_table_perspective.png";
 
 /* ── Circuit Board SVG Pattern ────────────────────────── */
@@ -25,6 +27,7 @@ export default function ClubDashboard() {
     createClub, isAdminOrOwner, handleInvitation,
   } = useClub();
 
+  const [activeTab, setActiveTab] = useState<"members" | "tournaments" | "leaderboard">("members");
   const [creatingTable, setCreatingTable] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [alliance, setAlliance] = useState<{ id: string; name: string; clubIds: string[] } | null>(null);
@@ -121,7 +124,7 @@ export default function ClubDashboard() {
         <div className="relative z-10">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
             </div>
           ) : !club ? (
             /* ─── No Club — Create or Browse ──────────────────────── */
@@ -131,8 +134,8 @@ export default function ClubDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 className="glass rounded-2xl p-8 border border-white/5 text-center"
               >
-                <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/20 flex items-center justify-center mx-auto mb-5">
-                  <Trophy className="w-8 h-8 text-amber-400" />
+                <div className="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
+                  <Trophy className="w-8 h-8 text-cyan-400" />
                 </div>
                 <h3 className="text-lg font-bold text-white mb-1.5">Create Your Club</h3>
                 <p className="text-xs text-gray-500 mb-6">Start your own poker club and invite friends to play</p>
@@ -178,7 +181,7 @@ export default function ClubDashboard() {
                   onClick={handleCreateClub}
                   disabled={creatingClub || !newClubName.trim()}
                   className="w-full mt-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  style={{ background: "linear-gradient(135deg, #c9a84c, #f0d078)", boxShadow: "0 0 20px rgba(201,168,76,0.2)" }}
+                  style={{ background: "linear-gradient(135deg, #00d4ff, #f0d078)", boxShadow: "0 0 20px rgba(0,212,255,0.2)" }}
                 >
                   {creatingClub ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                   Create Club
@@ -213,11 +216,11 @@ export default function ClubDashboard() {
               >
                 <div className="flex-1" />
                 <div className="flex items-center gap-3">
-                  <Crown className="w-8 h-8 text-amber-400 drop-shadow-[0_0_12px_rgba(201,168,76,0.5)]" />
+                  <Crown className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_12px_rgba(0,212,255,0.5)]" />
                   <div className="text-center">
                     <h2
                       className="text-2xl font-black tracking-[0.2em] uppercase gold-text"
-                      style={{ textShadow: "0 0 20px rgba(201,168,76,0.3)" }}
+                      style={{ textShadow: "0 0 20px rgba(0,212,255,0.3)" }}
                     >
                       CLUB MANAGER
                     </h2>
@@ -235,8 +238,8 @@ export default function ClubDashboard() {
                       disabled={creatingTable}
                       className="px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black flex items-center gap-1.5 disabled:opacity-50"
                       style={{
-                        background: "linear-gradient(135deg, #c9a84c, #f0d078)",
-                        boxShadow: "0 0 20px rgba(201,168,76,0.3)",
+                        background: "linear-gradient(135deg, #00d4ff, #f0d078)",
+                        boxShadow: "0 0 20px rgba(0,212,255,0.3)",
                       }}
                     >
                       {creatingTable ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
@@ -244,16 +247,49 @@ export default function ClubDashboard() {
                     </motion.button>
                     <button
                       onClick={() => navigate("/club/settings")}
-                      className="p-2.5 rounded-lg border border-white/10 hover:border-amber-500/30 transition-all"
+                      className="p-2.5 rounded-lg border border-white/10 hover:border-cyan-500/30 transition-all"
                       style={{ background: "rgba(255,255,255,0.03)" }}
                     >
-                      <Settings className="w-5 h-5 text-gray-400 hover:text-amber-400 transition-colors" />
+                      <Settings className="w-5 h-5 text-gray-400 hover:text-cyan-400 transition-colors" />
                     </button>
                   </div>
                 </div>
               </motion.div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* ── Tab Navigation ── */}
+              <div className="flex items-center gap-1 mb-6 p-1 glass rounded-xl border border-white/5 w-fit">
+                {([
+                  { key: "members" as const, label: "Members", icon: Users },
+                  { key: "tournaments" as const, label: "Tournaments", icon: Trophy },
+                  { key: "leaderboard" as const, label: "Leaderboard", icon: Medal },
+                ]).map(tab => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
+                        isActive
+                          ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
+                          : "text-gray-500 hover:text-gray-300 border border-transparent"
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ── Tab: Tournaments ── */}
+              {activeTab === "tournaments" && <ClubTournaments />}
+
+              {/* ── Tab: Leaderboard ── */}
+              {activeTab === "leaderboard" && club && <ClubLeaderboard clubId={club.id} />}
+
+              {/* ── Tab: Members ── */}
+              {activeTab === "members" && <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* ─── Main Content: Member List Table (2 cols) ─── */}
                 <div className="lg:col-span-2">
                   <motion.div
@@ -263,21 +299,21 @@ export default function ClubDashboard() {
                     style={{
                       background: "rgba(20,31,40,0.65)",
                       backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(212,168,67,0.20)",
-                      boxShadow: "0 0 40px rgba(212,168,67,0.06), inset 0 1px 0 rgba(212,168,67,0.08)",
+                      border: "1px solid rgba(0,212,255,0.20)",
+                      boxShadow: "0 0 40px rgba(0,212,255,0.06), inset 0 1px 0 rgba(0,212,255,0.08)",
                     }}
                   >
                     {/* Gold header bar */}
                     <div
-                      className="px-6 py-3 border-b border-amber-500/25"
+                      className="px-6 py-3 border-b border-cyan-500/25"
                       style={{
-                        background: "linear-gradient(90deg, rgba(212,168,67,0.18), rgba(180,140,50,0.06))",
-                        boxShadow: "inset 0 -1px 0 rgba(212,168,67,0.15)",
+                        background: "linear-gradient(90deg, rgba(0,212,255,0.18), rgba(180,140,50,0.06))",
+                        boxShadow: "inset 0 -1px 0 rgba(0,212,255,0.15)",
                       }}
                     >
                       <h3
-                        className="text-sm font-black uppercase tracking-[0.15em] text-amber-400"
-                        style={{ textShadow: "0 0 15px rgba(212,168,67,0.4)" }}
+                        className="text-sm font-black uppercase tracking-[0.15em] text-cyan-400"
+                        style={{ textShadow: "0 0 15px rgba(0,212,255,0.4)" }}
                       >
                         Member List
                       </h3>
@@ -315,7 +351,7 @@ export default function ClubDashboard() {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.04 }}
-                            className="grid grid-cols-12 gap-3 items-center px-6 py-4 border-b border-white/[0.04] hover:bg-amber-500/[0.06] transition-all"
+                            className="grid grid-cols-12 gap-3 items-center px-6 py-4 border-b border-white/[0.04] hover:bg-cyan-500/[0.06] transition-all"
                           >
                             {/* Avatar */}
                             <div className="col-span-1 flex justify-center">
@@ -334,7 +370,7 @@ export default function ClubDashboard() {
                             </div>
                             {/* Chips */}
                             <div className="col-span-3 flex items-center gap-1.5">
-                              <Coins className="w-4 h-4 text-amber-400" />
+                              <Coins className="w-4 h-4 text-cyan-400" />
                               <span className="text-base font-bold text-white">
                                 {member.chipBalance.toLocaleString()}
                               </span>
@@ -366,15 +402,15 @@ export default function ClubDashboard() {
                     style={{
                       background: "rgba(20,31,40,0.65)",
                       backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(212,168,67,0.12)",
-                      boxShadow: "0 0 25px rgba(212,168,67,0.04)",
+                      border: "1px solid rgba(0,212,255,0.12)",
+                      boxShadow: "0 0 25px rgba(0,212,255,0.04)",
                     }}
                   >
-                    <div className="px-4 py-3 border-b border-amber-500/10">
+                    <div className="px-4 py-3 border-b border-cyan-500/10">
                       <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white flex items-center gap-2">
                         Pending Join Requests
                         {pendingInvitations.length > 0 && (
-                          <span className="bg-amber-500/20 text-amber-400 text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30">
+                          <span className="bg-cyan-500/20 text-cyan-400 text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full border border-cyan-500/30">
                             {pendingInvitations.length}
                           </span>
                         )}
@@ -442,11 +478,11 @@ export default function ClubDashboard() {
                     style={{
                       background: "rgba(20,31,40,0.65)",
                       backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(212,168,67,0.12)",
-                      boxShadow: "0 0 25px rgba(212,168,67,0.04)",
+                      border: "1px solid rgba(0,212,255,0.12)",
+                      boxShadow: "0 0 25px rgba(0,212,255,0.04)",
                     }}
                   >
-                    <div className="px-4 py-3 border-b border-amber-500/10">
+                    <div className="px-4 py-3 border-b border-cyan-500/10">
                       <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white flex items-center gap-2">
                         <Shield className="w-3.5 h-3.5 text-purple-400" /> Alliance
                       </h3>
@@ -473,7 +509,7 @@ export default function ClubDashboard() {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => navigate("/leagues?tab=alliances")}
-                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-amber-400 border border-amber-500/20 hover:bg-amber-500/10 transition-colors"
+                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-colors"
                         >
                           Browse Alliances
                         </motion.button>
@@ -490,8 +526,8 @@ export default function ClubDashboard() {
                     style={{
                       background: "rgba(20,31,40,0.65)",
                       backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(212,168,67,0.12)",
-                      boxShadow: "0 0 25px rgba(212,168,67,0.04)",
+                      border: "1px solid rgba(0,212,255,0.12)",
+                      boxShadow: "0 0 25px rgba(0,212,255,0.04)",
                     }}
                   >
                     <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white mb-3">
@@ -508,7 +544,7 @@ export default function ClubDashboard() {
                         <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
                           <TrendingUp className="w-3 h-3" /> Online Now
                         </span>
-                        <span className="text-xs font-bold text-amber-400">
+                        <span className="text-xs font-bold text-cyan-400">
                           {members.filter(m => onlineUserIds.has(m.userId)).length}
                         </span>
                       </div>
@@ -516,14 +552,14 @@ export default function ClubDashboard() {
                         <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
                           <Coins className="w-3 h-3" /> Your Balance
                         </span>
-                        <span className="text-xs font-bold text-amber-400">
+                        <span className="text-xs font-bold text-cyan-400">
                           {user?.chipBalance?.toLocaleString() ?? 0}
                         </span>
                       </div>
                     </div>
                   </motion.div>
                 </div>
-              </div>
+              </div>}
             </>
           )}
         </div>

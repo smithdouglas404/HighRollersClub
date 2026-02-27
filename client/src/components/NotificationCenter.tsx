@@ -54,7 +54,7 @@ export function NotificationCenter() {
       >
         <Bell className="w-4 h-4 text-gray-400" />
         {totalCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[0.5rem] font-bold flex items-center justify-center">
             {totalCount > 9 ? "9+" : totalCount}
           </span>
         )}
@@ -81,7 +81,7 @@ export function NotificationCenter() {
               {totalCount === 0 ? (
                 <div className="py-8 text-center">
                   <Bell className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                  <p className="text-[11px] text-gray-600">No notifications</p>
+                  <p className="text-[0.6875rem] text-gray-600">No notifications</p>
                 </div>
               ) : (
                 <>
@@ -92,8 +92,8 @@ export function NotificationCenter() {
                         <UserPlus className="w-3.5 h-3.5 text-green-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] text-white font-medium">{inv.displayName} wants to join</p>
-                        <p className="text-[9px] text-gray-600 mt-0.5">{formatTimeAgo(inv.createdAt)}</p>
+                        <p className="text-[0.6875rem] text-white font-medium">{inv.displayName} wants to join</p>
+                        <p className="text-[0.5625rem] text-gray-600 mt-0.5">{formatTimeAgo(inv.createdAt)}</p>
                       </div>
                     </div>
                   ))}
@@ -101,13 +101,13 @@ export function NotificationCenter() {
                   {/* Announcements */}
                   {recentAnnouncements.slice(0, 5).map((a) => (
                     <div key={`ann-${a.id}`} className="px-4 py-3 hover:bg-white/[0.02] transition-colors flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <Megaphone className="w-3.5 h-3.5 text-amber-400" />
+                      <div className="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <Megaphone className="w-3.5 h-3.5 text-cyan-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] text-white font-medium truncate">{a.title}</p>
-                        <p className="text-[10px] text-gray-500 line-clamp-1">{a.content}</p>
-                        <p className="text-[9px] text-gray-600 mt-0.5">{formatTimeAgo(a.createdAt)}</p>
+                        <p className="text-[0.6875rem] text-white font-medium truncate">{a.title}</p>
+                        <p className="text-[0.625rem] text-gray-500 line-clamp-1">{a.content}</p>
+                        <p className="text-[0.5625rem] text-gray-600 mt-0.5">{formatTimeAgo(a.createdAt)}</p>
                       </div>
                     </div>
                   ))}
@@ -119,11 +119,11 @@ export function NotificationCenter() {
                         <CalendarDays className="w-3.5 h-3.5 text-cyan-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] text-white font-medium truncate">{ev.name}</p>
-                        <p className="text-[10px] text-gray-500">
+                        <p className="text-[0.6875rem] text-white font-medium truncate">{ev.name}</p>
+                        <p className="text-[0.625rem] text-gray-500">
                           {new Date(ev.startTime).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                         </p>
-                        <p className="text-[9px] text-gray-600 mt-0.5">{ev.eventType}</p>
+                        <p className="text-[0.5625rem] text-gray-600 mt-0.5">{ev.eventType}</p>
                       </div>
                     </div>
                   ))}

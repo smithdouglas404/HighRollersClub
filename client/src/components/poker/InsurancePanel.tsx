@@ -62,23 +62,22 @@ export function InsurancePanel({ offer, onAccept, onDecline }: InsurancePanelPro
         className="rounded-xl overflow-hidden backdrop-blur-xl"
         style={{
           background: "linear-gradient(135deg, rgba(10,15,30,0.95), rgba(20,10,40,0.95))",
-          border: "1px solid rgba(180,77,255,0.3)",
-          boxShadow: "0 0 30px rgba(180,77,255,0.15), 0 0 60px rgba(0,240,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",
+          border: "1px solid rgba(0,212,255,0.2)",
+          boxShadow: "0 0 30px rgba(0,212,255,0.1), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
       >
         {/* Holographic top border */}
         <div
           className="h-[2px] w-full"
           style={{
-            background: "linear-gradient(90deg, transparent, #b44dff, #00f0ff, #ffd700, #b44dff, transparent)",
-            animation: "holoSweep 3s linear infinite",
+            background: "linear-gradient(90deg, transparent, #00d4ff, #00d4ff, #00d4ff, transparent)",
           }}
         />
 
         <div className="p-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-purple-400">
+            <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-cyan-400">
               Equity Insurance
             </div>
             <div
@@ -96,16 +95,16 @@ export function InsurancePanel({ offer, onAccept, onDecline }: InsurancePanelPro
           {/* Equity display */}
           <div className="flex items-center justify-center gap-6 mb-4">
             <div className="text-center">
-              <div className="text-[9px] uppercase tracking-wider text-gray-500 mb-1">Your Equity</div>
-              <div className="text-2xl font-bold font-mono text-cyan-400">{equityPct}%</div>
+              <div className="text-[0.5625rem] uppercase tracking-wider text-gray-500 mb-1">Your Equity</div>
+              <div className="text-2xl font-bold font-mono text-white">{equityPct}%</div>
             </div>
             <div className="w-px h-10 bg-white/10" />
             <div className="text-center">
-              <div className="text-[9px] uppercase tracking-wider text-gray-500 mb-1">Cash Out</div>
-              <div className="text-2xl font-bold font-mono text-amber-400">
+              <div className="text-[0.5625rem] uppercase tracking-wider text-gray-500 mb-1">Cash Out</div>
+              <div className="text-2xl font-bold font-mono" style={{ color: "#ffd700" }}>
                 ${offer.cashOutAmount.toLocaleString()}
               </div>
-              <div className="text-[8px] text-gray-600 font-mono">1% fee: ${offer.fee.toLocaleString()}</div>
+              <div className="text-[0.5rem] text-gray-600 font-mono">1% fee: ${offer.fee.toLocaleString()}</div>
             </div>
           </div>
 

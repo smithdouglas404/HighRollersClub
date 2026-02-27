@@ -30,8 +30,8 @@ export function AmbientParticles() {
 
     const colors = [
       "rgba(201,168,76,",   // gold
-      "rgba(0,240,255,",    // cyan
-      "rgba(0,255,157,",    // green
+      "rgba(212,168,67,",    // gold
+      "rgba(201,168,76,",    // warm gold
       "rgba(255,255,255,",  // white
     ];
 

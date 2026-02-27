@@ -93,7 +93,7 @@ export default function ClubSettings() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
           </div>
         ) : !club ? (
           <motion.div
@@ -107,8 +107,8 @@ export default function ClubSettings() {
               onClick={() => navigate("/lobby")}
               className="mt-4 px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
               style={{
-                background: "linear-gradient(135deg, #c9a84c, #00d4aa)",
-                boxShadow: "0 0 15px rgba(201,168,76,0.2)",
+                background: "linear-gradient(135deg, #00d4ff, #00d4aa)",
+                boxShadow: "0 0 15px rgba(0,212,255,0.2)",
               }}
             >
               Back to Lobby
@@ -125,8 +125,8 @@ export default function ClubSettings() {
                   exit={{ opacity: 0, y: -10 }}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl"
                   style={{
-                    background: "rgba(201,168,76,0.08)",
-                    border: "1px solid rgba(201,168,76,0.2)",
+                    background: "rgba(0,212,255,0.08)",
+                    border: "1px solid rgba(0,212,255,0.2)",
                   }}
                 >
                   <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
@@ -142,7 +142,7 @@ export default function ClubSettings() {
               className="rounded-xl overflow-hidden"
               style={{
                 background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(212,168,67,0.1)",
+                border: "1px solid rgba(0,212,255,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
             >
@@ -150,8 +150,8 @@ export default function ClubSettings() {
                 className="flex items-center gap-3 px-5 py-4"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
               >
-                <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-amber-400" />
+                <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white tracking-wider uppercase">
@@ -207,7 +207,7 @@ export default function ClubSettings() {
                     {isPublic ? (
                       <Globe className="w-4 h-4 text-green-400" />
                     ) : (
-                      <Lock className="w-4 h-4 text-amber-400" />
+                      <Lock className="w-4 h-4 text-cyan-400" />
                     )}
                     <div>
                       <div className="text-xs font-semibold text-white">
@@ -225,7 +225,7 @@ export default function ClubSettings() {
                     className="relative w-11 h-6 rounded-full transition-colors"
                     style={{
                       background: isPublic
-                        ? "linear-gradient(135deg, #c9a84c, #00d4aa)"
+                        ? "linear-gradient(135deg, #00d4ff, #00d4aa)"
                         : "rgba(255,255,255,0.1)",
                     }}
                   >
@@ -246,8 +246,8 @@ export default function ClubSettings() {
                   disabled={saving || !name.trim()}
                   className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: "linear-gradient(135deg, #c9a84c, #00d4aa)",
-                    boxShadow: "0 0 20px rgba(201,168,76,0.15)",
+                    background: "linear-gradient(135deg, #00d4ff, #00d4aa)",
+                    boxShadow: "0 0 20px rgba(0,212,255,0.15)",
                   }}
                 >
                   {saving ? (
@@ -277,8 +277,8 @@ export default function ClubSettings() {
                   className="flex items-center gap-3 px-5 py-4"
                   style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
                 >
-                  <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
-                    <Crown className="w-5 h-5 text-amber-400" />
+                  <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-cyan-400" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white tracking-wider uppercase">
@@ -290,7 +290,7 @@ export default function ClubSettings() {
 
                 <div className="p-5 space-y-4">
                   <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(255,165,0,0.04)", border: "1px solid rgba(255,165,0,0.1)" }}>
-                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                     <p className="text-[0.625rem] text-gray-400 leading-relaxed">
                       Transferring ownership is permanent. You will be demoted to a regular member
                       and the new owner will have full control over the club.
@@ -326,7 +326,7 @@ export default function ClubSettings() {
                     whileTap={{ scale: 0.99 }}
                     onClick={handleTransferOwnership}
                     disabled={!transferTarget || saving}
-                    className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed text-amber-300 transition-colors hover:text-amber-200"
+                    className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed text-cyan-300 transition-colors hover:text-cyan-200"
                     style={{
                       background: "rgba(255,165,0,0.08)",
                       border: "1px solid rgba(255,165,0,0.2)",

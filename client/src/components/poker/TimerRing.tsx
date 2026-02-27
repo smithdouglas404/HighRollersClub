@@ -98,7 +98,7 @@ export function TimerRing({
         style={{ bottom: -2 }}
       >
         <div
-          className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold leading-none backdrop-blur-sm"
+          className="px-1.5 py-0.5 rounded-full text-[0.5625rem] font-mono font-bold leading-none backdrop-blur-sm"
           style={{
             background: "rgba(0,0,0,0.75)",
             color,

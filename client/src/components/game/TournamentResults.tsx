@@ -120,8 +120,8 @@ export function TournamentResults({ results, prizePool, onClose }: TournamentRes
                 transition={{ delay: 0.5 }}
                 className="mt-2 flex items-center justify-center gap-2"
               >
-                <Coins className="w-4 h-4 text-amber-400" />
-                <span className="text-sm font-mono font-bold text-amber-300">
+                <Coins className="w-4 h-4 text-yellow-400" />
+                <span className="text-sm font-mono font-bold" style={{ color: "#ffd700" }}>
                   Prize Pool: {prizePool.toLocaleString()}
                 </span>
               </motion.div>
@@ -185,7 +185,7 @@ export function TournamentResults({ results, prizePool, onClose }: TournamentRes
                         {result.displayName}
                       </div>
                       {isTopThree && (
-                        <div className="text-[10px] text-gray-600 uppercase tracking-wider font-bold">
+                        <div className="text-[0.625rem] text-gray-600 uppercase tracking-wider font-bold">
                           {config!.label}
                         </div>
                       )}

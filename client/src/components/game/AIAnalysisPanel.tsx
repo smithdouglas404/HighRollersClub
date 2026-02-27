@@ -100,9 +100,9 @@ export function AIAnalysisPanel({
       <div
         className="rounded-xl backdrop-blur-md overflow-hidden"
         style={{
-          background: "linear-gradient(180deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
-          border: "1px solid rgba(0,240,255,0.1)",
-          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(0,240,255,0.04)",
+          background: "linear-gradient(180deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
+          border: "1px solid rgba(0,212,255,0.1)",
+          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(0,212,255,0.04)",
         }}
       >
         {/* Header */}
@@ -129,7 +129,7 @@ export function AIAnalysisPanel({
               )}
             </div>
             <div className="text-left">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
                 AI Hand Analysis
               </span>
               {analysis && (
@@ -143,7 +143,7 @@ export function AIAnalysisPanel({
                     }}
                   />
                   <span
-                    className={`text-[9px] font-bold uppercase tracking-wider ${
+                    className={`text-[0.5625rem] font-bold uppercase tracking-wider ${
                       isOptimal ? "text-green-400" : "text-red-400"
                     }`}
                   >
@@ -182,7 +182,7 @@ export function AIAnalysisPanel({
                     className="flex flex-col items-center gap-3 py-6"
                   >
                     <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
-                    <span className="text-[11px] text-gray-500 font-medium">
+                    <span className="text-[0.6875rem] text-gray-500 font-medium">
                       Analyzing hand...
                     </span>
                   </motion.div>
@@ -200,7 +200,7 @@ export function AIAnalysisPanel({
                     }}
                   >
                     <XCircle className="w-4 h-4 text-red-400 shrink-0" />
-                    <span className="text-[11px] text-red-400/80">{error}</span>
+                    <span className="text-[0.6875rem] text-red-400/80">{error}</span>
                   </motion.div>
                 )}
 
@@ -235,7 +235,7 @@ export function AIAnalysisPanel({
                           >
                             {analysis.rating}
                           </div>
-                          <div className="text-[9px] text-gray-600">Play Rating</div>
+                          <div className="text-[0.5625rem] text-gray-600">Play Rating</div>
                         </div>
                       </div>
                       <div
@@ -252,7 +252,7 @@ export function AIAnalysisPanel({
 
                     {/* EV by action */}
                     <div>
-                      <div className="text-[9px] font-bold uppercase tracking-wider text-gray-600 mb-2">
+                      <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-600 mb-2">
                         Expected Value by Action
                       </div>
                       <div className="space-y-1">
@@ -270,7 +270,7 @@ export function AIAnalysisPanel({
                           >
                             <div className="flex items-center gap-2">
                               <Target className="w-3 h-3 text-gray-600" />
-                              <span className="text-[11px] font-bold text-gray-300 uppercase">
+                              <span className="text-[0.6875rem] font-bold text-gray-300 uppercase">
                                 {ev.action}
                               </span>
                             </div>
@@ -297,7 +297,7 @@ export function AIAnalysisPanel({
                     {/* Leak Detection */}
                     {analysis.leaks.length > 0 && (
                       <div>
-                        <div className="text-[9px] font-bold uppercase tracking-wider text-gray-600 mb-2">
+                        <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-600 mb-2">
                           Leak Detection
                         </div>
                         <div className="space-y-1">
@@ -314,7 +314,7 @@ export function AIAnalysisPanel({
                               }}
                             >
                               <AlertTriangle className="w-3 h-3 text-red-400/70 shrink-0 mt-0.5" />
-                              <span className="text-[11px] text-red-300/80 leading-relaxed">
+                              <span className="text-[0.6875rem] text-red-300/80 leading-relaxed">
                                 {leak}
                               </span>
                             </motion.div>
@@ -326,7 +326,7 @@ export function AIAnalysisPanel({
                     {/* Recommendations */}
                     {analysis.recommendations.length > 0 && (
                       <div>
-                        <div className="text-[9px] font-bold uppercase tracking-wider text-gray-600 mb-2">
+                        <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-600 mb-2">
                           Recommendations
                         </div>
                         <div className="space-y-1">
@@ -338,12 +338,12 @@ export function AIAnalysisPanel({
                               transition={{ delay: 0.35 + i * 0.05 }}
                               className="flex items-start gap-2 rounded-lg px-3 py-2"
                               style={{
-                                background: "rgba(0,240,255,0.03)",
-                                border: "1px solid rgba(0,240,255,0.08)",
+                                background: "rgba(0,212,255,0.03)",
+                                border: "1px solid rgba(0,212,255,0.08)",
                               }}
                             >
                               <Lightbulb className="w-3 h-3 text-cyan-400/70 shrink-0 mt-0.5" />
-                              <span className="text-[11px] text-cyan-300/80 leading-relaxed">
+                              <span className="text-[0.6875rem] text-cyan-300/80 leading-relaxed">
                                 {rec}
                               </span>
                             </motion.div>
@@ -362,7 +362,7 @@ export function AIAnalysisPanel({
                         whileTap={{ scale: 0.98 }}
                         onClick={handleSave}
                         disabled={saved}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold text-[11px] uppercase tracking-wider transition-all"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold text-[0.6875rem] uppercase tracking-wider transition-all"
                         style={{
                           background: saved
                             ? "rgba(34,197,94,0.1)"
@@ -394,7 +394,7 @@ export function AIAnalysisPanel({
                 {!analysis && !loading && !error && (
                   <div className="flex flex-col items-center gap-2 py-6">
                     <Brain className="w-6 h-6 text-gray-700" />
-                    <span className="text-[11px] text-gray-600 text-center">
+                    <span className="text-[0.6875rem] text-gray-600 text-center">
                       Play a hand to receive AI analysis
                     </span>
                   </div>

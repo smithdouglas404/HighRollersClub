@@ -7,8 +7,6 @@ import { ImageTable } from "../components/poker/ImageTable";
 
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
-import { AmbientParticles } from "../components/AmbientParticles";
-import { MatrixRain } from "../components/MatrixRain";
 import { AVATAR_OPTIONS, type AvatarOption } from "../components/poker/AvatarSelect";
 import { GameSetup, type GameSetupConfig } from "../components/game/GameSetup";
 import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
@@ -318,12 +316,7 @@ function GameTable({
       <div className="absolute inset-0">
         <img src={casinoBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" style={{ filter: "brightness(0.75) saturate(1.8) blur(1px)" }} />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(40,55,90,0.2)_0%,rgba(12,20,40,0.55)_80%)]" />
-        {!compactMode && <AmbientParticles />}
       </div>
-
-      {!compactMode && (
-        <MatrixRain side="both" color="#c9a84c" opacity={0.12} density={0.25} className="absolute inset-0 z-[1]" />
-      )}
 
       <ChipAnimation containerRef={tableRef} />
 
@@ -332,7 +325,7 @@ function GameTable({
       )}
 
       {/* ═══ TOP BAR ═══ */}
-      <div className="relative z-50 h-10 flex items-center justify-between px-4 bg-[#0a1020]/75 backdrop-blur-md border-b border-amber-500/15 shrink-0">
+      <div className="relative z-50 h-10 flex items-center justify-between px-4 bg-[#0a1020]/75 backdrop-blur-md border-b border-cyan-500/15 shrink-0">
         <div className="flex items-center gap-3">
           {onBack && (
             <button onClick={leaveTable || onBack} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Back to lobby">
@@ -349,10 +342,10 @@ function GameTable({
               : <>{players.length}-MAX</>
             }
           </span>
-          <span className="text-[0.625rem] text-amber-500/80 font-mono">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
-          <span className="text-[0.625rem] text-gray-400 font-mono">
+          <span className="text-[0.625rem] text-cyan-500/80 font-mono">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
+          <span className="text-[0.625rem] text-gray-500 font-mono">
             {(gameState as any).handNumber
-              ? <>Hand: ${topBarPot.toLocaleString()}</>
+              ? <>Hand #{(gameState as any).handNumber}</>
               : <>{tableId ? `#${tableId.slice(0, 6).toUpperCase()}` : ""}</>
             }
           </span>
@@ -361,11 +354,11 @@ function GameTable({
         <div className="flex items-center gap-3">
           <div className="px-3 py-1 rounded-lg bg-black/40 border border-amber-500/20">
             <span className="text-[0.625rem] text-gray-400 mr-1">POT:</span>
-            <span className="text-sm font-bold text-amber-400 font-mono">${topBarPot.toLocaleString()}</span>
+            <span className="text-sm font-bold font-mono" style={{ color: "#ffd700" }}>${topBarPot.toLocaleString()}</span>
           </div>
 
           {showdown?.results?.some((r: any) => r.isWinner && r.playerId === heroId) && (
-            <span className="text-[0.625rem] font-bold text-amber-400">
+            <span className="text-[0.625rem] font-bold text-emerald-400">
               WINNER: YOU ({showdown.results.find((r: any) => r.isWinner && r.playerId === heroId)?.handName || ""})
             </span>
           )}
@@ -380,7 +373,7 @@ function GameTable({
           )}
 
           {waiting && addBots && (
-            <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20">
+            <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20">
               <Bot className="w-3 h-3" /> BOTS
             </button>
           )}
@@ -431,9 +424,9 @@ function GameTable({
               <Music className={`w-3.5 h-3.5 ${bgmPlaying ? "text-green-400" : "text-gray-500"}`} />
             </button>
             {showBgmPanel && (
-              <div className="absolute right-0 top-full mt-1 z-50 w-80 rounded-lg p-3 space-y-2.5" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(212,168,67,0.15)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+              <div className="absolute right-0 top-full mt-1 z-50 w-80 rounded-lg p-3 space-y-2.5" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(0,212,255,0.15)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400">Music Library</span>
+                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400">Music Library</span>
                   <button onClick={() => setShowBgmPanel(false)} className="p-0.5 hover:bg-white/10 rounded"><X className="w-3 h-3 text-gray-500" /></button>
                 </div>
 
@@ -456,25 +449,25 @@ function GameTable({
                           else { sound.playBgm(); setBgmPlaying(true); }
                         }}
                         className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all ${
-                          isActive && bgmPlaying ? "bg-amber-500/15 border border-amber-500/25" : "bg-white/5 border border-transparent hover:bg-white/8"
+                          isActive && bgmPlaying ? "bg-cyan-500/15 border border-cyan-500/25" : "bg-white/5 border border-transparent hover:bg-white/8"
                         }`}
                       >
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                          isActive && bgmPlaying ? "bg-amber-500/25" : "bg-white/10"
+                          isActive && bgmPlaying ? "bg-cyan-500/25" : "bg-white/10"
                         }`}>
                           {isActive && bgmPlaying
-                            ? <Pause className="w-3 h-3 text-amber-400" />
+                            ? <Pause className="w-3 h-3 text-cyan-400" />
                             : <Play className="w-3 h-3 text-gray-400 ml-0.5" />
                           }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-[0.6875rem] font-bold truncate ${isActive && bgmPlaying ? "text-amber-400" : "text-white"}`}>{track.name}</div>
+                          <div className={`text-[0.6875rem] font-bold truncate ${isActive && bgmPlaying ? "text-cyan-400" : "text-white"}`}>{track.name}</div>
                           <div className="text-[0.5625rem] text-gray-500 truncate">{track.artist}</div>
                         </div>
                         {isActive && bgmPlaying && (
                           <div className="flex items-end gap-[2px] h-3">
                             {[0.6, 1, 0.4, 0.8, 0.5].map((h, i) => (
-                              <div key={i} className="w-[2px] bg-amber-400 rounded-full animate-pulse" style={{ height: `${h * 12}px`, animationDelay: `${i * 0.15}s` }} />
+                              <div key={i} className="w-[2px] bg-cyan-400 rounded-full animate-pulse" style={{ height: `${h * 12}px`, animationDelay: `${i * 0.15}s` }} />
                             ))}
                           </div>
                         )}
@@ -495,7 +488,7 @@ function GameTable({
                   />
                   <button
                     onClick={() => { if (bgmUrl) { sound.setBgmUrl(bgmUrl); if (bgmPlaying) { sound.stopBgm(); setBgmPlaying(false); } else { sound.playBgm(); setBgmPlaying(true); } } }}
-                    className={`px-2 py-1.5 rounded text-[0.625rem] font-bold ${bgmPlaying ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}
+                    className={`px-2 py-1.5 rounded text-[0.625rem] font-bold ${bgmPlaying ? "bg-red-500/20 text-red-400" : "bg-cyan-500/20 text-cyan-400"}`}
                   >
                     {bgmPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                   </button>
@@ -555,16 +548,16 @@ function GameTable({
               if (actions.length === 0 && !isCurrentStreet) return null;
               return (
                 <div key={street}>
-                  <div className="font-bold uppercase tracking-wider text-red-400 mb-1">
+                  <div className="font-bold uppercase tracking-wider text-cyan-400 mb-1">
                     <span className="mr-1">&bull;</span>{street.replace("-", "-").toUpperCase()}
                   </div>
                   {actions.length > 0 ? actions.map((a: any, i: number) => (
                     <div key={i} className="text-gray-400 leading-relaxed pl-2">
                       <span className="text-white font-medium">{a.playerName || "Player"}</span>{" "}
-                      <span className={a.action === "fold" ? "text-red-400" : a.action === "raise" ? "text-amber-400" : "text-green-400"}>
+                      <span className={a.action === "fold" ? "text-red-400" : a.action === "raise" ? "text-cyan-400" : "text-green-400"}>
                         {a.action?.toUpperCase()}
                       </span>
-                      {a.amount > 0 && <span className="text-amber-400 ml-1">${a.amount}</span>}
+                      {a.amount > 0 && <span className="ml-1" style={{ color: "#ffd700" }}>${a.amount}</span>}
                     </div>
                   )) : (
                     <div className="text-gray-600 pl-2 italic">...</div>
@@ -574,7 +567,7 @@ function GameTable({
             })}
             {showdown?.results && (
               <div>
-                <div className="font-bold uppercase tracking-wider text-red-400 mb-1">
+                <div className="font-bold uppercase tracking-wider text-cyan-400 mb-1">
                   <span className="mr-1">&bull;</span>SHOWDOWN
                 </div>
                 {showdown.results.filter((r: any) => r.isWinner).map((r: any, i: number) => (
@@ -617,7 +610,7 @@ function GameTable({
                 {isMultiplayer && waiting && players.length < 2 && (
                   <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 30 }}>
                     <div className="glass rounded-xl px-6 py-4 text-center border border-white/10 pointer-events-auto">
-                      <Users className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+                      <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
                       <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
                     </div>
@@ -657,41 +650,6 @@ function GameTable({
             </div>
           </div>
 
-          {/* Hero hole cards — below the table */}
-          <div className="relative z-20 flex justify-center items-center gap-4 py-1 shrink-0" style={{ minHeight: heroCards && gameState.phase !== "waiting" ? 80 : 0 }}>
-            {heroCards && gameState.phase !== "waiting" && (dealing.visiblePlayerCards.get(heroId) ?? 2) > 0 && (
-              <>
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 22 }}
-                  className="flex gap-3"
-                  style={{ filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.5))" }}
-                >
-                  {isMobile && heroHoleCards ? (
-                    <CardSqueeze cards={heroHoleCards} />
-                  ) : (
-                    heroCards.filter((_, i) => i < (dealing.visiblePlayerCards.get(heroId) ?? 2)).map((card, i) => (
-                      <Card
-                        key={`hero-${i}`}
-                        card={{ ...card, hidden: false }}
-                        size={compactMode ? "lg" : screen.cardSize}
-                        isHero={true}
-                        delay={compactMode ? 0 : 0.3 + i * 0.15}
-                      />
-                    ))
-                  )}
-                </motion.div>
-                {/* Hand strength badge next to hero cards */}
-                <HandBadge
-                  holeCards={heroHoleCards}
-                  communityCards={gameState.communityCards}
-                  phase={gameState.phase}
-                />
-              </>
-            )}
-          </div>
-
           {/* Sitting out banner */}
           {hero && (hero.isSittingOut || hero.status === "sitting-out") && sitIn && (
             <motion.div
@@ -709,7 +667,7 @@ function GameTable({
             </motion.div>
           )}
 
-          {/* Bottom controls — inline, not fixed */}
+          {/* ═══ UNIFIED BOTTOM PANEL: Hero Cards + Controls ═══ */}
           <div className="relative z-30 shrink-0">
             <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" || gameState.phase === "collecting-seeds" || !dealing.controlsReady ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
               <PokerControls
@@ -725,6 +683,40 @@ function GameTable({
                 bigBlind={formatInfo?.bigBlind || gameState.minBet || undefined}
                 heroTimeLeft={hero?.timeLeft}
                 heroStatus={hero?.status}
+                heroCardsSlot={
+                  heroCards && gameState.phase !== "waiting" && (dealing.visiblePlayerCards.get(heroId) ?? 2) > 0 ? (
+                    <motion.div
+                      initial={{ y: 15, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 22 }}
+                      className="flex gap-2"
+                      style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }}
+                    >
+                      {isMobile && heroHoleCards ? (
+                        <CardSqueeze cards={heroHoleCards} />
+                      ) : (
+                        heroCards.filter((_, i) => i < (dealing.visiblePlayerCards.get(heroId) ?? 2)).map((card, i) => (
+                          <Card
+                            key={`hero-${i}`}
+                            card={{ ...card, hidden: false }}
+                            size={compactMode ? "lg" : screen.cardSize}
+                            isHero={true}
+                            delay={compactMode ? 0 : 0.3 + i * 0.15}
+                          />
+                        ))
+                      )}
+                    </motion.div>
+                  ) : undefined
+                }
+                handBadgeSlot={
+                  heroCards && gameState.phase !== "waiting" ? (
+                    <HandBadge
+                      holeCards={heroHoleCards}
+                      communityCards={gameState.communityCards}
+                      phase={gameState.phase}
+                    />
+                  ) : undefined
+                }
               />
             </div>
           </div>
@@ -741,7 +733,7 @@ function GameTable({
             <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 text-[0.625rem] scrollbar-thin">
               {(gameState as any).chatMessages?.map((msg: any, i: number) => (
                 <div key={i} className="leading-relaxed">
-                  <span className="font-bold text-amber-400">{msg.playerName}:</span>{" "}
+                  <span className="font-bold text-cyan-400">{msg.playerName}:</span>{" "}
                   <span className="text-gray-300">{msg.message}</span>
                 </div>
               )) || <div className="text-gray-600 italic">No messages yet</div>}
@@ -758,7 +750,7 @@ function GameTable({
                     placeholder="Type a message..."
                     className="flex-1 text-[0.625rem] px-2 py-1.5 rounded bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none"
                   />
-                  <button type="submit" className="px-2 py-1.5 rounded bg-amber-500/20 text-amber-400 text-[0.625rem] font-bold hover:bg-amber-500/30">
+                  <button type="submit" className="px-2 py-1.5 rounded bg-cyan-500/20 text-cyan-400 text-[0.625rem] font-bold hover:bg-cyan-500/30">
                     &gt;
                   </button>
                 </form>
@@ -783,7 +775,7 @@ function GameTable({
                       )}
                     </div>
                     <span className="text-gray-300 truncate flex-1">{p.name}</span>
-                    <span className="text-amber-400 font-mono font-bold">{vpip}%</span>
+                    <span className="text-gray-300 font-mono font-bold">{vpip}%</span>
                   </div>
                 );
               })}
@@ -798,8 +790,8 @@ function GameTable({
             <div className="px-3 py-2 space-y-1 text-[0.625rem]">
               <div className="flex justify-between"><span className="text-gray-500">Chips</span><span className="text-white font-mono">{hero?.chips?.toLocaleString() || "—"}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Players</span><span className="text-white font-mono">{formatInfo?.playersRemaining || players.length}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Current Bet</span><span className="text-white font-mono">${gameState.minBet || 0}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Round</span><span className="text-amber-400 font-mono uppercase">{gameState.phase}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Current Bet</span><span className="font-mono" style={{ color: "#ffd700" }}>${gameState.minBet || 0}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Round</span><span className="text-gray-300 font-mono uppercase">{gameState.phase}</span></div>
             </div>
           </div>
         </div>
@@ -859,7 +851,7 @@ function GameTable({
               <div className="text-xs text-gray-400">
                 Finished #{elimination.finishPlace}
                 {elimination.prizeAmount > 0 && (
-                  <span className="text-amber-400 ml-2">Won {elimination.prizeAmount} chips</span>
+                  <span className="ml-2" style={{ color: "#ffd700" }}>Won {elimination.prizeAmount} chips</span>
                 )}
               </div>
             </div>
@@ -937,7 +929,7 @@ function GameTable({
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               className="glass rounded-2xl p-6 w-full max-w-xs border border-white/10"
-              style={{ boxShadow: "0 0 40px rgba(212,168,67,0.1)" }}
+              style={{ boxShadow: "0 0 40px rgba(0,212,255,0.1)" }}
             >
               <div className="text-center mb-5">
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 mb-2">
@@ -945,7 +937,7 @@ function GameTable({
                 </div>
                 <h3 className="font-bold text-sm tracking-wider text-white">ADD CHIPS</h3>
                 <p className="text-[0.625rem] text-gray-500 mt-1">
-                  Wallet: <span className="text-amber-400 font-mono">{(walletBalance || 0).toLocaleString()}</span> chips
+                  Wallet: <span className="text-cyan-400 font-mono">{(walletBalance || 0).toLocaleString()}</span> chips
                 </p>
               </div>
 
@@ -970,7 +962,7 @@ function GameTable({
 
               {hero && (
                 <p className="text-center text-[0.625rem] text-gray-500 mb-4">
-                  Current stack: <span className="text-amber-400 font-mono">{hero.chips.toLocaleString()}</span>
+                  Current stack: <span className="text-cyan-400 font-mono">{hero.chips.toLocaleString()}</span>
                   {" → "}
                   <span className="text-emerald-400 font-mono">{(hero.chips + addChipsAmount).toLocaleString()}</span>
                 </p>
@@ -996,7 +988,7 @@ function GameTable({
                   }}
                   disabled={addChipsAmount <= 0 || (walletBalance || 0) < addChipsAmount}
                   className="flex-1 rounded-lg py-2.5 text-xs font-bold tracking-wider text-black disabled:opacity-50 transition-all"
-                  style={{ background: "linear-gradient(135deg, #c9a84c, #e8c566)" }}
+                  style={{ background: "linear-gradient(135deg, #00d4ff, #66e5ff)" }}
                 >
                   CONFIRM
                 </motion.button>
@@ -1034,20 +1026,20 @@ function HandCountdownOverlay({ seconds }: { seconds: number | null }) {
           transition={{ duration: 0.3, ease: "easeOut" }}
           className="flex flex-col items-center"
         >
-          <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-amber-400/70 mb-2">
+          <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-cyan-400/70 mb-2">
             Next hand in
           </div>
           <div
-            className="text-6xl font-black tabular-nums text-amber-400"
+            className="text-6xl font-black tabular-nums text-cyan-400"
             style={{
-              textShadow: "0 0 30px rgba(212,168,67,0.5), 0 0 60px rgba(212,168,67,0.2)",
+              textShadow: "0 0 30px rgba(0,212,255,0.5), 0 0 60px rgba(0,212,255,0.2)",
             }}
           >
             {seconds}
           </div>
-          <div className="mt-3 w-16 h-1 rounded-full bg-amber-500/20 overflow-hidden">
+          <div className="mt-3 w-16 h-1 rounded-full bg-cyan-500/20 overflow-hidden">
             <motion.div
-              className="h-full bg-amber-400 rounded-full"
+              className="h-full bg-cyan-400 rounded-full"
               initial={{ width: "100%" }}
               animate={{ width: "0%" }}
               transition={{ duration: 1, ease: "linear" }}
@@ -1125,7 +1117,6 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
       <div className="min-h-screen bg-[#111b2a] text-white flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.4)_0%,rgba(20,31,40,0.88)_70%)]" />
-          <AmbientParticles />
         </div>
 
         <motion.div
@@ -1141,7 +1132,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
               <p className="text-xs text-gray-500 font-mono">
                 {tableInfo.smallBlind}/{tableInfo.bigBlind} &middot; {tableInfo.maxPlayers} seats
                 {isSNG && (
-                  <span className="ml-2 text-amber-400">
+                  <span className="ml-2 text-cyan-400">
                     &middot; {tableInfo.gameFormat === "sng" ? "Sit & Go" : "Tournament"}
                   </span>
                 )}
@@ -1155,8 +1146,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
               <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                 Fixed Buy-In
               </label>
-              <div className="glass rounded-lg p-4 border border-amber-500/20 text-center">
-                <div className="text-2xl font-bold text-amber-400 font-mono">
+              <div className="glass rounded-lg p-4 border border-cyan-500/20 text-center">
+                <div className="text-2xl font-bold text-cyan-400 font-mono">
                   {(tableInfo?.buyInAmount || 500).toLocaleString()}
                 </div>
                 <div className="text-[0.625rem] text-gray-500 mt-1">
@@ -1183,7 +1174,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
               />
               <div className="flex justify-between text-xs text-gray-500">
                 <span>{tableInfo?.minBuyIn || 200}</span>
-                <span className="text-lg font-bold text-amber-400">{buyIn}</span>
+                <span className="text-lg font-bold text-cyan-400">{buyIn}</span>
                 <span>{Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}</span>
               </div>
               <p className="text-center text-[0.625rem] text-gray-600 mt-1">
@@ -1216,8 +1207,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
                         isOccupied
                           ? "bg-red-500/10 border-red-500/20 text-red-400/40 cursor-not-allowed"
                           : isSelected
-                            ? "bg-amber-500/25 border-amber-400 text-amber-400 shadow-[0_0_10px_rgba(212,168,67,0.3)]"
-                            : "bg-white/5 border-white/10 text-gray-400 hover:border-amber-500/30 hover:text-white"
+                            ? "bg-cyan-500/25 border-cyan-400 text-cyan-400 shadow-[0_0_10px_rgba(0,212,255,0.3)]"
+                            : "bg-white/5 border-white/10 text-gray-400 hover:border-cyan-500/30 hover:text-white"
                       }`}
                     >
                       {i + 1}

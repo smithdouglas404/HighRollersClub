@@ -30,42 +30,80 @@
   --color-ring: hsl(var(--ring));
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Roboto Mono', ui-monospace, monospace;
-  --font-display: 'Orbitron', 'Inter', sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
+  --font-display: 'Orbitron', ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
-  --background: 220 20% 4%;
-  --foreground: 210 40% 98%;
-  --card: 220 20% 6%;
-  --card-foreground: 210 40% 98%;
-  --popover: 220 20% 6%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 160 100% 45%;
-  --primary-foreground: 160 100% 4%;
-  --secondary: 220 20% 12%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 220 20% 12%;
-  --muted-foreground: 215 20% 55%;
-  --accent: 220 20% 12%;
-  --accent-foreground: 210 40% 98%;
+  /* WSOP Casino Dark Theme */
+  --background: 222 25% 12%;
+  --foreground: 45 20% 95%;
+  --card: 222 20% 15%;
+  --card-foreground: 45 20% 95%;
+  --popover: 222 20% 15%;
+  --popover-foreground: 45 20% 95%;
+  --primary: 187 100% 50%;      /* Neon cyan */
+  --primary-foreground: 222 30% 8%;
+  --secondary: 222 20% 14%;
+  --secondary-foreground: 45 20% 90%;
+  --muted: 222 20% 14%;
+  --muted-foreground: 220 15% 50%;
+  --accent: 43 80% 55%;         /* Gold as secondary accent */
+  --accent-foreground: 45 20% 95%;
   --destructive: 0 72% 51%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 220 20% 14%;
-  --input: 220 20% 14%;
-  --ring: 160 100% 45%;
+  --destructive-foreground: 45 20% 95%;
+  --border: 222 20% 16%;
+  --input: 222 20% 16%;
+  --ring: 187 100% 50%;         /* Cyan focus ring */
   --radius: 0.5rem;
 
-  /* Poker Theme Colors */
-  --neon-cyan: #00f0ff;
-  --neon-green: #00ff9d;
-  --neon-gold: #ffd700;
-  --neon-red: #ff3366;
-  --neon-purple: #b44dff;
-  --felt-dark: #0a1e24;
-  --felt-mid: #0f2e35;
+  /* Casino Color Palette */
+  --casino-cyan: #00d4ff;
+  --casino-cyan-light: #66e5ff;
+  --casino-cyan-dark: #009ec2;
+  --casino-gold: #d4a843;
+  --casino-gold-light: #f0d478;
+  --casino-gold-dark: #9c7c2e;
+  --casino-emerald: #1b7a4a;
+  --casino-emerald-light: #25a065;
+  --casino-emerald-dark: #0f5c35;
+  --casino-navy: #141f28;
+  --casino-navy-light: #1e2d4a;
+  --casino-red: #c0392b;
+  --casino-red-light: #e74c3c;
+  --casino-cream: #f5efe0;
+
+  /* Felt table colors */
+  --felt-dark: #0e4028;
+  --felt-mid: #166b3f;
   --rail-dark: #1a1410;
   --rail-gold: #c9a84c;
+
+  /* ── Design Tokens ── */
+
+  /* Border opacity scale */
+  --border-subtle: rgba(255,255,255,0.08);
+  --border-default: rgba(255,255,255,0.15);
+  --border-emphasis: rgba(255,255,255,0.25);
+
+  /* Glow opacity scale */
+  --glow-subtle: 0.08;
+  --glow-default: 0.20;
+  --glow-emphasis: 0.40;
+
+  /* Shadow hierarchy */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3);
+  --shadow-cyan: 0 0 20px rgba(0,212,255,0.15), 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-gold: 0 0 20px rgba(212,168,67,0.15), 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-emerald: 0 0 20px rgba(37,160,101,0.15), 0 4px 12px rgba(0,0,0,0.4);
+
+  /* Animation timing */
+  --anim-fast: 0.3s;
+  --anim-normal: 0.6s;
+  --anim-slow: 1.5s;
+  --anim-ambient: 3s;
 }
 
 @layer base {
@@ -78,27 +116,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
   ::selection {
-    background: rgba(0, 240, 255, 0.3);
+    background: rgba(0, 212, 255, 0.35);
     color: white;
   }
 }
 
 /* === KEYFRAME ANIMATIONS === */
-
-@keyframes neonPulse {
-  0%, 100% { opacity: 1; filter: brightness(1); }
-  50% { opacity: 0.8; filter: brightness(1.3); }
-}
-
-@keyframes neonGlow {
-  0%, 100% { box-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 20px currentColor; }
-  50% { box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 40px currentColor; }
-}
-
-@keyframes borderGlow {
-  0%, 100% { border-color: rgba(0, 240, 255, 0.3); }
-  50% { border-color: rgba(0, 240, 255, 0.7); }
-}
 
 @keyframes floatUp {
   0% { transform: translateY(0); opacity: 1; }
@@ -110,34 +133,9 @@
   100% { background-position: 200% center; }
 }
 
-@keyframes goldShimmer {
-  0% { background-position: -300% center; }
-  100% { background-position: 300% center; }
-}
-
-@keyframes rotateGlow {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
-}
-
 @keyframes chipBounce {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-8px) scale(1.05); }
-}
-
-@keyframes avatarGlowSpin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes avatarGlowPulse {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.08); }
 }
 
 @keyframes cardDeal {
@@ -151,25 +149,6 @@
   to { stroke-dashoffset: 283; }
 }
 
-@keyframes particleDrift {
-  0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(-100vh) translateX(50px) scale(0.3); opacity: 0; }
-}
-
-@keyframes holoPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-@keyframes textGlitch {
-  0%, 100% { transform: translateX(0); }
-  10% { transform: translateX(-2px); }
-  20% { transform: translateX(2px); }
-  30% { transform: translateX(0); }
-}
-
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
@@ -180,36 +159,11 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-@keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-}
-
 @keyframes holoSweep {
-  0% {
-    opacity: 0;
-    background-position: -200% 0;
-  }
-  20% {
-    opacity: 0.6;
-  }
-  80% {
-    opacity: 0.3;
-  }
-  100% {
-    opacity: 0;
-    background-position: 200% 0;
-  }
-}
-
-@keyframes tierRingRotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes tierRingPulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0% { opacity: 0; background-position: -200% 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.3; }
+  100% { opacity: 0; background-position: 200% 0; }
 }
 
 @keyframes avatarShake {
@@ -218,103 +172,85 @@
   75% { transform: translateX(3px) rotate(1deg); }
 }
 
-@keyframes avatarAllInPulse {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.05); filter: brightness(1.2); }
-}
-
 /* === UTILITY CLASSES === */
 
 .glass {
-  background: rgba(10, 15, 25, 0.7);
+  background: rgba(20, 31, 40, 0.78);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.12);
 }
 
 .glass-light {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(0, 212, 255, 0.10);
 }
 
+/* Neon text — cyan primary, emerald secondary, gold accent */
 .neon-text-cyan {
-  color: var(--neon-cyan);
-  text-shadow: 0 0 7px var(--neon-cyan), 0 0 20px rgba(0, 240, 255, 0.4);
+  color: var(--casino-cyan);
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.5), 0 0 20px rgba(0, 212, 255, 0.25);
 }
 
 .neon-text-green {
-  color: var(--neon-green);
-  text-shadow: 0 0 7px var(--neon-green), 0 0 20px rgba(0, 255, 157, 0.4);
+  color: var(--casino-emerald-light);
+  text-shadow: 0 0 8px rgba(37, 160, 101, 0.5), 0 0 20px rgba(37, 160, 101, 0.25);
 }
 
 .neon-text-gold {
-  color: var(--neon-gold);
-  text-shadow: 0 0 7px var(--neon-gold), 0 0 20px rgba(255, 215, 0, 0.4);
+  color: var(--casino-gold-light);
+  text-shadow: 0 0 8px rgba(240, 212, 120, 0.5), 0 0 20px rgba(240, 212, 120, 0.25);
 }
 
+/* Neon borders — cyan primary, green secondary, gold accent */
 .neon-border-cyan {
-  border-color: rgba(0, 240, 255, 0.4);
-  box-shadow: 0 0 8px rgba(0, 240, 255, 0.15), inset 0 0 8px rgba(0, 240, 255, 0.05);
+  border-color: rgba(0, 212, 255, 0.35);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.15), inset 0 0 8px rgba(0, 212, 255, 0.05);
 }
 
 .neon-border-green {
-  border-color: rgba(0, 255, 157, 0.4);
-  box-shadow: 0 0 8px rgba(0, 255, 157, 0.15), inset 0 0 8px rgba(0, 255, 157, 0.05);
+  border-color: rgba(37, 160, 101, 0.35);
+  box-shadow: 0 0 10px rgba(37, 160, 101, 0.15), inset 0 0 8px rgba(37, 160, 101, 0.05);
 }
 
 .neon-border-gold {
-  border-color: rgba(255, 215, 0, 0.4);
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.15), inset 0 0 8px rgba(255, 215, 0, 0.05);
+  border-color: rgba(240, 212, 120, 0.4);
+  box-shadow: 0 0 12px rgba(240, 212, 120, 0.2), inset 0 0 8px rgba(240, 212, 120, 0.06);
 }
 
-.scanlines::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 240, 255, 0.015) 2px,
-    rgba(0, 240, 255, 0.015) 4px
-  );
-  pointer-events: none;
-  z-index: 1;
-}
+/* scanlines removed — unnecessary visual noise */
 
 .card-shadow {
   box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.3),
-    0 8px 16px rgba(0, 0, 0, 0.2),
-    0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 8px 16px rgba(0, 0, 0, 0.25),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
 }
 
 .card-shadow-hero {
   box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    0 12px 24px rgba(0, 0, 0, 0.3),
-    0 0 30px rgba(0, 240, 255, 0.1),
-    0 1px 0 rgba(255, 255, 255, 0.15) inset;
+    0 4px 8px rgba(0, 0, 0, 0.5),
+    0 12px 24px rgba(0, 0, 0, 0.35),
+    0 0 25px rgba(0, 212, 255, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.12) inset;
 }
 
 .gold-gradient {
-  background: linear-gradient(135deg, #c9a84c 0%, #f5e6a3 25%, #c9a84c 50%, #8b6914 75%, #c9a84c 100%);
-  background-size: 300% 300%;
-  animation: goldShimmer 8s ease infinite;
+  background: linear-gradient(135deg, #9c7c2e 0%, #d4a843 25%, #f0d478 50%, #d4a843 75%, #9c7c2e 100%);
+  background-size: 100% 100%;
 }
 
 .gold-text {
-  background: linear-gradient(135deg, #f5e6a3 0%, #c9a84c 40%, #f5e6a3 60%, #c9a84c 100%);
-  background-size: 300% 300%;
+  background: linear-gradient(135deg, #f0d478 0%, #d4a843 40%, #f0d478 60%, #d4a843 100%);
+  background-size: 100% 100%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: goldShimmer 6s ease infinite;
 }
 
-/* Scrollbar */
+/* Scrollbar — cyan tint */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -322,11 +258,11 @@
   background: rgba(0, 0, 0, 0.3);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 240, 255, 0.2);
+  background: rgba(0, 212, 255, 0.2);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 240, 255, 0.4);
+  background: rgba(0, 212, 255, 0.4);
 }
 
 /* Premium Button Base */
@@ -339,7 +275,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%);
   pointer-events: none;
 }
 .btn-neon:hover {
@@ -349,7 +285,7 @@
   transform: translateY(1px);
 }
 
-/* Cyberpunk date picker styling */
+/* Date picker dark styling */
 input[type="date"],
 input[type="datetime-local"] {
   color-scheme: dark;
@@ -359,7 +295,7 @@ input[type="datetime-local"] {
 
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.7) sepia(1) saturate(3) hue-rotate(160deg);
+  filter: invert(0.7) sepia(1) saturate(2) hue-rotate(10deg);
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.2s;
@@ -372,43 +308,28 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 
 /* === RESPONSIVE SCREEN SYSTEM === */
 
-/* Avatar size — driven by CSS custom property set by useScreenInfo hook */
 .avatar-size {
   width: var(--avatar-size, 80px);
   height: var(--avatar-size, 80px);
 }
 
-/* Sidebar width — driven by CSS custom property */
 .sidebar-responsive {
   width: var(--sidebar-w, 208px);
 }
 
-/* Responsive font sizes using calc with --font-scale */
-.text-responsive-xs {
-  font-size: calc(9px * var(--font-scale, 1));
-}
-.text-responsive-sm {
-  font-size: calc(10px * var(--font-scale, 1));
-}
-.text-responsive-base {
-  font-size: calc(12px * var(--font-scale, 1));
-}
-.text-responsive-lg {
-  font-size: calc(14px * var(--font-scale, 1));
-}
+.text-responsive-xs { font-size: calc(11px * var(--font-scale, 1)); }
+.text-responsive-sm { font-size: calc(12px * var(--font-scale, 1)); }
+.text-responsive-base { font-size: calc(12px * var(--font-scale, 1)); }
+.text-responsive-lg { font-size: calc(14px * var(--font-scale, 1)); }
 
-/* Small screens: stack layout, hide sidebars */
-@media (max-width: 1023px) {
-  .sidebar-responsive {
-    display: none;
-  }
+@media (max-width: 1399px) {
+  .sidebar-responsive { display: none; }
   .avatar-size {
     width: clamp(48px, 5vw, 72px);
     height: clamp(48px, 5vw, 72px);
   }
 }
 
-/* Medium screens: 1024-1599px */
 @media (min-width: 1024px) and (max-width: 1599px) {
   .avatar-size {
     width: clamp(64px, 5.5vw, 90px);
@@ -416,7 +337,6 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   }
 }
 
-/* Large screens: 1600-2559px */
 @media (min-width: 1600px) and (max-width: 2559px) {
   .avatar-size {
     width: clamp(80px, 5vw, 110px);
@@ -424,7 +344,6 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   }
 }
 
-/* Ultrawide / 4K: 2560px+ */
 @media (min-width: 2560px) {
   .avatar-size {
     width: clamp(100px, 4vw, 140px);
@@ -448,8 +367,62 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   animation: timerCriticalPulse 0.8s ease-in-out infinite;
 }
 
-/* Nameplate responsive width — scales with avatar */
 .nameplate-responsive {
-  min-width: calc(var(--avatar-size, 80px) * 0.9);
-  max-width: calc(var(--avatar-size, 80px) * 1.6);
+  min-width: calc(var(--avatar-size, 80px) * 1.1);
+  max-width: calc(var(--avatar-size, 80px) * 1.8);
+}
+
+/* ── Glass Panel (dark glass for nameplates & panels) ── */
+.glass-panel {
+  background: linear-gradient(180deg, rgba(18,26,40,0.75) 0%, rgba(12,18,30,0.82) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-default);
+}
+
+/* ── Panel Card (standard card container) ── */
+.panel-card {
+  background: rgba(20, 31, 40, 0.70);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Glow Utilities ── */
+.glow-gold-subtle {
+  box-shadow: 0 0 12px rgba(212,168,67,0.08);
+}
+.glow-gold {
+  box-shadow: 0 0 20px rgba(212,168,67,0.20), 0 0 8px rgba(212,168,67,0.10);
+}
+.glow-gold-intense {
+  box-shadow: 0 0 30px rgba(212,168,67,0.40), 0 0 12px rgba(212,168,67,0.20);
+}
+
+/* ── Spinner System ── */
+.spinner {
+  border: 2px solid rgba(0,212,255,0.30);
+  border-top-color: #00d4ff;
+  border-radius: 9999px;
+  animation: spin 0.7s linear infinite;
+}
+.spinner-sm { width: 1rem; height: 1rem; }
+.spinner-md { width: 1.5rem; height: 1.5rem; }
+.spinner-lg { width: 2rem; height: 2rem; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Focus Ring (accessibility) ── */
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(0,212,255,0.6);
+  outline-offset: 2px;
+}
+
+/* ── Transition Theme ── */
+.transition-theme {
+  transition: all 0.2s ease;
 }

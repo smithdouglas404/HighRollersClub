@@ -48,11 +48,11 @@ export function RunItVotePanel({ onVote }: RunItVotePanelProps) {
         className="rounded-xl p-5 backdrop-blur-xl text-center"
         style={{
           background: "rgba(10,15,30,0.92)",
-          border: "1px solid rgba(0,240,255,0.2)",
-          boxShadow: "0 0 30px rgba(0,240,255,0.1)",
+          border: "1px solid rgba(0,212,255,0.2)",
+          boxShadow: "0 0 30px rgba(0,212,255,0.1)",
         }}
       >
-        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400 mb-1">
+        <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-cyan-400 mb-1">
           All-In Runout
         </div>
         <div className="text-xs text-gray-400 mb-4">
@@ -72,9 +72,9 @@ export function RunItVotePanel({ onVote }: RunItVotePanelProps) {
                   ? "linear-gradient(135deg, rgba(100,100,100,0.4), rgba(80,80,80,0.4))"
                   : count === 2
                   ? "linear-gradient(135deg, rgba(0,150,200,0.4), rgba(0,120,180,0.4))"
-                  : "linear-gradient(135deg, rgba(180,77,255,0.4), rgba(140,50,220,0.4))",
-                border: `1px solid ${count === 1 ? "rgba(255,255,255,0.15)" : count === 2 ? "rgba(0,240,255,0.3)" : "rgba(180,77,255,0.3)"}`,
-                boxShadow: count > 1 ? `0 0 12px ${count === 2 ? "rgba(0,240,255,0.15)" : "rgba(180,77,255,0.15)"}` : "none",
+                  : "linear-gradient(135deg, rgba(0,180,220,0.5), rgba(0,140,180,0.5))",
+                border: `1px solid ${count === 1 ? "rgba(255,255,255,0.15)" : "rgba(0,212,255,0.3)"}`,
+                boxShadow: count > 1 ? "0 0 12px rgba(0,212,255,0.15)" : "none",
               }}
             >
               {count === 1 ? "Once" : count === 2 ? "Twice" : "Thrice"}
@@ -110,11 +110,11 @@ export function RunItResults({ boards, heroId }: RunItResultsProps) {
         className="rounded-xl p-4 backdrop-blur-xl"
         style={{
           background: "rgba(10,15,30,0.9)",
-          border: "1px solid rgba(0,240,255,0.15)",
+          border: "1px solid rgba(0,212,255,0.15)",
           boxShadow: "0 0 20px rgba(0,0,0,0.3)",
         }}
       >
-        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400 mb-3 text-center">
+        <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-cyan-400 mb-3 text-center">
           Run It {boards.length === 2 ? "Twice" : "Thrice"}
         </div>
         <div className="space-y-2">
@@ -129,7 +129,7 @@ export function RunItResults({ boards, heroId }: RunItResultsProps) {
                   border: `1px solid ${heroWon ? "rgba(5,150,105,0.3)" : "rgba(255,255,255,0.06)"}`,
                 }}
               >
-                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 w-16">
+                <span className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 w-16">
                   Board {i + 1}
                 </span>
                 <div className="flex gap-1">
@@ -137,11 +137,11 @@ export function RunItResults({ boards, heroId }: RunItResultsProps) {
                     <Card key={j} card={card} size="sm" delay={0} />
                   ))}
                 </div>
-                <span className="text-xs font-mono font-bold text-amber-400 ml-auto">
+                <span className="text-xs font-mono font-bold ml-auto" style={{ color: "#ffd700" }}>
                   ${board.potShare.toLocaleString()}
                 </span>
                 {heroWon && (
-                  <span className="text-[9px] font-bold text-green-400 uppercase">Win</span>
+                  <span className="text-[0.5625rem] font-bold text-green-400 uppercase">Win</span>
                 )}
               </div>
             );

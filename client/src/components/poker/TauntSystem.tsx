@@ -54,7 +54,7 @@ export const TAUNT_MAP = new Map(ALL_TAUNTS.map(t => [t.id, t]));
 const RARITY_COLORS: Record<string, string> = {
   common: "#9ca3af",
   uncommon: "#22c55e",
-  rare: "#d4a843",
+  rare: "#00d4ff",
   epic: "#a855f7",
   legendary: "#f59e0b",
 };
@@ -62,7 +62,7 @@ const RARITY_COLORS: Record<string, string> = {
 const RARITY_BORDER: Record<string, string> = {
   common: "rgba(156,163,175,0.15)",
   uncommon: "rgba(34,197,94,0.25)",
-  rare: "rgba(212,168,67,0.30)",
+  rare: "rgba(0,212,255,0.30)",
   epic: "rgba(168,85,247,0.30)",
   legendary: "rgba(245,158,11,0.40)",
 };
@@ -70,7 +70,7 @@ const RARITY_BORDER: Record<string, string> = {
 const RARITY_GLOW: Record<string, string> = {
   common: "none",
   uncommon: "0 0 8px rgba(34,197,94,0.15)",
-  rare: "0 0 12px rgba(212,168,67,0.20)",
+  rare: "0 0 12px rgba(0,212,255,0.20)",
   epic: "0 0 15px rgba(168,85,247,0.25)",
   legendary: "0 0 20px rgba(245,158,11,0.35)",
 };
@@ -273,7 +273,7 @@ export function TauntPicker({ heroId, isMultiplayer }: TauntPickerProps) {
                 onClick={() => setTab("free")}
                 className={`flex-1 py-2 text-[0.625rem] font-bold uppercase tracking-wider transition-colors ${
                   tab === "free"
-                    ? "text-amber-400 border-b-2 border-amber-400"
+                    ? "text-cyan-400 border-b-2 border-cyan-400"
                     : "text-gray-500 hover:text-gray-300"
                 }`}
               >
@@ -283,7 +283,7 @@ export function TauntPicker({ heroId, isMultiplayer }: TauntPickerProps) {
                 onClick={() => setTab("premium")}
                 className={`flex-1 py-2 text-[0.625rem] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1 ${
                   tab === "premium"
-                    ? "text-amber-400 border-b-2 border-amber-400"
+                    ? "text-cyan-400 border-b-2 border-cyan-400"
                     : "text-gray-500 hover:text-gray-300"
                 }`}
               >
@@ -366,7 +366,7 @@ export function TauntPicker({ heroId, isMultiplayer }: TauntPickerProps) {
         className={`glass rounded-xl p-3 transition-all ${isOpen ? "neon-border-amber" : ""} ${cooldown ? "opacity-50" : ""}`}
         disabled={cooldown}
       >
-        <Megaphone className={`w-5 h-5 ${isOpen ? "text-amber-400" : "text-gray-500"}`} />
+        <Megaphone className={`w-5 h-5 ${isOpen ? "text-cyan-400" : "text-gray-500"}`} />
       </motion.button>
     </div>
   );

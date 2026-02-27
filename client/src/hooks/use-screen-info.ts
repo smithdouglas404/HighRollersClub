@@ -26,7 +26,7 @@ export interface ScreenInfo {
   /** Base font scale multiplier (1 = default) */
   fontScale: number;
   /** Card size category for the Card component */
-  cardSize: "sm" | "md" | "lg" | "xl";
+  cardSize: "sm" | "md" | "lg" | "xl" | "2xl";
   /** Table max height as vh */
   tableMaxHeight: string;
   /** Whether the screen is ultra-wide (21:9 or wider) */
@@ -43,8 +43,8 @@ function computeScreenInfo(w: number, h: number, dpr: number): ScreenInfo {
   else if (w < 2560 && !isUltrawide) tier = "large";
   else tier = "ultrawide";
 
-  // Sidebar visibility and width
-  const showSidebars = w >= 1024;
+  // Sidebar visibility and width — hidden on smaller laptops to reduce clutter
+  const showSidebars = w >= 1400;
   let sidebarWidth = 0;
   if (showSidebars) {
     if (tier === "ultrawide") sidebarWidth = Math.min(320, Math.round(w * 0.12));
@@ -66,17 +66,18 @@ function computeScreenInfo(w: number, h: number, dpr: number): ScreenInfo {
   else if (tier === "large") fontScale = 1.1;
   else fontScale = 1.2;
 
-  // Card size
-  let cardSize: "sm" | "md" | "lg" | "xl";
+  // Card size — hero hole cards scale with screen
+  let cardSize: "sm" | "md" | "lg" | "xl" | "2xl";
   if (tier === "small") cardSize = "md";
   else if (tier === "medium") cardSize = "lg";
-  else cardSize = "xl";
+  else if (tier === "large") cardSize = "xl";
+  else cardSize = "2xl";
 
-  // Table max height — give more room on tall screens
+  // Table max height — give more room on tall screens, but cap to avoid overflow
   let tableMaxHeight: string;
-  if (h < 700) tableMaxHeight = "65vh";
-  else if (h < 900) tableMaxHeight = "72vh";
-  else tableMaxHeight = "78vh";
+  if (h < 700) tableMaxHeight = "62vh";
+  else if (h < 900) tableMaxHeight = "68vh";
+  else tableMaxHeight = "74vh";
 
   return {
     width: w,

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "wouter";
 import {
   ChevronRight, ChevronLeft, Zap, Shield, Crown, Star, Flame,
   Users, Coins, Clock, Bot, Trophy, Bomb, Swords, UserPlus,
-  Gamepad2, Settings2,
+  Gamepad2, Settings2, Wallet, AlertTriangle, ArrowRightLeft,
 } from "lucide-react";
-import { MatrixRain } from "../MatrixRain";
+import { useWallet, type WalletType } from "@/lib/wallet-context";
 import { AVATAR_OPTIONS, type AvatarOption } from "../poker/AvatarSelect";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
@@ -34,7 +35,7 @@ export interface GameSetupConfig {
 }
 
 const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string; color: string; rgb: string; tooltip: string }[] = [
-  { key: "cash",       label: "Cash Game",  icon: Coins,  desc: "Standard ring game — join and leave anytime",     color: "cyan",    rgb: "34,211,238", tooltip: "Cash Game — Play with chips worth real value. You can join or leave the table at any time." },
+  { key: "cash",       label: "Cash Game",  icon: Coins,  desc: "Standard ring game — join and leave anytime",     color: "amber",    rgb: "217,162,37", tooltip: "Cash Game — Play with chips worth real value. You can join or leave the table at any time." },
   { key: "sng",        label: "Sit & Go",   icon: Clock,  desc: "Fixed buy-in, rising blinds", color: "amber",   rgb: "245,158,11", tooltip: "Sit & Go (SNG) — A mini-tournament that starts when enough players join. Blinds increase over time." },
   { key: "tournament", label: "Tournament",  icon: Trophy, desc: "Multi-table, scheduled",  color: "emerald", rgb: "52,211,153", tooltip: "Tournament (MTT) — Compete against many players. Last one standing wins the prize pool." },
   { key: "heads_up",   label: "Heads Up",   icon: Swords, desc: "1v1 match",               color: "purple",  rgb: "168,85,247", tooltip: "Heads Up — A 1-on-1 match between two players. Great for practicing." },
@@ -42,7 +43,7 @@ const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string;
 ];
 
 const TIER_CONFIG: Record<string, { bg: string; text: string; label: string; icon: any }> = {
-  legendary: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", label: "LEGENDARY", icon: Crown },
+  legendary: { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "LEGENDARY", icon: Crown },
   epic:      { bg: "bg-purple-500/10 border-purple-500/20", text: "text-purple-400", label: "EPIC", icon: Star },
   rare:      { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "RARE", icon: Zap },
   common:    { bg: "bg-gray-500/10 border-gray-500/20", text: "text-gray-400", label: "COMMON", icon: Shield },
@@ -82,6 +83,18 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
   const [blindPreset, setBlindPreset] = useState("standard");
   const [bombPotFrequency, setBombPotFrequency] = useState(5);
   const [bombPotAnte, setBombPotAnte] = useState(0);
+
+  // Wallet balance integration (multiplayer only)
+  const walletData = mode === "multiplayer" ? useWallet() : null;
+  const relevantWalletType: WalletType = gameFormat === "sng" ? "sng"
+    : gameFormat === "tournament" ? "tournament"
+    : "cash_game";
+  const relevantWalletLabel = gameFormat === "sng" ? "Sit & Go"
+    : gameFormat === "tournament" ? "Tournament"
+    : "Cash Game";
+  const relevantBalance = walletData?.balances[relevantWalletType] ?? 0;
+  const effectiveBuyIn = (gameFormat === "sng" || gameFormat === "tournament") ? buyInAmount : minBuyIn;
+  const canAfford = mode === "offline" || relevantBalance >= effectiveBuyIn;
 
   const filteredAvatars = tierFilter === "all"
     ? AVATAR_OPTIONS
@@ -124,8 +137,8 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
 
   const selectedFormat = FORMAT_OPTIONS.find(f => f.key === gameFormat)!;
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,200,255,0.15)] transition-colors";
-  const labelClass = "text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-1.5";
+  const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,212,255,0.15)] transition-colors";
+  const labelClass = "text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-1.5";
 
   // ─── Progress Bar ─────────────────────────────────────────────────
   const ProgressBar = () => (
@@ -133,7 +146,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
       {/* Step 1 */}
       <button
         onClick={() => step === 2 && setStep(1)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
           step === 1
             ? "text-white"
             : "text-gray-500 hover:text-gray-300 cursor-pointer"
@@ -158,7 +171,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
 
       {/* Step 2 */}
       <div
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
           step === 2
             ? "text-white"
             : "text-gray-600"
@@ -202,14 +215,14 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
       {/* Player name */}
       <div className="flex-1 min-w-0">
         <div className="text-sm font-bold text-white truncate">{playerName}</div>
-        <div className={`text-[9px] font-bold uppercase tracking-wider ${TIER_CONFIG[selectedAvatar.tier].text}`}>
+        <div className={`text-[0.5625rem] font-bold uppercase tracking-wider ${TIER_CONFIG[selectedAvatar.tier].text}`}>
           {selectedAvatar.name}
         </div>
       </div>
 
       {/* Format badge */}
       <div
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider border"
         style={{
           backgroundColor: `rgba(${selectedFormat.rgb},0.1)`,
           borderColor: `rgba(${selectedFormat.rgb},0.2)`,
@@ -230,7 +243,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
           initial={{ opacity: 1 }}
           animate={{ opacity: 0, scale: 1.2 }}
           transition={{ duration: 0.8 }}
-          className="min-h-screen bg-[#0a1022] flex items-center justify-center"
+          className="min-h-screen bg-[#111b2a] flex items-center justify-center"
         >
           <motion.div
             initial={{ scale: 1 }}
@@ -250,15 +263,13 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: step === 1 ? -20 : 20 }}
           transition={{ duration: 0.3 }}
-          className="min-h-screen bg-[#0a1022] text-white flex flex-col items-center relative overflow-hidden"
+          className="min-h-screen bg-[#111b2a] text-white flex flex-col items-center relative overflow-hidden"
           style={{ justifyContent: "safe center", paddingTop: "2vh", paddingBottom: "2vh" }}
         >
           {/* Background */}
           <div className="absolute inset-0">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,20,30,0.4)_0%,rgba(0,0,0,0.95)_70%)]" />
           </div>
-          <MatrixRain side="both" color="#00ff9d" opacity={0.08} density={0.2} className="absolute inset-0 z-[1]" />
-
           {/* Dynamic glow */}
           <div className="absolute inset-0 z-[2] pointer-events-none">
             <div
@@ -275,8 +286,8 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
               className="text-center space-y-3"
             >
               <div className="w-12 h-12 mx-auto relative">
-                <div className="absolute inset-[-6px] bg-amber-500/20 blur-xl rounded-full animate-pulse" />
-                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(201,168,76,0.5)]" />
+                <div className="absolute inset-[-6px] bg-cyan-500/20 blur-xl rounded-full animate-pulse" />
+                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(0,212,255,0.5)]" />
               </div>
               <h1 className="font-display text-lg font-bold tracking-[0.2em] gold-text">
                 {step === 1 ? "CHOOSE YOUR AVATAR" : "GAME SETTINGS"}
@@ -297,7 +308,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                     <button
                       key={tier}
                       onClick={() => setTierFilter(tier)}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
+                      className={`px-3 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
                         tierFilter === tier
                           ? tier === "all"
                             ? "bg-white/10 text-white border border-white/15"
@@ -356,7 +367,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                             </div>
                           </div>
                           <div className="absolute bottom-0 left-0 right-0 px-2 pb-1.5">
-                            <div className="text-[10px] font-bold text-white truncate drop-shadow-lg">{av.name}</div>
+                            <div className="text-[0.625rem] font-bold text-white truncate drop-shadow-lg">{av.name}</div>
                           </div>
                         </div>
                       </motion.button>
@@ -385,7 +396,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                         boxShadow: playerName.trim() ? `0 0 15px ${selectedAvatar.glowColor.replace("0.3", "0.1")}` : "none",
                       }}
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 font-mono">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.625rem] text-gray-600 font-mono">
                       {playerName.length}/16
                     </div>
                   </div>
@@ -440,7 +451,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                   }}
                   className="w-full rounded-xl px-5 py-4 text-left flex items-center gap-4 transition-all"
                   style={{
-                    background: "linear-gradient(135deg, rgba(52,211,153,0.08), rgba(0,240,255,0.05))",
+                    background: "linear-gradient(135deg, rgba(52,211,153,0.08), rgba(0,212,255,0.05))",
                     border: "1px solid rgba(52,211,153,0.2)",
                     boxShadow: "0 0 20px rgba(52,211,153,0.08)",
                   }}
@@ -453,7 +464,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-bold text-emerald-300">Practice Mode</div>
-                    <div className="text-[10px] text-gray-500 mt-0.5">Micro stakes, slow timer, 4 players — perfect for learning</div>
+                    <div className="text-[0.625rem] text-gray-500 mt-0.5">Micro stakes, slow timer, 4 players — perfect for learning</div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-emerald-500/50" />
                 </motion.button>
@@ -461,7 +472,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                 {/* Divider */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-px bg-white/[0.06]" />
-                  <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">or customize</span>
+                  <span className="text-[0.5625rem] text-gray-600 font-bold uppercase tracking-wider">or customize</span>
                   <div className="flex-1 h-px bg-white/[0.06]" />
                 </div>
 
@@ -509,7 +520,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                       })}
                     </div>
                     {/* Format description */}
-                    <div className="mt-1.5 text-[10px] text-gray-500 text-center italic">
+                    <div className="mt-1.5 text-[0.625rem] text-gray-500 text-center italic">
                       {selectedFormat.desc}
                     </div>
                   </div>
@@ -620,8 +631,8 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className={`p-3 rounded-lg border ${gameFormat === "tournament" ? "border-emerald-500/15 bg-emerald-500/5" : "border-amber-500/15 bg-amber-500/5"}`}>
-                          <div className={`text-[10px] font-bold uppercase tracking-wider ${gameFormat === "tournament" ? "text-emerald-400" : "text-amber-400"} mb-3`}>
+                        <div className={`p-3 rounded-lg border ${gameFormat === "tournament" ? "border-emerald-500/15 bg-emerald-500/5" : "border-cyan-500/15 bg-cyan-500/5"}`}>
+                          <div className={`text-[0.625rem] font-bold uppercase tracking-wider ${gameFormat === "tournament" ? "text-emerald-400" : "text-cyan-400"} mb-3`}>
                             {gameFormat === "tournament" ? "Tournament Settings" : "SNG Settings"}
                           </div>
                           <div className="grid grid-cols-3 gap-3">
@@ -659,7 +670,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                         className="overflow-hidden"
                       >
                         <div className="p-3 rounded-lg border border-red-500/15 bg-red-500/5">
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-3">Bomb Pot Settings</div>
+                          <div className="text-[0.625rem] font-bold uppercase tracking-wider text-red-400 mb-3">Bomb Pot Settings</div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className={labelClass}>Every N Hands</label>
@@ -691,6 +702,44 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                         <input type="number" value={maxBuyIn} onChange={(e) => setMaxBuyIn(parseInt(e.target.value) || 1000)} min={1} className={inputClass} />
                       </div>
                     </div>
+                  )}
+
+                  {/* Wallet Balance Indicator (multiplayer only) */}
+                  {mode === "multiplayer" && walletData && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="overflow-hidden"
+                    >
+                      <div className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-colors ${
+                        canAfford ? "bg-white/[0.03] border-white/[0.06]" : "bg-red-500/5 border-red-500/15"
+                      }`}>
+                        <Wallet className={`w-3.5 h-3.5 shrink-0 ${canAfford ? "text-cyan-400" : "text-red-400"}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[0.625rem] text-gray-400">{relevantWalletLabel} Wallet:</span>
+                            <span className={`text-xs font-bold tabular-nums ${canAfford ? "text-white" : "text-red-400"}`}>
+                              {relevantBalance.toLocaleString()}
+                            </span>
+                            <span className="text-[0.5rem] text-cyan-600 uppercase">chips</span>
+                          </div>
+                          {!canAfford && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <AlertTriangle className="w-3 h-3 text-red-400 shrink-0" />
+                              <span className="text-[0.5625rem] text-red-400">
+                                Need {(effectiveBuyIn - relevantBalance).toLocaleString()} more chips
+                              </span>
+                              <span className="text-[0.5rem] text-gray-600">—</span>
+                              <Link href={`/wallet?tab=transfer&to=${relevantWalletType}`}>
+                                <span className="text-[0.5625rem] font-bold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer flex items-center gap-0.5">
+                                  <ArrowRightLeft className="w-2.5 h-2.5" /> Transfer Funds
+                                </span>
+                              </Link>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
                   )}
 
                   {/* Divider */}
@@ -746,17 +795,29 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
                     Back
                   </motion.button>
                   <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={canAfford ? { scale: 1.03 } : undefined}
+                    whileTap={canAfford ? { scale: 0.97 } : undefined}
                     onClick={handleStart}
-                    className="flex-1 rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 text-black"
-                    style={{
+                    disabled={!canAfford}
+                    className={`flex-1 rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                      canAfford ? "text-black" : "text-gray-500 bg-gray-800/50 cursor-not-allowed border border-white/[0.06]"
+                    }`}
+                    style={canAfford ? {
                       background: `linear-gradient(135deg, ${selectedAvatar.borderColor}, ${selectedAvatar.borderColor}cc)`,
                       boxShadow: `0 0 25px ${selectedAvatar.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
-                    }}
+                    } : undefined}
                   >
-                    <Flame className="w-4 h-4" />
-                    {mode === "offline" ? "START GAME" : "CREATE TABLE"}
+                    {!canAfford ? (
+                      <>
+                        <AlertTriangle className="w-4 h-4" />
+                        INSUFFICIENT FUNDS
+                      </>
+                    ) : (
+                      <>
+                        <Flame className="w-4 h-4" />
+                        {mode === "offline" ? "START GAME" : "CREATE TABLE"}
+                      </>
+                    )}
                   </motion.button>
                 </motion.div>
               </motion.div>

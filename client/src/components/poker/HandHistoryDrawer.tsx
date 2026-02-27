@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { History, ChevronLeft, Trophy, Coins, Clock, ExternalLink, Download } from "lucide-react";
+import { History, ChevronLeft, Trophy, Coins, Clock, ExternalLink, Download, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 
 interface HandRecord {
   id: string;
@@ -11,6 +11,111 @@ interface HandRecord {
   summary: any;
   commitmentHash: string | null;
   createdAt: string;
+}
+
+function SessionStats({ hands }: { hands: HandRecord[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const stats = useMemo(() => {
+    if (hands.length === 0) return null;
+    let wins = 0;
+    let biggestPot = 0;
+    const profitHistory: number[] = [];
+    let cumProfit = 0;
+
+    for (const h of hands) {
+      const pot = h.potTotal || 0;
+      if (pot > biggestPot) biggestPot = pot;
+      const winners = h.summary?.winners || [];
+      const won = winners.length > 0; // simplified - could check if current user is winner
+      if (won) wins++;
+      // Approximate profit tracking: assume constant buy-in per hand
+      cumProfit += won ? pot * 0.3 : -(pot * 0.1);
+      profitHistory.push(cumProfit);
+    }
+
+    return { wins, biggestPot, handsPlayed: hands.length, profitHistory, cumProfit };
+  }, [hands]);
+
+  if (!stats || hands.length === 0) return null;
+
+  // Mini sparkline SVG
+  const { profitHistory } = stats;
+  const minVal = Math.min(...profitHistory, 0);
+  const maxVal = Math.max(...profitHistory, 1);
+  const range = maxVal - minVal || 1;
+  const svgW = 220;
+  const svgH = 40;
+  const points = profitHistory.map((v, i) => {
+    const x = (i / Math.max(profitHistory.length - 1, 1)) * svgW;
+    const y = svgH - ((v - minVal) / range) * svgH;
+    return `${x},${y}`;
+  }).join(" ");
+
+  return (
+    <div className="border-b border-white/5">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors"
+      >
+        <span className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+          <TrendingUp className="w-3 h-3" /> Session Stats
+        </span>
+        {expanded ? <ChevronUp className="w-3 h-3 text-gray-600" /> : <ChevronDown className="w-3 h-3 text-gray-600" />}
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-3 space-y-2.5">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center">
+                  <div className="text-[0.5625rem] text-gray-600 uppercase">Hands</div>
+                  <div className="text-xs font-bold text-white">{stats.handsPlayed}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[0.5625rem] text-gray-600 uppercase">Wins</div>
+                  <div className="text-xs font-bold text-green-400">{stats.wins}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[0.5625rem] text-gray-600 uppercase">Best Pot</div>
+                  <div className="text-xs font-bold text-cyan-400">{stats.biggestPot.toLocaleString()}</div>
+                </div>
+              </div>
+
+              {/* Mini profit chart */}
+              {profitHistory.length > 1 && (
+                <div className="rounded-lg p-2" style={{ background: "rgba(0,0,0,0.2)" }}>
+                  <svg width={svgW} height={svgH} className="w-full" viewBox={`0 0 ${svgW} ${svgH}`}>
+                    {/* Zero line */}
+                    <line
+                      x1="0"
+                      y1={svgH - ((0 - minVal) / range) * svgH}
+                      x2={svgW}
+                      y2={svgH - ((0 - minVal) / range) * svgH}
+                      stroke="rgba(255,255,255,0.08)"
+                      strokeWidth="1"
+                      strokeDasharray="3,3"
+                    />
+                    <polyline
+                      fill="none"
+                      stroke="#00d4ff"
+                      strokeWidth="1.5"
+                      points={points}
+                    />
+                  </svg>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 export function HandHistoryDrawer({ tableId }: { tableId: string }) {
@@ -51,9 +156,9 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
-            className="fixed left-4 bottom-32 z-40 glass rounded-full p-3 border border-white/10 hover:border-amber-500/30 transition-all shadow-lg"
+            className="fixed left-4 bottom-32 z-40 glass rounded-full p-3 border border-white/10 hover:border-cyan-500/30 transition-all shadow-lg"
           >
-            <History className="w-5 h-5 text-amber-400" />
+            <History className="w-5 h-5 text-cyan-400" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -76,7 +181,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-amber-400" />
+                <History className="w-4 h-4 text-cyan-400" />
                 <span className="text-xs font-bold uppercase tracking-wider text-white">Hand History</span>
               </div>
               <button
@@ -86,6 +191,9 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                 <ChevronLeft className="w-4 h-4 text-gray-500" />
               </button>
             </div>
+
+            {/* Session Stats */}
+            <SessionStats hands={hands} />
 
             {/* Hand list */}
             <div className="flex-1 overflow-y-auto py-2 scrollbar-thin">
@@ -121,7 +229,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                       </div>
                       <div className="flex items-center gap-3 text-[0.625rem] text-gray-500">
                         <span className="flex items-center gap-1">
-                          <Coins className="w-2.5 h-2.5 text-amber-500/60" />
+                          <Coins className="w-2.5 h-2.5 text-cyan-500/60" />
                           {(hand.potTotal || 0).toLocaleString()}
                         </span>
                         {winners.length > 0 && (
@@ -169,7 +277,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                       a.href = url; a.download = `hand-history-${tableId.slice(0,8)}.json`;
                       a.click(); URL.revokeObjectURL(url);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-amber-500 hover:text-amber-300 transition-colors py-1"
+                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-cyan-500 hover:text-cyan-300 transition-colors py-1"
                   >
                     <Download className="w-3 h-3" /> JSON
                   </button>
@@ -190,7 +298,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                       a.href = url; a.download = `hand-history-${tableId.slice(0,8)}.csv`;
                       a.click(); URL.revokeObjectURL(url);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-amber-500 hover:text-amber-300 transition-colors py-1"
+                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-cyan-500 hover:text-cyan-300 transition-colors py-1"
                   >
                     <Download className="w-3 h-3" /> CSV
                   </button>

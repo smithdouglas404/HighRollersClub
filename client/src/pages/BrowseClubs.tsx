@@ -139,7 +139,7 @@ export default function BrowseClubs() {
         {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
           </div>
         )}
 
@@ -203,7 +203,7 @@ export default function BrowseClubs() {
                       className="h-[2px]"
                       style={{
                         background: club.isPublic
-                          ? "linear-gradient(90deg, rgba(212,168,67,0.4), rgba(212,168,67,0.1))"
+                          ? "linear-gradient(90deg, rgba(0,212,255,0.4), rgba(0,212,255,0.1))"
                           : "linear-gradient(90deg, rgba(245,158,11,0.4), rgba(245,158,11,0.1))",
                       }}
                     />
@@ -217,8 +217,8 @@ export default function BrowseClubs() {
                         <span
                           className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider ${
                             club.isPublic
-                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                              : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                              : "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
                           }`}
                         >
                           {club.isPublic ? (
@@ -256,17 +256,17 @@ export default function BrowseClubs() {
                       {/* Action button */}
                       {isMyClub ? (
                         <div
-                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-center text-amber-400"
+                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-center text-cyan-400"
                           style={{
-                            background: "rgba(212,168,67,0.06)",
-                            border: "1px solid rgba(212,168,67,0.15)",
+                            background: "rgba(0,212,255,0.06)",
+                            border: "1px solid rgba(0,212,255,0.15)",
                           }}
                         >
                           Your Club
                         </div>
                       ) : isPending ? (
                         <div
-                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-center text-amber-400 flex items-center justify-center gap-1.5"
+                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-center text-cyan-400 flex items-center justify-center gap-1.5"
                           style={{
                             background: "rgba(245,158,11,0.06)",
                             border: "1px solid rgba(245,158,11,0.15)",
@@ -286,9 +286,9 @@ export default function BrowseClubs() {
                             club.isPublic
                               ? {
                                   background:
-                                    "linear-gradient(135deg, rgba(212,168,67,0.15), rgba(0,200,220,0.1))",
-                                  border: "1px solid rgba(212,168,67,0.25)",
-                                  color: "#d4a843",
+                                    "linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,200,220,0.1))",
+                                  border: "1px solid rgba(0,212,255,0.25)",
+                                  color: "#00d4ff",
                                 }
                               : {
                                   background:

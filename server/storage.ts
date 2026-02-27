@@ -127,6 +127,7 @@ export interface IStorage {
   // Tournaments
   getTournaments(): Promise<Tournament[]>;
   getTournament(id: string): Promise<Tournament | undefined>;
+  getClubTournaments(clubId: string): Promise<Tournament[]>;
   createTournament(data: Omit<Tournament, "id" | "createdAt">): Promise<Tournament>;
   updateTournament(id: string, data: Partial<Tournament>): Promise<Tournament | undefined>;
   getTournamentRegistrations(tournamentId: string): Promise<TournamentRegistration[]>;
@@ -169,6 +170,7 @@ export interface IStorage {
   getPayment(id: string): Promise<Payment | undefined>;
   getPaymentByGatewayId(provider: string, gatewayPaymentId: string): Promise<Payment | undefined>;
   getUserPayments(userId: string, limit?: number, offset?: number): Promise<Payment[]>;
+  getAllPayments(limit?: number, offset?: number): Promise<Payment[]>;
   updatePayment(id: string, data: Partial<Payment>): Promise<Payment | undefined>;
 
   // Withdrawal Requests
@@ -700,6 +702,11 @@ export class MemStorage implements IStorage {
   // Tournaments
   async getTournaments() { return this.tournamentsList; }
   async getTournament(id: string) { return this.tournamentsList.find(t => t.id === id); }
+  async getClubTournaments(clubId: string) {
+    return this.tournamentsList
+      .filter(t => t.clubId === clubId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
   async createTournament(data: Omit<Tournament, "id" | "createdAt">): Promise<Tournament> {
     const t: Tournament = { ...data, id: randomUUID(), createdAt: new Date() };
     this.tournamentsList.push(t);
@@ -861,6 +868,11 @@ export class MemStorage implements IStorage {
   }
   async getUserPayments(userId: string, limit = 50, offset = 0) {
     return this.paymentsList.filter(p => p.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(offset, offset + limit);
+  }
+  async getAllPayments(limit = 200, offset = 0) {
+    return [...this.paymentsList]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(offset, offset + limit);
   }
@@ -1426,6 +1438,11 @@ export class DatabaseStorage implements IStorage {
   async getTournaments() {
     return this.db.select().from(tournaments).orderBy(desc(tournaments.createdAt));
   }
+  async getClubTournaments(clubId: string) {
+    return this.db.select().from(tournaments)
+      .where(eq(tournaments.clubId, clubId))
+      .orderBy(desc(tournaments.createdAt));
+  }
   async getTournament(id: string) {
     const [t] = await this.db.select().from(tournaments).where(eq(tournaments.id, id));
     return t;
@@ -1639,6 +1656,12 @@ export class DatabaseStorage implements IStorage {
   async getUserPayments(userId: string, limit = 50, offset = 0) {
     return this.db.select().from(payments)
       .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+  async getAllPayments(limit = 200, offset = 0) {
+    return this.db.select().from(payments)
       .orderBy(desc(payments.createdAt))
       .limit(limit)
       .offset(offset);

@@ -2,9 +2,13 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { useHandReplayState } from "@/hooks/useHandReplayState";
+import { ReplayMiniTable } from "@/components/poker/ReplayMiniTable";
+import { ReplayTimeline } from "@/components/poker/ReplayTimeline";
 import {
   ArrowLeft, ShieldCheck, Download, Copy, Check,
-  ChevronDown, ChevronUp, Clock, Coins, Trophy, User, Users, FileText
+  ChevronDown, ChevronUp, Clock, Coins, Trophy, User, Users, FileText,
+  Eye, List
 } from "lucide-react";
 
 interface CardType {
@@ -94,8 +98,8 @@ function ActionBadge({ action, amount }: { action: string; amount?: number }) {
   const configs: Record<string, { bg: string; text: string }> = {
     fold: { bg: "bg-red-500/15 border-red-500/20", text: "text-red-400" },
     check: { bg: "bg-gray-500/15 border-gray-500/20", text: "text-gray-400" },
-    call: { bg: "bg-amber-500/15 border-amber-500/20", text: "text-amber-400" },
-    raise: { bg: "bg-amber-500/15 border-amber-500/20", text: "text-amber-400" },
+    call: { bg: "bg-cyan-500/15 border-cyan-500/20", text: "text-cyan-400" },
+    raise: { bg: "bg-cyan-500/15 border-cyan-500/20", text: "text-cyan-400" },
     "all-in": { bg: "bg-purple-500/15 border-purple-500/20", text: "text-purple-400" },
     bet: { bg: "bg-green-500/15 border-green-500/20", text: "text-green-400" },
     "post-sb": { bg: "bg-gray-500/10 border-gray-500/15", text: "text-gray-500" },
@@ -139,7 +143,7 @@ function PhaseSection({
         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors"
       >
         <div className="flex items-center gap-3">
-          <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400 drop-shadow-[0_0_6px_rgba(212,168,67,0.3)]">
+          <span className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 drop-shadow-[0_0_6px_rgba(0,212,255,0.3)]">
             {PHASE_LABELS[phase] || phase}
           </span>
           {phaseCards.length > 0 && (
@@ -195,6 +199,16 @@ export default function HandReplay({ handId }: { handId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [copiedHash, setCopiedHash] = useState(false);
   const [showProof, setShowProof] = useState(false);
+  const [viewMode, setViewMode] = useState<"visual" | "text">("visual");
+
+  const {
+    snapshot,
+    stepForward,
+    stepBackward,
+    togglePlay,
+    goToAction,
+    cycleSpeed,
+  } = useHandReplayState(hand?.summary ?? null);
 
   useEffect(() => {
     async function load() {
@@ -373,7 +387,7 @@ export default function HandReplay({ handId }: { handId: string }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main panel - Action Log */}
+            {/* Main panel */}
             <div className="lg:col-span-2 space-y-4">
               {/* Hand header */}
               <motion.div
@@ -398,6 +412,30 @@ export default function HandReplay({ handId }: { handId: string }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* View mode toggle */}
+                    <div className="flex items-center gap-0.5 p-0.5 rounded-lg border border-white/5 bg-white/[0.02]">
+                      <button
+                        onClick={() => setViewMode("visual")}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
+                          viewMode === "visual"
+                            ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
+                            : "text-gray-500 hover:text-gray-300 border border-transparent"
+                        }`}
+                      >
+                        <Eye className="w-3 h-3" /> Visual
+                      </button>
+                      <button
+                        onClick={() => setViewMode("text")}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
+                          viewMode === "text"
+                            ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
+                            : "text-gray-500 hover:text-gray-300 border border-transparent"
+                        }`}
+                      >
+                        <List className="w-3 h-3" /> Text
+                      </button>
+                    </div>
+
                     {hand.commitmentHash && (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-500/10 border border-green-500/20">
                         <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
@@ -408,29 +446,29 @@ export default function HandReplay({ handId }: { handId: string }) {
                     )}
                     <button
                       onClick={exportPDF}
-                      className="glass rounded-lg p-2 hover:bg-white/5 transition-colors hover:shadow-[0_0_12px_rgba(201,168,76,0.3)] hover:border-amber-500/30 border border-transparent"
+                      className="glass rounded-lg p-2 hover:bg-white/5 transition-colors hover:shadow-[0_0_12px_rgba(0,212,255,0.3)] hover:border-cyan-500/30 border border-transparent"
                       title="Export PDF"
                     >
-                      <FileText className="w-4 h-4 text-amber-400" />
+                      <FileText className="w-4 h-4 text-cyan-400" />
                     </button>
                     <button
                       onClick={exportJSON}
-                      className="glass rounded-lg p-2 hover:bg-white/5 transition-colors hover:shadow-[0_0_12px_rgba(201,168,76,0.3)] hover:border-amber-500/30 border border-transparent"
+                      className="glass rounded-lg p-2 hover:bg-white/5 transition-colors hover:shadow-[0_0_12px_rgba(0,212,255,0.3)] hover:border-cyan-500/30 border border-transparent"
                       title="Export JSON"
                     >
-                      <Download className="w-4 h-4 text-amber-400" />
+                      <Download className="w-4 h-4 text-cyan-400" />
                     </button>
                   </div>
                 </div>
 
                 {/* Pot + Winners */}
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <Coins className="w-4 h-4 text-amber-400" />
-                    <span className="text-sm font-bold text-amber-400">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                    <Coins className="w-4 h-4 text-cyan-400" />
+                    <span className="text-sm font-bold text-cyan-400">
                       {(summary?.pot || hand.potTotal || 0).toLocaleString()}
                     </span>
-                    <span className="text-[0.625rem] text-amber-400/60 uppercase">pot</span>
+                    <span className="text-[0.625rem] text-cyan-400/60 uppercase">pot</span>
                   </div>
                   {winners.map((w) => (
                     <div key={w.playerId} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
@@ -443,8 +481,8 @@ export default function HandReplay({ handId }: { handId: string }) {
                   ))}
                 </div>
 
-                {/* Community Cards */}
-                {communityCards && communityCards.length > 0 && (
+                {/* Community Cards (only in text mode) */}
+                {viewMode === "text" && communityCards && communityCards.length > 0 && (
                   <div className="mt-4">
                     <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                       Board
@@ -458,15 +496,34 @@ export default function HandReplay({ handId }: { handId: string }) {
                 )}
               </motion.div>
 
-              {/* Action Log by Street */}
-              <motion.div
+              {/* Visual Replay Mode */}
+              {viewMode === "visual" && snapshot && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-4"
+                >
+                  <ReplayMiniTable snapshot={snapshot} />
+                  <ReplayTimeline
+                    snapshot={snapshot}
+                    onStepForward={stepForward}
+                    onStepBackward={stepBackward}
+                    onTogglePlay={togglePlay}
+                    onGoToAction={goToAction}
+                    onCycleSpeed={cycleSpeed}
+                  />
+                </motion.div>
+              )}
+
+              {/* Text Mode: Action Log by Street */}
+              {viewMode === "text" && <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
                 className="glass rounded-xl border border-white/5 overflow-hidden"
               >
                 <div className="px-4 py-3 border-b border-white/5">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
                     Action Log
                   </h3>
                 </div>
@@ -486,10 +543,10 @@ export default function HandReplay({ handId }: { handId: string }) {
                     No action data available for this hand
                   </div>
                 )}
-              </motion.div>
+              </motion.div>}
 
               {/* Showdown Results */}
-              {showdownResults && showdownResults.length > 0 && (
+              {viewMode === "text" && showdownResults && showdownResults.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -497,7 +554,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                   className="glass rounded-xl border border-white/5 overflow-hidden"
                 >
                   <div className="px-4 py-3 border-b border-white/5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
                       Showdown
                     </h3>
                   </div>
@@ -560,7 +617,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                 transition={{ delay: 0.15 }}
                 className="glass rounded-xl p-4 border border-white/5"
               >
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-3">
                   Players
                 </h3>
                 <div className="space-y-2">
@@ -616,7 +673,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                         Commitment Hash
                       </span>
                       <div className="flex items-center gap-2">
-                        <code className="text-[0.625rem] text-amber-400 font-mono break-all flex-1 bg-black/30 rounded px-2 py-1 border border-amber-500/10">
+                        <code className="text-[0.625rem] text-cyan-400 font-mono break-all flex-1 bg-black/30 rounded px-2 py-1 border border-cyan-500/10">
                           {hand.commitmentHash.slice(0, 32)}...
                         </code>
                         <button
@@ -653,7 +710,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                               <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider block mb-1">
                                 Server Seed
                               </span>
-                              <code className="text-[0.5625rem] text-amber-400/80 font-mono break-all block bg-black/30 rounded px-2 py-1 border border-amber-500/10">
+                              <code className="text-[0.5625rem] text-cyan-400/80 font-mono break-all block bg-black/30 rounded px-2 py-1 border border-cyan-500/10">
                                 {hand.serverSeed.slice(0, 48)}...
                               </code>
                             </div>
@@ -663,7 +720,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                               <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider block mb-1">
                                 Deck Order
                               </span>
-                              <code className="text-[0.5625rem] text-purple-400/80 font-mono break-all block bg-black/30 rounded px-2 py-1 border border-amber-500/10 max-h-20 overflow-y-auto">
+                              <code className="text-[0.5625rem] text-purple-400/80 font-mono break-all block bg-black/30 rounded px-2 py-1 border border-cyan-500/10 max-h-20 overflow-y-auto">
                                 {hand.deckOrder}
                               </code>
                             </div>

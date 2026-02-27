@@ -33,7 +33,7 @@ export function TournamentStatsPanel({
 
   const getStackColor = () => {
     if (stackRatio >= 1.2) return { text: "text-green-400", glow: "rgba(34,197,94,0.3)" };
-    if (stackRatio >= 0.8) return { text: "text-cyan-400", glow: "rgba(0,240,255,0.3)" };
+    if (stackRatio >= 0.8) return { text: "text-cyan-400", glow: "rgba(0,212,255,0.3)" };
     if (stackRatio >= 0.5) return { text: "text-yellow-400", glow: "rgba(234,179,8,0.3)" };
     return { text: "text-red-400", glow: "rgba(239,68,68,0.3)" };
   };
@@ -85,9 +85,9 @@ export function TournamentStatsPanel({
       <div
         className="rounded-xl backdrop-blur-md overflow-hidden"
         style={{
-          background: "linear-gradient(180deg, rgba(12,20,40,0.92) 0%, rgba(10,16,34,0.96) 100%)",
-          border: "1px solid rgba(0,240,255,0.1)",
-          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(0,240,255,0.04)",
+          background: "linear-gradient(180deg, rgba(20,31,40,0.88) 0%, rgba(16,24,36,0.92) 100%)",
+          border: "1px solid rgba(0,212,255,0.1)",
+          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(0,212,255,0.04)",
           minWidth: 200,
         }}
       >
@@ -100,13 +100,13 @@ export function TournamentStatsPanel({
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
               style={{
-                background: "rgba(0,240,255,0.08)",
-                border: "1px solid rgba(0,240,255,0.15)",
+                background: "rgba(0,212,255,0.08)",
+                border: "1px solid rgba(0,212,255,0.15)",
               }}
             >
               <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
               Tournament Stats
             </span>
           </div>
@@ -155,14 +155,14 @@ export function TournamentStatsPanel({
                     >
                       <Icon className={`w-3.5 h-3.5 ${stat.color} shrink-0 opacity-70`} />
                       <div className="flex-1 min-w-0">
-                        <div className="text-[9px] text-gray-600 uppercase tracking-wider font-bold">
+                        <div className="text-[0.5625rem] text-gray-600 uppercase tracking-wider font-bold">
                           {stat.label}
                         </div>
                         <div className={`text-sm font-mono font-bold ${stat.color}`}>
                           {stat.value}
                         </div>
                       </div>
-                      <div className="text-[9px] text-gray-600 font-mono shrink-0">
+                      <div className="text-[0.5625rem] text-gray-600 font-mono shrink-0">
                         {stat.sub}
                       </div>
                     </motion.div>
@@ -177,10 +177,10 @@ export function TournamentStatsPanel({
                     border: "1px solid rgba(168,85,247,0.08)",
                   }}
                 >
-                  <span className="text-[9px] text-gray-600 uppercase tracking-wider font-bold">
+                  <span className="text-[0.5625rem] text-gray-600 uppercase tracking-wider font-bold">
                     Commission
                   </span>
-                  <span className="text-[10px] font-mono text-purple-400/70">
+                  <span className="text-[0.625rem] font-mono text-purple-400/70">
                     Standard
                   </span>
                 </div>

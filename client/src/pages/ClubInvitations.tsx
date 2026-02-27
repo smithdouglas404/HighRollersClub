@@ -65,7 +65,7 @@ export default function ClubInvitations() {
   const statusIcon = (status: string) => {
     switch (status) {
       case "pending":
-        return <Clock className="w-3.5 h-3.5 text-amber-400" />;
+        return <Clock className="w-3.5 h-3.5 text-cyan-400" />;
       case "accepted":
         return <CheckCircle className="w-3.5 h-3.5 text-green-400" />;
       case "declined":
@@ -78,7 +78,7 @@ export default function ClubInvitations() {
   const statusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "text-amber-400";
+        return "text-cyan-400";
       case "accepted":
         return "text-green-400";
       case "declined":
@@ -93,7 +93,7 @@ export default function ClubInvitations() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
           </div>
         ) : !club ? (
           <motion.div
@@ -107,8 +107,8 @@ export default function ClubInvitations() {
               onClick={() => navigate("/lobby")}
               className="mt-4 px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
               style={{
-                background: "linear-gradient(135deg, #c9a84c, #f0d078)",
-                boxShadow: "0 0 20px rgba(201,168,76,0.3)",
+                background: "linear-gradient(135deg, #00d4ff, #f0d078)",
+                boxShadow: "0 0 20px rgba(0,212,255,0.3)",
               }}
             >
               Back to Lobby
@@ -123,7 +123,7 @@ export default function ClubInvitations() {
               className="rounded-xl overflow-hidden"
               style={{
                 background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(212,168,67,0.1)",
+                border: "1px solid rgba(0,212,255,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
             >
@@ -131,11 +131,11 @@ export default function ClubInvitations() {
                 className="flex items-center gap-3 px-5 py-4"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
               >
-                <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
-                  <UserPlus className="w-5 h-5 text-amber-400" />
+                <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-amber-400 tracking-wider uppercase">
+                  <h3 className="text-sm font-bold text-cyan-400 tracking-wider uppercase">
                     Invite Player
                   </h3>
                   <p className="text-[0.5625rem] text-gray-500">Send an invite by username</p>
@@ -163,8 +163,8 @@ export default function ClubInvitations() {
                     disabled={sending || !inviteUsername.trim()}
                     className="px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                     style={{
-                      background: "linear-gradient(135deg, #c9a84c, #f0d078)",
-                      boxShadow: "0 0 20px rgba(201,168,76,0.3)",
+                      background: "linear-gradient(135deg, #00d4ff, #f0d078)",
+                      boxShadow: "0 0 20px rgba(0,212,255,0.3)",
                     }}
                   >
                     {sending ? (
@@ -226,8 +226,8 @@ export default function ClubInvitations() {
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
-                    <Inbox className="w-5 h-5 text-amber-400" />
+                  <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
+                    <Inbox className="w-5 h-5 text-cyan-400" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold tracking-wider uppercase gold-text">
@@ -238,7 +238,7 @@ export default function ClubInvitations() {
                 </div>
                 {pendingRequests.length > 0 && (
                   <span
-                    className="text-[0.5625rem] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20"
+                    className="text-[0.5625rem] font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20"
                   >
                     {pendingRequests.length} pending
                   </span>
@@ -261,7 +261,7 @@ export default function ClubInvitations() {
                         className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-white/[0.02]"
                         style={{ border: "1px solid rgba(255,255,255,0.04)" }}
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(212,168,67,0.15)]">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(0,212,255,0.15)]">
                           <span className="text-[0.625rem] font-bold text-white">
                             {inv.displayName.charAt(0).toUpperCase()}
                           </span>
@@ -280,8 +280,8 @@ export default function ClubInvitations() {
                             disabled={actionLoading[inv.id]}
                             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
                             style={{
-                              background: "rgba(201,168,76,0.1)",
-                              border: "1px solid rgba(201,168,76,0.2)",
+                              background: "rgba(0,212,255,0.1)",
+                              border: "1px solid rgba(0,212,255,0.2)",
                             }}
                           >
                             {actionLoading[inv.id] ? (
@@ -354,7 +354,7 @@ export default function ClubInvitations() {
                         className="flex items-center gap-3 px-4 py-3 rounded-lg"
                         style={{ border: "1px solid rgba(255,255,255,0.04)" }}
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(212,168,67,0.15)]">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(0,212,255,0.15)]">
                           <span className="text-[0.625rem] font-bold text-white">
                             {inv.displayName.charAt(0).toUpperCase()}
                           </span>

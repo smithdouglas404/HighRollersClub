@@ -44,9 +44,9 @@ const FORMAT_TABS: { key: GameFormat; label: string; icon: any }[] = [
 function FormatBadge({ format }: { format: string }) {
   const colors: Record<string, string> = {
     cash: "bg-emerald-600/20 text-emerald-400 border-emerald-500/20",
-    sng: "bg-amber-500/20 text-amber-400 border-amber-500/20",
+    sng: "bg-cyan-500/20 text-cyan-400 border-cyan-500/20",
     heads_up: "bg-violet-500/20 text-violet-400 border-violet-500/20",
-    tournament: "bg-amber-600/20 text-amber-300 border-amber-500/20",
+    tournament: "bg-cyan-600/20 text-cyan-300 border-cyan-500/20",
     bomb_pot: "bg-red-500/20 text-red-400 border-red-500/20",
   };
   const labels: Record<string, string> = {
@@ -69,23 +69,23 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02, y: -2, boxShadow: "0 0 20px rgba(212,168,67,0.06), 0 4px 20px rgba(0,0,0,0.3)" }}
+      whileHover={{ scale: 1.02, y: -2, boxShadow: "0 0 20px rgba(0,212,255,0.06), 0 4px 20px rgba(0,0,0,0.3)" }}
       onClick={onClick}
-      className={`relative glass rounded-xl p-5 cursor-pointer transition-all border border-white/5 hover:border-amber-500/20 ${
+      className={`relative glass rounded-xl p-5 cursor-pointer transition-all border border-white/5 hover:border-cyan-500/20 ${
         isFull ? "opacity-60" : ""
       }`}
       style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.25)" }}
     >
       {table.isPrivate && (
         <div className="absolute top-3 right-3">
-          <Lock className="w-3.5 h-3.5 text-amber-400/60" />
+          <Lock className="w-3.5 h-3.5 text-cyan-400/60" />
         </div>
       )}
 
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-sm text-amber-400 tracking-wide">{table.name}</h3>
+            <h3 className="font-bold text-sm text-cyan-400 tracking-wide">{table.name}</h3>
             <FormatBadge format={table.gameFormat} />
             {isHot && (
               <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/20 animate-pulse">
@@ -93,7 +93,7 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
               </span>
             )}
             {isFull && (
-              <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/20">
+              <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-500/20">
                 FULL
               </span>
             )}
@@ -106,9 +106,9 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
         <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wider ${
           isPlaying
             ? "bg-green-500/20 text-green-400 border border-green-500/20"
-            : "bg-amber-500/20 text-amber-400 border border-amber-500/20"
+            : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
         }`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${isPlaying ? "bg-green-500" : "bg-amber-500"}`} />
+          <div className={`w-1.5 h-1.5 rounded-full ${isPlaying ? "bg-green-500" : "bg-cyan-500"}`} />
           {isPlaying ? "Playing" : "Waiting"}
         </div>
       </div>
@@ -251,7 +251,7 @@ export default function Lobby() {
           <div className="flex items-center gap-4">
             <h2 className="text-sm font-bold tracking-wider text-gray-400 uppercase">
               Open Tables
-              <span className="ml-2 text-amber-400">{filteredTables.length}</span>
+              <span className="ml-2 text-cyan-400">{filteredTables.length}</span>
             </h2>
           </div>
 
@@ -288,8 +288,8 @@ export default function Lobby() {
               onClick={() => { setDefaultPrivate(false); setShowCreateTable(true); }}
               className="rounded-lg px-5 py-2 text-[0.625rem] font-bold tracking-wider text-black flex items-center gap-2"
               style={{
-                background: "linear-gradient(135deg, #c9a84c, #e8c566)",
-                boxShadow: "0 0 20px rgba(201,168,76,0.3)",
+                background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
+                boxShadow: "0 0 20px rgba(0,212,255,0.3)",
               }}
             >
               <Plus className="w-3.5 h-3.5" />
@@ -407,7 +407,7 @@ export default function Lobby() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search tables..."
             className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-500 outline-none transition-all focus:ring-1 focus:ring-amber-500/30"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(212,168,67,0.15)" }}
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(0,212,255,0.15)" }}
           />
         </motion.div>
 
@@ -427,13 +427,13 @@ export default function Lobby() {
                 onClick={() => setActiveFormat(tab.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
                   isActive
-                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/20"
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
                     : "text-gray-500 hover:text-gray-300 border border-transparent"
                 }`}
               >
                 <Icon className="w-3 h-3" />
                 {tab.label}
-                {count > 0 && <span className={`ml-0.5 ${isActive ? "text-amber-300" : "text-gray-600"}`}>({count})</span>}
+                {count > 0 && <span className={`ml-0.5 ${isActive ? "text-cyan-300" : "text-gray-600"}`}>({count})</span>}
               </button>
             );
           })}
@@ -453,11 +453,11 @@ export default function Lobby() {
                 navigate("/game");
               }
             }}
-            className="glass rounded-xl p-4 border border-amber-500/10 hover:border-amber-500/20 cursor-pointer transition-all"
+            className="glass rounded-xl p-4 border border-cyan-500/10 hover:border-cyan-500/20 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-amber-400" />
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
                 <div className="text-xs font-bold text-white uppercase tracking-wider">Quick Match</div>
@@ -488,11 +488,11 @@ export default function Lobby() {
                 startingChips: 1500,
               });
             }}
-            className="glass rounded-xl p-4 border border-amber-500/10 hover:border-amber-500/20 cursor-pointer transition-all"
+            className="glass rounded-xl p-4 border border-cyan-500/10 hover:border-cyan-500/20 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-amber-400" />
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
                 <div className="text-xs font-bold text-white uppercase tracking-wider">Sit & Go</div>
@@ -507,11 +507,11 @@ export default function Lobby() {
             transition={{ delay: 0.1 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => { setDefaultPrivate(true); setShowCreateTable(true); }}
-            className="glass rounded-xl p-4 border border-amber-500/10 hover:border-amber-500/20 cursor-pointer transition-all"
+            className="glass rounded-xl p-4 border border-cyan-500/10 hover:border-cyan-500/20 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
-                <Users className="w-5 h-5 text-amber-400" />
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
+                <Users className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
                 <div className="text-xs font-bold text-white uppercase tracking-wider">Private Game</div>
@@ -534,8 +534,8 @@ export default function Lobby() {
             className="flex justify-center py-12"
           >
             <div className="glass rounded-2xl border border-white/5 px-12 py-10 text-center max-w-md">
-              <div className="w-16 h-16 rounded-full bg-amber-500/5 flex items-center justify-center mx-auto mb-4 border border-amber-500/10 shadow-[0_0_20px_rgba(212,168,67,0.08)]">
-                <Users className="w-8 h-8 text-amber-500/40" />
+              <div className="w-16 h-16 rounded-full bg-cyan-500/5 flex items-center justify-center mx-auto mb-4 border border-cyan-500/10 shadow-[0_0_20px_rgba(0,212,255,0.08)]">
+                <Users className="w-8 h-8 text-cyan-500/40" />
               </div>
               <p className="text-sm text-gray-300 mb-1 font-medium">
                 {activeFormat === "all" ? "No tables yet" : `No ${activeFormat.replace("_", " ")} tables`}
@@ -557,8 +557,8 @@ export default function Lobby() {
                   onClick={() => setShowCreateTable(true)}
                   className="rounded-lg px-5 py-2.5 text-xs font-bold tracking-wider text-black flex items-center gap-2"
                   style={{
-                    background: "linear-gradient(135deg, #c9a84c, #e8c566)",
-                    boxShadow: "0 0 20px rgba(201,168,76,0.3)",
+                    background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
+                    boxShadow: "0 0 20px rgba(0,212,255,0.3)",
                   }}
                 >
                   <Plus className="w-4 h-4" />
@@ -616,7 +616,7 @@ export default function Lobby() {
               }}
             >
               <div className="flex items-center gap-3 mb-4">
-                <Lock className="w-5 h-5 text-amber-400" />
+                <Lock className="w-5 h-5 text-cyan-400" />
                 <div>
                   <h3 className="text-sm font-bold text-white">Private Table</h3>
                   <p className="text-[0.625rem] text-gray-500">{passwordModal.tableName}</p>
@@ -642,7 +642,7 @@ export default function Lobby() {
                 <button
                   onClick={handlePasswordSubmit}
                   className="flex-1 py-2 rounded-lg text-xs font-bold text-black"
-                  style={{ background: "linear-gradient(135deg, #c9a84c, #e8c566)" }}
+                  style={{ background: "linear-gradient(135deg, #00d4ff, #66e5ff)" }}
                 >
                   Join Table
                 </button>

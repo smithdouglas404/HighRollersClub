@@ -67,8 +67,8 @@ function WinningsChart({ data }: { data: number[] }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={isPositive ? "#d4a843" : "#ff3366"} stopOpacity="0.4" />
-          <stop offset="100%" stopColor={isPositive ? "#d4a843" : "#ff3366"} stopOpacity="0.02" />
+          <stop offset="0%" stopColor={isPositive ? "#00d4ff" : "#ff3366"} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={isPositive ? "#00d4ff" : "#ff3366"} stopOpacity="0.02" />
         </linearGradient>
       </defs>
 
@@ -96,7 +96,7 @@ function WinningsChart({ data }: { data: number[] }) {
         <path
           d={pathD}
           fill="none"
-          stroke={isPositive ? "#d4a843" : "#ff3366"}
+          stroke={isPositive ? "#00d4ff" : "#ff3366"}
           strokeWidth="2"
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -109,7 +109,7 @@ function WinningsChart({ data }: { data: number[] }) {
           cx={points[points.length - 1].x}
           cy={points[points.length - 1].y}
           r="4"
-          fill={isPositive ? "#d4a843" : "#ff3366"}
+          fill={isPositive ? "#00d4ff" : "#ff3366"}
           stroke="rgba(10,16,34,0.8)"
           strokeWidth="2"
         />
@@ -185,8 +185,8 @@ export default function Analytics() {
       icon: Gamepad2,
       color: "amber",
       gradient: "from-amber-500/20 to-blue-500/20",
-      border: "border-amber-500/20",
-      textColor: "text-amber-400",
+      border: "border-cyan-500/20",
+      textColor: "text-cyan-400",
     },
     {
       label: "Pots Won",
@@ -203,8 +203,8 @@ export default function Analytics() {
       icon: Target,
       color: "amber",
       gradient: "from-amber-500/20 to-orange-500/20",
-      border: "border-amber-500/20",
-      textColor: "text-amber-400",
+      border: "border-cyan-500/20",
+      textColor: "text-cyan-400",
     },
     {
       label: "Balance",
@@ -249,7 +249,7 @@ export default function Analytics() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
           </div>
         ) : loadError ? (
           <div className="flex flex-col items-center justify-center py-20">
@@ -298,14 +298,14 @@ export default function Analytics() {
               className="rounded-xl overflow-hidden"
               style={{
                 background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(212,168,67,0.1)",
+                border: "1px solid rgba(0,212,255,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-amber-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Winnings Over Time</h3>
+                  <TrendingUp className="w-4 h-4 text-cyan-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Winnings Over Time</h3>
                 </div>
                 {cumulativeWinnings.length > 0 && (
                   <span className={`text-xs font-bold ${
@@ -339,13 +339,13 @@ export default function Analytics() {
               className="rounded-xl overflow-hidden"
               style={{
                 background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(212,168,67,0.1)",
+                border: "1px solid rgba(0,212,255,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Detailed Statistics</h3>
+                <BarChart3 className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Detailed Statistics</h3>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-white/[0.03]">
                 {advancedStats.map((stat, i) => (
@@ -387,7 +387,7 @@ export default function Analytics() {
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
                 <Brain className="w-4 h-4 text-purple-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Play Style Assessment</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Play Style Assessment</h3>
               </div>
               <div className="p-5">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -416,8 +416,8 @@ export default function Analytics() {
                       />
                     </div>
                     <div className="flex justify-between text-[0.5625rem]">
-                      <span className="text-amber-400">Tight</span>
-                      <span className="text-amber-400">Loose</span>
+                      <span className="text-cyan-400">Tight</span>
+                      <span className="text-cyan-400">Loose</span>
                     </div>
                   </div>
 
@@ -425,10 +425,10 @@ export default function Analytics() {
                   <div className="p-3 rounded-lg bg-white/8 border border-white/15">
                     <div className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-2">Play Type</div>
                     <div className="text-lg font-bold tracking-tight mt-1" style={{
-                      color: vpipPct <= 20 && pfrPct <= 15 ? "#d4a843"
+                      color: vpipPct <= 20 && pfrPct <= 15 ? "#00d4ff"
                         : vpipPct <= 20 && pfrPct > 15 ? "#ff6060"
                         : vpipPct > 20 && pfrPct <= 15 ? "#ffa500"
-                        : "#c9a84c"
+                        : "#00d4ff"
                     }}>
                       {vpipPct <= 20 && pfrPct <= 15 ? "Tight-Passive (Rock)"
                         : vpipPct <= 20 && pfrPct > 15 ? "Tight-Aggressive (TAG)"

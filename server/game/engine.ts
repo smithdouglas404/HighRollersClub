@@ -839,6 +839,8 @@ export class GameEngine {
 
   declineInsurance(playerId: string): { ok: boolean; error?: string } {
     if (!this.state.insuranceOffers) return { ok: false, error: "No insurance offers" };
+    const offer = this.state.insuranceOffers.find(o => o.playerId === playerId);
+    if (!offer) return { ok: false, error: "No offer for you" };
     if (this.state.insuranceResponses?.has(playerId)) return { ok: false, error: "Already responded" };
 
     this.state.insuranceResponses!.set(playerId, false);
@@ -1006,8 +1008,9 @@ export class GameEngine {
     }
 
     this.state.runItBoards = boards;
-    // Use the last board's community for display
-    this.state.communityCards = boards[boards.length - 1].communityCards;
+    // Use the first board's community cards for the main display so the
+    // table view shows the primary run; the RunItResults overlay renders all boards
+    this.state.communityCards = boards[0].communityCards;
     this.goToShowdown();
   }
 

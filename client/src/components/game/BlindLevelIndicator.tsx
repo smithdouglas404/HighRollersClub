@@ -63,9 +63,9 @@ export function BlindLevelIndicator({
       <div
         className="rounded-xl backdrop-blur-md overflow-hidden"
         style={{
-          background: "linear-gradient(180deg, rgba(12,20,40,0.92) 0%, rgba(10,16,34,0.96) 100%)",
-          border: "1px solid rgba(0,240,255,0.12)",
-          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 20px rgba(0,240,255,0.05)",
+          background: "linear-gradient(180deg, rgba(20,31,40,0.88) 0%, rgba(16,24,36,0.92) 100%)",
+          border: "1px solid rgba(0,212,255,0.12)",
+          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 20px rgba(0,212,255,0.05)",
           minWidth: 220,
         }}
       >
@@ -80,8 +80,8 @@ export function BlindLevelIndicator({
               style={{
                 background: isWarning
                   ? "rgba(234,179,8,0.15)"
-                  : "rgba(0,240,255,0.08)",
-                border: `1px solid ${isWarning ? "rgba(234,179,8,0.3)" : "rgba(0,240,255,0.15)"}`,
+                  : "rgba(0,212,255,0.08)",
+                border: `1px solid ${isWarning ? "rgba(234,179,8,0.3)" : "rgba(0,212,255,0.15)"}`,
               }}
             >
               <Layers
@@ -89,7 +89,7 @@ export function BlindLevelIndicator({
               />
             </div>
             <div className="text-left">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+              <div className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500">
                 Blind Level
               </div>
               <div className="text-sm font-mono font-bold text-white">
@@ -136,30 +136,30 @@ export function BlindLevelIndicator({
               >
                 {/* Current blinds */}
                 <div className="pt-3">
-                  <div className="text-[9px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">
+                  <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-600 mb-1.5">
                     Current Blinds
                   </div>
                   <div className="flex items-center gap-2">
                     <div
                       className="flex-1 rounded-lg px-3 py-2 text-center"
                       style={{
-                        background: "rgba(0,240,255,0.04)",
-                        border: "1px solid rgba(0,240,255,0.1)",
+                        background: "rgba(0,212,255,0.04)",
+                        border: "1px solid rgba(0,212,255,0.1)",
                       }}
                     >
-                      <div className="text-[8px] text-gray-600 uppercase">SB</div>
-                      <div className="text-sm font-mono font-bold text-cyan-300">{sb}</div>
+                      <div className="text-[0.5rem] text-gray-600 uppercase">SB</div>
+                      <div className="text-sm font-mono font-bold" style={{ color: "#ffd700" }}>{sb}</div>
                     </div>
                     <div className="text-gray-700 font-bold">/</div>
                     <div
                       className="flex-1 rounded-lg px-3 py-2 text-center"
                       style={{
-                        background: "rgba(0,240,255,0.04)",
-                        border: "1px solid rgba(0,240,255,0.1)",
+                        background: "rgba(0,212,255,0.04)",
+                        border: "1px solid rgba(0,212,255,0.1)",
                       }}
                     >
-                      <div className="text-[8px] text-gray-600 uppercase">BB</div>
-                      <div className="text-sm font-mono font-bold text-cyan-300">{bb}</div>
+                      <div className="text-[0.5rem] text-gray-600 uppercase">BB</div>
+                      <div className="text-sm font-mono font-bold" style={{ color: "#ffd700" }}>{bb}</div>
                     </div>
                     {ante > 0 && (
                       <>
@@ -171,8 +171,8 @@ export function BlindLevelIndicator({
                             border: "1px solid rgba(234,179,8,0.12)",
                           }}
                         >
-                          <div className="text-[8px] text-gray-600 uppercase">Ante</div>
-                          <div className="text-sm font-mono font-bold text-amber-400">{ante}</div>
+                          <div className="text-[0.5rem] text-gray-600 uppercase">Ante</div>
+                          <div className="text-sm font-mono font-bold" style={{ color: "#ffd700" }}>{ante}</div>
                         </div>
                       </>
                     )}
@@ -181,7 +181,7 @@ export function BlindLevelIndicator({
 
                 {/* Timer */}
                 <div>
-                  <div className="text-[9px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">
+                  <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-600 mb-1.5">
                     Next Level In
                   </div>
                   <div
@@ -223,21 +223,21 @@ export function BlindLevelIndicator({
                 {/* Next level preview */}
                 {nextLevel && (
                   <div>
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">
+                    <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-600 mb-1.5">
                       Next Level ({nextLevel.level})
                     </div>
                     <div
                       className="rounded-lg px-3 py-2 flex items-center gap-3"
                       style={{
-                        background: "rgba(168,85,247,0.04)",
-                        border: "1px solid rgba(168,85,247,0.1)",
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.08)",
                       }}
                     >
-                      <span className="text-[11px] font-mono text-purple-400/80">
+                      <span className="text-[0.6875rem] font-mono" style={{ color: "rgba(255,215,0,0.7)" }}>
                         {nextLevel.sb}/{nextLevel.bb}
                       </span>
                       {nextLevel.ante > 0 && (
-                        <span className="text-[10px] font-mono text-amber-400/60">
+                        <span className="text-[0.625rem] font-mono text-gray-500">
                           +{nextLevel.ante} ante
                         </span>
                       )}
@@ -248,14 +248,14 @@ export function BlindLevelIndicator({
                 {/* Full schedule preview (first few levels) */}
                 {blindSchedule && blindSchedule.length > 0 && (
                   <div>
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">
+                    <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-600 mb-1.5">
                       Schedule
                     </div>
                     <div className="space-y-0.5 max-h-28 overflow-y-auto custom-scrollbar">
                       {blindSchedule.map((entry) => (
                         <div
                           key={entry.level}
-                          className={`flex items-center justify-between text-[10px] px-2 py-1 rounded ${
+                          className={`flex items-center justify-between text-[0.625rem] px-2 py-1 rounded ${
                             entry.level === currentLevel
                               ? "bg-cyan-500/10 border border-cyan-500/20"
                               : entry.level < currentLevel
@@ -281,7 +281,7 @@ export function BlindLevelIndicator({
                           >
                             {entry.sb}/{entry.bb}
                             {entry.ante > 0 && (
-                              <span className="text-amber-500/60 ml-1">+{entry.ante}</span>
+                              <span className="text-gray-500 ml-1">+{entry.ante}</span>
                             )}
                           </span>
                         </div>

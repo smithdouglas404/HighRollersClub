@@ -29,7 +29,7 @@ interface Particle {
   maxLife: number;
 }
 
-const WINNER_PARTICLE_COLORS = ["#ffd700", "#c9a84c", "#f5e6a3", "#f0d478", "#e8c566"];
+const WINNER_PARTICLE_COLORS = ["#ffd700", "#f5e6a3", "#e8c566", "#fff8dc", "#d4a843"];
 
 function useWinnerParticles(isWinner: boolean) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -121,21 +121,21 @@ function useWinnerParticles(isWinner: boolean) {
   return canvasRef;
 }
 
-// Seat glow color palette — each position gets a unique neon ring (vivid & bright)
+// Seat glow color palette — restrained: cyan for hero, muted teal/gray tones for opponents
 const SEAT_COLORS = [
-  "#d4a843", // gold (hero)
-  "#e74c3c", // crimson red
-  "#a855f7", // purple
+  "#00d4ff", // cyan (hero)
+  "#5eead4", // teal
+  "#94a3b8", // slate
   "#25a065", // emerald
-  "#f0d478", // light gold
-  "#e67e22", // warm orange
-  "#3498db", // steel blue
-  "#2ecc71", // green
-  "#c0392b", // deep red
+  "#67e8f9", // light cyan
+  "#a1a1aa", // gray
+  "#38bdf8", // sky blue
+  "#34d399", // green
+  "#7dd3fc", // soft blue
 ];
 
 function getSeatColor(seatIndex: number, isHero: boolean): string {
-  if (isHero) return "#d4a843";
+  if (isHero) return "#00d4ff";
   return SEAT_COLORS[seatIndex % SEAT_COLORS.length];
 }
 
@@ -144,7 +144,7 @@ const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: st
   folded:  { bg: "bg-red-500/30",    text: "text-red-400",    border: "border-red-500/50",   glow: "rgba(239,68,68,0.20)" },
   called:  { bg: "bg-green-500/30",  text: "text-green-400",  border: "border-green-500/50", glow: "rgba(34,197,94,0.20)" },
   checked: { bg: "bg-gray-500/30",   text: "text-gray-300",   border: "border-gray-500/50",  glow: "rgba(156,163,175,0.20)" },
-  raised:  { bg: "bg-amber-500/30",  text: "text-amber-400",  border: "border-amber-500/50", glow: "rgba(212,168,67,0.20)" },
+  raised:  { bg: "bg-cyan-500/30",   text: "text-cyan-400",   border: "border-cyan-500/50",  glow: "rgba(0,212,255,0.20)" },
   "all-in":{ bg: "bg-amber-500/30",  text: "text-amber-400",  border: "border-amber-500/50", glow: "rgba(245,158,11,0.20)" },
 };
 
@@ -215,8 +215,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
       const t = setTimeout(() => setReactionStyle(undefined), 400);
       return () => clearTimeout(t);
     } else if (curr === "all-in") {
-      setReactionStyle({ animation: "avatarAllInPulse 1.5s ease-in-out infinite" });
-      // Clean up infinite animation when status changes away from all-in
+      setReactionStyle({ filter: "brightness(1.2)", boxShadow: "0 0 20px rgba(245,158,11,0.4)" });
       return () => setReactionStyle(undefined);
     } else {
       setReactionStyle(undefined);
@@ -447,20 +446,8 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 ? `0 0 16px ${hexToRgba(glowColor, 0.7)}, 0 0 32px ${hexToRgba(glowColor, 0.4)}, inset 0 0 10px ${hexToRgba(glowColor, 0.25)}`
                 : `0 0 8px ${hexToRgba(glowColor, 0.35)}`,
               transition: "all 0.3s ease",
-              animation: isTurn && !compactMode ? "avatarGlowPulse 1.5s ease-in-out infinite" : "none",
             }}
           />
-
-          {/* Active turn: pulsing outer glow (merged single layer) */}
-          {isTurn && !compactMode && (
-            <div
-              className="absolute -inset-[14px] rounded-xl"
-              style={{
-                boxShadow: `0 0 28px 8px ${hexToRgba(glowColor, 0.45)}`,
-                animation: "avatarGlowPulse 1.5s ease-in-out infinite",
-              }}
-            />
-          )}
 
           {/* Circular countdown timer ring around avatar */}
           {isTurn && (
@@ -510,7 +497,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -right-2 -top-2 z-30 w-6 h-6 rounded-full flex items-center justify-center text-[0.5625rem] font-black text-black gold-gradient shadow-[0_0_8px_rgba(201,168,76,0.5)]"
+              className="absolute -right-2 -top-2 z-30 w-6 h-6 rounded-full flex items-center justify-center text-[0.5625rem] font-black text-black gold-gradient shadow-[0_0_8px_rgba(212,168,67,0.5)]"
             >
               D
             </motion.div>
@@ -545,35 +532,36 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         <div
           className="relative z-10 flex flex-col items-center nameplate-responsive rounded-lg overflow-hidden backdrop-blur-md"
           style={{
-            background: "linear-gradient(180deg, rgba(8,12,24,0.80) 0%, rgba(4,8,16,0.85) 100%)",
-            border: `1px solid rgba(255,255,255,0.08)`,
+            background: "linear-gradient(180deg, rgba(8,12,24,0.85) 0%, rgba(4,8,16,0.90) 100%)",
+            border: `1px solid rgba(255,255,255,0.10)`,
             borderTopColor: glowColor,
             borderTopWidth: "3px",
             borderTopStyle: "solid",
-            boxShadow: `0 0 16px ${hexToRgba(glowColor, 0.12)}, 0 2px 8px rgba(0,0,0,0.4)`,
+            boxShadow: `0 0 16px ${hexToRgba(glowColor, 0.15)}, 0 2px 8px rgba(0,0,0,0.5)`,
           }}
         >
-          {/* Timer arc removed — circular TimerRing is rendered around avatar above */}
-
-          <div className="px-3 py-1.5 flex flex-col items-center gap-0">
-            {/* Player name */}
+          <div className="px-3 py-1.5 flex flex-col items-center gap-0.5">
+            {/* Player name — larger, more readable */}
             <span
               className={cn(
-                "text-[0.625rem] uppercase font-bold tracking-wider leading-tight",
-                isTurn ? "text-white" : "text-gray-400"
+                "text-xs uppercase font-extrabold tracking-wide leading-tight truncate max-w-[100px]",
+                isTurn ? "text-white" : "text-gray-300"
               )}
+              style={{
+                textShadow: isTurn ? `0 0 8px ${hexToRgba(glowColor, 0.4)}` : undefined,
+              }}
             >
               {player.name}
             </span>
 
-            {/* Chip count — large, gold, mono — animated counter */}
+            {/* Chip count — larger, gold, mono — animated counter */}
             <span
-              className="text-sm font-mono font-bold leading-tight relative"
+              className="text-[0.875rem] font-mono font-black leading-tight relative"
               style={{
                 color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
                 textShadow: chipsAnimating
                   ? chipsDelta < 0 ? "0 0 12px rgba(239,68,68,0.5)" : "0 0 12px rgba(34,197,94,0.5)"
-                  : "0 0 8px rgba(255,215,0,0.3)",
+                  : "0 0 10px rgba(255,215,0,0.35)",
                 transition: "color 0.3s ease, text-shadow 0.3s ease",
               }}
             >
@@ -642,7 +630,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 <circle cx="8" cy="8" r="4" fill="none" stroke="#b8860b" strokeWidth="0.8" />
                 <text x="8" y="10.5" textAnchor="middle" fontSize="6" fill="#8B6914" fontWeight="bold">$</text>
               </svg>
-              <span className="text-[0.625rem] font-mono font-bold text-amber-400">
+              <span className="text-[0.625rem] font-mono font-bold" style={{ color: "#ffd700" }}>
                 {formatChips(player.currentBet)}
               </span>
             </motion.div>
@@ -667,15 +655,15 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 height: 48,
                 marginLeft: i > 0 ? -10 : 0,
                 transform: `rotate(${i === 0 ? -8 : 8}deg)`,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(201,168,76,0.3)",
-                border: "1px solid rgba(201,168,76,0.4)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(212,168,67,0.3)",
+                border: "1px solid rgba(212,168,67,0.4)",
               }}
             >
               <div className="w-full h-full flex items-center justify-center"
                 style={{ background: "linear-gradient(145deg, #1a1040 0%, #0d0820 40%, #1a0a30 70%, #0a0618 100%)" }}
               >
-                <div className="w-4 h-4 rounded-full border border-amber-600/30"
-                  style={{ background: "radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%)" }}
+                <div className="w-4 h-4 rounded-full border border-amber-700/30"
+                  style={{ background: "radial-gradient(circle, rgba(212,168,67,0.12) 0%, transparent 70%)" }}
                 />
               </div>
             </div>

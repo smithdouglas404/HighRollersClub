@@ -11,9 +11,9 @@ export interface Emote {
 }
 
 export const EMOTES: Emote[] = [
-  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#c9a84c" },
+  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#00d4ff" },
   { id: "nice", emoji: "\ud83d\udc4f", label: "Nice Hand", color: "#ffd700" },
-  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#d4a843" },
+  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#00d4ff" },
   { id: "allin", emoji: "\ud83d\ude80", label: "All In!", color: "#ff3366" },
   { id: "gl", emoji: "\ud83c\udf40", label: "Good Luck", color: "#22c55e" },
   { id: "think", emoji: "\ud83e\udde0", label: "Hmm...", color: "#b44dff" },
@@ -167,7 +167,7 @@ export function EmotePicker({ heroId, isMultiplayer }: { heroId: string; isMulti
         className={`glass rounded-xl p-3 transition-all ${isOpen ? "neon-border-amber" : ""} ${cooldown ? "opacity-50" : ""}`}
         disabled={cooldown}
       >
-        <MessageCircle className={`w-5 h-5 ${isOpen ? "text-amber-400" : "text-gray-500"}`} />
+        <MessageCircle className={`w-5 h-5 ${isOpen ? "text-cyan-400" : "text-gray-500"}`} />
       </motion.button>
     </div>
   );

@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MatrixRain } from "./MatrixRain";
 import { WalletBar } from "./wallet/WalletBar";
 import { NotificationCenter } from "./NotificationCenter";
 import { MemberAvatar } from "./shared/MemberAvatar";
@@ -16,6 +15,7 @@ import {
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
 import serverBg from "@assets/generated_images/cinematic_server_room_bg.png";
+import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.png";
 
 interface NavItem {
   icon: any;
@@ -48,12 +48,12 @@ function ClubSwitcher() {
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all hover:bg-white/5"
         style={{
-          background: "rgba(0,240,255,0.04)",
-          border: "1px solid rgba(0,240,255,0.1)",
+          background: "rgba(0,212,255,0.04)",
+          border: "1px solid rgba(0,212,255,0.1)",
         }}
       >
         <Shield className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-        <span className="flex-1 text-[10px] font-bold text-white truncate tracking-wide">
+        <span className="flex-1 text-[0.625rem] font-bold text-white truncate tracking-wide">
           {club?.name ?? "Select Club"}
         </span>
         <ChevronDown
@@ -72,8 +72,8 @@ function ClubSwitcher() {
             <div
               className="mt-1 rounded-lg py-1 space-y-0.5"
               style={{
-                background: "rgba(12,20,40,0.95)",
-                border: "1px solid rgba(0,240,255,0.08)",
+                background: "rgba(20,31,40,0.95)",
+                border: "1px solid rgba(0,212,255,0.12)",
               }}
             >
               {allClubs.map((c) => (
@@ -85,8 +85,8 @@ function ClubSwitcher() {
                   }`}
                 >
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[10px] font-medium text-white truncate">{c.name}</span>
-                    <span className="block text-[8px] text-gray-500">{c.memberCount} members</span>
+                    <span className="block text-[0.625rem] font-medium text-white truncate">{c.name}</span>
+                    <span className="block text-[0.5rem] text-gray-400">{c.memberCount} members</span>
                   </span>
                   {c.id === club?.id && (
                     <Check className="w-3 h-3 text-cyan-400 shrink-0" />
@@ -96,7 +96,7 @@ function ClubSwitcher() {
               <Link href="/clubs/browse">
                 <div
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-[9px] text-cyan-500 hover:text-cyan-400 transition-colors cursor-pointer border-t border-white/5 mt-1 pt-1.5"
+                  className="flex items-center gap-2 px-3 py-1.5 text-[0.5625rem] text-cyan-500 hover:text-cyan-400 transition-colors cursor-pointer border-t border-white/5 mt-1 pt-1.5"
                 >
                   <Search className="w-3 h-3" />
                   Browse More Clubs
@@ -127,18 +127,18 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
       {/* Logo */}
       <div className="px-5 pt-6 pb-4 flex items-center gap-3">
         <div className="w-10 h-10 relative shrink-0">
-          <div className="absolute inset-0 bg-amber-500/20 blur-lg rounded-full" />
+          <div className="absolute inset-0 bg-cyan-500/20 blur-lg rounded-full" />
           <img
             src={lionLogo}
             alt="High Rollers"
-            className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_8px_rgba(201,168,76,0.4)]"
+            className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_8px_rgba(0,212,255,0.4)]"
           />
         </div>
         <div className="flex-1">
           <div className="font-display font-bold text-xs tracking-[0.15em] gold-text leading-none">
             HIGH ROLLERS
           </div>
-          <div className="text-[8px] text-gray-500 tracking-[0.2em] font-mono mt-0.5">CLUB</div>
+          <div className="text-[0.5rem] text-gray-400 tracking-[0.2em] font-mono mt-0.5">CLUB</div>
         </div>
         {isMobile && (
           <button
@@ -166,18 +166,18 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
                 whileHover={{ x: 2 }}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer group ${
                   isActive
-                    ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(0,240,255,0.05)]"
-                    : "text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent"
+                    ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(0,212,255,0.05)]"
+                    : "text-gray-400 hover:text-gray-300 hover:bg-white/5 border border-transparent"
                 }`}
               >
                 <Icon
                   className={`w-4 h-4 shrink-0 ${
-                    isActive ? "text-cyan-400" : "text-gray-500 group-hover:text-gray-300"
+                    isActive ? "text-cyan-400" : "text-gray-400 group-hover:text-gray-300"
                   }`}
                 />
                 <span className="tracking-wide">{item.label}</span>
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(0,212,255,0.5)]" />
                 )}
               </motion.div>
             </Link>
@@ -199,11 +199,11 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
           </Link>
           <div className="flex-1 min-w-0">
             <Link href="/profile">
-              <div className="text-[10px] font-medium text-gray-300 truncate cursor-pointer hover:text-white transition-colors">
+              <div className="text-[0.625rem] font-medium text-gray-300 truncate cursor-pointer hover:text-white transition-colors">
                 {user?.displayName || user?.username}
               </div>
             </Link>
-            <div className="text-[8px] text-gray-500 uppercase tracking-wider">
+            <div className="text-[0.5rem] text-gray-400 uppercase tracking-wider">
               {user?.role}
             </div>
           </div>
@@ -220,25 +220,17 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
   );
 
   return (
-    <div className="min-h-screen bg-[#0a1022] text-white flex relative overflow-hidden">
+    <div className="min-h-screen bg-[#111b2a] text-white flex relative overflow-hidden">
       {/* Background layers */}
       <div className="absolute inset-0 z-0">
         <img
-          src={serverBg}
+          src={casinoBg}
           alt=""
-          className="w-full h-full object-cover opacity-20 blur-[2px] scale-105"
+          className="w-full h-full object-cover opacity-25 blur-[1px] scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1022]/80 via-[#0a1022]/70 to-[#0a1022]/90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#111b2a]/75 via-[#111b2a]/65 to-[#111b2a]/80" />
       </div>
 
-      {/* Matrix rain on edges */}
-      <MatrixRain
-        side="both"
-        color="#00ff9d"
-        opacity={0.12}
-        density={0.3}
-        className="absolute inset-0 z-[1]"
-      />
 
       {/* ─── Desktop Sidebar ──────────────────────────────────────── */}
       {!isMobile && (
@@ -249,11 +241,11 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
           className="relative z-10 w-[220px] min-h-screen flex flex-col shrink-0"
         >
           {/* Glass panel */}
-          <div className="absolute inset-0 bg-[#0c1428]/80 backdrop-blur-xl border-r border-cyan-500/10" />
+          <div className="absolute inset-0 bg-[#141f30]/85 backdrop-blur-xl border-r border-cyan-500/10" />
           <div
             className="absolute inset-y-0 right-0 w-px"
             style={{
-              background: "linear-gradient(to bottom, transparent, rgba(0,240,255,0.2) 20%, rgba(0,240,255,0.2) 80%, transparent)",
+              background: "linear-gradient(to bottom, transparent, rgba(0,212,255,0.2) 20%, rgba(0,212,255,0.2) 80%, transparent)",
             }}
           />
           {sidebarContent}
@@ -281,7 +273,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
               transition={{ duration: 0.25, ease: "easeOut" }}
               className="fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col"
             >
-              <div className="absolute inset-0 bg-[#0c1428]/95 backdrop-blur-xl border-r border-cyan-500/10" />
+              <div className="absolute inset-0 bg-[#141f30]/95 backdrop-blur-xl border-r border-cyan-500/10" />
               {sidebarContent}
             </motion.aside>
           </>

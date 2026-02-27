@@ -81,8 +81,8 @@ export function ProvablyFairPanel({
     const html = `<!DOCTYPE html>
 <html><head><title>Poker Hand Verification - Hand #${shuffleProof.handNumber}</title>
 <style>body{font-family:monospace;background:#0a0a0a;color:#e0e0e0;padding:2rem;max-width:800px;margin:0 auto}
-h1{color:#00f0ff}pre{background:#111;padding:1rem;border-radius:8px;overflow-x:auto;border:1px solid #222}
-.pass{color:#22c55e;font-weight:bold}.fail{color:#ef4444;font-weight:bold}button{background:#00f0ff;color:#000;border:none;padding:0.75rem 1.5rem;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1rem}button:hover{opacity:0.9}</style></head>
+h1{color:#00d4ff}pre{background:#111;padding:1rem;border-radius:8px;overflow-x:auto;border:1px solid #222}
+.pass{color:#22c55e;font-weight:bold}.fail{color:#ef4444;font-weight:bold}button{background:#00d4ff;color:#000;border:none;padding:0.75rem 1.5rem;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1rem}button:hover{opacity:0.9}</style></head>
 <body><h1>Provably Fair Verification (v${version})</h1>
 <p>Hand #${shuffleProof.handNumber} | Table: ${shuffleProof.tableId}</p>
 <h3>Proof Data</h3>
@@ -124,8 +124,8 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
       className="w-[320px] h-full flex flex-col z-40 pointer-events-auto relative overflow-hidden"
       style={{
-        background: "linear-gradient(180deg, rgba(12,20,40,0.97) 0%, rgba(10,16,34,0.99) 100%)",
-        borderLeft: "1px solid rgba(0,240,255,0.12)",
+        background: "linear-gradient(180deg, rgba(20,31,40,0.92) 0%, rgba(16,24,36,0.96) 100%)",
+        borderLeft: "1px solid rgba(0,212,255,0.12)",
         boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
       }}
     >
@@ -151,7 +151,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
               Shuffle Status:
               <span className={`${sc.text} ml-1.5`}>{status.label}</span>
             </div>
-            <div className="text-[9px] text-gray-600 font-mono mt-0.5">
+            <div className="text-[0.5625rem] text-gray-600 font-mono mt-0.5">
               v2.0 | Casino-Grade Rejection Sampling
             </div>
           </div>
@@ -164,7 +164,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
 
           {/* Entropy Sources */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-3">
+            <div className="text-[0.625rem] font-bold uppercase tracking-wider text-white mb-3">
               Entropy Sources
             </div>
             <div className="space-y-2">
@@ -199,8 +199,8 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                     }`} />
                   </div>
                   <div className="flex-1">
-                    <span className="text-[11px] text-gray-300 font-medium">{source.label}</span>
-                    <span className="text-[9px] text-gray-600 ml-1.5">{source.detail}</span>
+                    <span className="text-[0.6875rem] text-gray-300 font-medium">{source.label}</span>
+                    <span className="text-[0.5625rem] text-gray-600 ml-1.5">{source.detail}</span>
                   </div>
                 </div>
               ))}
@@ -212,7 +212,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
             <div>
               <button
                 onClick={() => setShowPlayerSeeds(!showPlayerSeeds)}
-                className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-white mb-2"
+                className="w-full flex items-center justify-between text-[0.625rem] font-bold uppercase tracking-wider text-white mb-2"
               >
                 <span>Player Seeds ({shuffleProof.playerSeeds.length})</span>
                 {showPlayerSeeds ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
@@ -222,7 +222,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                   {shuffleProof.playerSeeds.map((ps: any, idx: number) => (
                     <div
                       key={idx}
-                      className="rounded-lg px-3 py-2 text-[8px] font-mono"
+                      className="rounded-lg px-3 py-2 text-[0.5rem] font-mono"
                       style={{
                         background: "rgba(168,85,247,0.03)",
                         border: "1px solid rgba(168,85,247,0.08)",
@@ -244,7 +244,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
           {/* On-Chain Proof */}
           {hasOnChainProof && (
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-2">
+              <div className="text-[0.625rem] font-bold uppercase tracking-wider text-white mb-2">
                 On-Chain Proof
               </div>
               <div className="space-y-1.5">
@@ -252,8 +252,8 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                   <div className="flex items-center gap-2">
                     <Blocks className="w-3 h-3 text-indigo-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-[9px] text-gray-500">Commitment TX</div>
-                      <div className="text-[8px] font-mono text-indigo-400/70 truncate">{onChainCommitTx}</div>
+                      <div className="text-[0.5625rem] text-gray-500">Commitment TX</div>
+                      <div className="text-[0.5rem] font-mono text-indigo-400/70 truncate">{onChainCommitTx}</div>
                     </div>
                     <a
                       href={`https://amoy.polygonscan.com/tx/${onChainCommitTx}`}
@@ -269,8 +269,8 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                   <div className="flex items-center gap-2">
                     <Blocks className="w-3 h-3 text-indigo-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-[9px] text-gray-500">Reveal TX</div>
-                      <div className="text-[8px] font-mono text-indigo-400/70 truncate">{onChainRevealTx}</div>
+                      <div className="text-[0.5625rem] text-gray-500">Reveal TX</div>
+                      <div className="text-[0.5rem] font-mono text-indigo-400/70 truncate">{onChainRevealTx}</div>
                     </div>
                     <a
                       href={`https://amoy.polygonscan.com/tx/${onChainRevealTx}`}
@@ -288,16 +288,16 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
 
           {/* Commitment Hash */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-2">
+            <div className="text-[0.625rem] font-bold uppercase tracking-wider text-white mb-2">
               Commitment Hash
             </div>
             {commitmentHash ? (
               <div className="flex items-center gap-2">
                 <div
-                  className="flex-1 rounded-lg px-3 py-2.5 text-[9px] font-mono text-cyan-400/80 truncate"
+                  className="flex-1 rounded-lg px-3 py-2.5 text-[0.5625rem] font-mono text-cyan-400/80 truncate"
                   style={{
-                    background: "rgba(0,240,255,0.04)",
-                    border: "1px solid rgba(0,240,255,0.1)",
+                    background: "rgba(0,212,255,0.04)",
+                    border: "1px solid rgba(0,212,255,0.1)",
                   }}
                   title={commitmentHash}
                 >
@@ -305,29 +305,29 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                 </div>
                 <button
                   onClick={() => handleCopy(commitmentHash, "hash")}
-                  className="shrink-0 px-3 py-2.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all"
+                  className="shrink-0 px-3 py-2.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all"
                   style={{
-                    background: copiedField === "hash" ? "rgba(0,255,157,0.15)" : "rgba(0,240,255,0.08)",
-                    border: `1px solid ${copiedField === "hash" ? "rgba(0,255,157,0.3)" : "rgba(0,240,255,0.15)"}`,
-                    color: copiedField === "hash" ? "#00ff9d" : "#8ecae6",
+                    background: copiedField === "hash" ? "rgba(0,212,255,0.15)" : "rgba(0,212,255,0.08)",
+                    border: `1px solid ${copiedField === "hash" ? "rgba(0,212,255,0.3)" : "rgba(0,212,255,0.15)"}`,
+                    color: copiedField === "hash" ? "#00d4ff" : "#8ecae6",
                   }}
                 >
                   {copiedField === "hash" ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 </button>
               </div>
             ) : (
-              <div className="rounded-lg px-3 py-2.5 text-[9px] font-mono text-gray-600 italic"
+              <div className="rounded-lg px-3 py-2.5 text-[0.5625rem] font-mono text-gray-600 italic"
                 style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}
               >
                 Waiting for next hand...
               </div>
             )}
-            <div className="text-[8px] text-gray-600 mt-1">Pre-deal locked SHA-256 of deck order</div>
+            <div className="text-[0.5rem] text-gray-600 mt-1">Pre-deal locked SHA-256 of deck order</div>
           </div>
 
           {/* Seed Reveal */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-white mb-2">
+            <div className="text-[0.625rem] font-bold uppercase tracking-wider text-white mb-2">
               Server Seed
             </div>
             {shuffleProof ? (
@@ -344,10 +344,10 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                     {seedRevealed ? <EyeOff className="w-4 h-4 text-purple-400" /> : <Eye className="w-4 h-4 text-purple-400" />}
                   </div>
                   <div className="text-left flex-1 min-w-0">
-                    <div className="text-[11px] font-semibold text-white group-hover:text-purple-300 transition-colors">
+                    <div className="text-[0.6875rem] font-semibold text-white group-hover:text-purple-300 transition-colors">
                       {seedRevealed ? "Hide Seed" : "Reveal Seed"}
                     </div>
-                    <div className="text-[9px] text-gray-600 truncate">
+                    <div className="text-[0.5625rem] text-gray-600 truncate">
                       {seedRevealed ? shuffleProof.serverSeed.slice(0, 24) + "..." : "Click to reveal after showdown"}
                     </div>
                   </div>
@@ -355,7 +355,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                 {seedRevealed && (
                   <div className="mt-2 flex items-center gap-2">
                     <div
-                      className="flex-1 rounded-lg px-3 py-2 text-[8px] font-mono text-purple-400/80 break-all"
+                      className="flex-1 rounded-lg px-3 py-2 text-[0.5rem] font-mono text-purple-400/80 break-all"
                       style={{
                         background: "rgba(168,85,247,0.04)",
                         border: "1px solid rgba(168,85,247,0.1)",
@@ -367,9 +367,9 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                       onClick={() => handleCopy(shuffleProof.serverSeed, "seed")}
                       className="shrink-0 p-2 rounded-lg transition-all"
                       style={{
-                        background: copiedField === "seed" ? "rgba(0,255,157,0.15)" : "rgba(168,85,247,0.08)",
-                        border: `1px solid ${copiedField === "seed" ? "rgba(0,255,157,0.3)" : "rgba(168,85,247,0.15)"}`,
-                        color: copiedField === "seed" ? "#00ff9d" : "#a78bfa",
+                        background: copiedField === "seed" ? "rgba(0,212,255,0.15)" : "rgba(168,85,247,0.08)",
+                        border: `1px solid ${copiedField === "seed" ? "rgba(0,212,255,0.3)" : "rgba(168,85,247,0.15)"}`,
+                        color: copiedField === "seed" ? "#00d4ff" : "#a78bfa",
                       }}
                     >
                       {copiedField === "seed" ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -389,8 +389,8 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                   <Eye className="w-4 h-4 text-gray-600" />
                 </div>
                 <div className="text-left">
-                  <div className="text-[11px] font-semibold text-gray-500">Locked Until Showdown</div>
-                  <div className="text-[9px] text-gray-700">Seed revealed after hand completes</div>
+                  <div className="text-[0.6875rem] font-semibold text-gray-500">Locked Until Showdown</div>
+                  <div className="text-[0.5625rem] text-gray-700">Seed revealed after hand completes</div>
                 </div>
               </div>
             )}
@@ -401,17 +401,17 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
             <div>
               <button
                 onClick={() => setShowDeckOrder(!showDeckOrder)}
-                className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-white mb-2"
+                className="w-full flex items-center justify-between text-[0.625rem] font-bold uppercase tracking-wider text-white mb-2"
               >
                 <span>Deck Order</span>
                 {showDeckOrder ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
               </button>
               {showDeckOrder && (
                 <div
-                  className="rounded-lg px-3 py-2 text-[8px] font-mono text-cyan-400/60 break-all max-h-32 overflow-y-auto custom-scrollbar"
+                  className="rounded-lg px-3 py-2 text-[0.5rem] font-mono text-cyan-400/60 break-all max-h-32 overflow-y-auto custom-scrollbar"
                   style={{
-                    background: "rgba(0,240,255,0.02)",
-                    border: "1px solid rgba(0,240,255,0.06)",
+                    background: "rgba(0,212,255,0.02)",
+                    border: "1px solid rgba(0,212,255,0.06)",
                   }}
                 >
                   {shuffleProof.deckOrder}
@@ -431,8 +431,8 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
             >
               <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
               <div>
-                <div className="text-[11px] font-semibold text-green-300">Client Verification Passed</div>
-                <div className="text-[9px] text-gray-500">Re-shuffled locally, hashes match</div>
+                <div className="text-[0.6875rem] font-semibold text-green-300">Client Verification Passed</div>
+                <div className="text-[0.5625rem] text-gray-500">Re-shuffled locally, hashes match</div>
               </div>
             </div>
           )}
@@ -447,8 +447,8 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
             >
               <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
               <div>
-                <div className="text-[11px] font-semibold text-red-300">Verification Failed</div>
-                <div className="text-[9px] text-gray-500">Hash mismatch detected</div>
+                <div className="text-[0.6875rem] font-semibold text-red-300">Verification Failed</div>
+                <div className="text-[0.5625rem] text-gray-500">Hash mismatch detected</div>
               </div>
             </div>
           )}
@@ -459,18 +459,18 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
             disabled={!shuffleProof}
             className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-green-500/[0.03] group disabled:opacity-30 disabled:cursor-not-allowed"
             style={{
-              background: "rgba(0,255,157,0.02)",
-              border: "1px solid rgba(0,255,157,0.1)",
+              background: "rgba(0,212,255,0.02)",
+              border: "1px solid rgba(0,212,255,0.1)",
             }}
           >
             <div className="w-8 h-8 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0">
               <Download className="w-4 h-4 text-green-400" />
             </div>
             <div className="text-left">
-              <div className="text-[11px] font-semibold text-green-300 group-hover:text-green-200 transition-colors">
+              <div className="text-[0.6875rem] font-semibold text-green-300 group-hover:text-green-200 transition-colors">
                 Download Verification
               </div>
-              <div className="text-[9px] text-gray-600">Standalone HTML with proof + verify code</div>
+              <div className="text-[0.5625rem] text-gray-600">Standalone HTML with proof + verify code</div>
             </div>
           </button>
         </div>
@@ -481,7 +481,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
         className="px-5 py-3 text-center"
         style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
       >
-        <div className="text-[9px] text-gray-600 font-mono">
+        <div className="text-[0.5625rem] text-gray-600 font-mono">
           <span className="text-cyan-500/60">HMAC-SHA256 Fisher-Yates</span>
           <span className="mx-1.5 text-gray-700">+</span>
           <span className="text-cyan-500/60">SHA-512 Entropy</span>

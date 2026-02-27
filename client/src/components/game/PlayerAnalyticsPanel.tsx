@@ -27,7 +27,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
 
   const getWinRateColor = (rate: number) => {
     if (rate >= 40) return { text: "text-green-400", bar: "#22c55e", glow: "rgba(34,197,94,0.3)" };
-    if (rate >= 25) return { text: "text-cyan-400", bar: "#06b6d4", glow: "rgba(0,240,255,0.3)" };
+    if (rate >= 25) return { text: "text-cyan-400", bar: "#06b6d4", glow: "rgba(0,212,255,0.3)" };
     if (rate >= 15) return { text: "text-yellow-400", bar: "#eab308", glow: "rgba(234,179,8,0.3)" };
     return { text: "text-red-400", bar: "#ef4444", glow: "rgba(239,68,68,0.3)" };
   };
@@ -90,9 +90,9 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
       <div
         className="rounded-xl backdrop-blur-md overflow-hidden"
         style={{
-          background: "linear-gradient(180deg, rgba(12,20,40,0.92) 0%, rgba(10,16,34,0.96) 100%)",
-          border: "1px solid rgba(0,240,255,0.1)",
-          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(0,240,255,0.04)",
+          background: "linear-gradient(180deg, rgba(20,31,40,0.88) 0%, rgba(16,24,36,0.92) 100%)",
+          border: "1px solid rgba(0,212,255,0.1)",
+          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(0,212,255,0.04)",
           minWidth: 210,
         }}
       >
@@ -111,7 +111,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
             >
               <Activity className="w-3.5 h-3.5 text-purple-400" />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
               Player Analytics
             </span>
           </div>
@@ -151,7 +151,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-1.5">
                           <Icon className="w-3 h-3 text-gray-600" />
-                          <span className="text-[9px] text-gray-500 uppercase tracking-wider font-bold">
+                          <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-bold">
                             {stat.label}
                           </span>
                         </div>
@@ -191,7 +191,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
                 >
                   <div className="flex items-center gap-1.5">
                     <Hash className="w-3 h-3 text-gray-600" />
-                    <span className="text-[9px] text-gray-600 uppercase tracking-wider font-bold">
+                    <span className="text-[0.5625rem] text-gray-600 uppercase tracking-wider font-bold">
                       Hands Played
                     </span>
                   </div>

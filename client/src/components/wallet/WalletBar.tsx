@@ -83,18 +83,18 @@ export function WalletBar() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setShowDropdown(!showDropdown)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/15 hover:border-amber-500/30 hover:bg-amber-500/15 transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/15 hover:border-cyan-500/30 hover:bg-cyan-500/15 transition-all cursor-pointer"
         >
-          <Coins className="w-3.5 h-3.5 text-amber-400" />
+          <Coins className="w-3.5 h-3.5 text-cyan-400" />
           <span className={`text-xs font-bold tabular-nums transition-colors duration-300 ${
             animating && delta > 0 ? "text-green-400" :
             animating && delta < 0 ? "text-red-400" :
-            "text-amber-400"
+            "text-cyan-400"
           }`}>
             {displayBalance.toLocaleString()}
           </span>
-          <span className="text-[0.5rem] text-amber-600 uppercase">chips</span>
-          <ChevronDown className={`w-3 h-3 text-amber-600 transition-transform ${showDropdown ? "rotate-180" : ""}`} />
+          <span className="text-[0.5rem] text-cyan-600 uppercase">chips</span>
+          <ChevronDown className={`w-3 h-3 text-cyan-600 transition-transform ${showDropdown ? "rotate-180" : ""}`} />
         </button>
 
         {/* Wallet dropdown */}
@@ -155,7 +155,7 @@ export function WalletBar() {
               {/* Footer with actions */}
               <div className="px-3 py-2 border-t border-white/5 flex items-center justify-between">
                 <Link href="/wallet" onClick={() => setShowDropdown(false)}>
-                  <span className="text-[0.625rem] font-semibold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer">
+                  <span className="text-[0.625rem] font-semibold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer">
                     Manage Wallets &rarr;
                   </span>
                 </Link>

@@ -60,7 +60,7 @@ export default function Profile() {
             alt=""
             className="absolute -top-4 -right-8 w-40 h-40 object-contain opacity-15 pointer-events-none rotate-12"
           />
-          <div className="absolute -top-20 -right-20 w-60 h-60 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-20 -right-20 w-60 h-60 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex items-center gap-6">
@@ -78,14 +78,14 @@ export default function Profile() {
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">@{user?.username}</p>
               <div className="flex items-center gap-3 mt-2">
-                <span className="flex items-center gap-1.5 text-xs text-amber-400 font-bold">
+                <span className="flex items-center gap-1.5 text-xs text-cyan-400 font-bold">
                   <Coins className="w-3.5 h-3.5" />
                   {(user?.chipBalance ?? 0).toLocaleString()} chips
                 </span>
                 <span className={`px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-wider ${
                   user?.role === "admin"
                     ? "bg-purple-500/15 text-purple-400 border border-purple-500/20"
-                    : "bg-amber-500/15 text-amber-400 border border-amber-500/20"
+                    : "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20"
                 }`}>
                   {user?.role || "member"}
                 </span>
@@ -102,12 +102,12 @@ export default function Profile() {
           className="glass rounded-xl p-6 border border-white/5 mb-6"
         >
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-amber-500/70" />
+            <TrendingUp className="w-4 h-4 text-cyan-500/70" />
             Your Statistics
           </h3>
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
+              <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
             </div>
           ) : statsError ? (
             <div className="flex items-center justify-center py-8">
@@ -115,9 +115,9 @@ export default function Profile() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 rounded-lg bg-white/5 border border-amber-500/10">
-                <Gamepad2 className="w-5 h-5 text-amber-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-amber-400">{stats?.handsPlayed ?? 0}</div>
+              <div className="text-center p-4 rounded-lg bg-white/5 border border-cyan-500/10">
+                <Gamepad2 className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
+                <div className="text-2xl font-bold text-cyan-400">{stats?.handsPlayed ?? 0}</div>
                 <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider mt-1">Hands Played</div>
               </div>
               <div className="text-center p-4 rounded-lg bg-white/5 border border-green-500/10">
@@ -125,9 +125,9 @@ export default function Profile() {
                 <div className="text-2xl font-bold text-green-400">{stats?.potsWon ?? 0}</div>
                 <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider mt-1">Pots Won</div>
               </div>
-              <div className="text-center p-4 rounded-lg bg-white/5 border border-amber-500/10">
-                <TrendingUp className="w-5 h-5 text-amber-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-amber-400">{winRate}%</div>
+              <div className="text-center p-4 rounded-lg bg-white/5 border border-cyan-500/10">
+                <TrendingUp className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
+                <div className="text-2xl font-bold text-cyan-400">{winRate}%</div>
                 <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider mt-1">Win Rate</div>
               </div>
               <div className="text-center p-4 rounded-lg bg-white/5 border border-purple-500/10">
@@ -176,9 +176,9 @@ export default function Profile() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/wallet")}
-            className="glass rounded-xl p-4 border border-white/5 hover:border-amber-500/20 transition-all text-center group"
+            className="glass rounded-xl p-4 border border-white/5 hover:border-cyan-500/20 transition-all text-center group"
           >
-            <Wallet className="w-5 h-5 text-amber-400 mx-auto mb-2" />
+            <Wallet className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
             <span className="text-[0.625rem] font-bold text-gray-400 uppercase tracking-wider group-hover:text-white transition-colors">
               Wallet
             </span>
@@ -187,9 +187,9 @@ export default function Profile() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/analytics")}
-            className="glass rounded-xl p-4 border border-white/5 hover:border-amber-500/20 transition-all text-center group"
+            className="glass rounded-xl p-4 border border-white/5 hover:border-cyan-500/20 transition-all text-center group"
           >
-            <BookOpen className="w-5 h-5 text-amber-400 mx-auto mb-2" />
+            <BookOpen className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
             <span className="text-[0.625rem] font-bold text-gray-400 uppercase tracking-wider group-hover:text-white transition-colors">
               Analytics
             </span>

@@ -19,13 +19,12 @@ import {
 function RoleLabel({ role }: { role: string }) {
   const colorMap: Record<string, string> = {
     owner: "text-amber-400",
-    admin: "text-cyan-400",
-    manager: "text-cyan-400",
+    admin: "text-amber-400",
     member: "text-gray-400",
   };
   const color = colorMap[role] || colorMap.member;
   return (
-    <span className={`text-[11px] font-bold capitalize ${color}`}>
+    <span className={`text-[0.6875rem] font-bold capitalize ${color}`}>
       {role}:
     </span>
   );
@@ -105,10 +104,16 @@ export default function Members() {
     if (!inviteUsername.trim() || !club) return;
     setInviteLoading(true);
     setInviteMsg(null);
-    const success = await sendInvite(inviteUsername.trim());
-    if (success) {
-      setInviteMsg({ text: `Invite sent to "${inviteUsername.trim()}"`, type: "success" });
-      setInviteUsername("");
+    try {
+      const success = await sendInvite(inviteUsername.trim());
+      if (success) {
+        setInviteMsg({ text: `Invite sent to "${inviteUsername.trim()}"`, type: "success" });
+        setInviteUsername("");
+      } else {
+        setInviteMsg({ text: "Failed to send invite", type: "error" });
+      }
+    } catch (err: any) {
+      setInviteMsg({ text: err.message || "Failed to send invite", type: "error" });
     }
     setInviteLoading(false);
   };
@@ -162,7 +167,7 @@ export default function Members() {
     }
 
     filtered.sort((a, b) => {
-      const order: Record<string, number> = { owner: 0, admin: 1, manager: 1, member: 2 };
+      const order: Record<string, number> = { owner: 0, admin: 1, member: 2 };
       return (order[a.role] ?? 3) - (order[b.role] ?? 3);
     });
 
@@ -178,7 +183,7 @@ export default function Members() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
           </div>
         ) : members.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -196,7 +201,7 @@ export default function Members() {
               {/* Header with count */}
               <div className="flex items-center gap-3 mb-1">
                 <h2 className="text-sm font-black uppercase tracking-[0.15em] text-white">Members</h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                <span className="px-2.5 py-0.5 rounded-full text-[0.625rem] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20">
                   {members.length}
                 </span>
               </div>
@@ -210,7 +215,7 @@ export default function Members() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search members..."
-                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all"
                   />
                 </div>
                 <div className="flex items-center gap-1">
@@ -218,9 +223,9 @@ export default function Members() {
                     <button
                       key={role}
                       onClick={() => setRoleFilter(role)}
-                      className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
+                      className={`px-2.5 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all border ${
                         roleFilter === role
-                          ? "bg-cyan-500/15 border-cyan-500/25 text-cyan-400"
+                          ? "bg-amber-500/15 border-amber-500/25 text-amber-400"
                           : "border-white/5 text-gray-600 hover:text-gray-400 hover:border-white/10"
                       }`}
                     >
@@ -233,11 +238,11 @@ export default function Members() {
                     <button
                       key={status}
                       onClick={() => setStatusFilter(status)}
-                      className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
+                      className={`px-2.5 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all border ${
                         statusFilter === status
                           ? status === "online"
                             ? "bg-green-500/15 border-green-500/25 text-green-400"
-                            : "bg-cyan-500/15 border-cyan-500/25 text-cyan-400"
+                            : "bg-amber-500/15 border-amber-500/25 text-amber-400"
                           : "border-white/5 text-gray-600 hover:text-gray-400 hover:border-white/10"
                       }`}
                     >
@@ -245,7 +250,7 @@ export default function Members() {
                     </button>
                   ))}
                 </div>
-                <span className="text-[9px] text-gray-600 ml-auto">
+                <span className="text-[0.5625rem] text-gray-600 ml-auto">
                   {sortedMembers.length}/{members.length} shown
                 </span>
               </div>
@@ -253,25 +258,25 @@ export default function Members() {
               <div
                 className="rounded-xl overflow-hidden"
                 style={{
-                  background: "rgba(10,16,34,0.6)",
+                  background: "rgba(20,31,40,0.65)",
                   backdropFilter: "blur(16px)",
-                  border: "1px solid rgba(0,240,255,0.15)",
-                  boxShadow: "0 0 40px rgba(0,240,255,0.06), inset 0 1px 0 rgba(0,240,255,0.08)",
+                  border: "1px solid rgba(212,168,67,0.15)",
+                  boxShadow: "0 0 40px rgba(212,168,67,0.06), inset 0 1px 0 rgba(212,168,67,0.08)",
                 }}
               >
                 {/* Table Header — 3 columns matching mockup */}
-                <div className="grid grid-cols-12 gap-2 px-6 py-3.5 border-b border-cyan-500/10">
-                  <span className="col-span-5 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400">Name / Role</span>
-                  <span className="col-span-2 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400">Status</span>
-                  <span className="col-span-3 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400">Stats</span>
-                  <span className="col-span-2 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 text-right">Actions</span>
+                <div className="grid grid-cols-12 gap-2 px-6 py-3.5 border-b border-amber-500/10">
+                  <span className="col-span-5 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Name / Role</span>
+                  <span className="col-span-2 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Status</span>
+                  <span className="col-span-3 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Stats</span>
+                  <span className="col-span-2 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400 text-right">Actions</span>
                 </div>
 
                 {/* Empty state */}
                 {sortedMembers.length === 0 && (searchQuery || roleFilter !== "all" || statusFilter !== "all") && (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Search className="w-6 h-6 text-gray-700 mb-2" />
-                    <p className="text-[11px] text-gray-600">No members match your filters</p>
+                    <p className="text-[0.6875rem] text-gray-600">No members match your filters</p>
                   </div>
                 )}
 
@@ -291,7 +296,7 @@ export default function Members() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className="grid grid-cols-12 gap-3 items-center px-6 py-5 border-b border-white/[0.04] hover:bg-cyan-500/[0.03] transition-all duration-200 group"
+                      className="grid grid-cols-12 gap-3 items-center px-6 py-5 border-b border-white/[0.04] hover:bg-amber-500/[0.06] transition-all duration-200 group"
                     >
                       {/* Column 1: Avatar + Name + Role */}
                       <div className="col-span-5 flex items-center gap-4">
@@ -302,7 +307,7 @@ export default function Members() {
                             size="xl"
                           />
                           <span
-                            className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#0a1022] ${
+                            className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#111b2a] ${
                               isOnline
                                 ? "bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.7)]"
                                 : "bg-gray-600"
@@ -316,7 +321,7 @@ export default function Members() {
                               {member.displayName}
                             </span>
                             {isMe && (
-                              <span className="text-[8px] text-cyan-400 font-bold uppercase bg-cyan-500/10 px-1.5 py-0.5 rounded">You</span>
+                              <span className="text-[0.5rem] text-amber-400 font-bold uppercase bg-amber-500/10 px-1.5 py-0.5 rounded">You</span>
                             )}
                           </div>
                         </div>
@@ -344,7 +349,7 @@ export default function Members() {
                           </span>
                           <span className="text-xs text-gray-500 font-medium">$</span>
                         </div>
-                        <div className="text-[10px] text-gray-500 mt-0.5">
+                        <div className="text-[0.625rem] text-gray-500 mt-0.5">
                           {hands} hands | {winRate}% WR
                         </div>
                       </div>
@@ -360,7 +365,7 @@ export default function Members() {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => setEditingRole(editingRole === member.userId ? null : member.userId)}
                                 disabled={actionLoading === `role-${member.userId}`}
-                                className="px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+                                className="px-2 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
                               >
                                 {actionLoading === `role-${member.userId}` ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -378,7 +383,7 @@ export default function Members() {
                                     {member.role !== "admin" && (
                                       <button
                                         onClick={() => handleRoleChange(member.userId, "admin")}
-                                        className="w-full px-3 py-2 text-left text-[10px] font-bold text-cyan-400 hover:bg-cyan-500/10 transition-colors flex items-center gap-1.5"
+                                        className="w-full px-3 py-2 text-left text-[0.625rem] font-bold text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-1.5"
                                       >
                                         <ChevronUp className="w-3 h-3" /> Promote
                                       </button>
@@ -386,7 +391,7 @@ export default function Members() {
                                     {member.role === "admin" && (
                                       <button
                                         onClick={() => handleRoleChange(member.userId, "member")}
-                                        className="w-full px-3 py-2 text-left text-[10px] font-bold text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-1.5"
+                                        className="w-full px-3 py-2 text-left text-[0.625rem] font-bold text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-1.5"
                                       >
                                         <ChevronDown className="w-3 h-3" /> Demote
                                       </button>
@@ -414,10 +419,10 @@ export default function Members() {
                           </>
                         )}
                         {!canManage && !isMe && (
-                          <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">--</span>
+                          <span className="text-[0.5625rem] text-gray-600 font-bold uppercase tracking-wider">--</span>
                         )}
                         {isMe && (
-                          <span className="text-[9px] text-cyan-400/60 font-bold uppercase tracking-wider">--</span>
+                          <span className="text-[0.5625rem] text-amber-400/60 font-bold uppercase tracking-wider">--</span>
                         )}
                       </div>
                     </motion.div>
@@ -436,20 +441,20 @@ export default function Members() {
                 transition={{ delay: 0.3 }}
                 className="rounded-xl overflow-hidden"
                 style={{
-                  background: "rgba(10,16,34,0.6)",
+                  background: "rgba(20,31,40,0.65)",
                   backdropFilter: "blur(16px)",
-                  border: "1px solid rgba(0,240,255,0.12)",
-                  boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+                  border: "1px solid rgba(212,168,67,0.12)",
+                  boxShadow: "0 0 25px rgba(212,168,67,0.04)",
                 }}
               >
-                <div className="px-4 py-3 border-b border-cyan-500/10 flex items-center justify-between">
+                <div className="px-4 py-3 border-b border-amber-500/10 flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-white">
                     Club & Alliance News
                   </h3>
                   <div className="relative">
                     <Bell className="w-4 h-4 text-amber-400" />
                     {announcements.length > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">
+                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[0.5rem] font-bold flex items-center justify-center">
                         {announcements.length}
                       </span>
                     )}
@@ -459,14 +464,14 @@ export default function Members() {
                   {announcements.length === 0 ? (
                     <div className="py-6 text-center">
                       <Bell className="w-5 h-5 text-gray-700 mx-auto mb-2" />
-                      <p className="text-[10px] text-gray-600">No news yet</p>
+                      <p className="text-[0.625rem] text-gray-600">No news yet</p>
                     </div>
                   ) : (
                     announcements.slice(0, 5).map(a => (
                       <div key={a.id} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                        <div className="text-[10px] font-bold text-cyan-400 mb-0.5">{a.title}</div>
-                        <p className="text-[11px] text-gray-400 line-clamp-2">{a.content}</p>
-                        <span className="text-[9px] text-gray-600 mt-1 block">{formatTimeAgo(a.createdAt)}</span>
+                        <div className="text-[0.625rem] font-bold text-amber-400 mb-0.5">{a.title}</div>
+                        <p className="text-[0.6875rem] text-gray-400 line-clamp-2">{a.content}</p>
+                        <span className="text-[0.5625rem] text-gray-600 mt-1 block">{formatTimeAgo(a.createdAt)}</span>
                       </div>
                     ))
                   )}
@@ -481,10 +486,10 @@ export default function Members() {
                   transition={{ delay: 0.35 }}
                   className="rounded-xl overflow-hidden"
                   style={{
-                    background: "rgba(10,16,34,0.6)",
+                    background: "rgba(20,31,40,0.65)",
                     backdropFilter: "blur(16px)",
-                    border: "1px solid rgba(0,240,255,0.12)",
-                    boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+                    border: "1px solid rgba(212,168,67,0.12)",
+                    boxShadow: "0 0 25px rgba(212,168,67,0.04)",
                   }}
                 >
                   <button
@@ -494,7 +499,7 @@ export default function Members() {
                     <h3 className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2">
                       Pending Join Requests
                       {pendingCount > 0 && (
-                        <span className="bg-amber-500/20 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30">
+                        <span className="bg-amber-500/20 text-amber-400 text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30">
                           {pendingCount}
                         </span>
                       )}
@@ -519,7 +524,7 @@ export default function Members() {
                           <div className="px-4 pb-4 text-center">
                             <div className="py-4">
                               <Users className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                              <p className="text-[10px] text-gray-600">No pending requests</p>
+                              <p className="text-[0.625rem] text-gray-600">No pending requests</p>
                             </div>
                           </div>
                         ) : (
@@ -535,7 +540,7 @@ export default function Members() {
                                 <MemberAvatar avatarId={inv.avatarId ?? null} displayName={inv.displayName} size="sm" />
                                 <div className="flex-1 min-w-0">
                                   <div className="text-xs font-semibold text-white truncate">{inv.displayName}</div>
-                                  <div className="text-[9px] text-gray-500">
+                                  <div className="text-[0.5625rem] text-gray-500">
                                     {inv.type === "request" ? "Request to Join" : "Pending Invite"}
                                   </div>
                                 </div>
@@ -545,7 +550,7 @@ export default function Members() {
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => handleInvitationAction(inv.id, "accepted")}
                                     disabled={actionLoading === inv.id}
-                                    className="px-4 py-1.5 rounded-lg bg-green-500/80 hover:bg-green-500 text-white transition-colors disabled:opacity-50 text-[10px] font-bold uppercase tracking-wider"
+                                    className="px-4 py-1.5 rounded-lg bg-green-500/80 hover:bg-green-500 text-white transition-colors disabled:opacity-50 text-[0.625rem] font-bold uppercase tracking-wider"
                                     title="Approve"
                                   >
                                     {actionLoading === inv.id ? (
@@ -557,7 +562,7 @@ export default function Members() {
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => handleInvitationAction(inv.id, "declined")}
                                     disabled={actionLoading === inv.id}
-                                    className="px-4 py-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-colors disabled:opacity-50 text-[10px] font-bold uppercase tracking-wider"
+                                    className="px-4 py-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-colors disabled:opacity-50 text-[0.625rem] font-bold uppercase tracking-wider"
                                     title="Decline"
                                   >
                                     DECLINE
@@ -581,15 +586,15 @@ export default function Members() {
                   transition={{ delay: 0.4 }}
                   className="rounded-xl p-4"
                   style={{
-                    background: "rgba(10,16,34,0.6)",
+                    background: "rgba(20,31,40,0.65)",
                     backdropFilter: "blur(16px)",
-                    border: "1px solid rgba(0,240,255,0.12)",
-                    boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+                    border: "1px solid rgba(212,168,67,0.12)",
+                    boxShadow: "0 0 25px rgba(212,168,67,0.04)",
                   }}
                 >
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-3 flex items-center gap-2">
-                    <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
-                    <UserPlus className="w-3.5 h-3.5 text-cyan-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/80 mb-3 flex items-center gap-2">
+                    <span className="w-0.5 h-3.5 bg-amber-400/60 rounded-full" />
+                    <UserPlus className="w-3.5 h-3.5 text-amber-400" />
                     Invite Player
                   </h3>
                   <div className="flex gap-2">
@@ -606,7 +611,7 @@ export default function Members() {
                           if (e.key === "Enter") handleInvite();
                         }}
                         placeholder="Enter username..."
-                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all"
                       />
                     </div>
                     <motion.button
@@ -614,7 +619,7 @@ export default function Members() {
                       whileTap={{ scale: 0.95 }}
                       onClick={handleInvite}
                       disabled={inviteLoading || !inviteUsername.trim()}
-                      className="px-3 py-2 rounded-lg bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 hover:bg-cyan-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      className="px-3 py-2 rounded-lg bg-amber-500/15 border border-amber-500/25 text-amber-400 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                       {inviteLoading ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -630,7 +635,7 @@ export default function Members() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className={`mt-2 flex items-center gap-1.5 text-[10px] font-medium ${
+                        className={`mt-2 flex items-center gap-1.5 text-[0.625rem] font-medium ${
                           inviteMsg.type === "success" ? "text-green-400" : "text-red-400"
                         }`}
                       >
@@ -658,14 +663,14 @@ export default function Members() {
             transition={{ delay: 0.5 }}
             className="rounded-xl p-5"
             style={{
-              background: "rgba(10,16,34,0.6)",
+              background: "rgba(20,31,40,0.65)",
               backdropFilter: "blur(16px)",
-              border: "1px solid rgba(0,240,255,0.12)",
-              boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+              border: "1px solid rgba(212,168,67,0.12)",
+              boxShadow: "0 0 25px rgba(212,168,67,0.04)",
             }}
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-4 flex items-center gap-2">
-              <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/80 mb-4 flex items-center gap-2">
+              <span className="w-0.5 h-3.5 bg-amber-400/60 rounded-full" />
               Daily Missions
             </h3>
             <MissionsGrid missions={missions} />
@@ -678,21 +683,21 @@ export default function Members() {
             transition={{ delay: 0.6 }}
             className="rounded-xl p-5"
             style={{
-              background: "rgba(10,16,34,0.6)",
+              background: "rgba(20,31,40,0.65)",
               backdropFilter: "blur(16px)",
-              border: "1px solid rgba(0,240,255,0.12)",
-              boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+              border: "1px solid rgba(212,168,67,0.12)",
+              boxShadow: "0 0 25px rgba(212,168,67,0.04)",
             }}
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-4 flex items-center gap-2">
-              <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
-              <CalendarDays className="w-3.5 h-3.5 text-cyan-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/80 mb-4 flex items-center gap-2">
+              <span className="w-0.5 h-3.5 bg-amber-400/60 rounded-full" />
+              <CalendarDays className="w-3.5 h-3.5 text-amber-400" />
               Upcoming Private Games
             </h3>
             {events.length === 0 ? (
               <div className="text-center py-4">
                 <CalendarDays className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                <p className="text-[11px] text-gray-600">No upcoming games scheduled</p>
+                <p className="text-[0.6875rem] text-gray-600">No upcoming games scheduled</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -700,7 +705,7 @@ export default function Members() {
                   <div key={ev.id} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-bold text-white truncate">{ev.name}</div>
-                      <div className="text-[10px] text-gray-500 mt-0.5">
+                      <div className="text-[0.625rem] text-gray-500 mt-0.5">
                         {formatEventTime(ev.startTime)} | {ev.eventType}
                       </div>
                     </div>
@@ -708,7 +713,7 @@ export default function Members() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleRemindMe(ev.id, ev.name)}
-                      className={`px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all shrink-0 ml-3 ${
+                      className={`px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all shrink-0 ml-3 ${
                         localStorage.getItem(`remind_${ev.id}`)
                           ? "bg-green-500/20 text-green-400 border border-green-500/20"
                           : "bg-green-500 text-white hover:bg-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]"

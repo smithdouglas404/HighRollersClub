@@ -250,7 +250,11 @@ function GameTable({
 
     const playerIdx = players.findIndex(p => p.id === la.playerId);
     if (playerIdx < 0) return;
-    const seat = TABLE_SEATS[playerIdx] || TABLE_SEATS[playerIdx % TABLE_SEATS.length];
+    // Use visual seat (hero-rotated) for correct spatial audio positioning
+    const heroSeatIdx = players.findIndex(p => p.id === heroId);
+    const totalSeats = players.length;
+    const visualSeat = (playerIdx - heroSeatIdx + totalSeats) % totalSeats;
+    const seat = TABLE_SEATS[visualSeat] || TABLE_SEATS[visualSeat % TABLE_SEATS.length];
     const seatX = seat.x;
     const seatScale = seat.scale;
 
@@ -403,7 +407,7 @@ function GameTable({
           )}
 
           {/* Add Chips button — only for cash games when between hands */}
-          {isMultiplayer && addChips && maxBuyIn && hero && (gameState.phase === "pre-flop" && waiting || gameState.phase === "showdown" || gameState.phase === "waiting") && (
+          {isMultiplayer && addChips && maxBuyIn && hero && ((gameState.phase === "pre-flop" && waiting) || gameState.phase === "showdown" || gameState.phase === "waiting") && (
             <button
               onClick={() => { setAddChipsAmount(Math.min(maxBuyIn, walletBalance || maxBuyIn)); setShowAddChips(true); }}
               className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
@@ -529,11 +533,7 @@ function GameTable({
             <ShieldCheck className={`w-3.5 h-3.5 ${verificationStatus === "verified" ? "text-green-400" : "text-gray-500"}`} />
           </button>
 
-          {gameState.phase === "showdown" && (
-            <button className="px-3 py-1 rounded-lg border border-green-500/30 text-[0.625rem] font-bold text-green-400 hover:bg-green-500/10 transition-colors">
-              + NEW HAND
-            </button>
-          )}
+          {/* Next hand starts automatically after showdown — show countdown instead of decorative button */}
         </div>
       </div>
 
@@ -711,10 +711,10 @@ function GameTable({
 
           {/* Bottom controls — inline, not fixed */}
           <div className="relative z-30 shrink-0">
-            <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" || !dealing.controlsReady ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
+            <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" || gameState.phase === "collecting-seeds" || !dealing.controlsReady ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
               <PokerControls
                 onAction={handlePlayerAction}
-                minBet={gameState.minRaise || gameState.minBet || 0}
+                minBet={Math.max(gameState.minRaise || 0, gameState.minBet || 0, 1)}
                 maxBet={(hero?.chips || 0) + (hero?.currentBet || 0)}
                 callCost={Math.max(0, (gameState.minBet || 0) - (hero?.currentBet || 0))}
                 pot={gameState.pot}

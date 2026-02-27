@@ -203,7 +203,9 @@ export default function Lobby() {
 
   const handlePasswordSubmit = () => {
     if (!passwordModal) return;
+    // Store password temporarily for the join attempt — cleared on failed join
     sessionStorage.setItem(`table-password-${passwordModal.tableId}`, passwordInput);
+    setPasswordInput("");
     setPasswordModal(null);
     navigate(`/game/${passwordModal.tableId}`);
   };

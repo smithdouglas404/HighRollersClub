@@ -35,9 +35,11 @@ export default function ClubInvitations() {
         setInviteUsername("");
         setSendSuccess(`Invitation sent to ${username}`);
         setTimeout(() => setSendSuccess(""), 3000);
+      } else {
+        setSendError("Failed to send invitation");
       }
     } catch (err: any) {
-      setSendError(err.message);
+      setSendError(err.message || "Failed to send invitation");
     } finally {
       setSending(false);
     }
@@ -91,7 +93,7 @@ export default function ClubInvitations() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
           </div>
         ) : !club ? (
           <motion.div
@@ -120,8 +122,8 @@ export default function ClubInvitations() {
               animate={{ opacity: 1, y: 0 }}
               className="rounded-xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
-                border: "1px solid rgba(0,240,255,0.1)",
+                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
+                border: "1px solid rgba(212,168,67,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
             >
@@ -129,14 +131,14 @@ export default function ClubInvitations() {
                 className="flex items-center gap-3 px-5 py-4"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
               >
-                <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                  <UserPlus className="w-5 h-5 text-cyan-400" />
+                <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-cyan-400 tracking-wider uppercase">
+                  <h3 className="text-sm font-bold text-amber-400 tracking-wider uppercase">
                     Invite Player
                   </h3>
-                  <p className="text-[9px] text-gray-500">Send an invite by username</p>
+                  <p className="text-[0.5625rem] text-gray-500">Send an invite by username</p>
                 </div>
               </div>
 
@@ -148,10 +150,10 @@ export default function ClubInvitations() {
                     onChange={(e) => setInviteUsername(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSendInvite()}
                     placeholder="Enter username..."
-                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40"
                     style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
                     }}
                   />
                   <motion.button
@@ -180,7 +182,7 @@ export default function ClubInvitations() {
                       initial={{ opacity: 0, y: -5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -5 }}
-                      className="flex items-center gap-2 text-[10px] text-green-400"
+                      className="flex items-center gap-2 text-[0.625rem] text-green-400"
                     >
                       <CheckCircle className="w-3 h-3" />
                       {sendSuccess}
@@ -191,7 +193,7 @@ export default function ClubInvitations() {
                       initial={{ opacity: 0, y: -5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -5 }}
-                      className="flex items-center gap-2 text-[10px] text-red-400"
+                      className="flex items-center gap-2 text-[0.625rem] text-red-400"
                     >
                       <AlertTriangle className="w-3 h-3" />
                       {sendError}
@@ -214,7 +216,7 @@ export default function ClubInvitations() {
               transition={{ delay: 0.1 }}
               className="rounded-xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
+                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
                 border: "1px solid rgba(255,165,0,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
@@ -231,12 +233,12 @@ export default function ClubInvitations() {
                     <h3 className="text-sm font-bold tracking-wider uppercase gold-text">
                       Pending Requests
                     </h3>
-                    <p className="text-[9px] text-gray-500">Players wanting to join your club</p>
+                    <p className="text-[0.5625rem] text-gray-500">Players wanting to join your club</p>
                   </div>
                 </div>
                 {pendingRequests.length > 0 && (
                   <span
-                    className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20"
+                    className="text-[0.5625rem] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20"
                   >
                     {pendingRequests.length} pending
                   </span>
@@ -247,7 +249,7 @@ export default function ClubInvitations() {
                 {pendingRequests.length === 0 ? (
                   <div className="text-center py-6">
                     <Mail className="w-8 h-8 text-gray-700 mx-auto mb-2" />
-                    <p className="text-[11px] text-gray-600">No pending requests</p>
+                    <p className="text-[0.6875rem] text-gray-600">No pending requests</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -259,8 +261,8 @@ export default function ClubInvitations() {
                         className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-white/[0.02]"
                         style={{ border: "1px solid rgba(255,255,255,0.04)" }}
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(0,200,255,0.15)]">
-                          <span className="text-[10px] font-bold text-white">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(212,168,67,0.15)]">
+                          <span className="text-[0.625rem] font-bold text-white">
                             {inv.displayName.charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -268,7 +270,7 @@ export default function ClubInvitations() {
                           <div className="text-xs font-semibold text-white truncate">
                             {inv.displayName}
                           </div>
-                          <div className="text-[9px] text-gray-500">@{inv.username}</div>
+                          <div className="text-[0.5625rem] text-gray-500">@{inv.username}</div>
                         </div>
                         <div className="flex gap-1.5 shrink-0">
                           <motion.button
@@ -278,8 +280,8 @@ export default function ClubInvitations() {
                             disabled={actionLoading[inv.id]}
                             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
                             style={{
-                              background: "rgba(0,255,157,0.1)",
-                              border: "1px solid rgba(0,255,157,0.2)",
+                              background: "rgba(201,168,76,0.1)",
+                              border: "1px solid rgba(201,168,76,0.2)",
                             }}
                           >
                             {actionLoading[inv.id] ? (
@@ -316,7 +318,7 @@ export default function ClubInvitations() {
               transition={{ delay: 0.2 }}
               className="rounded-xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
+                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
                 border: "1px solid rgba(120,80,220,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
@@ -332,7 +334,7 @@ export default function ClubInvitations() {
                   <h3 className="text-sm font-bold tracking-wider uppercase gold-text">
                     Sent Invitations
                   </h3>
-                  <p className="text-[9px] text-gray-500">Track your outgoing invites</p>
+                  <p className="text-[0.5625rem] text-gray-500">Track your outgoing invites</p>
                 </div>
               </div>
 
@@ -340,7 +342,7 @@ export default function ClubInvitations() {
                 {sentInvitations.length === 0 ? (
                   <div className="text-center py-6">
                     <Send className="w-8 h-8 text-gray-700 mx-auto mb-2" />
-                    <p className="text-[11px] text-gray-600">No invitations sent yet</p>
+                    <p className="text-[0.6875rem] text-gray-600">No invitations sent yet</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -352,8 +354,8 @@ export default function ClubInvitations() {
                         className="flex items-center gap-3 px-4 py-3 rounded-lg"
                         style={{ border: "1px solid rgba(255,255,255,0.04)" }}
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(0,200,255,0.15)]">
-                          <span className="text-[10px] font-bold text-white">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(212,168,67,0.15)]">
+                          <span className="text-[0.625rem] font-bold text-white">
                             {inv.displayName.charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -361,11 +363,11 @@ export default function ClubInvitations() {
                           <div className="text-xs font-semibold text-white truncate">
                             {inv.displayName}
                           </div>
-                          <div className="text-[9px] text-gray-500">@{inv.username}</div>
+                          <div className="text-[0.5625rem] text-gray-500">@{inv.username}</div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {statusIcon(inv.status)}
-                          <span className={`text-[9px] font-bold uppercase tracking-wider ${statusColor(inv.status)}`}>
+                          <span className={`text-[0.5625rem] font-bold uppercase tracking-wider ${statusColor(inv.status)}`}>
                             {inv.status}
                           </span>
                         </div>

@@ -85,7 +85,7 @@ function MiniCard({ card }: { card: CardType }) {
   return (
     <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-xs font-mono font-bold ${color}`}>
       {card.rank}
-      <span className="text-[10px]">{SUIT_SYMBOLS[card.suit]}</span>
+      <span className="text-[0.625rem]">{SUIT_SYMBOLS[card.suit]}</span>
     </span>
   );
 }
@@ -94,7 +94,7 @@ function ActionBadge({ action, amount }: { action: string; amount?: number }) {
   const configs: Record<string, { bg: string; text: string }> = {
     fold: { bg: "bg-red-500/15 border-red-500/20", text: "text-red-400" },
     check: { bg: "bg-gray-500/15 border-gray-500/20", text: "text-gray-400" },
-    call: { bg: "bg-cyan-500/15 border-cyan-500/20", text: "text-cyan-400" },
+    call: { bg: "bg-amber-500/15 border-amber-500/20", text: "text-amber-400" },
     raise: { bg: "bg-amber-500/15 border-amber-500/20", text: "text-amber-400" },
     "all-in": { bg: "bg-purple-500/15 border-purple-500/20", text: "text-purple-400" },
     bet: { bg: "bg-green-500/15 border-green-500/20", text: "text-green-400" },
@@ -103,7 +103,7 @@ function ActionBadge({ action, amount }: { action: string; amount?: number }) {
   };
   const c = configs[action] || configs.check;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${c.text} ${c.bg} border`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.625rem] font-bold uppercase tracking-wider ${c.text} ${c.bg} border`}>
       {action}
       {amount !== undefined && amount > 0 && <span>{amount.toLocaleString()}</span>}
     </span>
@@ -139,7 +139,7 @@ function PhaseSection({
         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors"
       >
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 drop-shadow-[0_0_6px_rgba(0,240,255,0.3)]">
+          <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400 drop-shadow-[0_0_6px_rgba(212,168,67,0.3)]">
             {PHASE_LABELS[phase] || phase}
           </span>
           {phaseCards.length > 0 && (
@@ -149,7 +149,7 @@ function PhaseSection({
               ))}
             </div>
           )}
-          <span className="text-[9px] text-gray-600">{actions.length} actions</span>
+          <span className="text-[0.5625rem] text-gray-600">{actions.length} actions</span>
         </div>
         {expanded ? (
           <ChevronUp className="w-3.5 h-3.5 text-gray-600" />
@@ -178,7 +178,7 @@ function PhaseSection({
                 );
               })}
               {actions.length === 0 && (
-                <p className="text-[10px] text-gray-600 italic">No actions</p>
+                <p className="text-[0.625rem] text-gray-600 italic">No actions</p>
               )}
             </div>
           </motion.div>
@@ -356,12 +356,20 @@ export default function HandReplay({ handId }: { handId: string }) {
 
         {loading ? (
           <div className="text-center py-20">
-            <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
+            <div className="spinner spinner-lg mx-auto mb-4" />
             <p className="text-sm text-gray-500">Loading hand...</p>
           </div>
-        ) : error || !hand ? (
+        ) : error ? (
           <div className="text-center py-20">
-            <p className="text-sm text-red-400">{error || "Hand not found"}</p>
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        ) : !hand ? (
+          <div className="text-center py-20">
+            <p className="text-sm text-red-400">Hand not found</p>
+          </div>
+        ) : !hand.summary ? (
+          <div className="text-center py-20">
+            <p className="text-sm text-yellow-400">Hand data exists but the detailed summary is not available.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -393,7 +401,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                     {hand.commitmentHash && (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-500/10 border border-green-500/20">
                         <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
-                        <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">
+                        <span className="text-[0.625rem] font-bold text-green-400 uppercase tracking-wider">
                           Verified
                         </span>
                       </div>
@@ -422,7 +430,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                     <span className="text-sm font-bold text-amber-400">
                       {(summary?.pot || hand.potTotal || 0).toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-amber-400/60 uppercase">pot</span>
+                    <span className="text-[0.625rem] text-amber-400/60 uppercase">pot</span>
                   </div>
                   {winners.map((w) => (
                     <div key={w.playerId} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
@@ -430,7 +438,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                       <span className="text-xs font-bold text-green-400">
                         {playerMap.get(w.playerId)?.displayName || w.playerId.slice(0, 8)}
                       </span>
-                      <span className="text-[10px] text-green-400/60">+{w.amount.toLocaleString()}</span>
+                      <span className="text-[0.625rem] text-green-400/60">+{w.amount.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -438,7 +446,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                 {/* Community Cards */}
                 {communityCards && communityCards.length > 0 && (
                   <div className="mt-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-2">
+                    <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                       Board
                     </span>
                     <div className="flex items-center gap-1.5">
@@ -458,7 +466,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                 className="glass rounded-xl border border-white/5 overflow-hidden"
               >
                 <div className="px-4 py-3 border-b border-white/5">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
                     Action Log
                   </h3>
                 </div>
@@ -489,7 +497,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                   className="glass rounded-xl border border-white/5 overflow-hidden"
                 >
                   <div className="px-4 py-3 border-b border-white/5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
                       Showdown
                     </h3>
                   </div>
@@ -520,7 +528,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                               <div className="text-sm font-bold text-white">
                                 {player?.displayName || result.playerId.slice(0, 8)}
                               </div>
-                              <div className="text-[10px] text-gray-500">{result.handName}</div>
+                              <div className="text-[0.625rem] text-gray-500">{result.handName}</div>
                             </div>
                             {result.cards && (
                               <div className="flex items-center gap-1 ml-2">
@@ -552,7 +560,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                 transition={{ delay: 0.15 }}
                 className="glass rounded-xl p-4 border border-white/5"
               >
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-3">
                   Players
                 </h3>
                 <div className="space-y-2">
@@ -562,22 +570,22 @@ export default function HandReplay({ handId }: { handId: string }) {
                     return (
                       <div key={player.id} className="flex items-center justify-between py-1.5">
                         <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[0.625rem] font-bold ${
                             isWinner
                               ? "bg-green-500/20 text-green-400 border border-green-500/20"
-                              : "bg-gradient-to-br from-cyan-500/30 to-purple-500/30 text-gray-300 border border-white/10"
+                              : "bg-gradient-to-br from-amber-500/30 to-purple-500/30 text-gray-300 border border-white/10"
                           }`}>
                             {player.displayName.charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <div className="text-xs font-medium text-white">{player.displayName}</div>
-                            <div className="text-[9px] text-gray-600">
+                            <div className="text-[0.5625rem] text-gray-600">
                               Seat {player.seatIndex + 1} &middot; {player.startChips.toLocaleString()} chips
                             </div>
                           </div>
                         </div>
                         {isWinner && winAmount && (
-                          <span className="text-[10px] font-bold text-green-400">
+                          <span className="text-[0.625rem] font-bold text-green-400">
                             +{winAmount.toLocaleString()}
                           </span>
                         )}
@@ -604,11 +612,11 @@ export default function HandReplay({ handId }: { handId: string }) {
 
                   <div className="space-y-3">
                     <div>
-                      <span className="text-[9px] text-gray-500 uppercase tracking-wider block mb-1">
+                      <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider block mb-1">
                         Commitment Hash
                       </span>
                       <div className="flex items-center gap-2">
-                        <code className="text-[10px] text-cyan-400 font-mono break-all flex-1 bg-black/30 rounded px-2 py-1 border border-cyan-500/10">
+                        <code className="text-[0.625rem] text-amber-400 font-mono break-all flex-1 bg-black/30 rounded px-2 py-1 border border-amber-500/10">
                           {hand.commitmentHash.slice(0, 32)}...
                         </code>
                         <button
@@ -626,7 +634,7 @@ export default function HandReplay({ handId }: { handId: string }) {
 
                     <button
                       onClick={() => setShowProof(!showProof)}
-                      className="text-[10px] font-bold text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
+                      className="text-[0.625rem] font-bold text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
                     >
                       {showProof ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                       {showProof ? "Hide Details" : "Show Proof Details"}
@@ -642,20 +650,20 @@ export default function HandReplay({ handId }: { handId: string }) {
                         >
                           {hand.serverSeed && (
                             <div>
-                              <span className="text-[9px] text-gray-500 uppercase tracking-wider block mb-1">
+                              <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider block mb-1">
                                 Server Seed
                               </span>
-                              <code className="text-[9px] text-amber-400/80 font-mono break-all block bg-black/30 rounded px-2 py-1 border border-cyan-500/10">
+                              <code className="text-[0.5625rem] text-amber-400/80 font-mono break-all block bg-black/30 rounded px-2 py-1 border border-amber-500/10">
                                 {hand.serverSeed.slice(0, 48)}...
                               </code>
                             </div>
                           )}
                           {hand.deckOrder && (
                             <div>
-                              <span className="text-[9px] text-gray-500 uppercase tracking-wider block mb-1">
+                              <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider block mb-1">
                                 Deck Order
                               </span>
-                              <code className="text-[9px] text-purple-400/80 font-mono break-all block bg-black/30 rounded px-2 py-1 border border-cyan-500/10 max-h-20 overflow-y-auto">
+                              <code className="text-[0.5625rem] text-purple-400/80 font-mono break-all block bg-black/30 rounded px-2 py-1 border border-amber-500/10 max-h-20 overflow-y-auto">
                                 {hand.deckOrder}
                               </code>
                             </div>
@@ -666,7 +674,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-white/5">
-                    <span className="text-[8px] text-gray-600 uppercase tracking-wider">
+                    <span className="text-[0.5rem] text-gray-600 uppercase tracking-wider">
                       HMAC-SHA256 Fisher-Yates + SHA-512 Entropy
                     </span>
                   </div>

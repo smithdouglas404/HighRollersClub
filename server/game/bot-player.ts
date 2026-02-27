@@ -224,6 +224,7 @@ export class BotPlayer {
           recentActions.push(`${actorName} ${lastAction.action}${lastAction.amount ? " $" + lastAction.amount : ""}`);
         }
 
+        const handAtRequest = engine.state.handNumber;
         const result = await getAIDecision({
           personality: this.personality,
           holeCards: player.cards,
@@ -242,7 +243,11 @@ export class BotPlayer {
           // Re-check turn status — game state may have changed during async AI call
           const postPlayer = engine.getPlayer(this.id);
           if (!postPlayer || postPlayer.seatIndex !== engine.state.currentTurnSeat || postPlayer.status !== "thinking") {
-            return; // No longer our turn — discard AI result
+            return; // No longer our turn or hand changed — discard AI result
+          }
+          // Also check hand number to avoid acting on wrong hand
+          if (engine.state.handNumber !== handAtRequest) {
+            return; // Hand changed during AI call — discard stale result
           }
           if (result.chatMessage) {
             this.sendChat(result.chatMessage);
@@ -312,6 +317,9 @@ export class BotPlayer {
     const mediumThreshold = 0.45 - (p.aggression * 0.10);
     const specThreshold = 0.25 + (p.tightness * 0.10);
 
+    // Helper: ensure bot raise is at least minRaise to avoid silent rejection
+    const safeRaise = (amount: number) => Math.max(amount, engine.state.minRaise);
+
     // ── Decision-making ────────────────────────────────────────────────────
     if (toCall > 0) {
       const potOdds = toCall / (pot + toCall);
@@ -332,7 +340,7 @@ export class BotPlayer {
           } else {
             this.sendChat(pickChat(p.chat.raise));
           }
-          engine.handleAction(this.id, "raise", raiseAmount);
+          engine.handleAction(this.id, "raise", safeRaise(raiseAmount));
         }
       } else if (equity > strongThreshold) {
         // Strong: raise or call based on aggression
@@ -342,7 +350,7 @@ export class BotPlayer {
             chips + player.currentBet
           );
           this.sendChat(pickChat(p.chat.raise));
-          engine.handleAction(this.id, "raise", raiseAmount);
+          engine.handleAction(this.id, "raise", safeRaise(raiseAmount));
         } else {
           engine.handleAction(this.id, "call");
         }
@@ -354,7 +362,7 @@ export class BotPlayer {
               Math.floor(engine.state.minBet * 2 * p.betSizeMult),
               chips + player.currentBet
             );
-            engine.handleAction(this.id, "raise", raiseAmount);
+            engine.handleAction(this.id, "raise", safeRaise(raiseAmount));
           } else {
             engine.handleAction(this.id, "call");
           }
@@ -377,7 +385,7 @@ export class BotPlayer {
             Math.floor(engine.state.minBet * 2 * p.betSizeMult),
             chips + player.currentBet
           );
-          engine.handleAction(this.id, "raise", raiseAmount);
+          engine.handleAction(this.id, "raise", safeRaise(raiseAmount));
         } else {
           this.sendChat(pickChat(p.chat.fold));
           engine.handleAction(this.id, "fold");
@@ -391,7 +399,7 @@ export class BotPlayer {
               Math.floor(engine.state.minBet * 2.5 * p.betSizeMult),
               chips + player.currentBet
             );
-            engine.handleAction(this.id, "raise", raiseAmount);
+            engine.handleAction(this.id, "raise", safeRaise(raiseAmount));
           } else {
             engine.handleAction(this.id, "call");
           }

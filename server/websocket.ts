@@ -286,12 +286,8 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
           return;
         }
       }
-      // Leave previous table first if switching tables
-      if (client.tableId && client.tableId !== msg.tableId) {
-        await tableManager.leaveTable(client.tableId, client.userId);
-        sendGameStateToTable(client.tableId);
-        client.tableId = null;
-      }
+      // Try joining the new table first before leaving the old one
+      const previousTableId = client.tableId;
       const result = await tableManager.joinTable(
         msg.tableId,
         client.userId,
@@ -302,6 +298,11 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       if (!result.ok) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
+      }
+      // Join succeeded — now leave the old table
+      if (previousTableId && previousTableId !== msg.tableId) {
+        await tableManager.leaveTable(previousTableId, client.userId);
+        sendGameStateToTable(previousTableId);
       }
       client.tableId = msg.tableId;
       sendGameStateToTable(msg.tableId);
@@ -372,15 +373,9 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       }
       const amount = msg.amount;
       if (!amount || amount <= 0) return;
-      // Verify user has enough chips and add to their stack
-      const user = await storage.getUser(client.userId);
-      if (!user || user.chipBalance < amount) {
-        sendToUser(client.userId, { type: "error", message: "Insufficient chips" });
-        return;
-      }
+      // Verify user has enough chips in cash_game wallet and add to stack
       const table = await storage.getTable(client.tableId);
       if (!table) return;
-      // Can only add chips between hands
       const instance = tableManager.getTable(client.tableId);
       if (!instance) return;
       const player = instance.engine.getPlayer(client.userId);
@@ -397,24 +392,26 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendToUser(client.userId, { type: "error", message: "Invalid amount" });
         return;
       }
-      // Re-read to prevent race condition (optimistic locking)
-      const freshUser = await storage.getUser(client.userId);
-      if (!freshUser || freshUser.chipBalance < addAmount) {
-        sendToUser(client.userId, { type: "error", message: "Insufficient chips" });
+      // Atomically deduct from cash_game wallet
+      await storage.ensureWallets(client.userId);
+      const { success: deducted, newBalance: newWalletBalance } = await storage.atomicDeductFromWallet(client.userId, "cash_game", addAmount);
+      if (!deducted) {
+        sendToUser(client.userId, { type: "error", message: "Insufficient chips in cash game wallet" });
         return;
       }
-      // Deduct from user balance and add to stack
-      const newWalletBalance = freshUser.chipBalance - addAmount;
-      await storage.updateUser(client.userId, { chipBalance: newWalletBalance });
       // Record the transaction
       await storage.createTransaction({
         userId: client.userId,
         type: "withdraw",
         amount: -addAmount,
-        balanceBefore: freshUser.chipBalance,
+        balanceBefore: newWalletBalance + addAmount,
         balanceAfter: newWalletBalance,
         tableId: client.tableId,
         description: "Added chips to table",
+        walletType: "cash_game",
+        relatedTransactionId: null,
+        paymentId: null,
+        metadata: null,
       });
       player.chips += addAmount;
       // Send confirmation with new wallet balance so client can update display

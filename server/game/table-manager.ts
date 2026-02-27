@@ -52,6 +52,8 @@ class TableManager {
   private pendingLeaves = new Map<string, Set<string>>(); // tableId → Set<userId>
   // Auto-cashout timers for disconnected players (5 min)
   private autoCashoutTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  // Lock set to prevent concurrent join_table for the same user
+  private joiningUsers = new Set<string>();
 
   constructor() {
     if (blockchainConfig.enabled) {
@@ -281,6 +283,10 @@ class TableManager {
               balanceAfter: 0,
               tableId,
               description: `Rake from hand #${proof.handNumber}`,
+              walletType: null,
+              relatedTransactionId: null,
+              paymentId: null,
+              metadata: null,
             }).catch(() => {});
           }
         }
@@ -458,15 +464,26 @@ class TableManager {
   private async creditPrize(userId: string, amount: number, tableId: string) {
     const user = await storage.getUser(userId);
     if (!user) return;
-    await storage.updateUser(userId, { chipBalance: user.chipBalance + amount });
+
+    // Determine wallet type from the table's game format
+    const instance = this.tables.get(tableId);
+    const format = instance?.config.gameFormat || "cash";
+    const walletType = format === "sng" ? "sng" : format === "tournament" ? "tournament" : "main";
+
+    await storage.ensureWallets(userId);
+    const { newBalance } = await storage.atomicAddToWallet(userId, walletType as any, amount);
     await storage.createTransaction({
       userId,
       type: "prize",
       amount,
-      balanceBefore: user.chipBalance,
-      balanceAfter: user.chipBalance + amount,
+      balanceBefore: newBalance - amount,
+      balanceAfter: newBalance,
       tableId,
       description: `Tournament prize (${amount} chips)`,
+      walletType: walletType,
+      relatedTransactionId: null,
+      paymentId: null,
+      metadata: null,
     });
   }
 
@@ -503,6 +520,26 @@ class TableManager {
     buyIn: number,
     requestedSeat?: number
   ): Promise<{ ok: boolean; error?: string }> {
+    // Prevent concurrent join_table for the same user (avoids double deduction)
+    const lockKey = `${userId}:${tableId}`;
+    if (this.joiningUsers.has(lockKey)) {
+      return { ok: false, error: "Join already in progress" };
+    }
+    this.joiningUsers.add(lockKey);
+    try {
+      return await this._joinTableInner(tableId, userId, displayName, buyIn, requestedSeat);
+    } finally {
+      this.joiningUsers.delete(lockKey);
+    }
+  }
+
+  private async _joinTableInner(
+    tableId: string,
+    userId: string,
+    displayName: string,
+    buyIn: number,
+    requestedSeat?: number
+  ): Promise<{ ok: boolean; error?: string }> {
     const instance = await this.ensureTable(tableId);
     const { engine, config, lifecycle } = instance;
 
@@ -518,13 +555,14 @@ class TableManager {
         return { ok: false, error: "Tournament already started" };
       }
 
-      // Atomically deduct fixed buy-in from user balance
+      // Atomically deduct fixed buy-in from SNG wallet
       const user = await storage.getUser(userId);
       if (!user) return { ok: false, error: "User not found" };
 
-      const deductResult = await storage.atomicDeductChips(userId, fixedBuyIn);
+      await storage.ensureWallets(userId);
+      const deductResult = await storage.atomicDeductFromWallet(userId, "sng", fixedBuyIn);
       if (!deductResult.success) {
-        return { ok: false, error: "Insufficient chips for buy-in" };
+        return { ok: false, error: "Insufficient chips in SNG wallet" };
       }
 
       await storage.createTransaction({
@@ -535,6 +573,10 @@ class TableManager {
         balanceAfter: deductResult.newBalance,
         tableId,
         description: `SNG buy-in`,
+        walletType: "sng",
+        relatedTransactionId: null,
+        paymentId: null,
+        metadata: null,
       });
 
       // Register in lifecycle
@@ -624,13 +666,15 @@ class TableManager {
       return { ok: false, error: "Table is full" };
     }
 
-    // Atomically deduct from user balance
+    // Atomically deduct from cash_game wallet
     const user = await storage.getUser(userId);
     if (!user) return { ok: false, error: "User not found" };
 
-    const deductResult = await storage.atomicDeductChips(userId, buyIn);
+    await storage.ensureWallets(userId);
+    const walletType = config.gameFormat === "sng" ? "sng" : config.gameFormat === "tournament" ? "tournament" : "cash_game";
+    const deductResult = await storage.atomicDeductFromWallet(userId, walletType as any, buyIn);
     if (!deductResult.success) {
-      return { ok: false, error: "Insufficient chips" };
+      return { ok: false, error: `Insufficient chips in ${walletType} wallet` };
     }
 
     await storage.createTransaction({
@@ -641,6 +685,10 @@ class TableManager {
       balanceAfter: deductResult.newBalance,
       tableId,
       description: `Buy-in at table`,
+      walletType: walletType,
+      relatedTransactionId: null,
+      paymentId: null,
+      metadata: null,
     });
 
     // Find available seat
@@ -717,7 +765,36 @@ class TableManager {
     const player = instance.engine.getPlayer(userId);
     if (!player) return;
 
-    // SNG: forfeit (eliminate with last place)
+    // SNG during registration: refund buy-in
+    if (instance.config.gameFormat === "sng" && instance.lifecycle && instance.lifecycle.status === "registering") {
+      const reg = instance.lifecycle.registeredPlayers.get(userId);
+      if (reg && reg.buyIn > 0) {
+        // Refund buy-in to SNG wallet
+        const { newBalance } = await storage.atomicAddToWallet(userId, "sng", reg.buyIn);
+        await storage.createTransaction({
+          userId,
+          type: "refund",
+          amount: reg.buyIn,
+          balanceBefore: newBalance - reg.buyIn,
+          balanceAfter: newBalance,
+          tableId,
+          description: "SNG buy-in refund (left before start)",
+          walletType: "sng",
+          relatedTransactionId: null,
+          paymentId: null,
+          metadata: null,
+        });
+      }
+      instance.lifecycle.registeredPlayers.delete(userId);
+      instance.lifecycle.prizePool -= (reg?.buyIn || 0);
+      instance.engine.forceRemovePlayer(userId);
+      instance.avatarMap.delete(userId);
+      await storage.removeTablePlayer(tableId, userId);
+      broadcastToTable(tableId, { type: "player_left", userId, displayName: player.displayName, seatIndex: player.seatIndex });
+      return;
+    }
+
+    // SNG in play: forfeit (eliminate with last place)
     if (instance.config.gameFormat === "sng" && instance.lifecycle && instance.lifecycle.status === "playing") {
       const info = instance.lifecycle.forfeit(userId, player.displayName);
       if (info) {
@@ -787,10 +864,12 @@ class TableManager {
     instance.engine.removePlayer(userId);
     instance.avatarMap.delete(userId);
 
-    // Return chips to wallet balance atomically
+    // Return chips to wallet balance atomically (same wallet type used for buy-in)
     if (cashOut > 0) {
-      // Use atomic add to prevent race conditions on concurrent cashouts
-      const { success, newBalance } = await storage.atomicAddChips(userId, cashOut);
+      const format = instance.config.gameFormat;
+      const walletType = format === "sng" ? "sng" : format === "tournament" ? "tournament" : "cash_game";
+      await storage.ensureWallets(userId);
+      const { success, newBalance } = await storage.atomicAddToWallet(userId, walletType as any, cashOut);
       if (success) {
         await storage.createTransaction({
           userId,
@@ -800,6 +879,10 @@ class TableManager {
           balanceAfter: newBalance,
           tableId,
           description: `Cash-out from table`,
+          walletType: walletType,
+          relatedTransactionId: null,
+          paymentId: null,
+          metadata: null,
         });
       }
     }
@@ -821,6 +904,13 @@ class TableManager {
     }
 
     broadcastToTable(tableId, { type: "player_left", userId, displayName, seatIndex });
+
+    // Cancel hand countdown if no longer enough players to start
+    if (instance.handCountdownTimer && !instance.engine.canStartHand()) {
+      clearTimeout(instance.handCountdownTimer);
+      instance.handCountdownTimer = null;
+      broadcastToTable(tableId, { type: "hand_countdown", seconds: 0 } as any);
+    }
 
     // Clean up empty table
     if (instance.engine.state.players.length === 0) {
@@ -893,6 +983,7 @@ class TableManager {
     const player = instance.engine.getPlayer(userId);
     if (player) {
       player.isSittingOut = sitOut;
+      player.voluntarySitOut = sitOut; // track intent: true = player chose to sit out
       if (sitOut) {
         player.status = "sitting-out";
       } else if (player.status === "sitting-out") {
@@ -930,9 +1021,16 @@ class TableManager {
 
     // If it's their turn, auto-fold after a short timeout
     if (player.seatIndex === instance.engine.state.currentTurnSeat) {
+      const handAtDisconnect = instance.engine.state.handNumber;
       setTimeout(() => {
-        if (!player.isConnected) {
-          instance.engine.handleAction(userId, "fold");
+        const inst = this.tables.get(tableId);
+        if (!inst) return;
+        const p = inst.engine.getPlayer(userId);
+        if (!p || p.isConnected) return;
+        // Only fold if we're still in the same hand
+        if (inst.engine.state.handNumber !== handAtDisconnect) return;
+        if (p.seatIndex === inst.engine.state.currentTurnSeat) {
+          inst.engine.handleAction(userId, "fold");
           sendGameStateToTable(tableId);
         }
       }, 10000);
@@ -1019,11 +1117,13 @@ class TableManager {
       this.autoCashoutTimers.delete(cashoutTimerKey);
     }
 
-    // Remove from pending leaves if player reconnected before hand ended
-    this.pendingLeaves.get(tableId)?.delete(userId);
+    // Note: Do NOT remove from pendingLeaves here — if the player explicitly clicked
+    // "Leave" and their connection flickered, we should still honor their leave intent
+    // after the current hand ends.
 
-    // If player was marked sitting out from disconnect, restore them
-    if (player.isSittingOut && player.chips > 0) {
+    // If player was marked sitting out from disconnect (not voluntary, and not pending leave), restore them
+    const isPendingLeave = this.pendingLeaves.get(tableId)?.has(userId) ?? false;
+    if (player.isSittingOut && player.chips > 0 && !player.voluntarySitOut && !isPendingLeave) {
       player.isSittingOut = false;
       player.status = "waiting";
     }
@@ -1101,9 +1201,9 @@ class TableManager {
         inst.bots.push(bot);
         inst.avatarMap.set(b.botId, b.avatar);
 
-        // Register bot in SNG lifecycle
+        // Register bot in SNG lifecycle — bots don't pay real buy-in, use 0 to avoid inflating prize pool
         if (inst.lifecycle && config.gameFormat === "sng") {
-          inst.lifecycle.register(b.botId, b.botName, config.buyInAmount);
+          inst.lifecycle.register(b.botId, b.botName, 0);
         }
 
         // Broadcast join notification

@@ -9,12 +9,15 @@ import {
   type ShopItem, type UserInventoryItem,
   type ClubAlliance, type LeagueSeason,
   type HandPlayer, type HandAction, type TournamentRegistration,
+  type Wallet, type WalletType, type Payment, type WithdrawalRequest, type SupportedCurrency,
+  walletTypeEnum,
   users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, tournamentRegistrations, playerStats,
   clubInvitations, clubAnnouncements, clubEvents,
   missions, userMissions, handAnalyses,
   shopItems, userInventory,
   clubAlliances, leagueSeasons,
   handPlayers, handActions,
+  wallets, payments, withdrawalRequests, supportedCurrencies,
 } from "@shared/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -145,6 +148,38 @@ export interface IStorage {
   deleteLeagueSeason(id: string): Promise<void>;
   getActiveLeagueSeason(): Promise<LeagueSeason | undefined>;
   updateLeagueStandings(seasonId: string, standings: any[]): Promise<void>;
+
+  // Wallets
+  getWallet(userId: string, walletType: WalletType): Promise<Wallet | undefined>;
+  getUserWallets(userId: string): Promise<Wallet[]>;
+  createWallet(userId: string, walletType: WalletType, initialBalance?: number): Promise<Wallet>;
+  ensureWallets(userId: string): Promise<Wallet[]>;
+
+  // Wallet Atomic Operations
+  atomicDeductFromWallet(userId: string, walletType: WalletType, amount: number): Promise<{ success: boolean; newBalance: number }>;
+  atomicAddToWallet(userId: string, walletType: WalletType, amount: number): Promise<{ success: boolean; newBalance: number }>;
+  atomicTransferBetweenWallets(userId: string, fromWallet: WalletType, toWallet: WalletType, amount: number): Promise<{ success: boolean; fromBalance: number; toBalance: number }>;
+
+  // Wallet Aggregate
+  getAllWalletBalanceSum(): Promise<number>;
+  getUserTotalBalance(userId: string): Promise<number>;
+
+  // Payments
+  createPayment(data: Omit<Payment, "id" | "createdAt" | "updatedAt">): Promise<Payment>;
+  getPayment(id: string): Promise<Payment | undefined>;
+  getPaymentByGatewayId(provider: string, gatewayPaymentId: string): Promise<Payment | undefined>;
+  getUserPayments(userId: string, limit?: number, offset?: number): Promise<Payment[]>;
+  updatePayment(id: string, data: Partial<Payment>): Promise<Payment | undefined>;
+
+  // Withdrawal Requests
+  createWithdrawalRequest(data: Omit<WithdrawalRequest, "id" | "createdAt">): Promise<WithdrawalRequest>;
+  getWithdrawalRequests(status?: string): Promise<WithdrawalRequest[]>;
+  getUserWithdrawalRequests(userId: string): Promise<WithdrawalRequest[]>;
+  updateWithdrawalRequest(id: string, data: Partial<WithdrawalRequest>): Promise<WithdrawalRequest | undefined>;
+
+  // Supported Currencies
+  getSupportedCurrencies(): Promise<SupportedCurrency[]>;
+  upsertSupportedCurrency(data: SupportedCurrency): Promise<SupportedCurrency>;
 }
 
 // ─── In-Memory Storage (fallback when no DATABASE_URL) ───────────────────────
@@ -525,8 +560,8 @@ export class MemStorage implements IStorage {
   async getPlayerHandHistory(userId: string, limit = 50) {
     return this.handPlayersList
       .filter(hp => hp.userId === userId)
-      .slice(-limit)
-      .reverse();
+      .sort((a, b) => b.handId.localeCompare(a.handId))
+      .slice(0, limit);
   }
   async createHandActions(records: Omit<HandAction, "id">[]) {
     for (const r of records) {
@@ -559,7 +594,7 @@ export class MemStorage implements IStorage {
       let value = 0;
       if (metric === "chips") value = u.chipBalance;
       else if (metric === "wins") value = stats?.potsWon ?? 0;
-      else if (metric === "winRate") value = stats && stats.handsPlayed > 0 ? Math.round((stats.potsWon / stats.handsPlayed) * 100) : 0;
+      else if (metric === "winRate") value = stats && stats.handsPlayed >= 10 ? Math.round((stats.potsWon / stats.handsPlayed) * 100) : 0;
       result.push({ userId: u.id, username: u.username, displayName: u.displayName, avatarId: u.avatarId, value });
     }
     result.sort((a, b) => b.value - a.value);
@@ -744,6 +779,127 @@ export class MemStorage implements IStorage {
   async updateLeagueStandings(seasonId: string, standings: any[]) {
     const season = this.leagueSeasonsList.find(s => s.id === seasonId);
     if (season) season.standings = standings;
+  }
+
+  // ── Wallets ──────────────────────────────────────────────────────────
+  private walletsList: Wallet[] = [];
+  private paymentsList: Payment[] = [];
+  private withdrawalRequestsList: WithdrawalRequest[] = [];
+  private supportedCurrenciesList: SupportedCurrency[] = [];
+
+  async getWallet(userId: string, walletType: WalletType) {
+    return this.walletsList.find(w => w.userId === userId && w.walletType === walletType);
+  }
+  async getUserWallets(userId: string) {
+    return this.walletsList.filter(w => w.userId === userId);
+  }
+  async createWallet(userId: string, walletType: WalletType, initialBalance = 0): Promise<Wallet> {
+    const w: Wallet = {
+      id: randomUUID(), userId, walletType, balance: initialBalance,
+      isLocked: false, createdAt: new Date(), updatedAt: new Date(),
+    };
+    this.walletsList.push(w);
+    return w;
+  }
+  async ensureWallets(userId: string): Promise<Wallet[]> {
+    const existing = this.walletsList.filter(w => w.userId === userId);
+    const existingTypes = new Set(existing.map(w => w.walletType));
+    for (const wt of walletTypeEnum) {
+      if (!existingTypes.has(wt)) {
+        await this.createWallet(userId, wt, 0);
+      }
+    }
+    return this.walletsList.filter(w => w.userId === userId);
+  }
+
+  async atomicDeductFromWallet(userId: string, walletType: WalletType, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    const w = this.walletsList.find(w => w.userId === userId && w.walletType === walletType);
+    if (!w || w.isLocked || w.balance < amount) {
+      return { success: false, newBalance: w?.balance ?? 0 };
+    }
+    w.balance -= amount;
+    w.updatedAt = new Date();
+    return { success: true, newBalance: w.balance };
+  }
+  async atomicAddToWallet(userId: string, walletType: WalletType, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    const w = this.walletsList.find(w => w.userId === userId && w.walletType === walletType);
+    if (!w || w.isLocked) return { success: false, newBalance: w?.balance ?? 0 };
+    w.balance += amount;
+    w.updatedAt = new Date();
+    return { success: true, newBalance: w.balance };
+  }
+  async atomicTransferBetweenWallets(userId: string, fromWallet: WalletType, toWallet: WalletType, amount: number): Promise<{ success: boolean; fromBalance: number; toBalance: number }> {
+    if (fromWallet === "bonus") return { success: false, fromBalance: 0, toBalance: 0 };
+    const from = this.walletsList.find(w => w.userId === userId && w.walletType === fromWallet);
+    const to = this.walletsList.find(w => w.userId === userId && w.walletType === toWallet);
+    if (!from || !to || from.isLocked || to.isLocked || from.balance < amount) {
+      return { success: false, fromBalance: from?.balance ?? 0, toBalance: to?.balance ?? 0 };
+    }
+    from.balance -= amount;
+    to.balance += amount;
+    from.updatedAt = new Date();
+    to.updatedAt = new Date();
+    return { success: true, fromBalance: from.balance, toBalance: to.balance };
+  }
+
+  async getAllWalletBalanceSum() {
+    return this.walletsList.reduce((sum, w) => sum + w.balance, 0);
+  }
+  async getUserTotalBalance(userId: string) {
+    return this.walletsList.filter(w => w.userId === userId).reduce((sum, w) => sum + w.balance, 0);
+  }
+
+  // ── Payments ──────────────────────────────────────────────────────────
+  async createPayment(data: Omit<Payment, "id" | "createdAt" | "updatedAt">): Promise<Payment> {
+    const p: Payment = { ...data, id: randomUUID(), createdAt: new Date(), updatedAt: new Date() };
+    this.paymentsList.push(p);
+    return p;
+  }
+  async getPayment(id: string) { return this.paymentsList.find(p => p.id === id); }
+  async getPaymentByGatewayId(provider: string, gatewayPaymentId: string) {
+    return this.paymentsList.find(p => p.gatewayProvider === provider && p.gatewayPaymentId === gatewayPaymentId);
+  }
+  async getUserPayments(userId: string, limit = 50, offset = 0) {
+    return this.paymentsList.filter(p => p.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(offset, offset + limit);
+  }
+  async updatePayment(id: string, data: Partial<Payment>) {
+    const p = this.paymentsList.find(p => p.id === id);
+    if (!p) return undefined;
+    Object.assign(p, data, { updatedAt: new Date() });
+    return p;
+  }
+
+  // ── Withdrawal Requests ───────────────────────────────────────────────
+  async createWithdrawalRequest(data: Omit<WithdrawalRequest, "id" | "createdAt">): Promise<WithdrawalRequest> {
+    const r: WithdrawalRequest = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.withdrawalRequestsList.push(r);
+    return r;
+  }
+  async getWithdrawalRequests(status?: string) {
+    if (status) return this.withdrawalRequestsList.filter(r => r.status === status);
+    return this.withdrawalRequestsList;
+  }
+  async getUserWithdrawalRequests(userId: string) {
+    return this.withdrawalRequestsList.filter(r => r.userId === userId);
+  }
+  async updateWithdrawalRequest(id: string, data: Partial<WithdrawalRequest>) {
+    const r = this.withdrawalRequestsList.find(r => r.id === id);
+    if (!r) return undefined;
+    Object.assign(r, data);
+    return r;
+  }
+
+  // ── Supported Currencies ──────────────────────────────────────────────
+  async getSupportedCurrencies() {
+    return this.supportedCurrenciesList.filter(c => c.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+  async upsertSupportedCurrency(data: SupportedCurrency): Promise<SupportedCurrency> {
+    const idx = this.supportedCurrenciesList.findIndex(c => c.id === data.id);
+    if (idx >= 0) { this.supportedCurrenciesList[idx] = data; return data; }
+    this.supportedCurrenciesList.push(data);
+    return data;
   }
 }
 
@@ -1149,7 +1305,7 @@ export class DatabaseStorage implements IStorage {
       handsPlayed: playerStats.handsPlayed,
       potsWon: playerStats.potsWon,
     }).from(playerStats).innerJoin(users, eq(users.id, playerStats.userId))
-      .where(sql`${playerStats.handsPlayed} > 0`)
+      .where(sql`${playerStats.handsPlayed} >= 10`)
       .orderBy(sql`(${playerStats.potsWon}::float / ${playerStats.handsPlayed}::float) DESC`)
       .limit(limit);
 
@@ -1369,6 +1525,176 @@ export class DatabaseStorage implements IStorage {
     await this.db.update(leagueSeasons)
       .set({ standings })
       .where(eq(leagueSeasons.id, seasonId));
+  }
+
+  // ── Wallets ──────────────────────────────────────────────────────────
+  async getWallet(userId: string, walletType: WalletType) {
+    const [w] = await this.db.select().from(wallets)
+      .where(and(eq(wallets.userId, userId), eq(wallets.walletType, walletType)));
+    return w;
+  }
+  async getUserWallets(userId: string) {
+    return this.db.select().from(wallets).where(eq(wallets.userId, userId));
+  }
+  async createWallet(userId: string, walletType: WalletType, initialBalance = 0): Promise<Wallet> {
+    const [w] = await this.db.insert(wallets).values({
+      userId, walletType, balance: initialBalance,
+    }).returning();
+    return w;
+  }
+  async ensureWallets(userId: string): Promise<Wallet[]> {
+    // Insert all 5 wallet types, skip any that already exist (ON CONFLICT DO NOTHING)
+    for (const wt of walletTypeEnum) {
+      await this.db.execute(sql`
+        INSERT INTO wallets (id, user_id, wallet_type, balance)
+        VALUES (gen_random_uuid(), ${userId}, ${wt}, 0)
+        ON CONFLICT (user_id, wallet_type) DO NOTHING
+      `);
+    }
+    return this.getUserWallets(userId);
+  }
+
+  async atomicDeductFromWallet(userId: string, walletType: WalletType, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    const result = await this.db.execute(sql`
+      UPDATE wallets SET balance = balance - ${amount}, updated_at = NOW()
+      WHERE user_id = ${userId} AND wallet_type = ${walletType}
+        AND balance >= ${amount} AND is_locked = false
+      RETURNING balance
+    `);
+    const rows = result.rows as any[];
+    if (rows.length === 0) {
+      const w = await this.getWallet(userId, walletType);
+      return { success: false, newBalance: w?.balance ?? 0 };
+    }
+    return { success: true, newBalance: Number(rows[0].balance) };
+  }
+  async atomicAddToWallet(userId: string, walletType: WalletType, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    const result = await this.db.execute(sql`
+      UPDATE wallets SET balance = balance + ${amount}, updated_at = NOW()
+      WHERE user_id = ${userId} AND wallet_type = ${walletType} AND is_locked = false
+      RETURNING balance
+    `);
+    const rows = result.rows as any[];
+    if (rows.length === 0) return { success: false, newBalance: 0 };
+    return { success: true, newBalance: Number(rows[0].balance) };
+  }
+  async atomicTransferBetweenWallets(userId: string, fromWallet: WalletType, toWallet: WalletType, amount: number): Promise<{ success: boolean; fromBalance: number; toBalance: number }> {
+    if (fromWallet === "bonus") {
+      return { success: false, fromBalance: 0, toBalance: 0 };
+    }
+    // Use a CTE to atomically deduct and add in one statement
+    const result = await this.db.execute(sql`
+      WITH deducted AS (
+        UPDATE wallets SET balance = balance - ${amount}, updated_at = NOW()
+        WHERE user_id = ${userId} AND wallet_type = ${fromWallet}
+          AND balance >= ${amount} AND is_locked = false
+        RETURNING balance AS from_balance
+      ),
+      added AS (
+        UPDATE wallets SET balance = balance + ${amount}, updated_at = NOW()
+        WHERE user_id = ${userId} AND wallet_type = ${toWallet}
+          AND is_locked = false
+          AND EXISTS (SELECT 1 FROM deducted)
+        RETURNING balance AS to_balance
+      )
+      SELECT d.from_balance, a.to_balance
+      FROM deducted d, added a
+    `);
+    const rows = result.rows as any[];
+    if (rows.length === 0) {
+      const fromW = await this.getWallet(userId, fromWallet);
+      const toW = await this.getWallet(userId, toWallet);
+      return { success: false, fromBalance: fromW?.balance ?? 0, toBalance: toW?.balance ?? 0 };
+    }
+    return { success: true, fromBalance: Number(rows[0].from_balance), toBalance: Number(rows[0].to_balance) };
+  }
+
+  async getAllWalletBalanceSum() {
+    const rows = await this.db.execute(sql`
+      SELECT COALESCE(SUM(balance), 0) AS total FROM wallets
+    `);
+    return Number((rows.rows as any[])[0]?.total || 0);
+  }
+  async getUserTotalBalance(userId: string) {
+    const rows = await this.db.execute(sql`
+      SELECT COALESCE(SUM(balance), 0) AS total FROM wallets WHERE user_id = ${userId}
+    `);
+    return Number((rows.rows as any[])[0]?.total || 0);
+  }
+
+  // ── Payments ──────────────────────────────────────────────────────────
+  async createPayment(data: Omit<Payment, "id" | "createdAt" | "updatedAt">): Promise<Payment> {
+    const [p] = await this.db.insert(payments).values(data).returning();
+    return p;
+  }
+  async getPayment(id: string) {
+    const [p] = await this.db.select().from(payments).where(eq(payments.id, id));
+    return p;
+  }
+  async getPaymentByGatewayId(provider: string, gatewayPaymentId: string) {
+    const [p] = await this.db.select().from(payments)
+      .where(and(eq(payments.gatewayProvider, provider), eq(payments.gatewayPaymentId, gatewayPaymentId)));
+    return p;
+  }
+  async getUserPayments(userId: string, limit = 50, offset = 0) {
+    return this.db.select().from(payments)
+      .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+  async updatePayment(id: string, data: Partial<Payment>) {
+    const [p] = await this.db.update(payments).set({ ...data, updatedAt: new Date() })
+      .where(eq(payments.id, id)).returning();
+    return p;
+  }
+
+  // ── Withdrawal Requests ───────────────────────────────────────────────
+  async createWithdrawalRequest(data: Omit<WithdrawalRequest, "id" | "createdAt">): Promise<WithdrawalRequest> {
+    const [r] = await this.db.insert(withdrawalRequests).values(data).returning();
+    return r;
+  }
+  async getWithdrawalRequests(status?: string) {
+    if (status) {
+      return this.db.select().from(withdrawalRequests)
+        .where(eq(withdrawalRequests.status, status))
+        .orderBy(desc(withdrawalRequests.createdAt));
+    }
+    return this.db.select().from(withdrawalRequests).orderBy(desc(withdrawalRequests.createdAt));
+  }
+  async getUserWithdrawalRequests(userId: string) {
+    return this.db.select().from(withdrawalRequests)
+      .where(eq(withdrawalRequests.userId, userId))
+      .orderBy(desc(withdrawalRequests.createdAt));
+  }
+  async updateWithdrawalRequest(id: string, data: Partial<WithdrawalRequest>) {
+    const [r] = await this.db.update(withdrawalRequests).set(data)
+      .where(eq(withdrawalRequests.id, id)).returning();
+    return r;
+  }
+
+  // ── Supported Currencies ──────────────────────────────────────────────
+  async getSupportedCurrencies() {
+    return this.db.select().from(supportedCurrencies)
+      .where(eq(supportedCurrencies.isActive, true))
+      .orderBy(supportedCurrencies.sortOrder);
+  }
+  async upsertSupportedCurrency(data: SupportedCurrency): Promise<SupportedCurrency> {
+    const [c] = await this.db.insert(supportedCurrencies).values(data)
+      .onConflictDoUpdate({
+        target: supportedCurrencies.id,
+        set: {
+          name: data.name,
+          symbol: data.symbol,
+          network: data.network,
+          minDeposit: data.minDeposit,
+          minWithdrawal: data.minWithdrawal,
+          confirmationsRequired: data.confirmationsRequired,
+          isActive: data.isActive,
+          sortOrder: data.sortOrder,
+        },
+      }).returning();
+    return c;
   }
 }
 

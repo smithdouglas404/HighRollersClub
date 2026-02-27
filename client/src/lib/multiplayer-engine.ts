@@ -6,9 +6,19 @@ import type { PlayerResult } from "./hand-evaluator";
 import type { ShowdownData } from "./game-engine";
 
 // Convert server state to client-compatible format
-function serverToClientPlayers(serverPlayers: any[]): Player[] {
+function serverToClientPlayers(serverPlayers: any[], turnDeadline?: number, turnTimerDuration?: number): Player[] {
   return serverPlayers.map((p) => {
     const avatarOption = p.avatarId ? AVATAR_OPTIONS.find(a => a.id === p.avatarId) : undefined;
+    // Calculate timeLeft from actual turn deadline, not from time bank
+    let timeLeft: number | undefined;
+    if (p.status === "thinking" && turnDeadline && turnTimerDuration) {
+      const remainingMs = turnDeadline - Date.now();
+      const totalMs = turnTimerDuration * 1000;
+      timeLeft = Math.max(0, Math.min(100, Math.round((remainingMs / totalMs) * 100)));
+    } else if (p.status === "thinking") {
+      // Fallback if server doesn't send deadline
+      timeLeft = Math.max(0, Math.round((p.timeBank || 30) * 100 / 30));
+    }
     return {
     id: p.id,
     name: p.displayName,
@@ -25,7 +35,7 @@ function serverToClientPlayers(serverPlayers: any[]): Player[] {
     isBigBlind: p.isBigBlind || false,
     currentBet: p.currentBet || 0,
     status: p.status || "waiting",
-    timeLeft: p.status === "thinking" ? Math.max(0, Math.round((p.timeBank || 30) * 100 / 30)) : undefined,
+    timeLeft,
     timeBankSeconds: p.timeBank ?? 30,
   };
   });
@@ -199,7 +209,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         const state = msg.state;
         if (!state) return;
 
-        setPlayers(serverToClientPlayers(state.players || []));
+        setPlayers(serverToClientPlayers(state.players || [], state.turnDeadline, state.turnTimerDuration));
         setGameState(serverToClientGameState(state));
         setWaiting(state.phase === "waiting" || state.phase === "collecting-seeds");
 
@@ -361,26 +371,33 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     // Hand countdown — server sends seconds before next hand starts
     unsubs.push(
       wsClient.on("hand_countdown", (msg: any) => {
-        const seconds = msg.seconds || 5;
+        const seconds = msg.seconds;
         // Clear any existing countdown
         if (countdownTimerRef.current) {
           clearInterval(countdownTimerRef.current);
           countdownTimerRef.current = null;
         }
+        // seconds === 0 or null means cancel the countdown
+        if (!seconds || seconds <= 0) {
+          setHandCountdown(null);
+          return;
+        }
+        // Use a deadline-based approach to avoid setInterval drift
+        const deadline = Date.now() + seconds * 1000;
         setHandCountdown(seconds);
-        let remaining = seconds;
         countdownTimerRef.current = setInterval(() => {
-          remaining--;
-          if (remaining <= 0) {
+          const remainingMs = deadline - Date.now();
+          const remainingSec = Math.ceil(remainingMs / 1000);
+          if (remainingSec <= 0) {
             setHandCountdown(null);
             if (countdownTimerRef.current) {
               clearInterval(countdownTimerRef.current);
               countdownTimerRef.current = null;
             }
           } else {
-            setHandCountdown(remaining);
+            setHandCountdown(remainingSec);
           }
-        }, 1000);
+        }, 250); // Check more frequently for smoother countdown
       })
     );
 
@@ -421,6 +438,10 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         const isJoinError = joinErrors.some(e => msg.message?.includes(e));
         if (isJoinError) {
           joinedRef.current = false;
+          // Clear stored password on incorrect password to prevent reuse
+          if (msg.message?.includes("Incorrect table password")) {
+            sessionStorage.removeItem(`table-password-${tableIdRef.current}`);
+          }
         }
         setTimeout(() => setError(null), 5000);
       })

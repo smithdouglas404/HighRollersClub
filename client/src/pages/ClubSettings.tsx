@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
+import { useToast } from "@/hooks/use-toast";
 import {
   Settings, Save, Trash2, Shield, Globe, Lock,
   Users, Crown, Loader2, AlertTriangle, CheckCircle, X,
@@ -15,6 +16,7 @@ export default function ClubSettings() {
   const {
     club, members, loading, updateClub, deleteClub,
   } = useClub();
+  const { toast } = useToast();
 
   // Form state — initialized from context
   const [name, setName] = useState("");
@@ -63,8 +65,9 @@ export default function ClubSettings() {
       }
       setSuccessMsg("Ownership transferred. Redirecting...");
       setTimeout(() => navigate("/club"), 2000);
-    } catch {
-      // toast handles via context
+    } catch (err: any) {
+      setSuccessMsg("");
+      toast({ title: "Transfer failed", description: err.message || "Failed to transfer ownership", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -90,7 +93,7 @@ export default function ClubSettings() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
           </div>
         ) : !club ? (
           <motion.div
@@ -104,8 +107,8 @@ export default function ClubSettings() {
               onClick={() => navigate("/lobby")}
               className="mt-4 px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
               style={{
-                background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                boxShadow: "0 0 15px rgba(0,255,157,0.2)",
+                background: "linear-gradient(135deg, #c9a84c, #00d4aa)",
+                boxShadow: "0 0 15px rgba(201,168,76,0.2)",
               }}
             >
               Back to Lobby
@@ -122,8 +125,8 @@ export default function ClubSettings() {
                   exit={{ opacity: 0, y: -10 }}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl"
                   style={{
-                    background: "rgba(0,255,157,0.08)",
-                    border: "1px solid rgba(0,255,157,0.2)",
+                    background: "rgba(201,168,76,0.08)",
+                    border: "1px solid rgba(201,168,76,0.2)",
                   }}
                 >
                   <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
@@ -138,8 +141,8 @@ export default function ClubSettings() {
               animate={{ opacity: 1, y: 0 }}
               className="rounded-xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
-                border: "1px solid rgba(0,240,255,0.1)",
+                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
+                border: "1px solid rgba(212,168,67,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
             >
@@ -147,21 +150,21 @@ export default function ClubSettings() {
                 className="flex items-center gap-3 px-5 py-4"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
               >
-                <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-cyan-400" />
+                <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white tracking-wider uppercase">
                     General Settings
                   </h3>
-                  <p className="text-[9px] text-gray-500">Edit your club details</p>
+                  <p className="text-[0.5625rem] text-gray-500">Edit your club details</p>
                 </div>
               </div>
 
               <div className="p-5 space-y-5">
                 {/* Club Name */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
                     Club Name
                   </label>
                   <input
@@ -169,10 +172,10 @@ export default function ClubSettings() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     maxLength={50}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40"
                     style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
                     }}
                     placeholder="Enter club name..."
                   />
@@ -180,7 +183,7 @@ export default function ClubSettings() {
 
                 {/* Description */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
                     Description
                   </label>
                   <textarea
@@ -188,14 +191,14 @@ export default function ClubSettings() {
                     onChange={(e) => setDescription(e.target.value)}
                     maxLength={300}
                     rows={3}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none resize-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none resize-none transition-all focus:ring-1 focus:ring-amber-500/40"
                     style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
                     }}
                     placeholder="Describe your club..."
                   />
-                  <div className="text-right text-[9px] text-gray-600">{description.length}/300</div>
+                  <div className="text-right text-[0.5625rem] text-gray-600">{description.length}/300</div>
                 </div>
 
                 {/* Public / Private Toggle — NOW WIRED TO SERVER */}
@@ -210,7 +213,7 @@ export default function ClubSettings() {
                       <div className="text-xs font-semibold text-white">
                         {isPublic ? "Public Club" : "Private Club"}
                       </div>
-                      <div className="text-[9px] text-gray-500">
+                      <div className="text-[0.5625rem] text-gray-500">
                         {isPublic
                           ? "Anyone can find and request to join"
                           : "Invite-only, hidden from search"}
@@ -222,7 +225,7 @@ export default function ClubSettings() {
                     className="relative w-11 h-6 rounded-full transition-colors"
                     style={{
                       background: isPublic
-                        ? "linear-gradient(135deg, #00ff9d, #00d4aa)"
+                        ? "linear-gradient(135deg, #c9a84c, #00d4aa)"
                         : "rgba(255,255,255,0.1)",
                     }}
                   >
@@ -243,8 +246,8 @@ export default function ClubSettings() {
                   disabled={saving || !name.trim()}
                   className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                    boxShadow: "0 0 20px rgba(0,255,157,0.15)",
+                    background: "linear-gradient(135deg, #c9a84c, #00d4aa)",
+                    boxShadow: "0 0 20px rgba(201,168,76,0.15)",
                   }}
                 >
                   {saving ? (
@@ -265,7 +268,7 @@ export default function ClubSettings() {
                 transition={{ delay: 0.1 }}
                 className="rounded-xl overflow-hidden"
                 style={{
-                  background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
+                  background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
                   border: "1px solid rgba(255,165,0,0.1)",
                   boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
                 }}
@@ -281,21 +284,21 @@ export default function ClubSettings() {
                     <h3 className="text-sm font-bold text-white tracking-wider uppercase">
                       Transfer Ownership
                     </h3>
-                    <p className="text-[9px] text-gray-500">Hand the club over to another member</p>
+                    <p className="text-[0.5625rem] text-gray-500">Hand the club over to another member</p>
                   </div>
                 </div>
 
                 <div className="p-5 space-y-4">
                   <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(255,165,0,0.04)", border: "1px solid rgba(255,165,0,0.1)" }}>
                     <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-[10px] text-gray-400 leading-relaxed">
+                    <p className="text-[0.625rem] text-gray-400 leading-relaxed">
                       Transferring ownership is permanent. You will be demoted to a regular member
                       and the new owner will have full control over the club.
                     </p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
                       New Owner
                     </label>
                     <select
@@ -307,11 +310,11 @@ export default function ClubSettings() {
                         border: "1px solid rgba(255,255,255,0.08)",
                       }}
                     >
-                      <option value="" className="bg-[#0c1428]">
+                      <option value="" className="bg-[#141f30]">
                         Select a member...
                       </option>
                       {otherMembers.map((m) => (
-                        <option key={m.userId} value={m.userId} className="bg-[#0c1428]">
+                        <option key={m.userId} value={m.userId} className="bg-[#141f30]">
                           {m.displayName} (@{m.username})
                         </option>
                       ))}
@@ -344,7 +347,7 @@ export default function ClubSettings() {
                 transition={{ delay: 0.2 }}
                 className="rounded-xl overflow-hidden"
                 style={{
-                  background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
+                  background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
                   border: "1px solid rgba(255,60,60,0.1)",
                   boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
                 }}
@@ -360,7 +363,7 @@ export default function ClubSettings() {
                     <h3 className="text-sm font-bold text-white tracking-wider uppercase">
                       Danger Zone
                     </h3>
-                    <p className="text-[9px] text-gray-500">Irreversible actions</p>
+                    <p className="text-[0.5625rem] text-gray-500">Irreversible actions</p>
                   </div>
                 </div>
 
@@ -396,7 +399,7 @@ export default function ClubSettings() {
                           <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
                           <div>
                             <div className="text-xs font-bold text-red-300">Are you sure?</div>
-                            <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">
+                            <p className="text-[0.625rem] text-gray-400 mt-1 leading-relaxed">
                               This will permanently delete <strong className="text-white">{club.name}</strong> and
                               remove all members. This action cannot be undone.
                             </p>
@@ -405,7 +408,7 @@ export default function ClubSettings() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => setShowDeleteConfirm(false)}
-                            className="flex-1 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
+                            className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
                             style={{
                               background: "rgba(255,255,255,0.03)",
                               border: "1px solid rgba(255,255,255,0.06)",
@@ -418,7 +421,7 @@ export default function ClubSettings() {
                             whileTap={{ scale: 0.98 }}
                             onClick={handleDelete}
                             disabled={deleting}
-                            className="flex-1 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-white flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-white flex items-center justify-center gap-1.5 disabled:opacity-50"
                             style={{
                               background: "linear-gradient(135deg, #ff3c3c, #cc2020)",
                               boxShadow: "0 0 15px rgba(255,60,60,0.2)",

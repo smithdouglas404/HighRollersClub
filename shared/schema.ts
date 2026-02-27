@@ -265,19 +265,44 @@ export const handActions = pgTable("hand_actions", {
 
 export type HandAction = typeof handActions.$inferSelect;
 
+// ─── Wallet Types ────────────────────────────────────────────────────────────
+export const walletTypeEnum = ["main", "cash_game", "sng", "tournament", "bonus"] as const;
+export type WalletType = typeof walletTypeEnum[number];
+
+// ─── Wallets ─────────────────────────────────────────────────────────────────
+export const wallets = pgTable("wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  walletType: text("wallet_type").notNull(), // main | cash_game | sng | tournament | bonus
+  balance: integer("balance").notNull().default(0),
+  isLocked: boolean("is_locked").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("wallets_user_idx").on(table.userId),
+  uniqueIndex("wallets_user_type_idx").on(table.userId, table.walletType),
+]);
+
+export type Wallet = typeof wallets.$inferSelect;
+
 // ─── Transactions ────────────────────────────────────────────────────────────
 export const transactions = pgTable("transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
-  type: text("type").notNull(), // deposit | withdraw | buyin | cashout | bonus | rake | prize
+  type: text("type").notNull(), // deposit | withdraw | buyin | cashout | bonus | rake | prize | transfer | rakeback | purchase | refund
   amount: integer("amount").notNull(),
   balanceBefore: integer("balance_before").notNull(),
   balanceAfter: integer("balance_after").notNull(),
   tableId: varchar("table_id"),
   description: text("description"),
+  walletType: text("wallet_type"), // which wallet this transaction affects
+  relatedTransactionId: varchar("related_transaction_id"), // links transfer pairs
+  paymentId: varchar("payment_id"), // link to payments table
+  metadata: jsonb("metadata"), // flexible: allocation splits, exchange rates, etc.
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   index("transactions_user_idx").on(table.userId),
+  index("transactions_wallet_type_idx").on(table.userId, table.walletType),
 ]);
 
 export type Transaction = typeof transactions.$inferSelect;
@@ -488,5 +513,99 @@ export const leagueStandingsSchema = z.object({
     points: z.number().int().min(0).default(0),
     wins: z.number().int().min(0).default(0),
     losses: z.number().int().min(0).default(0),
-  })).min(1),
+  })).min(1, { message: "At least one standing entry is required" }),
+});
+
+// ─── Payments ───────────────────────────────────────────────────────────────
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  direction: text("direction").notNull(), // deposit | withdrawal
+  status: text("status").notNull().default("pending"), // pending | confirming | confirmed | credited | failed | expired
+  amountFiat: integer("amount_fiat").notNull(), // in USD cents
+  amountCrypto: text("amount_crypto"), // string for precision (e.g., "0.00234500")
+  currency: text("currency").notNull(), // USD | BTC | ETH | USDT | SOL
+  exchangeRate: text("exchange_rate"), // rate at time of transaction
+  chipAmount: integer("chip_amount").notNull(), // final chip credit/debit amount
+  allocation: jsonb("allocation"), // [{walletType: "cash_game", amount: 6000}, ...]
+  gatewayProvider: text("gateway_provider"), // nowpayments | coinpayments | direct
+  gatewayPaymentId: text("gateway_payment_id"),
+  gatewayData: jsonb("gateway_data"), // raw response from gateway
+  depositAddress: text("deposit_address"), // crypto address to pay to
+  txHash: text("tx_hash"), // blockchain transaction hash
+  confirmations: integer("confirmations").default(0),
+  requiredConfirmations: integer("required_confirmations").default(1),
+  withdrawalAddress: text("withdrawal_address"), // player's withdrawal address
+  confirmedAt: timestamp("confirmed_at"),
+  creditedAt: timestamp("credited_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("payments_user_idx").on(table.userId),
+  index("payments_status_idx").on(table.status),
+  index("payments_gateway_idx").on(table.gatewayProvider, table.gatewayPaymentId),
+]);
+
+export type Payment = typeof payments.$inferSelect;
+
+// ─── Withdrawal Requests ────────────────────────────────────────────────────
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  paymentId: varchar("payment_id").references(() => payments.id),
+  amount: integer("amount").notNull(), // chips to withdraw
+  amountFiat: integer("amount_fiat"), // USD cents equivalent
+  currency: text("currency").notNull().default("USDT"),
+  withdrawalAddress: text("withdrawal_address").notNull(),
+  status: text("status").notNull().default("pending"), // pending | processing | completed | failed | cancelled
+  reviewedBy: varchar("reviewed_by"), // admin user ID
+  reviewNote: text("review_note"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("withdrawal_requests_user_idx").on(table.userId),
+  index("withdrawal_requests_status_idx").on(table.status),
+]);
+
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
+
+// ─── Supported Currencies ───────────────────────────────────────────────────
+export const supportedCurrencies = pgTable("supported_currencies", {
+  id: varchar("id").primaryKey(), // BTC, ETH, USDT, SOL
+  name: text("name").notNull(),
+  symbol: text("symbol").notNull(),
+  network: text("network"), // ERC20, TRC20, SOL, BTC
+  minDeposit: text("min_deposit").notNull(),
+  minWithdrawal: text("min_withdrawal").notNull(),
+  confirmationsRequired: integer("confirmations_required").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export type SupportedCurrency = typeof supportedCurrencies.$inferSelect;
+
+// ─── Validation Schemas for Wallet Operations ───────────────────────────────
+export const walletTransferSchema = z.object({
+  from: z.enum(walletTypeEnum),
+  to: z.enum(walletTypeEnum),
+  amount: z.number().int().min(1),
+});
+
+export const depositAllocationSchema = z.object({
+  walletType: z.enum(walletTypeEnum),
+  amount: z.number().int().min(0),
+});
+
+export const initiateDepositSchema = z.object({
+  amount: z.number().int().min(100), // min $1.00 in cents
+  currency: z.string().min(1),
+  gateway: z.enum(["nowpayments", "coinpayments", "direct"]),
+  allocation: z.array(depositAllocationSchema).min(1),
+});
+
+export const initiateWithdrawalSchema = z.object({
+  amount: z.number().int().min(1), // chips
+  currency: z.string().min(1),
+  address: z.string().min(10),
 });

@@ -6,9 +6,24 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { seedData } from "./seed";
 import { csrfProtection } from "./middleware/csrf";
+import { hasDatabase } from "./db";
 
 try { execSync("fuser -k -9 5000/tcp 2>/dev/null", { timeout: 3000 }); } catch {}
 await new Promise(r => setTimeout(r, 2000));
+
+// Auto-push database schema if DATABASE_URL is set
+if (hasDatabase()) {
+  try {
+    log("Syncing database schema...");
+    execSync("npx drizzle-kit push --force", { timeout: 30000, stdio: "pipe" });
+    log("Database schema synced.");
+  } catch (err: any) {
+    console.error("[db] Schema push failed:", err.stderr?.toString() || err.message);
+    log("WARNING: Database schema push failed — some features may not work.");
+  }
+} else {
+  log("WARNING: No DATABASE_URL set — using in-memory storage. All data will be lost on restart!");
+}
 
 const app = express();
 

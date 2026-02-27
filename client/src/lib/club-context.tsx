@@ -353,19 +353,24 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         const d = await res.json().catch(() => ({ message: "Failed to send invite" }));
         throw new Error(d.message);
       }
+      const newInv = await res.json();
+      // Optimistically add to local invitations list instead of full reload
+      setInvitations(prev => [...prev, { ...newInv, displayName: username, username, avatarId: null }]);
       toast({ title: "Invite sent", description: `Invitation sent to "${username}"` });
-      await reload();
       return true;
     } catch (err: any) {
       toast({ title: "Failed to send invite", description: err.message, variant: "destructive" });
       return false;
     }
-  }, [club, reload, toast]);
+  }, [club, toast]);
 
   const handleInvitation = useCallback(async (invId: string, status: "accepted" | "declined") => {
-    if (!club) return false;
+    // Use the invitation's actual clubId instead of relying on active club
+    const inv = invitations.find(i => i.id === invId);
+    const clubId = inv?.clubId ?? club?.id;
+    if (!clubId) return false;
     try {
-      const res = await fetch(`/api/clubs/${club.id}/invitations/${invId}`, {
+      const res = await fetch(`/api/clubs/${clubId}/invitations/${invId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),

@@ -56,13 +56,14 @@ export function setupAuth(app: Express) {
   }
 
   const sessionMiddleware = session({
-    secret: process.env.SESSION_SECRET || "poker-platform-dev-secret-" + randomUUID(),
+    secret: process.env.SESSION_SECRET || "poker-platform-dev-secret-change-me-in-prod",
     resave: false,
     saveUninitialized: false,
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: "lax",
     },
     store,
   });
@@ -170,6 +171,10 @@ export function registerAuthRoutes(app: Express) {
         avatarId: randomAvatar,
       });
 
+      // Create wallets and seed main wallet with starting chips
+      const wallets = await storage.ensureWallets(user.id);
+      await storage.atomicAddToWallet(user.id, "main", 10000);
+
       const safeUser = sanitizeUser(user);
       req.login(safeUser, (err) => {
         if (err) return next(err);
@@ -192,6 +197,10 @@ export function registerAuthRoutes(app: Express) {
       }
       if (username.length < 3 || username.length > 20) {
         return res.status(400).json({ message: "Username must be 3-20 characters" });
+      }
+      // #10: Reject HTML special chars to prevent XSS in non-React contexts
+      if (/[<>&"'/\\]/.test(username)) {
+        return res.status(400).json({ message: "Username contains invalid characters" });
       }
       if (password.length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
@@ -229,6 +238,10 @@ export function registerAuthRoutes(app: Express) {
         role: "member",
         chipBalance: 10000,
       });
+
+      // Create wallets and seed main wallet with starting chips
+      await storage.ensureWallets(user.id);
+      await storage.atomicAddToWallet(user.id, "main", 10000);
 
       const safeUser = sanitizeUser(user);
       req.login(safeUser, (err) => {

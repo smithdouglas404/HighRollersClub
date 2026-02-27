@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { History, ChevronLeft, Trophy, Coins, Clock, ExternalLink, Download } from "lucide-react";
@@ -19,7 +19,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
   const [hands, setHands] = useState<HandRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchHands = async () => {
+  const fetchHands = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/tables/${tableId}/hands?limit=20`);
@@ -31,13 +31,13 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tableId]);
 
   useEffect(() => {
     if (isOpen) {
       fetchHands();
     }
-  }, [isOpen, tableId]);
+  }, [isOpen, fetchHands]);
 
   return (
     <>
@@ -91,13 +91,13 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
             <div className="flex-1 overflow-y-auto py-2 scrollbar-thin">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="w-5 h-5 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                  <div className="spinner spinner-md" />
                 </div>
               ) : hands.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                   <History className="w-8 h-8 text-gray-700 mb-2" />
-                  <p className="text-[10px] text-gray-600">No hands played yet</p>
-                  <p className="text-[9px] text-gray-700">History will appear here as hands complete</p>
+                  <p className="text-[0.625rem] text-gray-600">No hands played yet</p>
+                  <p className="text-[0.5625rem] text-gray-700">History will appear here as hands complete</p>
                 </div>
               ) : (
                 hands.map((hand) => {
@@ -119,7 +119,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                         </span>
                         <ExternalLink className="w-3 h-3 text-gray-700 group-hover:text-gray-400 transition-colors" />
                       </div>
-                      <div className="flex items-center gap-3 text-[10px] text-gray-500">
+                      <div className="flex items-center gap-3 text-[0.625rem] text-gray-500">
                         <span className="flex items-center gap-1">
                           <Coins className="w-2.5 h-2.5 text-amber-500/60" />
                           {(hand.potTotal || 0).toLocaleString()}
@@ -137,7 +137,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                       </div>
                       {hand.commitmentHash && (
                         <div className="mt-1">
-                          <span className="text-[8px] text-green-500/50 font-mono">
+                          <span className="text-[0.5rem] text-green-500/50 font-mono">
                             {hand.commitmentHash.slice(0, 16)}...
                           </span>
                         </div>
@@ -169,7 +169,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                       a.href = url; a.download = `hand-history-${tableId.slice(0,8)}.json`;
                       a.click(); URL.revokeObjectURL(url);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold text-cyan-500 hover:text-cyan-300 transition-colors py-1"
+                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-amber-500 hover:text-amber-300 transition-colors py-1"
                   >
                     <Download className="w-3 h-3" /> JSON
                   </button>
@@ -190,7 +190,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                       a.href = url; a.download = `hand-history-${tableId.slice(0,8)}.csv`;
                       a.click(); URL.revokeObjectURL(url);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold text-amber-500 hover:text-amber-300 transition-colors py-1"
+                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-amber-500 hover:text-amber-300 transition-colors py-1"
                   >
                     <Download className="w-3 h-3" /> CSV
                   </button>
@@ -198,7 +198,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                 <button
                   onClick={fetchHands}
                   disabled={loading}
-                  className="w-full text-center text-[10px] font-bold text-gray-500 hover:text-gray-300 transition-colors py-1"
+                  className="w-full text-center text-[0.625rem] font-bold text-gray-500 hover:text-gray-300 transition-colors py-1"
                 >
                   {loading ? "Loading..." : "Refresh"}
                 </button>

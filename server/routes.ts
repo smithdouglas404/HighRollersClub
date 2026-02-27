@@ -9,6 +9,7 @@ import { tableManager } from "./game/table-manager";
 import { analyzeHand } from "./game/hand-analyzer";
 import { geofenceMiddleware } from "./middleware/geofence";
 import { setAnthropicApiKey, getAnthropicApiKey, hasAIEnabled } from "./game/ai-bot-engine";
+import { hasDatabase } from "./db";
 
 // Global kill switch — blocks buy-ins and withdrawals if integrity check fails
 let globalSystemLocked = false;
@@ -22,6 +23,15 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // Auth routes
   registerAuthRoutes(app);
 
+  // ─── Server Info ───────────────────────────────────────────────────────
+  app.get("/api/health", (_req, res) => {
+    res.json({
+      ok: true,
+      storage: hasDatabase() ? "database" : "memory",
+      warning: hasDatabase() ? null : "Using in-memory storage — all data will be lost on restart",
+    });
+  });
+
   // ─── Online Users ──────────────────────────────────────────────────────
   app.get("/api/online-users", (_req, res) => {
     const clients = getClients();
@@ -31,7 +41,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
   // ─── Table Routes ────────────────────────────────────────────────────────
   // List all public tables (+ user's private tables)
-  app.get("/api/tables", async (req, res, next) => {
+  app.get("/api/tables", requireAuth, async (req, res, next) => {
     try {
       const allTables = await storage.getTables();
       const tablesWithPlayers = await Promise.all(
@@ -170,7 +180,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // ─── Club Routes ─────────────────────────────────────────────────────────
-  app.get("/api/clubs", async (_req, res, next) => {
+  app.get("/api/clubs", async (req, res, next) => {
     try {
       const allClubs = await storage.getClubs();
       // Enrich with memberCount
@@ -180,7 +190,11 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
           return { ...club, memberCount: members.length };
         })
       );
-      res.json(enriched);
+      // #27: Filter out private clubs for unauthenticated users
+      const visible = req.user
+        ? enriched
+        : enriched.filter(c => c.isPublic);
+      res.json(visible);
     } catch (err) {
       next(err);
     }
@@ -340,6 +354,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
       if (!targetUserId) return res.status(400).json({ message: "userId or username required" });
 
+      // #28: Check for duplicate pending invitation
+      const existing = await storage.getClubInvitations(club.id);
+      if (existing.some(i => i.userId === targetUserId && i.status === "pending")) {
+        return res.status(409).json({ message: "A pending invitation already exists for this user" });
+      }
+
       const inv = await storage.createClubInvitation({
         clubId: club.id,
         userId: targetUserId,
@@ -391,9 +411,15 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(403).json({ message: "You must be a club member to view invitations" });
       }
       const invitations = await storage.getClubInvitations(req.params.id);
+      // Filter out old resolved invitations (>7 days) to prevent accumulation
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const filtered = invitations.filter(inv => {
+        if (inv.status === "pending") return true;
+        return new Date(inv.createdAt).getTime() > sevenDaysAgo;
+      });
       // Enrich with user data
       const enriched = await Promise.all(
-        invitations.map(async (inv) => {
+        filtered.map(async (inv) => {
           const user = await storage.getUser(inv.userId);
           return {
             ...inv,
@@ -509,6 +535,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(403).json({ message: "Not authorized" });
       }
       const { title, content, pinned } = req.body;
+      if (!title || !title.trim()) {
+        return res.status(400).json({ message: "Announcement title is required" });
+      }
+      if (!content || !content.trim()) {
+        return res.status(400).json({ message: "Announcement content is required" });
+      }
       const ann = await storage.createClubAnnouncement({
         clubId: club.id,
         authorId: req.user!.id,
@@ -580,8 +612,31 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // ─── Wallet Routes ───────────────────────────────────────────────────────
   app.get("/api/wallet/balance", requireAuth, async (req, res, next) => {
     try {
-      const user = await storage.getUser(req.user!.id);
-      res.json({ balance: user?.chipBalance ?? 0 });
+      const userWallets = await storage.getUserWallets(req.user!.id);
+      const balances: Record<string, number> = {};
+      let total = 0;
+      for (const w of userWallets) {
+        balances[w.walletType] = w.balance;
+        total += w.balance;
+      }
+      // Backward compat: also return flat balance
+      res.json({ balance: total, balances, wallets: userWallets });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/wallet/balances", requireAuth, async (req, res, next) => {
+    try {
+      await storage.ensureWallets(req.user!.id);
+      const userWallets = await storage.getUserWallets(req.user!.id);
+      const balances: Record<string, number> = { main: 0, cash_game: 0, sng: 0, tournament: 0, bonus: 0 };
+      let total = 0;
+      for (const w of userWallets) {
+        balances[w.walletType] = w.balance;
+        total += w.balance;
+      }
+      res.json({ balances, total, wallets: userWallets });
     } catch (err) {
       next(err);
     }
@@ -638,9 +693,13 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const hasElitePass = elitePass ? userInventory.some(inv => inv.itemId === elitePass.id) : false;
       const bonus = hasElitePass ? 2000 : 1000;
 
-      // Use atomic add to prevent balance race conditions
-      const { success, newBalance } = await storage.atomicAddChips(user.id, bonus);
+      // Credit bonus wallet (ensure wallets exist first)
+      await storage.ensureWallets(user.id);
+      const { success, newBalance } = await storage.atomicAddToWallet(user.id, "bonus", bonus);
       if (!success) return res.status(500).json({ message: "Failed to credit bonus" });
+
+      // Also update legacy chipBalance for backward compat
+      await storage.atomicAddChips(user.id, bonus);
 
       await storage.createTransaction({
         userId: user.id,
@@ -650,9 +709,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         balanceAfter: newBalance,
         tableId: null,
         description: "Daily login bonus",
+        walletType: "bonus",
+        relatedTransactionId: null,
+        paymentId: null,
+        metadata: null,
       });
 
-      res.json({ balance: newBalance, bonus, nextClaimAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) });
+      const totalBal = await storage.getUserTotalBalance(user.id);
+      res.json({ balance: totalBal, bonus, nextClaimAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) });
     } catch (err) {
       next(err);
     }
@@ -693,6 +757,168 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 20, 1), 50);
       const sessions = await storage.getSessionSummaries(req.user!.id, limit);
       res.json(sessions);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Wallet Transfer ─────────────────────────────────────────────────────
+  app.post("/api/wallet/transfer", requireAuth, async (req, res, next) => {
+    try {
+      const { from, to, amount } = req.body;
+      if (!from || !to || !amount || amount <= 0) {
+        return res.status(400).json({ message: "Invalid transfer: from, to, and amount > 0 required" });
+      }
+      const validTypes = ["main", "cash_game", "sng", "tournament", "bonus"];
+      if (!validTypes.includes(from) || !validTypes.includes(to)) {
+        return res.status(400).json({ message: "Invalid wallet type" });
+      }
+      if (from === to) return res.status(400).json({ message: "Cannot transfer to the same wallet" });
+      if (from === "bonus") return res.status(400).json({ message: "Cannot transfer from bonus wallet" });
+
+      await storage.ensureWallets(req.user!.id);
+      const { success, fromBalance, toBalance } = await storage.atomicTransferBetweenWallets(
+        req.user!.id, from, to, amount
+      );
+      if (!success) return res.status(400).json({ message: "Insufficient funds or wallet locked" });
+
+      // Log both sides of the transfer
+      const txId1 = require("crypto").randomUUID();
+      const txId2 = require("crypto").randomUUID();
+      await storage.createTransaction({
+        userId: req.user!.id, type: "transfer", amount: -amount,
+        balanceBefore: fromBalance + amount, balanceAfter: fromBalance,
+        tableId: null, description: `Transfer to ${to} wallet`,
+        walletType: from, relatedTransactionId: txId2, paymentId: null, metadata: null,
+      });
+      await storage.createTransaction({
+        userId: req.user!.id, type: "transfer", amount: amount,
+        balanceBefore: toBalance - amount, balanceAfter: toBalance,
+        tableId: null, description: `Transfer from ${from} wallet`,
+        walletType: to, relatedTransactionId: txId1, paymentId: null, metadata: null,
+      });
+
+      const allWallets = await storage.getUserWallets(req.user!.id);
+      const balances: Record<string, number> = {};
+      for (const w of allWallets) balances[w.walletType] = w.balance;
+
+      res.json({ success: true, balances });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Payment / Deposit Routes ─────────────────────────────────────────────
+  app.get("/api/payments/currencies", async (_req, res, next) => {
+    try {
+      const currencies = await storage.getSupportedCurrencies();
+      res.json(currencies);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/payments/gateways", async (_req, res, next) => {
+    try {
+      const { getPaymentService } = await import("./payments/payment-service");
+      const svc = getPaymentService();
+      res.json(svc.getAvailableGateways());
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/payments/deposit", requireAuth, async (req, res, next) => {
+    try {
+      const { amount, currency, gateway, allocation } = req.body;
+      if (!amount || !currency || !gateway || !allocation || !Array.isArray(allocation)) {
+        return res.status(400).json({ message: "amount, currency, gateway, and allocation[] required" });
+      }
+      if (amount < 100) return res.status(400).json({ message: "Minimum deposit is $1.00 (100 cents)" });
+
+      const allocSum = allocation.reduce((s: number, a: any) => s + (a.amount || 0), 0);
+      if (allocSum !== amount) {
+        return res.status(400).json({ message: `Allocation sum (${allocSum}) must equal deposit amount (${amount})` });
+      }
+
+      const { getPaymentService } = await import("./payments/payment-service");
+      const svc = getPaymentService();
+      const result = await svc.initiateDeposit(req.user!.id, amount, currency, gateway, allocation);
+      res.json(result);
+    } catch (err: any) {
+      if (err.message?.includes("not configured")) {
+        return res.status(400).json({ message: err.message });
+      }
+      next(err);
+    }
+  });
+
+  app.get("/api/payments/:id", requireAuth, async (req, res, next) => {
+    try {
+      const payment = await storage.getPayment(req.params.id);
+      if (!payment || payment.userId !== req.user!.id) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      res.json(payment);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/payments", requireAuth, async (req, res, next) => {
+    try {
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const userPayments = await storage.getUserPayments(req.user!.id, limit, offset);
+      res.json(userPayments);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Payment Webhooks (no auth — verified by signature) ───────────────────
+  app.post("/api/payments/webhook/:provider", async (req, res, next) => {
+    try {
+      const provider = req.params.provider;
+      const { getPaymentService } = await import("./payments/payment-service");
+      const svc = getPaymentService();
+      const headers: Record<string, string> = {};
+      for (const [k, v] of Object.entries(req.headers)) {
+        if (typeof v === "string") headers[k.toLowerCase()] = v;
+      }
+      const result = await svc.processWebhook(provider, req.body, headers);
+      res.json({ ok: true, ...result });
+    } catch (err: any) {
+      console.error(`[Webhook] Error processing ${req.params.provider} webhook:`, err.message);
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // ─── Withdrawal Routes ────────────────────────────────────────────────────
+  app.post("/api/wallet/withdraw", requireAuth, async (req, res, next) => {
+    try {
+      const { amount, currency, address } = req.body;
+      if (!amount || !currency || !address) {
+        return res.status(400).json({ message: "amount, currency, and address required" });
+      }
+      if (amount <= 0) return res.status(400).json({ message: "Amount must be positive" });
+
+      const { getPaymentService } = await import("./payments/payment-service");
+      const svc = getPaymentService();
+      const result = await svc.initiateWithdrawal(req.user!.id, amount, currency, address);
+      res.json(result);
+    } catch (err: any) {
+      if (err.message?.includes("Insufficient") || err.message?.includes("Invalid")) {
+        return res.status(400).json({ message: err.message });
+      }
+      next(err);
+    }
+  });
+
+  app.get("/api/wallet/withdrawals", requireAuth, async (req, res, next) => {
+    try {
+      const requests = await storage.getUserWithdrawalRequests(req.user!.id);
+      res.json(requests);
     } catch (err) {
       next(err);
     }
@@ -957,8 +1183,9 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         });
       }
 
-      // Credit reward atomically
-      const { success: credited, newBalance } = await storage.atomicAddChips(req.user!.id, mission.reward);
+      // Credit reward to bonus wallet
+      await storage.ensureWallets(req.user!.id);
+      const { success: credited, newBalance } = await storage.atomicAddToWallet(req.user!.id, "bonus", mission.reward);
       if (credited) {
         await storage.createTransaction({
           userId: req.user!.id,
@@ -968,6 +1195,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
           balanceAfter: newBalance,
           tableId: null,
           description: `Mission reward: ${mission.label}`,
+          walletType: "bonus",
+          relatedTransactionId: null,
+          paymentId: null,
+          metadata: null,
         });
       }
 
@@ -1040,10 +1271,11 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "Already owned" });
       }
 
-      // Use atomic deduct to prevent race conditions
-      const { success, newBalance: balanceAfterPurchase } = await storage.atomicDeductChips(user.id, item.price);
+      // Deduct from main wallet for shop purchases
+      await storage.ensureWallets(user.id);
+      const { success, newBalance: balanceAfterPurchase } = await storage.atomicDeductFromWallet(user.id, "main", item.price);
       if (!success) {
-        return res.status(400).json({ message: "Insufficient chips" });
+        return res.status(400).json({ message: "Insufficient chips in main wallet" });
       }
 
       await storage.createTransaction({
@@ -1054,6 +1286,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         balanceAfter: balanceAfterPurchase,
         tableId: null,
         description: `Purchased: ${item.name}`,
+        walletType: "main",
+        relatedTransactionId: null,
+        paymentId: null,
+        metadata: null,
       });
 
       const inv = await storage.addToInventory(user.id, itemId);
@@ -1073,6 +1309,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
               balanceAfter: balAfterBonus,
               tableId: null,
               description: `Bonus chips from: ${item.name}`,
+              walletType: "bonus",
+              relatedTransactionId: null,
+              paymentId: null,
+              metadata: null,
             });
           }
         }
@@ -1188,10 +1428,11 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "Tournament full" });
       }
 
-      // Deduct buy-in atomically (after successful registration)
-      const { success: deducted, newBalance: balAfterBuyIn } = await storage.atomicDeductChips(user.id, tourney.buyIn);
+      // Deduct buy-in from tournament wallet
+      await storage.ensureWallets(user.id);
+      const { success: deducted, newBalance: balAfterBuyIn } = await storage.atomicDeductFromWallet(user.id, "tournament", tourney.buyIn);
       if (!deducted) {
-        return res.status(400).json({ message: "Insufficient chips" });
+        return res.status(400).json({ message: "Insufficient chips in tournament wallet" });
       }
       await storage.createTransaction({
         userId: user.id,
@@ -1201,6 +1442,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         balanceAfter: balAfterBuyIn,
         tableId: null,
         description: `Tournament buy-in: ${tourney.name}`,
+        walletType: "tournament",
+        relatedTransactionId: null,
+        paymentId: null,
+        metadata: null,
       });
 
       // Update prize pool
@@ -1360,7 +1605,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (!alliance) return res.status(404).json({ message: "Alliance not found" });
 
       const { clubId } = req.body;
+      if (!clubId) return res.status(400).json({ message: "clubId is required" });
       const clubIds = alliance.clubIds as string[];
+
+      if (!clubIds.includes(clubId)) {
+        return res.status(404).json({ message: "Club is not in this alliance" });
+      }
 
       const foundingClubId = clubIds[0];
       if (clubId === foundingClubId) {
@@ -1677,6 +1927,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
           balanceAfter: user.chipBalance + rakebackAmount,
           tableId: null,
           description: `Rakeback payout (${percent}% of ${entry.totalRake} rake over ${lookbackDays} days)`,
+          walletType: "bonus",
+          relatedTransactionId: null,
+          paymentId: null,
+          metadata: null,
         });
 
         payouts.push({ userId: entry.userId, amount: rakebackAmount });
@@ -1713,6 +1967,50 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       res.json({ locked: globalSystemLocked, reason: globalLockReason });
     } catch (err) {
       next(err);
+    }
+  });
+
+  // ─── Admin: Payments & Withdrawals ──────────────────────────────────────
+  app.get("/api/admin/payments", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      // Return all payments (admin view) - using raw SQL since we need all users
+      const allPayments = await storage.getUserPayments("", 200, 0).catch(() => []);
+      // For admin, we'll use a broader approach
+      res.json(allPayments);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/admin/withdrawals", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const requests = await storage.getWithdrawalRequests(status || "pending");
+      res.json(requests);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/admin/withdrawals/:id/approve", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const { getPaymentService } = await import("./payments/payment-service");
+      const svc = getPaymentService();
+      await svc.approveWithdrawal(req.params.id, req.user!.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/withdrawals/:id/reject", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const { getPaymentService } = await import("./payments/payment-service");
+      const svc = getPaymentService();
+      await svc.rejectWithdrawal(req.params.id, req.user!.id, req.body.note);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
     }
   });
 

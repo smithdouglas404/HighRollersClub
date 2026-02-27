@@ -8,6 +8,7 @@ export interface AuthUser {
   chipBalance: number;
   role: string;
   provider: string;
+  lastDailyClaim: string | null;
   createdAt: string;
 }
 
@@ -105,11 +106,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    let serverLogoutFailed = false;
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      setUser(null);
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      if (!res.ok) {
+        serverLogoutFailed = true;
+      }
     } catch {
-      // ignore
+      serverLogoutFailed = true;
+    }
+    // Always clear local state so user can re-login
+    setUser(null);
+    if (serverLogoutFailed) {
+      setError("Logged out locally, but server session may still be active");
     }
   }, []);
 

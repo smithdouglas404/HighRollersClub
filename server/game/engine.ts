@@ -21,6 +21,7 @@ export interface SeatPlayer {
   isBot: boolean;
   isConnected: boolean;
   isSittingOut: boolean;
+  voluntarySitOut: boolean; // true = player chose to sit out, false = disconnected/auto
   totalBetThisHand: number;
   timeBank: number; // remaining time bank seconds
 }
@@ -245,6 +246,7 @@ export class GameEngine {
       isBot,
       isConnected: true,
       isSittingOut: false,
+      voluntarySitOut: false,
       totalBetThisHand: 0,
       timeBank: 30, // 30 seconds of time bank per player
     };
@@ -267,6 +269,13 @@ export class GameEngine {
       }
       player.isSittingOut = true;
       player.status = "sitting-out";
+      return seat;
+    }
+
+    // If all-in, keep player in hand until showdown to preserve pot eligibility
+    if (player.status === "all-in" && this.state.phase !== "waiting" && this.state.phase !== "showdown") {
+      player.isConnected = false;
+      player.isSittingOut = true;
       return seat;
     }
 
@@ -504,6 +513,7 @@ export class GameEngine {
           if (p.seatIndex === this.state.smallBlindSeat || p.seatIndex === this.state.bigBlindSeat) continue;
           const actual = Math.min(currentAnte, p.chips);
           p.chips -= actual;
+          p.currentBet += actual;
           p.totalBetThisHand += actual;
           this.state.pot += actual;
           if (p.chips === 0) p.status = "all-in";
@@ -1012,7 +1022,8 @@ export class GameEngine {
     const cost = this.bigBlind;
     player.chips -= cost;
     this.state.pot += cost;
-    player.totalBetThisHand += cost;
+    // Note: buyTime cost is a dead chip (like rake), not a bet — don't add to totalBetThisHand
+    // as it would corrupt side-pot distribution calculations
 
     // Extend turn deadline by 10 seconds
     const extraSeconds = 10;

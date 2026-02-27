@@ -66,7 +66,12 @@ export default function BrowseClubs() {
     try {
       if (isPublic) {
         const ok = await joinClub(clubId);
-        if (ok) await reload();
+        if (ok) {
+          await reload();
+          // Refresh browse list memberCount
+          const clubsRes = await fetch("/api/clubs");
+          if (clubsRes.ok) setAllClubs(await clubsRes.json());
+        }
       } else {
         const ok = await requestJoinClub(clubId);
         if (ok) {
@@ -119,14 +124,14 @@ export default function BrowseClubs() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search clubs by name..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/30"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/30"
               style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)",
               }}
             />
           </div>
-          <div className="mt-2 text-[10px] text-gray-600">
+          <div className="mt-2 text-[0.625rem] text-gray-600">
             {loading ? "Loading..." : `${filteredClubs.length} club${filteredClubs.length !== 1 ? "s" : ""} found`}
           </div>
         </motion.div>
@@ -134,7 +139,7 @@ export default function BrowseClubs() {
         {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
           </div>
         )}
 
@@ -155,7 +160,7 @@ export default function BrowseClubs() {
               <FolderSearch className="w-8 h-8 text-gray-600" />
             </div>
             <h3 className="text-sm font-bold text-gray-400 mb-1">No clubs found</h3>
-            <p className="text-[11px] text-gray-600 max-w-xs mx-auto leading-relaxed">
+            <p className="text-[0.6875rem] text-gray-600 max-w-xs mx-auto leading-relaxed">
               {searchQuery
                 ? `No clubs match "${searchQuery}". Try a different search term.`
                 : "There are no clubs available yet. Be the first to create one!"}
@@ -198,7 +203,7 @@ export default function BrowseClubs() {
                       className="h-[2px]"
                       style={{
                         background: club.isPublic
-                          ? "linear-gradient(90deg, rgba(0,240,255,0.4), rgba(0,240,255,0.1))"
+                          ? "linear-gradient(90deg, rgba(212,168,67,0.4), rgba(212,168,67,0.1))"
                           : "linear-gradient(90deg, rgba(245,158,11,0.4), rgba(245,158,11,0.1))",
                       }}
                     />
@@ -210,9 +215,9 @@ export default function BrowseClubs() {
                           {club.name}
                         </h3>
                         <span
-                          className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+                          className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider ${
                             club.isPublic
-                              ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                               : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                           }`}
                         >
@@ -226,17 +231,17 @@ export default function BrowseClubs() {
                       </div>
 
                       {/* Description */}
-                      <p className="text-[10px] text-gray-500 leading-relaxed line-clamp-2 mb-3 min-h-[28px]">
+                      <p className="text-[0.625rem] text-gray-500 leading-relaxed line-clamp-2 mb-3 min-h-[28px]">
                         {club.description || "No description provided."}
                       </p>
 
                       {/* Stats row */}
                       <div className="flex items-center gap-3 mb-4">
-                        <div className="flex items-center gap-1 text-[9px] text-gray-500">
+                        <div className="flex items-center gap-1 text-[0.5625rem] text-gray-500">
                           <Users className="w-3 h-3 text-gray-600" />
                           <span>{club.memberCount} member{club.memberCount !== 1 ? "s" : ""}</span>
                         </div>
-                        <div className="flex items-center gap-1 text-[9px] text-gray-500">
+                        <div className="flex items-center gap-1 text-[0.5625rem] text-gray-500">
                           <CalendarDays className="w-3 h-3 text-gray-600" />
                           <span>
                             {new Date(club.createdAt).toLocaleDateString(undefined, {
@@ -251,17 +256,17 @@ export default function BrowseClubs() {
                       {/* Action button */}
                       {isMyClub ? (
                         <div
-                          className="w-full py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-center text-cyan-400"
+                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-center text-amber-400"
                           style={{
-                            background: "rgba(0,240,255,0.06)",
-                            border: "1px solid rgba(0,240,255,0.15)",
+                            background: "rgba(212,168,67,0.06)",
+                            border: "1px solid rgba(212,168,67,0.15)",
                           }}
                         >
                           Your Club
                         </div>
                       ) : isPending ? (
                         <div
-                          className="w-full py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-center text-amber-400 flex items-center justify-center gap-1.5"
+                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-center text-amber-400 flex items-center justify-center gap-1.5"
                           style={{
                             background: "rgba(245,158,11,0.06)",
                             border: "1px solid rgba(245,158,11,0.15)",
@@ -276,14 +281,14 @@ export default function BrowseClubs() {
                           whileTap={{ scale: 0.98 }}
                           onClick={() => handleJoin(club.id, club.isPublic)}
                           disabled={joiningId === club.id}
-                          className="w-full py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                           style={
                             club.isPublic
                               ? {
                                   background:
-                                    "linear-gradient(135deg, rgba(0,240,255,0.15), rgba(0,200,220,0.1))",
-                                  border: "1px solid rgba(0,240,255,0.25)",
-                                  color: "#00f0ff",
+                                    "linear-gradient(135deg, rgba(212,168,67,0.15), rgba(0,200,220,0.1))",
+                                  border: "1px solid rgba(212,168,67,0.25)",
+                                  color: "#d4a843",
                                 }
                               : {
                                   background:

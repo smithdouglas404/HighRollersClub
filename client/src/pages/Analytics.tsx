@@ -131,6 +131,8 @@ export default function Analytics() {
   const [handHistory, setHandHistory] = useState<HandEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -138,10 +140,15 @@ export default function Analytics() {
           fetch("/api/stats/me"),
           user?.id ? fetch(`/api/players/${user.id}/hands?limit=200`) : Promise.resolve(null),
         ]);
+        if (statsRes.status === 401) {
+          setLoadError("Session expired — please log in again");
+          return;
+        }
         if (statsRes.ok) setStats(await statsRes.json());
+        else setLoadError("Failed to load stats");
         if (handsRes?.ok) setHandHistory(await handsRes.json());
-      } catch {
-        // silently fail
+      } catch (err: any) {
+        setLoadError(err.message || "Failed to load analytics data");
       } finally {
         setLoading(false);
       }
@@ -243,6 +250,10 @@ export default function Analytics() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <p className="text-sm text-red-400">{loadError}</p>
           </div>
         ) : (
           <div className="space-y-6">

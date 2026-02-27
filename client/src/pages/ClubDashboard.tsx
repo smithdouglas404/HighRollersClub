@@ -11,9 +11,10 @@ import {
   Settings, Search, Check, X,
   Shield
 } from "lucide-react";
+import pokerTableImg from "@assets/generated_images/poker_table_perspective.png";
 
 /* ── Circuit Board SVG Pattern ────────────────────────── */
-const CIRCUIT_SVG = `url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cstyle%3Eline%7Bstroke:%2300f0ff;stroke-width:0.5;opacity:0.15%7Dcircle%7Bfill:%2300f0ff;opacity:0.2%7D%3C/style%3E%3C/defs%3E%3Cline x1='20' y1='0' x2='20' y2='60'/%3E%3Cline x1='20' y1='60' x2='80' y2='60'/%3E%3Cline x1='80' y1='60' x2='80' y2='120'/%3E%3Cline x1='80' y1='120' x2='140' y2='120'/%3E%3Cline x1='140' y1='120' x2='140' y2='180'/%3E%3Cline x1='140' y1='180' x2='200' y2='180'/%3E%3Cline x1='60' y1='0' x2='60' y2='40'/%3E%3Cline x1='60' y1='40' x2='120' y2='40'/%3E%3Cline x1='120' y1='40' x2='120' y2='100'/%3E%3Cline x1='160' y1='0' x2='160' y2='30'/%3E%3Cline x1='160' y1='30' x2='200' y2='30'/%3E%3Cline x1='0' y1='140' x2='40' y2='140'/%3E%3Cline x1='40' y1='140' x2='40' y2='200'/%3E%3Ccircle cx='20' cy='60' r='2'/%3E%3Ccircle cx='80' cy='60' r='2'/%3E%3Ccircle cx='80' cy='120' r='2'/%3E%3Ccircle cx='140' cy='120' r='2'/%3E%3Ccircle cx='60' cy='40' r='2'/%3E%3Ccircle cx='120' cy='40' r='2'/%3E%3Ccircle cx='160' cy='30' r='2'/%3E%3Ccircle cx='40' cy='140' r='2'/%3E%3C/svg%3E")`;
+const CIRCUIT_SVG = `url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cstyle%3Eline%7Bstroke:%23d4a843;stroke-width:0.5;opacity:0.15%7Dcircle%7Bfill:%23d4a843;opacity:0.2%7D%3C/style%3E%3C/defs%3E%3Cline x1='20' y1='0' x2='20' y2='60'/%3E%3Cline x1='20' y1='60' x2='80' y2='60'/%3E%3Cline x1='80' y1='60' x2='80' y2='120'/%3E%3Cline x1='80' y1='120' x2='140' y2='120'/%3E%3Cline x1='140' y1='120' x2='140' y2='180'/%3E%3Cline x1='140' y1='180' x2='200' y2='180'/%3E%3Cline x1='60' y1='0' x2='60' y2='40'/%3E%3Cline x1='60' y1='40' x2='120' y2='40'/%3E%3Cline x1='120' y1='40' x2='120' y2='100'/%3E%3Cline x1='160' y1='0' x2='160' y2='30'/%3E%3Cline x1='160' y1='30' x2='200' y2='30'/%3E%3Cline x1='0' y1='140' x2='40' y2='140'/%3E%3Cline x1='40' y1='140' x2='40' y2='200'/%3E%3Ccircle cx='20' cy='60' r='2'/%3E%3Ccircle cx='80' cy='60' r='2'/%3E%3Ccircle cx='80' cy='120' r='2'/%3E%3Ccircle cx='140' cy='120' r='2'/%3E%3Ccircle cx='60' cy='40' r='2'/%3E%3Ccircle cx='120' cy='40' r='2'/%3E%3Ccircle cx='160' cy='30' r='2'/%3E%3Ccircle cx='40' cy='140' r='2'/%3E%3C/svg%3E")`;
 
 export default function ClubDashboard() {
   const { user } = useAuth();
@@ -28,16 +29,13 @@ export default function ClubDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [alliance, setAlliance] = useState<{ id: string; name: string; clubIds: string[] } | null>(null);
 
-  // Fetch club's alliance
+  // Fetch club's alliance using the specific endpoint
   useEffect(() => {
     if (!club) return;
-    fetch("/api/alliances")
-      .then(r => r.ok ? r.json() : [])
-      .then((alliances: any[]) => {
-        const found = alliances.find((a: any) => (a.clubIds as string[]).includes(club.id));
-        setAlliance(found || null);
-      })
-      .catch(() => {});
+    fetch(`/api/clubs/${club.id}/alliance`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data) => setAlliance(data || null))
+      .catch(() => setAlliance(null));
   }, [club]);
 
   // Create Club form state
@@ -74,15 +72,23 @@ export default function ClubDashboard() {
     }
   };
 
+  const [createError, setCreateError] = useState("");
+
   const handleCreateClub = async () => {
     if (creatingClub || !newClubName.trim()) return;
     setCreatingClub(true);
+    setCreateError("");
     try {
-      await createClub({
+      const result = await createClub({
         name: newClubName.trim(),
         description: newClubDescription.trim() || undefined,
         isPublic: newClubIsPublic,
       });
+      if (!result) {
+        setCreateError("Failed to create club. Please try again.");
+      }
+    } catch (err: any) {
+      setCreateError(err.message || "Failed to create club");
     } finally {
       setCreatingClub(false);
     }
@@ -97,6 +103,15 @@ export default function ClubDashboard() {
   return (
     <DashboardLayout title="Club Dashboard">
       <div className="px-8 pb-8 relative">
+        {/* Casino table background */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <img
+            src={pokerTableImg}
+            alt=""
+            className="w-full h-64 object-cover opacity-15 blur-[1px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#111b2a]/80 to-[#111b2a]" />
+        </div>
         {/* Circuit board background overlay */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.07]"
@@ -106,7 +121,7 @@ export default function ClubDashboard() {
         <div className="relative z-10">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
             </div>
           ) : !club ? (
             /* ─── No Club — Create or Browse ──────────────────────── */
@@ -139,7 +154,7 @@ export default function ClubDashboard() {
                     className="w-full px-4 py-2.5 rounded-lg text-xs text-white placeholder-gray-600 outline-none resize-none"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                   />
-                  <label className="flex items-center gap-2 text-[10px] text-gray-400 cursor-pointer">
+                  <label className="flex items-center gap-2 text-[0.625rem] text-gray-400 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={newClubIsPublic}
@@ -150,12 +165,19 @@ export default function ClubDashboard() {
                   </label>
                 </div>
 
+                {createError && (
+                  <div className="mt-3 flex items-center gap-2 text-[0.625rem] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    <X className="w-3 h-3 shrink-0" />
+                    {createError}
+                  </div>
+                )}
+
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleCreateClub}
                   disabled={creatingClub || !newClubName.trim()}
-                  className="w-full mt-5 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="w-full mt-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black flex items-center justify-center gap-1.5 disabled:opacity-50"
                   style={{ background: "linear-gradient(135deg, #c9a84c, #f0d078)", boxShadow: "0 0 20px rgba(201,168,76,0.2)" }}
                 >
                   {creatingClub ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
@@ -164,7 +186,7 @@ export default function ClubDashboard() {
 
                 <div className="flex items-center gap-3 mt-4">
                   <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
-                  <span className="text-[9px] text-gray-600 uppercase tracking-wider">or</span>
+                  <span className="text-[0.5625rem] text-gray-600 uppercase tracking-wider">or</span>
                   <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
                 </div>
 
@@ -172,7 +194,7 @@ export default function ClubDashboard() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => navigate("/clubs/browse")}
-                  className="w-full mt-4 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2"
                   style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
                 >
                   <Search className="w-3.5 h-3.5" />
@@ -199,7 +221,7 @@ export default function ClubDashboard() {
                     >
                       CLUB MANAGER
                     </h2>
-                    <div className="text-[10px] text-gray-500 mt-0.5 tracking-wider">
+                    <div className="text-[0.625rem] text-gray-500 mt-0.5 tracking-wider">
                       {club.name} | {members.length} members
                     </div>
                   </div>
@@ -211,7 +233,7 @@ export default function ClubDashboard() {
                       whileTap={{ scale: 0.98 }}
                       onClick={handleCreateTable}
                       disabled={creatingTable}
-                      className="px-5 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-black flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black flex items-center gap-1.5 disabled:opacity-50"
                       style={{
                         background: "linear-gradient(135deg, #c9a84c, #f0d078)",
                         boxShadow: "0 0 20px rgba(201,168,76,0.3)",
@@ -239,23 +261,23 @@ export default function ClubDashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     className="rounded-xl overflow-hidden"
                     style={{
-                      background: "rgba(10,16,34,0.7)",
+                      background: "rgba(20,31,40,0.65)",
                       backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(0,255,100,0.2)",
-                      boxShadow: "0 0 40px rgba(0,255,100,0.05), inset 0 1px 0 rgba(0,255,100,0.08)",
+                      border: "1px solid rgba(212,168,67,0.20)",
+                      boxShadow: "0 0 40px rgba(212,168,67,0.06), inset 0 1px 0 rgba(212,168,67,0.08)",
                     }}
                   >
-                    {/* Neon green header bar */}
+                    {/* Gold header bar */}
                     <div
-                      className="px-6 py-3 border-b border-green-500/25"
+                      className="px-6 py-3 border-b border-amber-500/25"
                       style={{
-                        background: "linear-gradient(90deg, rgba(0,255,100,0.18), rgba(0,200,80,0.06))",
-                        boxShadow: "inset 0 -1px 0 rgba(0,255,100,0.15)",
+                        background: "linear-gradient(90deg, rgba(212,168,67,0.18), rgba(180,140,50,0.06))",
+                        boxShadow: "inset 0 -1px 0 rgba(212,168,67,0.15)",
                       }}
                     >
                       <h3
-                        className="text-sm font-black uppercase tracking-[0.15em] text-green-400"
-                        style={{ textShadow: "0 0 15px rgba(0,255,100,0.5)" }}
+                        className="text-sm font-black uppercase tracking-[0.15em] text-amber-400"
+                        style={{ textShadow: "0 0 15px rgba(212,168,67,0.4)" }}
                       >
                         Member List
                       </h3>
@@ -263,18 +285,18 @@ export default function ClubDashboard() {
 
                     {/* Table header */}
                     <div className="grid grid-cols-12 gap-3 px-6 py-3 border-b border-white/5">
-                      <span className="col-span-1 text-[9px] font-bold uppercase tracking-[0.15em] text-gray-400">Avatar</span>
-                      <span className="col-span-3 text-[9px] font-bold uppercase tracking-[0.15em] text-gray-400">Name</span>
-                      <span className="col-span-3 text-[9px] font-bold uppercase tracking-[0.15em] text-gray-400">Chips</span>
-                      <span className="col-span-3 text-[9px] font-bold uppercase tracking-[0.15em] text-gray-400">Hands Played</span>
-                      <span className="col-span-2 text-[9px] font-bold uppercase tracking-[0.15em] text-gray-400">Status</span>
+                      <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Avatar</span>
+                      <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Name</span>
+                      <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Chips</span>
+                      <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Hands Played</span>
+                      <span className="col-span-2 text-[0.5625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Status</span>
                     </div>
 
                     {/* Member rows */}
                     {members.length === 0 ? (
                       <div className="py-10 text-center">
                         <Users className="w-8 h-8 text-gray-700 mx-auto mb-2" />
-                        <p className="text-[11px] text-gray-600">No members yet</p>
+                        <p className="text-[0.6875rem] text-gray-600">No members yet</p>
                       </div>
                     ) : (
                       members.map((member, i) => {
@@ -293,7 +315,7 @@ export default function ClubDashboard() {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.04 }}
-                            className="grid grid-cols-12 gap-3 items-center px-6 py-4 border-b border-white/[0.04] hover:bg-purple-500/[0.06] transition-all"
+                            className="grid grid-cols-12 gap-3 items-center px-6 py-4 border-b border-white/[0.04] hover:bg-amber-500/[0.06] transition-all"
                           >
                             {/* Avatar */}
                             <div className="col-span-1 flex justify-center">
@@ -308,7 +330,7 @@ export default function ClubDashboard() {
                               <span className="text-sm font-bold text-white truncate block">
                                 {member.displayName}
                               </span>
-                              <span className="text-[9px] text-gray-600 truncate block">@{member.username}</span>
+                              <span className="text-[0.5625rem] text-gray-600 truncate block">@{member.username}</span>
                             </div>
                             {/* Chips */}
                             <div className="col-span-3 flex items-center gap-1.5">
@@ -323,7 +345,7 @@ export default function ClubDashboard() {
                             </div>
                             {/* Status */}
                             <div className="col-span-2">
-                              <span className={`inline-block px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${statusColor}`}>
+                              <span className={`inline-block px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider border ${statusColor}`}>
                                 {status}
                               </span>
                             </div>
@@ -342,17 +364,17 @@ export default function ClubDashboard() {
                     transition={{ delay: 0.2 }}
                     className="rounded-xl overflow-hidden"
                     style={{
-                      background: "rgba(10,16,34,0.7)",
+                      background: "rgba(20,31,40,0.65)",
                       backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(0,240,255,0.12)",
-                      boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+                      border: "1px solid rgba(212,168,67,0.12)",
+                      boxShadow: "0 0 25px rgba(212,168,67,0.04)",
                     }}
                   >
-                    <div className="px-4 py-3 border-b border-cyan-500/10">
+                    <div className="px-4 py-3 border-b border-amber-500/10">
                       <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white flex items-center gap-2">
                         Pending Join Requests
                         {pendingInvitations.length > 0 && (
-                          <span className="bg-amber-500/20 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30">
+                          <span className="bg-amber-500/20 text-amber-400 text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30">
                             {pendingInvitations.length}
                           </span>
                         )}
@@ -361,7 +383,7 @@ export default function ClubDashboard() {
                     {pendingInvitations.length === 0 ? (
                       <div className="py-8 text-center">
                         <Users className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                        <p className="text-[10px] text-gray-600">No pending requests</p>
+                        <p className="text-[0.625rem] text-gray-600">No pending requests</p>
                       </div>
                     ) : (
                       <div className="p-4 space-y-3">
@@ -376,7 +398,7 @@ export default function ClubDashboard() {
                               <MemberAvatar avatarId={inv.avatarId ?? null} displayName={inv.displayName} size="sm" />
                               <div className="flex-1 min-w-0">
                                 <div className="text-xs font-bold text-white truncate">{inv.displayName}</div>
-                                <div className="text-[9px] text-gray-500">
+                                <div className="text-[0.5625rem] text-gray-500">
                                   {inv.type === "request" ? "Request to Join" : "Pending Invite"}
                                 </div>
                               </div>
@@ -387,7 +409,7 @@ export default function ClubDashboard() {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => handleInvitationAction(inv.id, "accepted")}
                                 disabled={actionLoading === inv.id}
-                                className="flex-1 py-1.5 rounded-lg bg-green-500/80 text-white text-[9px] font-bold uppercase flex items-center justify-center gap-1 hover:bg-green-500 transition-colors disabled:opacity-50"
+                                className="flex-1 py-1.5 rounded-lg bg-green-500/80 text-white text-[0.5625rem] font-bold uppercase flex items-center justify-center gap-1 hover:bg-green-500 transition-colors disabled:opacity-50"
                               >
                                 {actionLoading === inv.id ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -400,7 +422,7 @@ export default function ClubDashboard() {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => handleInvitationAction(inv.id, "declined")}
                                 disabled={actionLoading === inv.id}
-                                className="flex-1 py-1.5 rounded-lg bg-red-500/80 text-white text-[9px] font-bold uppercase flex items-center justify-center gap-1 hover:bg-red-500 transition-colors disabled:opacity-50"
+                                className="flex-1 py-1.5 rounded-lg bg-red-500/80 text-white text-[0.5625rem] font-bold uppercase flex items-center justify-center gap-1 hover:bg-red-500 transition-colors disabled:opacity-50"
                               >
                                 <X className="w-3 h-3" /> Decline
                               </motion.button>
@@ -418,13 +440,13 @@ export default function ClubDashboard() {
                     transition={{ delay: 0.25 }}
                     className="rounded-xl overflow-hidden"
                     style={{
-                      background: "rgba(10,16,34,0.7)",
+                      background: "rgba(20,31,40,0.65)",
                       backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(0,240,255,0.12)",
-                      boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+                      border: "1px solid rgba(212,168,67,0.12)",
+                      boxShadow: "0 0 25px rgba(212,168,67,0.04)",
                     }}
                   >
-                    <div className="px-4 py-3 border-b border-cyan-500/10">
+                    <div className="px-4 py-3 border-b border-amber-500/10">
                       <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white flex items-center gap-2">
                         <Shield className="w-3.5 h-3.5 text-purple-400" /> Alliance
                       </h3>
@@ -432,26 +454,26 @@ export default function ClubDashboard() {
                     {alliance ? (
                       <div className="p-4">
                         <div className="text-sm font-bold text-white mb-1">{alliance.name}</div>
-                        <div className="text-[10px] text-gray-500 mb-3">
+                        <div className="text-[0.625rem] text-gray-500 mb-3">
                           {(alliance.clubIds as string[]).length} clubs
                         </div>
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => navigate(`/alliances/${alliance.id}`)}
-                          className="w-full py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-purple-400 border border-purple-500/20 hover:bg-purple-500/10 transition-colors"
+                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-purple-400 border border-purple-500/20 hover:bg-purple-500/10 transition-colors"
                         >
                           View Alliance
                         </motion.button>
                       </div>
                     ) : (
                       <div className="p-4 text-center">
-                        <p className="text-[10px] text-gray-600 mb-3">Not part of any alliance</p>
+                        <p className="text-[0.625rem] text-gray-600 mb-3">Not part of any alliance</p>
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          onClick={() => navigate("/leagues")}
-                          className="w-full py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-colors"
+                          onClick={() => navigate("/leagues?tab=alliances")}
+                          className="w-full py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-amber-400 border border-amber-500/20 hover:bg-amber-500/10 transition-colors"
                         >
                           Browse Alliances
                         </motion.button>
@@ -466,10 +488,10 @@ export default function ClubDashboard() {
                     transition={{ delay: 0.3 }}
                     className="rounded-xl p-4"
                     style={{
-                      background: "rgba(10,16,34,0.7)",
+                      background: "rgba(20,31,40,0.65)",
                       backdropFilter: "blur(16px)",
-                      border: "1px solid rgba(0,240,255,0.12)",
-                      boxShadow: "0 0 25px rgba(0,240,255,0.04)",
+                      border: "1px solid rgba(212,168,67,0.12)",
+                      boxShadow: "0 0 25px rgba(212,168,67,0.04)",
                     }}
                   >
                     <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white mb-3">
@@ -477,21 +499,21 @@ export default function ClubDashboard() {
                     </h3>
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                        <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
                           <Users className="w-3 h-3" /> Members
                         </span>
                         <span className="text-xs font-bold text-green-400">{club.memberCount}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                        <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
                           <TrendingUp className="w-3 h-3" /> Online Now
                         </span>
-                        <span className="text-xs font-bold text-cyan-400">
+                        <span className="text-xs font-bold text-amber-400">
                           {members.filter(m => onlineUserIds.has(m.userId)).length}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                        <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
                           <Coins className="w-3 h-3" /> Your Balance
                         </span>
                         <span className="text-xs font-bold text-amber-400">

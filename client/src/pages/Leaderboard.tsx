@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { Trophy, Coins, Target, TrendingUp, Loader2, Medal } from "lucide-react";
+import goldChips from "@assets/generated_images/gold_chip_stack_3d.png";
 
 type MetricKey = "chips" | "wins" | "winRate";
 
@@ -32,24 +33,39 @@ export default function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   useEffect(() => {
     setLoading(true);
+    setFetchError(null);
     fetch(`/api/leaderboard?metric=${metric}`)
-      .then(r => r.ok ? r.json() : [])
+      .then(r => {
+        if (r.status === 401) throw new Error("Session expired — please log in again");
+        if (!r.ok) throw new Error("Failed to load leaderboard");
+        return r.json();
+      })
       .then(data => setEntries(data))
-      .catch(() => setEntries([]))
+      .catch((err) => { setEntries([]); setFetchError(err.message || "Failed to load leaderboard"); })
       .finally(() => setLoading(false));
   }, [metric]);
 
   return (
     <DashboardLayout title="Leaderboard">
       <div className="px-8 pb-8">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <Medal className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(201,168,76,0.4)]" />
-          <h2 className="text-lg font-black tracking-[0.12em] uppercase gold-text">
-            Leaderboard
-          </h2>
+        {/* Header with gold chips accent */}
+        <div className="relative mb-6 overflow-hidden rounded-xl glass border border-amber-500/10 p-5">
+          <img
+            src={goldChips}
+            alt=""
+            className="absolute -right-6 -top-2 w-36 h-36 object-contain opacity-20 pointer-events-none"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />
+          <div className="relative z-10 flex items-center gap-3">
+            <Medal className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(201,168,76,0.4)]" />
+            <h2 className="text-lg font-black tracking-[0.12em] uppercase gold-text">
+              Leaderboard
+            </h2>
+          </div>
         </div>
 
         {/* Tab Bar */}
@@ -61,9 +77,9 @@ export default function Leaderboard() {
               <button
                 key={tab.key}
                 onClick={() => setMetric(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
                   isActive
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/20"
                     : "text-gray-500 hover:text-gray-300 border border-transparent"
                 }`}
               >
@@ -78,28 +94,32 @@ export default function Leaderboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-xl overflow-hidden border border-cyan-500/10"
-          style={{ boxShadow: "0 0 30px rgba(0,240,255,0.03)" }}
+          className="glass rounded-xl overflow-hidden border border-amber-500/10"
+          style={{ boxShadow: "0 0 30px rgba(212,168,67,0.03)" }}
         >
           {/* Table header */}
           <div className="grid grid-cols-12 gap-2 px-5 py-3 border-b border-white/5">
-            <span className="col-span-1 text-[9px] font-bold uppercase tracking-wider text-gray-500">Rank</span>
-            <span className="col-span-1 text-[9px] font-bold uppercase tracking-wider text-gray-500">Avatar</span>
-            <span className="col-span-4 text-[9px] font-bold uppercase tracking-wider text-gray-500">Player</span>
-            <span className="col-span-3 text-[9px] font-bold uppercase tracking-wider text-gray-500">
+            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Rank</span>
+            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Avatar</span>
+            <span className="col-span-4 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Player</span>
+            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">
               {metric === "chips" ? "Chips" : metric === "wins" ? "Total Wins" : "Win Rate"}
             </span>
-            <span className="col-span-3 text-[9px] font-bold uppercase tracking-wider text-gray-500 text-right">Username</span>
+            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 text-right">Username</span>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+            </div>
+          ) : fetchError ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <p className="text-[0.6875rem] text-red-400">{fetchError}</p>
             </div>
           ) : entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
               <Trophy className="w-8 h-8 text-gray-700 mb-2" />
-              <p className="text-[11px] text-gray-600">No leaderboard data yet</p>
+              <p className="text-[0.6875rem] text-gray-600">No leaderboard data yet</p>
             </div>
           ) : (
             entries.map((entry, i) => {
@@ -113,7 +133,7 @@ export default function Leaderboard() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  className="grid grid-cols-12 gap-2 items-center px-5 py-3 border-b border-white/[0.03] hover:bg-purple-500/[0.06] transition-all"
+                  className="grid grid-cols-12 gap-2 items-center px-5 py-3 border-b border-white/[0.03] hover:bg-amber-500/[0.06] transition-all"
                 >
                   {/* Rank */}
                   <div className="col-span-1">
@@ -143,7 +163,7 @@ export default function Leaderboard() {
                   </div>
                   {/* Username */}
                   <div className="col-span-3 text-right">
-                    <span className="text-[10px] text-gray-600">@{entry.username}</span>
+                    <span className="text-[0.625rem] text-gray-600">@{entry.username}</span>
                   </div>
                 </motion.div>
               );

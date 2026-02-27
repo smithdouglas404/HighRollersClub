@@ -18,7 +18,7 @@ export interface WsClient {
 
 // Message types: Client → Server
 export type ClientMessage =
-  | { type: "join_table"; tableId: string; seatIndex?: number; buyIn: number }
+  | { type: "join_table"; tableId: string; seatIndex?: number; buyIn: number; password?: string }
   | { type: "leave_table" }
   | { type: "player_action"; action: "fold" | "check" | "call" | "raise"; amount?: number; actionNumber?: number }
   | { type: "sit_out" }
@@ -278,6 +278,14 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendToUser(client.userId, { type: "error", message: "System is temporarily locked for maintenance" });
         return;
       }
+      // Validate password for private tables
+      const tableInfo = await storage.getTable(msg.tableId);
+      if (tableInfo?.isPrivate && tableInfo.password) {
+        if (!msg.password || msg.password !== tableInfo.password) {
+          sendToUser(client.userId, { type: "error", message: "Incorrect table password" });
+          return;
+        }
+      }
       // Leave previous table first if switching tables
       if (client.tableId && client.tableId !== msg.tableId) {
         await tableManager.leaveTable(client.tableId, client.userId);
@@ -382,8 +390,8 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendToUser(client.userId, { type: "error", message: "Can only add chips between hands" });
         return;
       }
-      // Cap each add-chips request at the table's maxBuyIn
-      const maxAdd = table.maxBuyIn;
+      // Cap so total stack doesn't exceed maxBuyIn
+      const maxAdd = Math.max(0, table.maxBuyIn - player.chips);
       const addAmount = Math.min(amount, maxAdd);
       if (addAmount <= 0) {
         sendToUser(client.userId, { type: "error", message: "Invalid amount" });
@@ -396,18 +404,26 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         return;
       }
       // Deduct from user balance and add to stack
-      await storage.updateUser(client.userId, { chipBalance: freshUser.chipBalance - addAmount });
+      const newWalletBalance = freshUser.chipBalance - addAmount;
+      await storage.updateUser(client.userId, { chipBalance: newWalletBalance });
       // Record the transaction
       await storage.createTransaction({
         userId: client.userId,
         type: "withdraw",
         amount: -addAmount,
         balanceBefore: freshUser.chipBalance,
-        balanceAfter: freshUser.chipBalance - addAmount,
+        balanceAfter: newWalletBalance,
         tableId: client.tableId,
         description: "Added chips to table",
       });
       player.chips += addAmount;
+      // Send confirmation with new wallet balance so client can update display
+      sendToUser(client.userId, {
+        type: "chips_added",
+        amount: addAmount,
+        newTableStack: player.chips,
+        newWalletBalance,
+      } as any);
       sendGameStateToTable(client.tableId);
       break;
     }

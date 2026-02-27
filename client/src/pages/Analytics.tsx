@@ -67,8 +67,8 @@ function WinningsChart({ data }: { data: number[] }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={isPositive ? "#00f0ff" : "#ff3366"} stopOpacity="0.4" />
-          <stop offset="100%" stopColor={isPositive ? "#00f0ff" : "#ff3366"} stopOpacity="0.02" />
+          <stop offset="0%" stopColor={isPositive ? "#d4a843" : "#ff3366"} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={isPositive ? "#d4a843" : "#ff3366"} stopOpacity="0.02" />
         </linearGradient>
       </defs>
 
@@ -96,7 +96,7 @@ function WinningsChart({ data }: { data: number[] }) {
         <path
           d={pathD}
           fill="none"
-          stroke={isPositive ? "#00f0ff" : "#ff3366"}
+          stroke={isPositive ? "#d4a843" : "#ff3366"}
           strokeWidth="2"
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -109,7 +109,7 @@ function WinningsChart({ data }: { data: number[] }) {
           cx={points[points.length - 1].x}
           cy={points[points.length - 1].y}
           r="4"
-          fill={isPositive ? "#00f0ff" : "#ff3366"}
+          fill={isPositive ? "#d4a843" : "#ff3366"}
           stroke="rgba(10,16,34,0.8)"
           strokeWidth="2"
         />
@@ -153,8 +153,12 @@ export default function Analytics() {
     ? Math.round((stats.potsWon / stats.handsPlayed) * 100)
     : 0;
 
-  const vpipPct = stats?.vpip ?? 0;
-  const pfrPct = stats?.pfr ?? 0;
+  const vpipPct = stats && stats.handsPlayed > 0
+    ? Math.round((stats.vpip / stats.handsPlayed) * 100)
+    : 0;
+  const pfrPct = stats && stats.handsPlayed > 0
+    ? Math.round((stats.pfr / stats.handsPlayed) * 100)
+    : 0;
 
   // Compute cumulative winnings from hand history (reverse since API returns newest first)
   const cumulativeWinnings = useMemo(() => {
@@ -172,10 +176,10 @@ export default function Analytics() {
       label: "Hands Played",
       value: stats?.handsPlayed ?? 0,
       icon: Gamepad2,
-      color: "cyan",
-      gradient: "from-cyan-500/20 to-blue-500/20",
-      border: "border-cyan-500/20",
-      textColor: "text-cyan-400",
+      color: "amber",
+      gradient: "from-amber-500/20 to-blue-500/20",
+      border: "border-amber-500/20",
+      textColor: "text-amber-400",
     },
     {
       label: "Pots Won",
@@ -238,7 +242,7 @@ export default function Analytics() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
           </div>
         ) : (
           <div className="space-y-6">
@@ -254,7 +258,7 @@ export default function Analytics() {
                     transition={{ delay: i * 0.05 }}
                     className={`rounded-xl p-4 border ${card.border} relative overflow-hidden`}
                     style={{
-                      background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
+                      background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
                       boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
                     }}
                   >
@@ -266,7 +270,7 @@ export default function Analytics() {
                       <div className={`text-2xl font-bold ${card.textColor} tracking-tight`}>
                         {card.value}
                       </div>
-                      <div className="text-[9px] text-gray-500 uppercase tracking-wider mt-0.5">
+                      <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider mt-0.5">
                         {card.label}
                       </div>
                     </div>
@@ -282,15 +286,15 @@ export default function Analytics() {
               transition={{ delay: 0.15 }}
               className="rounded-xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
-                border: "1px solid rgba(0,240,255,0.1)",
+                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
+                border: "1px solid rgba(212,168,67,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Winnings Over Time</h3>
+                  <TrendingUp className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Winnings Over Time</h3>
                 </div>
                 {cumulativeWinnings.length > 0 && (
                   <span className={`text-xs font-bold ${
@@ -310,7 +314,7 @@ export default function Analytics() {
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <TrendingUp className="w-8 h-8 text-gray-700 mb-3" />
                     <p className="text-xs text-gray-500 font-medium">Not enough hand data yet</p>
-                    <p className="text-[10px] text-gray-600 mt-1">Play some hands to see your winnings chart</p>
+                    <p className="text-[0.625rem] text-gray-600 mt-1">Play some hands to see your winnings chart</p>
                   </div>
                 )}
               </div>
@@ -323,14 +327,14 @@ export default function Analytics() {
               transition={{ delay: 0.2 }}
               className="rounded-xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(12,20,40,0.95) 0%, rgba(10,16,34,0.98) 100%)",
-                border: "1px solid rgba(0,240,255,0.1)",
+                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
+                border: "1px solid rgba(212,168,67,0.1)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Detailed Statistics</h3>
+                <BarChart3 className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Detailed Statistics</h3>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-white/[0.03]">
                 {advancedStats.map((stat, i) => (
@@ -342,7 +346,7 @@ export default function Analytics() {
                     className="p-4 hover:bg-white/[0.02] transition-colors"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                      <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
                         {stat.label}
                       </span>
                       {getTrendIcon(stat.trend)}
@@ -350,7 +354,7 @@ export default function Analytics() {
                     <div className="text-xl font-bold text-white tracking-tight">
                       {stat.value}
                     </div>
-                    <div className="text-[9px] text-gray-500 mt-0.5">
+                    <div className="text-[0.5625rem] text-gray-500 mt-0.5">
                       {stat.desc}
                     </div>
                   </motion.div>
@@ -365,62 +369,62 @@ export default function Analytics() {
               transition={{ delay: 0.4 }}
               className="rounded-xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(120,80,220,0.08) 0%, rgba(12,20,40,0.95) 100%)",
+                background: "linear-gradient(135deg, rgba(120,80,220,0.08) 0%, rgba(20,31,40,0.90) 100%)",
                 border: "1px solid rgba(120,80,220,0.15)",
                 boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               }}
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
                 <Brain className="w-4 h-4 text-purple-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Play Style Assessment</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Play Style Assessment</h3>
               </div>
               <div className="p-5">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Aggression */}
-                  <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Aggression</div>
+                  <div className="p-3 rounded-lg bg-white/8 border border-white/15">
+                    <div className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-2">Aggression</div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-1.5">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-green-500 to-red-500"
                         style={{ width: `${Math.min(pfrPct * 3, 100)}%` }}
                       />
                     </div>
-                    <div className="flex justify-between text-[9px]">
+                    <div className="flex justify-between text-[0.5625rem]">
                       <span className="text-green-400">Passive</span>
                       <span className="text-red-400">Aggressive</span>
                     </div>
                   </div>
 
                   {/* Tightness */}
-                  <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Hand Selection</div>
+                  <div className="p-3 rounded-lg bg-white/8 border border-white/15">
+                    <div className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-2">Hand Selection</div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-1.5">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-amber-500"
+                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-500"
                         style={{ width: `${Math.min(vpipPct * 2.5, 100)}%` }}
                       />
                     </div>
-                    <div className="flex justify-between text-[9px]">
-                      <span className="text-cyan-400">Tight</span>
+                    <div className="flex justify-between text-[0.5625rem]">
+                      <span className="text-amber-400">Tight</span>
                       <span className="text-amber-400">Loose</span>
                     </div>
                   </div>
 
                   {/* Overall */}
-                  <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Play Type</div>
+                  <div className="p-3 rounded-lg bg-white/8 border border-white/15">
+                    <div className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-2">Play Type</div>
                     <div className="text-lg font-bold tracking-tight mt-1" style={{
-                      color: vpipPct <= 20 && pfrPct <= 15 ? "#00f0ff"
+                      color: vpipPct <= 20 && pfrPct <= 15 ? "#d4a843"
                         : vpipPct <= 20 && pfrPct > 15 ? "#ff6060"
                         : vpipPct > 20 && pfrPct <= 15 ? "#ffa500"
-                        : "#00ff9d"
+                        : "#c9a84c"
                     }}>
                       {vpipPct <= 20 && pfrPct <= 15 ? "Tight-Passive (Rock)"
                         : vpipPct <= 20 && pfrPct > 15 ? "Tight-Aggressive (TAG)"
                         : vpipPct > 20 && pfrPct <= 15 ? "Loose-Passive (Calling Station)"
                         : "Loose-Aggressive (LAG)"}
                     </div>
-                    <div className="text-[9px] text-gray-500 mt-1">Based on VPIP & PFR</div>
+                    <div className="text-[0.5625rem] text-gray-500 mt-1">Based on VPIP & PFR</div>
                   </div>
                 </div>
               </div>

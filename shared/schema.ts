@@ -142,6 +142,7 @@ export const tables = pgTable("tables", {
   rakePercent: integer("rake_percent").notNull().default(0), // rake % (e.g., 5 = 5%), 0 = no rake
   rakeCap: integer("rake_cap").notNull().default(0), // max rake per hand in chips, 0 = no cap
   straddleEnabled: boolean("straddle_enabled").notNull().default(false),
+  gameSpeed: text("game_speed").notNull().default("normal"), // normal | fast | turbo
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   index("tables_club_idx").on(table.clubId),
@@ -180,6 +181,7 @@ export const insertTableSchema = z.object({
   rakePercent: z.number().int().min(0).max(10).default(0),
   rakeCap: z.number().int().min(0).default(0),
   straddleEnabled: z.boolean().default(false),
+  gameSpeed: z.enum(["normal", "fast", "turbo"]).default("normal"),
 });
 
 export type TableRow = typeof tables.$inferSelect;

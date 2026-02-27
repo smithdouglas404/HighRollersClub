@@ -10,6 +10,14 @@ import { analyzeHand } from "./game/hand-analyzer";
 import { geofenceMiddleware } from "./middleware/geofence";
 import { setAnthropicApiKey, getAnthropicApiKey, hasAIEnabled } from "./game/ai-bot-engine";
 
+// Global kill switch — blocks buy-ins and withdrawals if integrity check fails
+let globalSystemLocked = false;
+let globalLockReason = "";
+
+export function isSystemLocked(): boolean {
+  return globalSystemLocked;
+}
+
 export async function registerRoutes(app: Express, sessionMiddleware: RequestHandler): Promise<Server> {
   // Auth routes
   registerAuthRoutes(app);
@@ -28,10 +36,18 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const allTables = await storage.getTables();
       const tablesWithPlayers = await Promise.all(
         allTables.map(async (table) => {
-          const players = await storage.getTablePlayers(table.id);
+          // Use live engine state for player count and status when available
+          const instance = tableManager.getTable(table.id);
+          const playerCount = instance
+            ? instance.engine.state.players.length  // includes bots
+            : (await storage.getTablePlayers(table.id)).length;
+          const status = instance
+            ? (instance.engine.state.phase !== "waiting" ? "playing" : "waiting")
+            : table.status;
           return {
             ...table,
-            playerCount: players.length,
+            playerCount,
+            status,
             password: undefined, // never expose password
           };
         })
@@ -140,7 +156,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   app.get("/api/me/clubs", requireAuth, async (req, res, next) => {
     try {
       const userClubs = await storage.getUserClubs(req.user!.id);
-      res.json(userClubs);
+      // Enrich with memberCount
+      const enriched = await Promise.all(
+        userClubs.map(async (club) => {
+          const members = await storage.getClubMembers(club.id);
+          return { ...club, memberCount: members.length };
+        })
+      );
+      res.json(enriched);
     } catch (err) {
       next(err);
     }
@@ -150,7 +173,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   app.get("/api/clubs", async (_req, res, next) => {
     try {
       const allClubs = await storage.getClubs();
-      res.json(allClubs);
+      // Enrich with memberCount
+      const enriched = await Promise.all(
+        allClubs.map(async (club) => {
+          const members = await storage.getClubMembers(club.id);
+          return { ...club, memberCount: members.length };
+        })
+      );
+      res.json(enriched);
     } catch (err) {
       next(err);
     }
@@ -177,7 +207,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  app.get("/api/clubs/:id/members", async (req, res, next) => {
+  app.get("/api/clubs/:id/members", requireAuth, async (req, res, next) => {
     try {
       const club = await storage.getClub(req.params.id);
       if (!club) return res.status(404).json({ message: "Club not found" });
@@ -202,7 +232,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // Get stats for all members of a club
-  app.get("/api/clubs/:id/members/stats", async (req, res, next) => {
+  app.get("/api/clubs/:id/members/stats", requireAuth, async (req, res, next) => {
     try {
       const club = await storage.getClub(req.params.id);
       if (!club) return res.status(404).json({ message: "Club not found" });
@@ -256,8 +286,24 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (!member || (member.role !== "owner" && member.role !== "admin")) {
         return res.status(403).json({ message: "Not authorized" });
       }
-      const { name, description, isPublic, avatarUrl } = req.body;
-      const updated = await storage.updateClub(club.id, { name, description, isPublic, avatarUrl });
+      const { name, description, isPublic, avatarUrl, ownerId } = req.body;
+      // Ownership transfer: only the current owner can transfer
+      const updateData: any = { name, description, isPublic, avatarUrl };
+      if (ownerId && ownerId !== club.ownerId) {
+        if (club.ownerId !== req.user!.id) {
+          return res.status(403).json({ message: "Only the club owner can transfer ownership" });
+        }
+        // Verify new owner is a member
+        if (!members.some(m => m.userId === ownerId)) {
+          return res.status(400).json({ message: "New owner must be a club member" });
+        }
+        updateData.ownerId = ownerId;
+        // Update old owner's role from "owner" to "admin"
+        await storage.updateClubMemberRole(club.id, req.user!.id, "admin");
+        // Update new owner's role to "owner"
+        await storage.updateClubMemberRole(club.id, ownerId, "owner");
+      }
+      const updated = await storage.updateClub(club.id, updateData);
       res.json(updated);
     } catch (err) {
       next(err);
@@ -313,6 +359,18 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (status !== "accepted" && status !== "declined") {
         return res.status(400).json({ message: "Status must be 'accepted' or 'declined'" });
       }
+      // Fetch invitation first to verify ownership
+      const existingInv = await storage.getClubInvitation(req.params.invId);
+      if (!existingInv) return res.status(404).json({ message: "Invitation not found" });
+      // Only the invitee or a club admin can accept/decline
+      const isInvitee = existingInv.userId === req.user!.id;
+      if (!isInvitee) {
+        const members = await storage.getClubMembers(req.params.id);
+        const requester = members.find(m => m.userId === req.user!.id);
+        if (!requester || (requester.role !== "owner" && requester.role !== "admin")) {
+          return res.status(403).json({ message: "Not authorized to modify this invitation" });
+        }
+      }
       const inv = await storage.updateClubInvitation(req.params.invId, { status });
       if (!inv) return res.status(404).json({ message: "Invitation not found" });
       if (status === "accepted") {
@@ -324,9 +382,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // Get club invitations
+  // Get club invitations (only club members can view)
   app.get("/api/clubs/:id/invitations", requireAuth, async (req, res, next) => {
     try {
+      // Verify requester is a member of this club
+      const clubMembers = await storage.getClubMembers(req.params.id);
+      if (!clubMembers.some(m => m.userId === req.user!.id)) {
+        return res.status(403).json({ message: "You must be a club member to view invitations" });
+      }
       const invitations = await storage.getClubInvitations(req.params.id);
       // Enrich with user data
       const enriched = await Promise.all(
@@ -391,6 +454,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     try {
       const club = await storage.getClub(req.params.id);
       if (!club) return res.status(404).json({ message: "Club not found" });
+      // Private clubs require an accepted invitation — cannot join directly
+      if (!club.isPublic) {
+        return res.status(403).json({ message: "This is a private club. You need an invitation to join." });
+      }
       const members = await storage.getClubMembers(club.id);
       if (members.some(m => m.userId === req.user!.id)) {
         return res.status(409).json({ message: "Already a member" });
@@ -469,6 +536,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     try {
       const club = await storage.getClub(req.params.id);
       if (!club) return res.status(404).json({ message: "Club not found" });
+      // Only club owner/admin can create events
+      const members = await storage.getClubMembers(club.id);
+      const requester = members.find(m => m.userId === req.user!.id);
+      if (!requester || (requester.role !== "owner" && requester.role !== "admin")) {
+        return res.status(403).json({ message: "Only club admins can create events" });
+      }
       const { eventType, name, description, startTime, tableId } = req.body;
       const ev = await storage.createClubEvent({
         clubId: club.id,
@@ -496,7 +569,9 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
       await storage.updateUser(req.user!.id, updates);
       const user = await storage.getUser(req.user!.id);
-      res.json(user);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
     } catch (err) {
       next(err);
     }
@@ -552,31 +627,32 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         }
       }
 
+      // Atomically set lastDailyClaim to prevent race conditions
+      // (re-read user to get fresh state after the check)
+      await storage.updateUser(user.id, { lastDailyClaim: now });
+
       // Check if user has Elite Pass for 2x bonus
       const userInventory = await storage.getUserInventory(user.id);
       const allShopItems = await storage.getShopItems();
       const elitePass = allShopItems.find(i => i.category === "premium" && i.rarity === "legendary");
       const hasElitePass = elitePass ? userInventory.some(inv => inv.itemId === elitePass.id) : false;
       const bonus = hasElitePass ? 2000 : 1000;
-      const balanceBefore = user.chipBalance;
-      const balanceAfter = balanceBefore + bonus;
 
-      await storage.updateUser(user.id, {
-        chipBalance: balanceAfter,
-        lastDailyClaim: now,
-      });
+      // Use atomic add to prevent balance race conditions
+      const { success, newBalance } = await storage.atomicAddChips(user.id, bonus);
+      if (!success) return res.status(500).json({ message: "Failed to credit bonus" });
 
       await storage.createTransaction({
         userId: user.id,
         type: "bonus",
         amount: bonus,
-        balanceBefore,
-        balanceAfter,
+        balanceBefore: newBalance - bonus,
+        balanceAfter: newBalance,
         tableId: null,
         description: "Daily login bonus",
       });
 
-      res.json({ balance: balanceAfter, bonus, nextClaimAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) });
+      res.json({ balance: newBalance, bonus, nextClaimAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) });
     } catch (err) {
       next(err);
     }
@@ -587,14 +663,43 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100);
       const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
       const txs = await storage.getTransactions(req.user!.id, limit, offset);
-      res.json(txs);
+
+      // Add human-readable display types for the frontend
+      const displayTypeMap: Record<string, string> = {
+        buyin: "Table Buy-in",
+        cashout: "Table Exit",
+        deposit: "Funds Added",
+        withdraw: "Added Chips to Table",
+        bonus: "Bonus",
+        rake: "Rake Collected",
+        prize: "Tournament Prize",
+      };
+
+      const formatted = txs.map(tx => ({
+        ...tx,
+        displayType: displayTypeMap[tx.type] || "Adjustment",
+        status: "Completed",
+      }));
+
+      res.json(formatted);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Session profit/loss summaries — grouped by table
+  app.get("/api/wallet/sessions", requireAuth, async (req, res, next) => {
+    try {
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 20, 1), 50);
+      const sessions = await storage.getSessionSummaries(req.user!.id, limit);
+      res.json(sessions);
     } catch (err) {
       next(err);
     }
   });
 
   // ─── Hand Routes ─────────────────────────────────────────────────────────
-  app.get("/api/hands/:id", async (req, res, next) => {
+  app.get("/api/hands/:id", requireAuth, async (req, res, next) => {
     try {
       const hand = await storage.getGameHand(req.params.id);
       if (!hand) return res.status(404).json({ message: "Hand not found" });
@@ -605,7 +710,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // ─── Hand Verification Route ──────────────────────────────────────────────
-  app.get("/api/hands/:id/verify", async (req, res, next) => {
+  app.get("/api/hands/:id/verify", requireAuth, async (req, res, next) => {
     try {
       const hand = await storage.getGameHand(req.params.id);
       if (!hand) return res.status(404).json({ message: "Hand not found" });
@@ -625,7 +730,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // ─── Hand History Routes ────────────────────────────────────────────────
-  app.get("/api/tables/:id/hands", async (req, res, next) => {
+  app.get("/api/tables/:id/hands", requireAuth, async (req, res, next) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const hands = await storage.getGameHands(req.params.id, limit);
@@ -635,18 +740,26 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // Hand players (per-player records for a specific hand)
-  app.get("/api/hands/:id/players", async (req, res, next) => {
+  // Hand players (per-player records for a specific hand) — strip hole cards for non-showdown players
+  app.get("/api/hands/:id/players", requireAuth, async (req, res, next) => {
     try {
       const players = await storage.getHandPlayers(req.params.id);
-      res.json(players);
+      const safePlayers = players.map((p: any) => {
+        // Only reveal hole cards for the requesting user or if player went to showdown
+        if (p.userId === req.user!.id || p.finalAction === "showdown") {
+          return p;
+        }
+        const { holeCards, ...rest } = p;
+        return rest;
+      });
+      res.json(safePlayers);
     } catch (err) {
       next(err);
     }
   });
 
   // Hand actions (action-by-action replay log)
-  app.get("/api/hands/:id/actions", async (req, res, next) => {
+  app.get("/api/hands/:id/actions", requireAuth, async (req, res, next) => {
     try {
       const actions = await storage.getHandActions(req.params.id);
       res.json(actions);
@@ -656,7 +769,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // Player hand history (all hands a user participated in)
-  app.get("/api/players/:id/hands", async (req, res, next) => {
+  app.get("/api/players/:id/hands", requireAuth, async (req, res, next) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const hands = await storage.getPlayerHandHistory(req.params.id, limit);
@@ -844,16 +957,15 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         });
       }
 
-      // Credit reward
-      const user = await storage.getUser(req.user!.id);
-      if (user) {
-        await storage.updateUser(user.id, { chipBalance: user.chipBalance + mission.reward });
+      // Credit reward atomically
+      const { success: credited, newBalance } = await storage.atomicAddChips(req.user!.id, mission.reward);
+      if (credited) {
         await storage.createTransaction({
-          userId: user.id,
+          userId: req.user!.id,
           type: "bonus",
           amount: mission.reward,
-          balanceBefore: user.chipBalance,
-          balanceAfter: user.chipBalance + mission.reward,
+          balanceBefore: newBalance - mission.reward,
+          balanceAfter: newBalance,
           tableId: null,
           description: `Mission reward: ${mission.label}`,
         });
@@ -928,17 +1040,18 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "Already owned" });
       }
 
-      if (user.chipBalance < item.price) {
+      // Use atomic deduct to prevent race conditions
+      const { success, newBalance: balanceAfterPurchase } = await storage.atomicDeductChips(user.id, item.price);
+      if (!success) {
         return res.status(400).json({ message: "Insufficient chips" });
       }
 
-      await storage.updateUser(user.id, { chipBalance: user.chipBalance - item.price });
       await storage.createTransaction({
         userId: user.id,
-        type: "withdraw",
+        type: "purchase",
         amount: -item.price,
-        balanceBefore: user.chipBalance,
-        balanceAfter: user.chipBalance - item.price,
+        balanceBefore: balanceAfterPurchase + item.price,
+        balanceAfter: balanceAfterPurchase,
         tableId: null,
         description: `Purchased: ${item.name}`,
       });
@@ -950,16 +1063,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (chipMatch) {
         const bonusChips = parseInt(chipMatch[1].replace(/,/g, ""), 10);
         if (bonusChips > 0) {
-          const updatedUser = await storage.getUser(user.id);
-          if (updatedUser) {
-            const newBalance = updatedUser.chipBalance + bonusChips;
-            await storage.updateUser(user.id, { chipBalance: newBalance });
+          const { success: addOk, newBalance: balAfterBonus } = await storage.atomicAddChips(user.id, bonusChips);
+          if (addOk) {
             await storage.createTransaction({
               userId: user.id,
               type: "deposit",
               amount: bonusChips,
-              balanceBefore: updatedUser.chipBalance,
-              balanceAfter: newBalance,
+              balanceBefore: balAfterBonus - bonusChips,
+              balanceAfter: balAfterBonus,
               tableId: null,
               description: `Bonus chips from: ${item.name}`,
             });
@@ -1077,14 +1188,17 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "Tournament full" });
       }
 
-      // Deduct buy-in (after successful registration)
-      await storage.updateUser(user.id, { chipBalance: user.chipBalance - tourney.buyIn });
+      // Deduct buy-in atomically (after successful registration)
+      const { success: deducted, newBalance: balAfterBuyIn } = await storage.atomicDeductChips(user.id, tourney.buyIn);
+      if (!deducted) {
+        return res.status(400).json({ message: "Insufficient chips" });
+      }
       await storage.createTransaction({
         userId: user.id,
-        type: "withdraw",
+        type: "buyin",
         amount: -tourney.buyIn,
-        balanceBefore: user.chipBalance,
-        balanceAfter: user.chipBalance - tourney.buyIn,
+        balanceBefore: balAfterBuyIn + tourney.buyIn,
+        balanceAfter: balAfterBuyIn,
         tableId: null,
         description: `Tournament buy-in: ${tourney.name}`,
       });
@@ -1302,9 +1416,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // Create league season
+  // Create league season (admin only)
   app.post("/api/leagues", requireAuth, async (req, res, next) => {
     try {
+      if (req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
       const parsed = createLeagueSeasonSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message || "Invalid input" });
       const { name, startDate, endDate } = parsed.data;
@@ -1321,9 +1438,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // Update league season
+  // Update league season (admin only)
   app.put("/api/leagues/:id", requireAuth, async (req, res, next) => {
     try {
+      if (req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
       const season = await storage.getLeagueSeason(req.params.id);
       if (!season) return res.status(404).json({ message: "League season not found" });
 
@@ -1341,9 +1461,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // Delete league season
+  // Delete league season (admin only)
   app.delete("/api/leagues/:id", requireAuth, async (req, res, next) => {
     try {
+      if (req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
       const season = await storage.getLeagueSeason(req.params.id);
       if (!season) return res.status(404).json({ message: "League season not found" });
 
@@ -1354,9 +1477,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // Manually update league standings
+  // Manually update league standings (admin only)
   app.post("/api/leagues/:id/standings", requireAuth, async (req, res, next) => {
     try {
+      if (req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
       const season = await storage.getLeagueSeason(req.params.id);
       if (!season) return res.status(404).json({ message: "League season not found" });
 
@@ -1371,9 +1497,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // Complete a league season (set endDate to now)
+  // Complete a league season (admin only)
   app.post("/api/leagues/:id/complete", requireAuth, async (req, res, next) => {
     try {
+      if (req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
       const season = await storage.getLeagueSeason(req.params.id);
       if (!season) return res.status(404).json({ message: "League season not found" });
 
@@ -1408,6 +1537,180 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       } else {
         return res.status(400).json({ error: "Invalid API key format — must start with 'sk-'" });
       }
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Admin: Rake & Revenue Reports ─────────────────────────────────────
+
+  const requireAdmin: RequestHandler = (req, res, next) => {
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    next();
+  };
+
+  // Daily rake report by table
+  app.get("/api/admin/rake-report", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const days = Math.min(Math.max(parseInt(req.query.days as string) || 30, 1), 365);
+      const report = await storage.getRakeReport(days);
+      res.json(report);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Rake contributed by each player (for rakeback calculations)
+  app.get("/api/admin/rake-by-player", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const days = Math.min(Math.max(parseInt(req.query.days as string) || 30, 1), 365);
+      const report = await storage.getRakeByPlayer(days);
+      res.json(report);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Revenue summary: gross rake, total rakeback paid, net revenue
+  app.get("/api/admin/revenue-summary", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const totals = await storage.getTransactionTotals();
+      const totalsMap = new Map(totals.map(t => [t.type, t.total]));
+
+      const grossRake = Math.abs(totalsMap.get("rake") || 0);
+      const rakebackPaid = Math.abs(totalsMap.get("rakeback") || 0);
+      const netRevenue = grossRake - rakebackPaid;
+      const totalDeposits = totalsMap.get("deposit") || 0;
+      const totalBonuses = totalsMap.get("bonus") || 0;
+      const totalBuyins = Math.abs(totalsMap.get("buyin") || 0);
+      const totalCashouts = totalsMap.get("cashout") || 0;
+      const totalPrizes = totalsMap.get("prize") || 0;
+
+      res.json({
+        grossRake,
+        rakebackPaid,
+        netRevenue,
+        totalDeposits,
+        totalBonuses,
+        totalBuyins,
+        totalCashouts,
+        totalPrizes,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Trial balance: the golden equation audit
+  // Total Deposits + Bonuses - Total Withdrawals = Sum of Player Wallets + Total Rake
+  app.get("/api/admin/trial-balance", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const totals = await storage.getTransactionTotals();
+      const totalsMap = new Map(totals.map(t => [t.type, t.total]));
+      const playerBalanceSum = await storage.getAllPlayerBalanceSum();
+
+      // Money in: deposits, bonuses, prizes (created from thin air)
+      const moneyIn = (totalsMap.get("deposit") || 0) + (totalsMap.get("bonus") || 0);
+      // Money in escrow at tables (buyins - cashouts - added chips)
+      const escrowedAtTables = Math.abs(totalsMap.get("buyin") || 0)
+        - (totalsMap.get("cashout") || 0)
+        + Math.abs(totalsMap.get("withdraw") || 0);
+      // Rake taken by the house
+      const totalRake = Math.abs(totalsMap.get("rake") || 0);
+      // Rakeback returned to players
+      const totalRakeback = totalsMap.get("rakeback") || 0;
+      // Prizes paid out
+      const totalPrizes = totalsMap.get("prize") || 0;
+
+      // Expected balance: all money that went IN, minus what was taken OUT (rake)
+      // Player wallets should equal: moneyIn - totalRake + totalRakeback
+      // Minus any chips currently sitting at tables (escrow)
+      const expectedBalance = moneyIn - totalRake + totalRakeback;
+      const discrepancy = playerBalanceSum + escrowedAtTables - expectedBalance;
+
+      const healthy = Math.abs(discrepancy) <= 1; // allow 1 chip rounding
+
+      res.json({
+        playerBalanceSum,
+        escrowedAtTables,
+        moneyIn,
+        totalRake,
+        totalRakeback,
+        totalPrizes,
+        expectedBalance,
+        discrepancy,
+        healthy,
+        breakdown: Object.fromEntries(totalsMap),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Admin: Rakeback Processing ──────────────────────────────────────────
+
+  // Process rakeback for all players (e.g., 20% weekly)
+  app.post("/api/admin/process-rakeback", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const { rakebackPercent = 20, days = 7 } = req.body;
+      const percent = Math.min(Math.max(Number(rakebackPercent), 1), 100);
+      const lookbackDays = Math.min(Math.max(Number(days), 1), 90);
+
+      const rakeByPlayer = await storage.getRakeByPlayer(lookbackDays);
+      const payouts: { userId: string; amount: number }[] = [];
+
+      for (const entry of rakeByPlayer) {
+        const rakebackAmount = Math.floor(entry.totalRake * percent / 100);
+        if (rakebackAmount <= 0) continue;
+
+        const user = await storage.getUser(entry.userId);
+        if (!user) continue;
+
+        await storage.updateUser(entry.userId, { chipBalance: user.chipBalance + rakebackAmount });
+        await storage.createTransaction({
+          userId: entry.userId,
+          type: "rakeback",
+          amount: rakebackAmount,
+          balanceBefore: user.chipBalance,
+          balanceAfter: user.chipBalance + rakebackAmount,
+          tableId: null,
+          description: `Rakeback payout (${percent}% of ${entry.totalRake} rake over ${lookbackDays} days)`,
+        });
+
+        payouts.push({ userId: entry.userId, amount: rakebackAmount });
+      }
+
+      res.json({
+        processed: payouts.length,
+        totalPaid: payouts.reduce((sum, p) => sum + p.amount, 0),
+        payouts,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Admin: Kill Switch ───────────────────────────────────────────────────
+
+  // Global lock status
+  app.get("/api/admin/system-status", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      res.json({ locked: globalSystemLocked, reason: globalLockReason });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Toggle global lock
+  app.post("/api/admin/system-lock", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const { locked, reason } = req.body;
+      globalSystemLocked = !!locked;
+      globalLockReason = reason || (locked ? "Manual admin lock" : "");
+      console.warn(`[ADMIN] System lock ${locked ? "ENGAGED" : "RELEASED"}: ${globalLockReason}`);
+      res.json({ locked: globalSystemLocked, reason: globalLockReason });
     } catch (err) {
       next(err);
     }

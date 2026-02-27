@@ -30,6 +30,7 @@ function getTypeIcon(type: string) {
     case "daily_bonus":
       return Gift;
     case "buy_in":
+    case "buyin":
     case "purchase":
       return ArrowDownRight;
     case "cashout":
@@ -46,6 +47,7 @@ function getTypeColor(type: string) {
     case "daily_bonus":
       return "text-purple-400";
     case "buy_in":
+    case "buyin":
     case "purchase":
       return "text-red-400";
     case "cashout":
@@ -59,7 +61,7 @@ function getTypeColor(type: string) {
 function matchesFilter(type: string, filter: FilterType): boolean {
   if (filter === "all") return true;
   if (filter === "bonus") return type === "bonus" || type === "daily_bonus";
-  if (filter === "buy_in") return type === "buy_in";
+  if (filter === "buy_in") return type === "buy_in" || type === "buyin";
   if (filter === "cashout") return type === "cashout";
   if (filter === "purchase") return type === "purchase";
   if (filter === "prize") return type === "prize" || type === "winnings";
@@ -114,15 +116,15 @@ function BalanceChart({ transactions }: { transactions: Transaction[] }) {
     <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
       <defs>
         <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgb(0, 240, 255)" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="rgb(0, 240, 255)" stopOpacity="0.02" />
+          <stop offset="0%" stopColor="rgb(212, 168, 67)" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="rgb(212, 168, 67)" stopOpacity="0.02" />
         </linearGradient>
       </defs>
       <path d={points.areaPath} fill="url(#balanceGradient)" />
       <path
         d={points.linePath}
         fill="none"
-        stroke="rgb(0, 240, 255)"
+        stroke="rgb(212, 168, 67)"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -134,8 +136,8 @@ function BalanceChart({ transactions }: { transactions: Transaction[] }) {
           cx={points.coords[points.coords.length - 1].x}
           cy={points.coords[points.coords.length - 1].y}
           r="2"
-          fill="rgb(0, 240, 255)"
-          className="drop-shadow-[0_0_4px_rgba(0,240,255,0.6)]"
+          fill="rgb(212, 168, 67)"
+          className="drop-shadow-[0_0_4px_rgba(212,168,67,0.6)]"
         />
       )}
     </svg>
@@ -239,7 +241,7 @@ export default function Wallet() {
         >
           {/* Background glow */}
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             {/* Left — balance display */}
@@ -262,8 +264,8 @@ export default function Wallet() {
                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <Clock className="w-4 h-4 text-gray-500" />
                   <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Next bonus in</p>
-                    <p className="text-sm font-bold text-cyan-400 tabular-nums">{timeLeft}</p>
+                    <p className="text-[0.625rem] text-gray-500 uppercase tracking-wider">Next bonus in</p>
+                    <p className="text-sm font-bold text-amber-400 tabular-nums">{timeLeft}</p>
                   </div>
                 </div>
               ) : (
@@ -286,7 +288,7 @@ export default function Wallet() {
                   Claim Daily Bonus
                 </motion.button>
               )}
-              <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
+              <div className="flex items-center gap-1.5 text-[0.625rem] text-gray-600">
                 <Sparkles className="w-3 h-3 text-amber-500/60" />
                 <span>+{bonusAmount.toLocaleString()} chips daily reward{hasElitePass ? " (Elite Pass Active)" : " (2x with Elite Pass)"}</span>
               </div>
@@ -303,11 +305,11 @@ export default function Wallet() {
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-cyan-500/70" />
+              <TrendingUp className="w-4 h-4 text-amber-500/70" />
               Balance History
             </h2>
             {transactions.length >= 2 && (
-              <div className="flex items-center gap-2 text-[10px] text-gray-600">
+              <div className="flex items-center gap-2 text-[0.625rem] text-gray-600">
                 <span>Last {Math.min(transactions.length, 20)} transactions</span>
               </div>
             )}
@@ -317,7 +319,7 @@ export default function Wallet() {
           </div>
           {/* Min/Max labels */}
           {transactions.length >= 2 && (
-            <div className="flex justify-between mt-2 text-[10px] text-gray-600 tabular-nums">
+            <div className="flex justify-between mt-2 text-[0.625rem] text-gray-600 tabular-nums">
               <span>
                 Low:{" "}
                 {Math.min(
@@ -344,14 +346,14 @@ export default function Wallet() {
           {/* Header + filters */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Filter className="w-4 h-4 text-cyan-500/70" />
+              <Filter className="w-4 h-4 text-amber-500/70" />
               Transaction History
               <button
                 onClick={() => refreshTransactions()}
                 className="p-1 rounded-md hover:bg-white/[0.05] transition-colors"
                 title="Refresh transactions"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-gray-500 hover:text-cyan-400 transition-colors" />
+                <RefreshCw className="w-3.5 h-3.5 text-gray-500 hover:text-amber-400 transition-colors" />
               </button>
               <button
                 onClick={exportCSV}
@@ -366,35 +368,35 @@ export default function Wallet() {
                 <button
                   key={opt.key}
                   onClick={() => setFilter(opt.key)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all border ${
+                  className={`px-3 py-1.5 rounded-lg text-[0.625rem] font-semibold uppercase tracking-wider transition-all border ${
                     filter === opt.key
-                      ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/25"
+                      ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
                       : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:text-gray-300 hover:bg-white/[0.05]"
                   }`}
                 >
                   {opt.label}
                 </button>
               ))}
-              <span className="text-[9px] text-gray-600 ml-1">|</span>
+              <span className="text-[0.5625rem] text-gray-600 ml-1">|</span>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-2 py-1 rounded-lg text-[10px] text-gray-400 bg-white/[0.02] border border-white/[0.05] outline-none focus:border-cyan-500/25 transition-all"
+                className="px-2 py-1 rounded-lg text-[0.625rem] text-gray-400 bg-white/[0.02] border border-white/[0.05] outline-none focus:border-amber-500/25 transition-all"
                 title="From date"
               />
-              <span className="text-[9px] text-gray-600">to</span>
+              <span className="text-[0.5625rem] text-gray-600">to</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="px-2 py-1 rounded-lg text-[10px] text-gray-400 bg-white/[0.02] border border-white/[0.05] outline-none focus:border-cyan-500/25 transition-all"
+                className="px-2 py-1 rounded-lg text-[0.625rem] text-gray-400 bg-white/[0.02] border border-white/[0.05] outline-none focus:border-amber-500/25 transition-all"
                 title="To date"
               />
               {(startDate || endDate) && (
                 <button
                   onClick={() => { setStartDate(""); setEndDate(""); }}
-                  className="text-[9px] text-red-400 hover:text-red-300 transition-colors"
+                  className="text-[0.5625rem] text-red-400 hover:text-red-300 transition-colors"
                 >
                   Clear
                 </button>
@@ -405,7 +407,7 @@ export default function Wallet() {
           {/* Transaction list */}
           {loadingTx ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 text-cyan-500/50 animate-spin" />
+              <Loader2 className="w-6 h-6 text-amber-500/50 animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-600">
@@ -449,7 +451,7 @@ export default function Wallet() {
                         <p className="text-xs font-medium text-gray-300 truncate">
                           {tx.description || tx.type.replace(/_/g, " ")}
                         </p>
-                        <p className="text-[10px] text-gray-600">
+                        <p className="text-[0.625rem] text-gray-600">
                           {new Date(tx.createdAt).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
@@ -470,7 +472,7 @@ export default function Wallet() {
                           {isPositive ? "+" : ""}
                           {tx.amount.toLocaleString()}
                         </p>
-                        <p className="text-[10px] text-gray-600 tabular-nums">
+                        <p className="text-[0.625rem] text-gray-600 tabular-nums">
                           Bal: {tx.balanceAfter.toLocaleString()}
                         </p>
                       </div>
@@ -481,7 +483,7 @@ export default function Wallet() {
               {hasMore && (
                 <button
                   onClick={loadMore}
-                  className="w-full py-3 text-[10px] font-bold uppercase text-cyan-400 hover:text-white transition-colors"
+                  className="w-full py-3 text-[0.625rem] font-bold uppercase text-amber-400 hover:text-white transition-colors"
                 >
                   Load More
                 </button>

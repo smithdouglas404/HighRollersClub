@@ -182,11 +182,19 @@ export function evaluateHand(holeCards: CardType[], communityCards: CardType[]):
   const allCards = [...holeCards, ...communityCards];
 
   if (allCards.length < 5) {
-    // Not enough cards for full evaluation, evaluate what we have
+    // Not enough cards for full evaluation — return partial info without dummy padding
     if (allCards.length === 0) {
       return { rank: 'High Card', rankValue: 0, kickers: [], bestCards: [], description: 'No cards' };
     }
-    return evaluate5([...allCards, ...Array(5 - allCards.length).fill({ suit: 'spades' as Suit, rank: '2' as Rank })]);
+    // Sort by value descending to show best cards
+    const sorted = [...allCards].sort((a, b) => RANK_VALUES[b.rank] - RANK_VALUES[a.rank]);
+    return {
+      rank: 'High Card',
+      rankValue: 0,
+      kickers: sorted.map(c => RANK_VALUES[c.rank]),
+      bestCards: sorted,
+      description: `${sorted[0].rank} high (${allCards.length} cards)`,
+    };
   }
 
   const combos = combinations(allCards, 5);

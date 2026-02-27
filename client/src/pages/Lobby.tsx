@@ -10,6 +10,7 @@ import {
   Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search,
   Brain, Key, CheckCircle, XCircle
 } from "lucide-react";
+import feltBg from "@assets/generated_images/poker_felt_top_down.png";
 
 type GameFormat = "all" | "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
 
@@ -42,17 +43,17 @@ const FORMAT_TABS: { key: GameFormat; label: string; icon: any }[] = [
 
 function FormatBadge({ format }: { format: string }) {
   const colors: Record<string, string> = {
-    cash: "bg-green-500/20 text-green-400 border-green-500/20",
+    cash: "bg-emerald-600/20 text-emerald-400 border-emerald-500/20",
     sng: "bg-amber-500/20 text-amber-400 border-amber-500/20",
-    heads_up: "bg-purple-500/20 text-purple-400 border-purple-500/20",
-    tournament: "bg-cyan-500/20 text-cyan-400 border-cyan-500/20",
+    heads_up: "bg-violet-500/20 text-violet-400 border-violet-500/20",
+    tournament: "bg-amber-600/20 text-amber-300 border-amber-500/20",
     bomb_pot: "bg-red-500/20 text-red-400 border-red-500/20",
   };
   const labels: Record<string, string> = {
     cash: "CASH", sng: "SNG", heads_up: "H/U", tournament: "MTT", bomb_pot: "BOMB",
   };
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${colors[format] || colors.cash}`}>
+    <span className={`px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider border ${colors[format] || colors.cash}`}>
       {labels[format] || "CASH"}
     </span>
   );
@@ -68,12 +69,12 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02, y: -2, boxShadow: "0 0 20px rgba(0,240,255,0.08), 0 4px 20px rgba(0,0,0,0.2)" }}
+      whileHover={{ scale: 1.02, y: -2, boxShadow: "0 0 20px rgba(212,168,67,0.06), 0 4px 20px rgba(0,0,0,0.3)" }}
       onClick={onClick}
-      className={`relative glass rounded-xl p-5 cursor-pointer transition-all border border-white/5 hover:border-cyan-500/20 ${
+      className={`relative glass rounded-xl p-5 cursor-pointer transition-all border border-white/5 hover:border-amber-500/20 ${
         isFull ? "opacity-60" : ""
       }`}
-      style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}
+      style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.25)" }}
     >
       {table.isPrivate && (
         <div className="absolute top-3 right-3">
@@ -84,25 +85,25 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-sm text-cyan-400 tracking-wide" style={{ textShadow: "0 0 8px rgba(0,240,255,0.3)" }}>{table.name}</h3>
+            <h3 className="font-bold text-sm text-amber-400 tracking-wide">{table.name}</h3>
             <FormatBadge format={table.gameFormat} />
             {isHot && (
-              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/20 animate-pulse">
+              <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/20 animate-pulse">
                 HOT
               </span>
             )}
             {isFull && (
-              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/20">
+              <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/20">
                 FULL
               </span>
             )}
           </div>
-          <p className="text-[10px] text-gray-500 font-mono mt-0.5">
+          <p className="text-[0.625rem] text-gray-500 font-mono mt-0.5">
             {table.smallBlind}/{table.bigBlind}
             {table.gameFormat === "sng" && ` | Buy-in: ${table.buyInAmount}`}
           </p>
         </div>
-        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wider ${
           isPlaying
             ? "bg-green-500/20 text-green-400 border border-green-500/20"
             : "bg-amber-500/20 text-amber-400 border border-amber-500/20"
@@ -229,7 +230,16 @@ export default function Lobby() {
 
   return (
     <DashboardLayout title="Games & Tournaments">
-      <div className="px-8 pb-8">
+      <div className="px-8 pb-8 relative">
+        {/* Felt texture background */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <img
+            src={feltBg}
+            alt=""
+            className="w-full h-48 object-cover opacity-10"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#111b2a]/85 to-[#111b2a]" />
+        </div>
         {/* Actions row */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
@@ -239,7 +249,7 @@ export default function Lobby() {
           <div className="flex items-center gap-4">
             <h2 className="text-sm font-bold tracking-wider text-gray-400 uppercase">
               Open Tables
-              <span className="ml-2 text-cyan-500">{filteredTables.length}</span>
+              <span className="ml-2 text-amber-400">{filteredTables.length}</span>
             </h2>
           </div>
 
@@ -249,7 +259,7 @@ export default function Lobby() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowAISettings(!showAISettings)}
-                className={`glass rounded-lg px-4 py-2 text-[10px] font-bold tracking-wider border transition-all flex items-center gap-2 ${
+                className={`glass rounded-lg px-4 py-2 text-[0.625rem] font-bold tracking-wider border transition-all flex items-center gap-2 ${
                   aiEnabled
                     ? "text-purple-400 border-purple-500/20 hover:border-purple-500/40"
                     : "text-gray-400 border-white/5 hover:border-white/15 hover:text-white"
@@ -264,7 +274,7 @@ export default function Lobby() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate("/game")}
-              className="glass rounded-lg px-4 py-2 text-[10px] font-bold tracking-wider text-gray-400 hover:text-white border border-white/5 hover:border-white/15 transition-all flex items-center gap-2"
+              className="glass rounded-lg px-4 py-2 text-[0.625rem] font-bold tracking-wider text-gray-400 hover:text-white border border-white/5 hover:border-white/15 transition-all flex items-center gap-2"
             >
               <Bot className="w-3.5 h-3.5" />
               PLAY OFFLINE
@@ -274,7 +284,7 @@ export default function Lobby() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => { setDefaultPrivate(false); setShowCreateTable(true); }}
-              className="rounded-lg px-5 py-2 text-[10px] font-bold tracking-wider text-black flex items-center gap-2"
+              className="rounded-lg px-5 py-2 text-[0.625rem] font-bold tracking-wider text-black flex items-center gap-2"
               style={{
                 background: "linear-gradient(135deg, #c9a84c, #e8c566)",
                 boxShadow: "0 0 20px rgba(201,168,76,0.3)",
@@ -298,18 +308,18 @@ export default function Lobby() {
               <div
                 className="rounded-xl p-4"
                 style={{
-                  background: "linear-gradient(135deg, rgba(88,28,135,0.1), rgba(15,23,42,0.8))",
+                  background: "linear-gradient(135deg, rgba(88,28,135,0.1), rgba(20,31,40,0.8))",
                   border: "1px solid rgba(168,85,247,0.15)",
                 }}
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Brain className="w-4 h-4 text-purple-400" />
                   <span className="text-xs font-bold uppercase tracking-wider text-purple-400">AI Bot Configuration</span>
-                  <span className={`ml-2 flex items-center gap-1 text-[9px] font-bold uppercase ${aiEnabled ? "text-green-400" : "text-gray-500"}`}>
+                  <span className={`ml-2 flex items-center gap-1 text-[0.5625rem] font-bold uppercase ${aiEnabled ? "text-green-400" : "text-gray-500"}`}>
                     {aiEnabled ? <><CheckCircle className="w-3 h-3" /> Active</> : <><XCircle className="w-3 h-3" /> Inactive</>}
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-500 mb-3">
+                <p className="text-[0.625rem] text-gray-500 mb-3">
                   Provide your Anthropic API key to enable Claude-powered AI bots with unique personalities.
                   Bots will use Claude Haiku for fast, intelligent decisions and in-character chat.
                   {!aiHasKey && " Without a key, bots use built-in heuristic logic."}
@@ -323,7 +333,7 @@ export default function Lobby() {
                       onChange={(e) => setAiKeyInput(e.target.value)}
                       placeholder={aiHasKey ? "Key is set (enter new to replace)" : "sk-ant-..."}
                       className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-purple-500/30"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
                     />
                   </div>
                   <button
@@ -352,7 +362,7 @@ export default function Lobby() {
                       }
                     }}
                     disabled={aiSaving || !aiKeyInput.trim()}
-                    className="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-white bg-purple-600/60 border border-purple-500/30 hover:bg-purple-600/80 transition-all disabled:opacity-40"
+                    className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-white bg-purple-600/60 border border-purple-500/30 hover:bg-purple-600/80 transition-all disabled:opacity-40"
                   >
                     {aiSaving ? "Saving..." : "Save Key"}
                   </button>
@@ -371,7 +381,7 @@ export default function Lobby() {
                           toast({ title: "AI bots disabled", description: "Bots will use heuristic logic." });
                         } catch {} finally { setAiSaving(false); }
                       }}
-                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all"
+                      className="px-3 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all"
                     >
                       Remove
                     </button>
@@ -394,8 +404,8 @@ export default function Lobby() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search tables..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-500 outline-none transition-all focus:ring-1 focus:ring-cyan-500/30"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}
+            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-500 outline-none transition-all focus:ring-1 focus:ring-amber-500/30"
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(212,168,67,0.15)" }}
           />
         </motion.div>
 
@@ -413,15 +423,15 @@ export default function Lobby() {
               <button
                 key={tab.key}
                 onClick={() => setActiveFormat(tab.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
                   isActive
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/20"
                     : "text-gray-500 hover:text-gray-300 border border-transparent"
                 }`}
               >
                 <Icon className="w-3 h-3" />
                 {tab.label}
-                {count > 0 && <span className={`ml-0.5 ${isActive ? "text-cyan-300" : "text-gray-600"}`}>({count})</span>}
+                {count > 0 && <span className={`ml-0.5 ${isActive ? "text-amber-300" : "text-gray-600"}`}>({count})</span>}
               </button>
             );
           })}
@@ -441,15 +451,15 @@ export default function Lobby() {
                 navigate("/game");
               }
             }}
-            className="glass rounded-xl p-4 border border-cyan-500/10 hover:border-cyan-500/25 cursor-pointer transition-all"
+            className="glass rounded-xl p-4 border border-amber-500/10 hover:border-amber-500/20 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-cyan-400" />
+              <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-amber-400" />
               </div>
               <div>
                 <div className="text-xs font-bold text-white uppercase tracking-wider">Quick Match</div>
-                <div className="text-[9px] text-gray-500">{tables.some(t => t.playerCount < t.maxPlayers) ? "Join an open table" : "Play offline vs bots"}</div>
+                <div className="text-[0.5625rem] text-gray-500">{tables.some(t => t.playerCount < t.maxPlayers) ? "Join an open table" : "Play offline vs bots"}</div>
               </div>
             </div>
           </motion.div>
@@ -476,7 +486,7 @@ export default function Lobby() {
                 startingChips: 1500,
               });
             }}
-            className="glass rounded-xl p-4 border border-amber-500/10 hover:border-amber-500/25 cursor-pointer transition-all"
+            className="glass rounded-xl p-4 border border-amber-500/10 hover:border-amber-500/20 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
@@ -484,7 +494,7 @@ export default function Lobby() {
               </div>
               <div>
                 <div className="text-xs font-bold text-white uppercase tracking-wider">Sit & Go</div>
-                <div className="text-[9px] text-gray-500">Quick 6-max, 500 buy-in</div>
+                <div className="text-[0.5625rem] text-gray-500">Quick 6-max, 500 buy-in</div>
               </div>
             </div>
           </motion.div>
@@ -495,15 +505,15 @@ export default function Lobby() {
             transition={{ delay: 0.1 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => { setDefaultPrivate(true); setShowCreateTable(true); }}
-            className="glass rounded-xl p-4 border border-purple-500/10 hover:border-purple-500/25 cursor-pointer transition-all"
+            className="glass rounded-xl p-4 border border-amber-500/10 hover:border-amber-500/20 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center">
-                <Users className="w-5 h-5 text-purple-400" />
+              <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
+                <Users className="w-5 h-5 text-amber-400" />
               </div>
               <div>
                 <div className="text-xs font-bold text-white uppercase tracking-wider">Private Game</div>
-                <div className="text-[9px] text-gray-500">Create a friends-only table</div>
+                <div className="text-[0.5625rem] text-gray-500">Create a friends-only table</div>
               </div>
             </div>
           </motion.div>
@@ -512,7 +522,7 @@ export default function Lobby() {
         {/* Table grid */}
         {loading ? (
           <div className="text-center py-20">
-            <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
+            <div className="spinner spinner-lg mx-auto mb-4" />
             <p className="text-sm text-gray-500">Loading tables...</p>
           </div>
         ) : filteredTables.length === 0 ? (
@@ -522,8 +532,8 @@ export default function Lobby() {
             className="flex justify-center py-12"
           >
             <div className="glass rounded-2xl border border-white/5 px-12 py-10 text-center max-w-md">
-              <div className="w-16 h-16 rounded-full bg-cyan-500/5 flex items-center justify-center mx-auto mb-4 border border-cyan-500/10 shadow-[0_0_20px_rgba(0,240,255,0.05)]">
-                <Users className="w-8 h-8 text-cyan-500/40" />
+              <div className="w-16 h-16 rounded-full bg-amber-500/5 flex items-center justify-center mx-auto mb-4 border border-amber-500/10 shadow-[0_0_20px_rgba(212,168,67,0.08)]">
+                <Users className="w-8 h-8 text-amber-500/40" />
               </div>
               <p className="text-sm text-gray-300 mb-1 font-medium">
                 {activeFormat === "all" ? "No tables yet" : `No ${activeFormat.replace("_", " ")} tables`}
@@ -534,7 +544,7 @@ export default function Lobby() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate("/game")}
-                  className="glass rounded-lg px-5 py-2.5 text-xs font-bold tracking-wider text-gray-300 border border-white/10 hover:border-white/20 transition-all flex items-center gap-2"
+                  className="glass rounded-lg px-5 py-2.5 text-xs font-bold tracking-wider text-gray-300 border border-white/10 hover:border-white/15 transition-all flex items-center gap-2"
                 >
                   <Bot className="w-4 h-4" />
                   PLAY VS BOTS
@@ -598,7 +608,7 @@ export default function Lobby() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="relative w-full max-w-sm rounded-xl p-6"
               style={{
-                background: "linear-gradient(135deg, rgba(12,20,40,0.98), rgba(10,16,34,0.99))",
+                background: "linear-gradient(135deg, rgba(20,31,40,0.95), rgba(16,24,36,0.98))",
                 border: "1px solid rgba(255,255,255,0.1)",
                 boxShadow: "0 25px 80px rgba(0,0,0,0.5)",
               }}
@@ -607,7 +617,7 @@ export default function Lobby() {
                 <Lock className="w-5 h-5 text-amber-400" />
                 <div>
                   <h3 className="text-sm font-bold text-white">Private Table</h3>
-                  <p className="text-[10px] text-gray-500">{passwordModal.tableName}</p>
+                  <p className="text-[0.625rem] text-gray-500">{passwordModal.tableName}</p>
                 </div>
               </div>
               <input
@@ -618,12 +628,12 @@ export default function Lobby() {
                 placeholder="Enter table password..."
                 autoFocus
                 className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none mb-4"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
               />
               <div className="flex gap-2">
                 <button
                   onClick={() => setPasswordModal(null)}
-                  className="flex-1 py-2 rounded-lg text-xs font-bold text-gray-400 border border-white/10 hover:border-white/20 transition-all"
+                  className="flex-1 py-2 rounded-lg text-xs font-bold text-gray-400 border border-white/10 hover:border-white/15 transition-all"
                 >
                   Cancel
                 </button>

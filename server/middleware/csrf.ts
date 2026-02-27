@@ -9,10 +9,12 @@ const TOKEN_LENGTH = 32;
 const PROTECTED_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 
 // Routes that are exempt from CSRF (session-creating endpoints)
+// NOTE: When mounted at app.use("/api", csrfProtection), req.path is relative
+// to the mount point, so "/api/auth/login" becomes "/auth/login"
 const EXEMPT_ROUTES = new Set([
-  "/api/auth/login",
-  "/api/auth/register",
-  "/api/auth/guest",
+  "/auth/login",
+  "/auth/register",
+  "/auth/guest",
 ]);
 
 /**

@@ -2,7 +2,7 @@ import { GameEngine, type HandSummary, type GameFormat } from "./engine";
 import { CollusionDetector } from "./collusion-detector";
 import { BotPlayer, getRandomPersonality, getBotDisplayName } from "./bot-player";
 import { storage } from "../storage";
-import { sendGameStateToTable, broadcastToTable } from "../websocket";
+import { sendGameStateToTable, broadcastToTable, clearClientTable } from "../websocket";
 import type { ShuffleProof } from "./crypto-shuffle";
 import { blockchainConfig } from "../blockchain/config";
 import { VRFClient } from "../blockchain/vrf-client";
@@ -25,6 +25,7 @@ export interface TableInstance {
   bots: BotPlayer[];
   lifecycle: SNGLifecycle | null;
   avatarMap: Map<string, string>; // playerId → avatarId
+  handCountdownTimer: ReturnType<typeof setTimeout> | null; // prevent stacking
   config: {
     maxPlayers: number;
     smallBlind: number;
@@ -47,6 +48,10 @@ class TableManager {
   private contractClient: ContractClient | null = null;
   private collusionDetector = new CollusionDetector();
   private handsTracked = 0;
+  // Players flagged as "pending leave" — will be cashed out after the current hand ends
+  private pendingLeaves = new Map<string, Set<string>>(); // tableId → Set<userId>
+  // Auto-cashout timers for disconnected players (5 min)
+  private autoCashoutTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor() {
     if (blockchainConfig.enabled) {
@@ -74,6 +79,10 @@ class TableManager {
     const gameFormat = (tableRow.gameFormat || "cash") as GameFormat;
     const blindSchedule = (tableRow.blindSchedule as BlindLevel[]) || [];
 
+    // Convert gameSpeed string to multiplier
+    const speedMap: Record<string, number> = { normal: 1.0, fast: 0.5, turbo: 0.25 };
+    const speedMultiplier = speedMap[(tableRow as any).gameSpeed] || 1.0;
+
     const engine = new GameEngine(tableId, {
       smallBlind: tableRow.smallBlind,
       bigBlind: tableRow.bigBlind,
@@ -86,6 +95,7 @@ class TableManager {
       rakePercent: tableRow.rakePercent || 0,
       rakeCap: tableRow.rakeCap || 0,
       straddleEnabled: tableRow.straddleEnabled || false,
+      speedMultiplier,
     });
 
     // Pass VRF client if available
@@ -250,6 +260,32 @@ class TableManager {
         }).catch(() => {});
       }
 
+      // Record rake as a transaction for the house ledger
+      const rakeAmount = engine.lastHandRake;
+      if (rakeAmount > 0) {
+        // Attribute rake proportionally to non-bot players who were in the hand
+        const humanPlayers = summary.players.filter(p => !p.id.startsWith("bot-"));
+        if (humanPlayers.length > 0) {
+          const perPlayerRake = Math.floor(rakeAmount / humanPlayers.length);
+          const remainder = rakeAmount - perPlayerRake * humanPlayers.length;
+          for (let i = 0; i < humanPlayers.length; i++) {
+            const p = humanPlayers[i];
+            // First player absorbs any rounding remainder
+            const playerRake = perPlayerRake + (i === 0 ? remainder : 0);
+            if (playerRake <= 0) continue;
+            storage.createTransaction({
+              userId: p.id,
+              type: "rake",
+              amount: -playerRake,
+              balanceBefore: 0, // rake is from in-game pot, not wallet
+              balanceAfter: 0,
+              tableId,
+              description: `Rake from hand #${proof.handNumber}`,
+            }).catch(() => {});
+          }
+        }
+      }
+
       // Update player stats for missions (non-bot players only)
       for (const p of summary.players) {
         if (!p.id.startsWith("bot-")) {
@@ -318,6 +354,11 @@ class TableManager {
         this.updateLeagueStandings(tableRow.clubId, summary.winners.map(w => w.playerId)).catch(() => {});
       }
 
+      // Process pending leaves — cash out players who requested leave during the hand
+      this.processPendingLeaves(tableId).catch(err => {
+        console.error(`[table-manager] Error processing pending leaves for ${tableId}:`, err);
+      });
+
       // Broadcast seed reveal at showdown
       broadcastToTable(tableId, {
         type: "shuffle_reveal",
@@ -365,13 +406,13 @@ class TableManager {
       }
     };
 
-    // When a bot needs to act — delay varies by personality
+    // When a bot needs to act — delay varies by personality (scaled by speed)
     engine.onBotTurn = (botId: string) => {
       const inst = this.tables.get(tableId);
       if (!inst) return;
       const bot = inst.bots.find(b => b.id === botId);
       if (bot) {
-        const delay = bot.getThinkingDelay();
+        const delay = bot.getThinkingDelay() * engine.speedMultiplier;
         setTimeout(() => {
           bot.actAsync(engine).catch(() => bot.act(engine));
         }, delay);
@@ -385,6 +426,7 @@ class TableManager {
       bots: [],
       lifecycle,
       avatarMap,
+      handCountdownTimer: null,
       config: {
         maxPlayers: tableRow.maxPlayers,
         smallBlind: tableRow.smallBlind,
@@ -553,24 +595,27 @@ class TableManager {
     if (config.replaceBots && engine.state.players.length >= config.maxPlayers) {
       const botPlayers = engine.state.players.filter(p => p.isBot);
       if (botPlayers.length > 0) {
-        const botToRemove = botPlayers[botPlayers.length - 1];
+        // Prefer a bot that's already folded or one in waiting/showdown phase
+        const isActiveHand = engine.state.phase !== "waiting" && engine.state.phase !== "showdown";
+        const foldedBot = isActiveHand
+          ? botPlayers.find(p => { const bp = engine.getPlayer(p.id); return bp && bp.status === "folded"; })
+          : null;
+        const botToRemove = foldedBot || botPlayers[botPlayers.length - 1];
 
-        // Fold bot if mid-hand
-        if (engine.state.phase !== "waiting" && engine.state.phase !== "showdown") {
+        if (isActiveHand && !foldedBot) {
+          // All bots are still in hand — mark the last bot as sitting out so it's removed after hand
           const bp = engine.getPlayer(botToRemove.id);
-          if (bp && bp.status !== "folded") {
-            engine.handleAction(botToRemove.id, "fold");
+          if (bp) bp.isSittingOut = true;
+        } else {
+          // Safe to remove immediately
+          engine.forceRemovePlayer(botToRemove.id);
+          const idx = instance.bots.findIndex(b => b.id === botToRemove.id);
+          if (idx !== -1) {
+            instance.bots[idx].cleanup();
+            instance.bots.splice(idx, 1);
           }
+          instance.avatarMap.delete(botToRemove.id);
         }
-
-        // Remove from engine + bots array + avatar map
-        engine.forceRemovePlayer(botToRemove.id);
-        const idx = instance.bots.findIndex(b => b.id === botToRemove.id);
-        if (idx !== -1) {
-          instance.bots[idx].cleanup();
-          instance.bots.splice(idx, 1);
-        }
-        instance.avatarMap.delete(botToRemove.id);
       }
     }
 
@@ -641,9 +686,25 @@ class TableManager {
       }
     }
 
-    // Auto-start if enough players
+    // Auto-start if enough players — give a countdown (scaled by speed)
+    // Clear any existing countdown timer to prevent stacking
     if (engine.state.phase === "waiting" && engine.canStartHand()) {
-      setTimeout(() => engine.startHand(), 2000);
+      if (instance.handCountdownTimer) {
+        clearTimeout(instance.handCountdownTimer);
+        instance.handCountdownTimer = null;
+      }
+      const countdownSec = Math.max(1, Math.round(5 * engine.speedMultiplier));
+      broadcastToTable(tableId, {
+        type: "hand_countdown",
+        seconds: countdownSec,
+      } as any);
+      instance.handCountdownTimer = setTimeout(() => {
+        const inst = this.tables.get(tableId);
+        if (inst) inst.handCountdownTimer = null;
+        if (inst && inst.engine.state.phase === "waiting" && inst.engine.canStartHand()) {
+          inst.engine.startHand();
+        }
+      }, countdownSec * 1000);
     }
 
     return { ok: true };
@@ -684,22 +745,59 @@ class TableManager {
       }
     }
 
+    // ─── Cash Game: Check if player is in an active hand ──────────────────
+    const phase = instance.engine.state.phase;
+    const isInActiveHand = phase !== "waiting" && phase !== "showdown"
+      && player.status !== "folded" && player.status !== "sitting-out";
+
+    if (isInActiveHand) {
+      // Player is in a hand — flag as "pending leave" instead of immediate removal.
+      // They will be auto-folded/removed once the hand completes.
+      let pending = this.pendingLeaves.get(tableId);
+      if (!pending) {
+        pending = new Set();
+        this.pendingLeaves.set(tableId, pending);
+      }
+      pending.add(userId);
+
+      // Mark sitting out so no new hands start for them
+      player.isSittingOut = true;
+
+      broadcastToTable(tableId, {
+        type: "info",
+        message: `${player.displayName} will leave after this hand`,
+      } as any);
+      return;
+    }
+
+    // ─── Not in hand — immediate cash-out ─────────────────────────────────
+    await this.processCashOut(tableId, userId, instance);
+  }
+
+  /** Atomic cash-out: return chips to wallet and remove player from table */
+  private async processCashOut(tableId: string, userId: string, instance: TableInstance): Promise<void> {
+    const player = instance.engine.getPlayer(userId);
+    if (!player) return;
+
     const cashOut = player.chips;
     const seatIndex = player.seatIndex;
+    const displayName = player.displayName || "Player";
+
+    // Remove from engine first (folds if mid-hand)
     instance.engine.removePlayer(userId);
     instance.avatarMap.delete(userId);
 
-    // Return chips to balance
+    // Return chips to wallet balance atomically
     if (cashOut > 0) {
-      const user = await storage.getUser(userId);
-      if (user) {
-        await storage.updateUser(userId, { chipBalance: user.chipBalance + cashOut });
+      // Use atomic add to prevent race conditions on concurrent cashouts
+      const { success, newBalance } = await storage.atomicAddChips(userId, cashOut);
+      if (success) {
         await storage.createTransaction({
           userId,
           type: "cashout",
           amount: cashOut,
-          balanceBefore: user.chipBalance,
-          balanceAfter: user.chipBalance + cashOut,
+          balanceBefore: newBalance - cashOut,
+          balanceAfter: newBalance,
           tableId,
           description: `Cash-out from table`,
         });
@@ -708,7 +806,21 @@ class TableManager {
 
     await storage.removeTablePlayer(tableId, userId);
 
-    broadcastToTable(tableId, { type: "player_left", userId, displayName: player?.displayName || "Player", seatIndex });
+    // Clear the websocket client's table reference (important for pending leaves)
+    clearClientTable(userId);
+
+    // Remove from pending leaves if present
+    this.pendingLeaves.get(tableId)?.delete(userId);
+
+    // Cancel any auto-cashout timer for this player
+    const cashoutTimerKey = `cashout:${tableId}:${userId}`;
+    const cashoutTimer = this.autoCashoutTimers.get(cashoutTimerKey);
+    if (cashoutTimer) {
+      clearTimeout(cashoutTimer);
+      this.autoCashoutTimers.delete(cashoutTimerKey);
+    }
+
+    broadcastToTable(tableId, { type: "player_left", userId, displayName, seatIndex });
 
     // Clean up empty table
     if (instance.engine.state.players.length === 0) {
@@ -717,6 +829,25 @@ class TableManager {
       this.clearTableTimers(tableId);
       this.tables.delete(tableId);
     }
+  }
+
+  /** Process all pending leaves for a table (called after hand completion) */
+  private async processPendingLeaves(tableId: string): Promise<void> {
+    const pending = this.pendingLeaves.get(tableId);
+    if (!pending || pending.size === 0) return;
+
+    const instance = this.tables.get(tableId);
+    if (!instance) {
+      this.pendingLeaves.delete(tableId);
+      return;
+    }
+
+    const userIds = Array.from(pending);
+    for (const userId of userIds) {
+      await this.processCashOut(tableId, userId, instance);
+    }
+    this.pendingLeaves.delete(tableId);
+    sendGameStateToTable(tableId);
   }
 
   handleAction(
@@ -762,19 +893,29 @@ class TableManager {
     const player = instance.engine.getPlayer(userId);
     if (player) {
       player.isSittingOut = sitOut;
-      if (sitOut) player.status = "sitting-out";
+      if (sitOut) {
+        player.status = "sitting-out";
+      } else if (player.status === "sitting-out") {
+        player.status = "waiting";
+      }
     }
   }
 
   // Track disconnect grace timers for reconnection
   private disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  // Clear all disconnect timers for a table (prevents leaks on table deletion)
+  // Clear all disconnect & auto-cashout timers for a table (prevents leaks on table deletion)
   private clearTableTimers(tableId: string) {
     for (const [key, timer] of this.disconnectTimers) {
       if (key.startsWith(`${tableId}:`)) {
         clearTimeout(timer);
         this.disconnectTimers.delete(key);
+      }
+    }
+    for (const [key, timer] of this.autoCashoutTimers) {
+      if (key.startsWith(`cashout:${tableId}:`)) {
+        clearTimeout(timer);
+        this.autoCashoutTimers.delete(key);
       }
     }
   }
@@ -829,6 +970,26 @@ class TableManager {
         seatIndex: p.seatIndex,
       });
       sendGameStateToTable(tableId);
+
+      // Start 5-minute auto-cashout timer — if still disconnected, cash them out entirely
+      const cashoutTimerKey = `cashout:${tableId}:${userId}`;
+      const existingCashout = this.autoCashoutTimers.get(cashoutTimerKey);
+      if (existingCashout) clearTimeout(existingCashout);
+
+      const autoCashout = setTimeout(async () => {
+        this.autoCashoutTimers.delete(cashoutTimerKey);
+        const tableInst = this.tables.get(tableId);
+        if (!tableInst) return;
+        const disconnPlayer = tableInst.engine.getPlayer(userId);
+        if (!disconnPlayer || disconnPlayer.isConnected) return;
+
+        // Auto-cashout: return chips to wallet and remove from table
+        console.log(`[table-manager] Auto-cashout for disconnected player ${userId} at table ${tableId}`);
+        await this.processCashOut(tableId, userId, tableInst);
+        sendGameStateToTable(tableId);
+      }, 5 * 60 * 1000); // 5 minutes
+
+      this.autoCashoutTimers.set(cashoutTimerKey, autoCashout);
     }, 60000);
 
     this.disconnectTimers.set(timerKey, graceTimer);
@@ -849,6 +1010,17 @@ class TableManager {
       clearTimeout(timer);
       this.disconnectTimers.delete(timerKey);
     }
+
+    // Cancel auto-cashout timer
+    const cashoutTimerKey = `cashout:${tableId}:${userId}`;
+    const cashoutTimer = this.autoCashoutTimers.get(cashoutTimerKey);
+    if (cashoutTimer) {
+      clearTimeout(cashoutTimer);
+      this.autoCashoutTimers.delete(cashoutTimerKey);
+    }
+
+    // Remove from pending leaves if player reconnected before hand ended
+    this.pendingLeaves.get(tableId)?.delete(userId);
 
     // If player was marked sitting out from disconnect, restore them
     if (player.isSittingOut && player.chips > 0) {
@@ -914,9 +1086,11 @@ class TableManager {
       botIndex++;
     }
 
-    // Add first bot immediately, stagger the rest with 1.5-4s delays
+    // Add first bot immediately, stagger the rest with 1.5-4s cumulative delays
+    let cumulativeDelay = 0;
     for (let i = 0; i < botsToAdd.length; i++) {
-      const delay = i === 0 ? 0 : 1500 + Math.random() * 2500; // first bot instant, rest staggered
+      if (i > 0) cumulativeDelay += 1500 + Math.random() * 2500;
+      const delay = cumulativeDelay;
       const addBot = (b: typeof botsToAdd[0]) => {
         const inst = this.tables.get(tableId);
         if (!inst) return; // table may have been deleted
@@ -953,16 +1127,32 @@ class TableManager {
           return;
         }
 
-        // Auto-start hand if enough players and still waiting
+        // Auto-start hand if enough players and still waiting — with countdown (scaled by speed)
+        // Clear any existing countdown to prevent stacking
         if (inst.engine.state.phase === "waiting" && inst.engine.canStartHand()) {
-          setTimeout(() => inst.engine.startHand(), 1500);
+          if (inst.handCountdownTimer) {
+            clearTimeout(inst.handCountdownTimer);
+            inst.handCountdownTimer = null;
+          }
+          const countdownSec = Math.max(1, Math.round(5 * inst.engine.speedMultiplier));
+          broadcastToTable(tableId, {
+            type: "hand_countdown",
+            seconds: countdownSec,
+          } as any);
+          inst.handCountdownTimer = setTimeout(() => {
+            const tbl = this.tables.get(tableId);
+            if (tbl) tbl.handCountdownTimer = null;
+            if (tbl && tbl.engine.state.phase === "waiting" && tbl.engine.canStartHand()) {
+              tbl.engine.startHand();
+            }
+          }, countdownSec * 1000);
         }
       };
 
       if (delay === 0) {
         addBot(botsToAdd[i]);
       } else {
-        setTimeout(() => addBot(botsToAdd[i]), delay * i);
+        setTimeout(() => addBot(botsToAdd[i]), delay);
       }
     }
   }

@@ -96,6 +96,7 @@ export interface GameEngineOpts {
   rakePercent?: number; // e.g., 5 = 5% rake
   rakeCap?: number; // max rake per hand in chips, 0 = no cap
   straddleEnabled?: boolean;
+  speedMultiplier?: number; // 1.0 = normal, 0.5 = fast, 0.25 = turbo
 }
 
 // ─── Game Engine ─────────────────────────────────────────────────────────────
@@ -134,6 +135,7 @@ export class GameEngine {
   private rakePercent: number;
   private rakeCap: number;
   private straddleEnabled: boolean;
+  public speedMultiplier: number;
   public lastHandRake: number = 0; // rake taken from last hand (for persistence)
 
   // VPIP/PFR tracking for pre-flop voluntary actions
@@ -166,6 +168,7 @@ export class GameEngine {
     this.rakePercent = opts.rakePercent || 0;
     this.rakeCap = opts.rakeCap || 0;
     this.straddleEnabled = opts.straddleEnabled || false;
+    this.speedMultiplier = opts.speedMultiplier || 1.0;
 
     this.state = {
       phase: "waiting",
@@ -546,7 +549,9 @@ export class GameEngine {
     }
     this.state.commitmentHash = proof.commitmentHash;
 
-    for (const p of eligible) {
+    // Deal cards starting from the player left of the dealer (clockwise order)
+    const dealOrder = this.getDealingOrder(eligible);
+    for (const p of dealOrder) {
       p.cards = [this.deck.pop()!, this.deck.pop()!];
     }
 
@@ -702,12 +707,10 @@ export class GameEngine {
       }
 
       case "raise": {
-        if (!amount || amount < this.state.minRaise) {
-          if (amount && amount >= player.chips + player.currentBet) {
-            // All-in is always allowed
-          } else {
-            return { ok: false, error: `Minimum raise is ${this.state.minRaise}` };
-          }
+        // All-in is always allowed regardless of min raise
+        const isAllIn = amount && amount >= player.chips + player.currentBet;
+        if (!isAllIn && (!amount || amount < this.state.minRaise)) {
+          return { ok: false, error: `Minimum raise is ${this.state.minRaise}` };
         }
         const raiseTotal = amount || this.state.minRaise;
         const toAdd = Math.min(raiseTotal - player.currentBet, player.chips);
@@ -954,9 +957,13 @@ export class GameEngine {
       const boardCommunity = [...savedCommunity];
       while (boardCommunity.length < 5) {
         deckIdx++; // burn card
+        if (deckIdx >= stub.length) break; // deck exhausted
         boardCommunity.push(stub[deckIdx]);
         deckIdx++;
+        if (deckIdx >= stub.length) break; // deck exhausted
       }
+      // If we couldn't deal enough cards, skip this board
+      if (boardCommunity.length < 5) break;
 
       // Evaluate each player's hand against this board
       const boardCommunityEncoded = boardCommunity.map(encodeCard);
@@ -1187,7 +1194,7 @@ export class GameEngine {
 
     this.emitState();
 
-    // Auto-start next hand after delay
+    // Auto-start next hand after delay (scaled by speed multiplier)
     this.showdownTimer = setTimeout(() => {
       if (this.canStartHand()) {
         this.startHand();
@@ -1195,7 +1202,7 @@ export class GameEngine {
         this.state.phase = "waiting";
         this.emitState();
       }
-    }, 5000);
+    }, 5000 * this.speedMultiplier);
   }
 
   // Calculate rake from pot: percentage of total pot, capped at rakeCap
@@ -1221,15 +1228,16 @@ export class GameEngine {
   // Return the player closest left of the dealer (worst position = earliest to act)
   // Used for awarding odd chips in split pots per industry standard
   private worstPositionFirst(playerIds: string[]): string[] {
-    const maxPlayers = this.state.players.length;
+    // Use a modulus large enough to cover all possible seat indices (max 10 seats)
+    const MOD = 10;
     const dealerSeat = this.state.dealerSeat;
     return [...playerIds].sort((aId, bId) => {
       const aPlayer = this.getPlayer(aId);
       const bPlayer = this.getPlayer(bId);
       if (!aPlayer || !bPlayer) return 0;
       // Distance from dealer going clockwise (left of dealer = seat after dealer)
-      const aDist = (aPlayer.seatIndex - dealerSeat + maxPlayers) % maxPlayers;
-      const bDist = (bPlayer.seatIndex - dealerSeat + maxPlayers) % maxPlayers;
+      const aDist = (aPlayer.seatIndex - dealerSeat + MOD) % MOD;
+      const bDist = (bPlayer.seatIndex - dealerSeat + MOD) % MOD;
       return aDist - bDist;
     });
   }
@@ -1325,14 +1333,17 @@ export class GameEngine {
   private endHandLastStanding() {
     this.clearTimers();
     const active = this.activePlayers();
+    const potAmount = this.state.pot;
     if (active.length === 1) {
-      active[0].chips += this.state.pot;
+      active[0].chips += potAmount;
       this.state.lastAction = { playerId: active[0].id, action: "win" };
     }
+    // Zero pot after distribution so clients don't see stale value
+    this.state.pot = 0;
 
     // Fire hand complete callback with proof and summary
     const winnerAmounts = active.length === 1
-      ? [{ playerId: active[0].id, amount: this.state.pot }]
+      ? [{ playerId: active[0].id, amount: potAmount }]
       : [];
     if (this.currentShuffleProof) {
       this.onHandComplete?.(this.currentShuffleProof, this.buildHandSummary(winnerAmounts));
@@ -1354,7 +1365,7 @@ export class GameEngine {
         this.state.phase = "waiting";
         this.emitState();
       }
-    }, 3000);
+    }, 3000 * this.speedMultiplier);
   }
 
   // ─── Turn Management ──────────────────────────────────────────────────
@@ -1403,6 +1414,17 @@ export class GameEngine {
     return this.state.players.find(p => p.seatIndex === seatIndex);
   }
 
+  /** Return players in clockwise dealing order starting left of dealer (SB first, dealer last) */
+  private getDealingOrder(eligible: SeatPlayer[]): SeatPlayer[] {
+    if (eligible.length <= 1) return eligible;
+    const sorted = [...eligible].sort((a, b) => a.seatIndex - b.seatIndex);
+    // Find the first player whose seatIndex is after the dealer
+    const dealerIdx = sorted.findIndex(p => p.seatIndex > this.state.dealerSeat);
+    if (dealerIdx <= 0) return sorted; // dealer is at the highest seat or all seats are after
+    // Rotate: players after dealer come first, then wrap to the beginning
+    return [...sorted.slice(dealerIdx), ...sorted.slice(0, dealerIdx)];
+  }
+
   private nextEligibleSeat(currentSeat: number): number {
     const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0);
     if (eligible.length === 0) return currentSeat;
@@ -1432,8 +1454,18 @@ export class GameEngine {
     if (this.state.players.length === 0) return 0;
     const seats = this.state.players.map(p => p.seatIndex).sort((a, b) => a - b);
     const idx = seats.indexOf(current);
-    if (idx === -1 || idx === seats.length - 1) return seats[0];
-    return seats[idx + 1];
+    if (idx >= 0 && idx < seats.length - 1) {
+      // Current seat exists in the list — return the next one
+      return seats[idx + 1];
+    }
+    if (idx === seats.length - 1) {
+      // Current seat is the last — wrap to first
+      return seats[0];
+    }
+    // Current seat is NOT in the list (player left) — find the next seat clockwise
+    // This is the first seat with index > current, wrapping around
+    const next = seats.find(s => s > current);
+    return next !== undefined ? next : seats[0];
   }
 
   private clearTimers() {
@@ -1515,6 +1547,7 @@ export class GameEngine {
       // Big blind for UI
       smallBlind: this.smallBlind,
       bigBlind: this.bigBlind,
+      speedMultiplier: this.speedMultiplier,
       players: state.players.map(p => ({
         id: p.id,
         displayName: p.displayName,

@@ -29,6 +29,7 @@ export interface IStorage {
 
   // Users (atomic)
   atomicDeductChips(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }>;
+  atomicAddChips(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }>;
 
   // Clubs
   getClub(id: string): Promise<Club | undefined>;
@@ -45,6 +46,7 @@ export interface IStorage {
   getUserClubs(userId: string): Promise<Club[]>;
 
   // Club Invitations
+  getClubInvitation(id: string): Promise<ClubInvitation | undefined>;
   getClubInvitations(clubId: string): Promise<ClubInvitation[]>;
   getUserPendingRequests(userId: string): Promise<ClubInvitation[]>;
   createClubInvitation(data: Omit<ClubInvitation, "id" | "createdAt">): Promise<ClubInvitation>;
@@ -74,6 +76,11 @@ export interface IStorage {
   // Transactions
   createTransaction(tx: Omit<Transaction, "id" | "createdAt">): Promise<Transaction>;
   getTransactions(userId: string, limit?: number, offset?: number): Promise<Transaction[]>;
+  getSessionSummaries(userId: string, limit?: number): Promise<{ tableId: string; netResult: number; sessionStart: Date; sessionEnd: Date; handsPlayed: number }[]>;
+  getTransactionTotals(): Promise<{ type: string; total: number }[]>;
+  getAllPlayerBalanceSum(): Promise<number>;
+  getRakeReport(days?: number): Promise<{ tableId: string; handsPlayed: number; totalRake: number; reportDate: string }[]>;
+  getRakeByPlayer(days?: number): Promise<{ userId: string; totalRake: number; handsPlayed: number }[]>;
 
   // Game Hands
   createGameHand(hand: Omit<GameHand, "id" | "createdAt">): Promise<GameHand>;
@@ -205,6 +212,13 @@ export class MemStorage implements IStorage {
     return { success: true, newBalance: user.chipBalance };
   }
 
+  async atomicAddChips(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    const user = this.users.get(userId);
+    if (!user) return { success: false, newBalance: 0 };
+    user.chipBalance += amount;
+    return { success: true, newBalance: user.chipBalance };
+  }
+
   // Clubs
   async getClub(id: string) { return this.clubs.get(id); }
   async getClubs() { return Array.from(this.clubs.values()); }
@@ -270,6 +284,9 @@ export class MemStorage implements IStorage {
   }
 
   // Club Invitations
+  async getClubInvitation(id: string) {
+    return this.clubInvitationsList.find(i => i.id === id);
+  }
   async getClubInvitations(clubId: string) {
     return this.clubInvitationsList.filter(i => i.clubId === clubId);
   }
@@ -345,6 +362,7 @@ export class MemStorage implements IStorage {
       rakePercent: data.rakePercent ?? 0,
       rakeCap: data.rakeCap ?? 0,
       straddleEnabled: data.straddleEnabled ?? false,
+      gameSpeed: data.gameSpeed || "normal",
       createdAt: new Date(),
     };
     this.tablesList.set(id, table);
@@ -406,6 +424,73 @@ export class MemStorage implements IStorage {
       .filter(t => t.userId === userId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(offset, offset + limit);
+  }
+  async getSessionSummaries(userId: string, limit = 20) {
+    const tableTxs = this.transactionsList
+      .filter(t => t.userId === userId && t.tableId && ["buyin", "cashout", "withdraw", "prize"].includes(t.type));
+    const groups = new Map<string, { net: number; start: Date; end: Date; count: number }>();
+    for (const tx of tableTxs) {
+      const key = tx.tableId!;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.net += tx.amount;
+        if (tx.createdAt < existing.start) existing.start = tx.createdAt;
+        if (tx.createdAt > existing.end) existing.end = tx.createdAt;
+        existing.count++;
+      } else {
+        groups.set(key, { net: tx.amount, start: tx.createdAt, end: tx.createdAt, count: 1 });
+      }
+    }
+    return Array.from(groups.entries())
+      .map(([tableId, g]) => ({ tableId, netResult: g.net, sessionStart: g.start, sessionEnd: g.end, handsPlayed: g.count }))
+      .sort((a, b) => b.sessionEnd.getTime() - a.sessionEnd.getTime())
+      .slice(0, limit);
+  }
+  async getTransactionTotals() {
+    const map = new Map<string, number>();
+    for (const tx of this.transactionsList) {
+      map.set(tx.type, (map.get(tx.type) || 0) + tx.amount);
+    }
+    return Array.from(map.entries()).map(([type, total]) => ({ type, total }));
+  }
+  async getAllPlayerBalanceSum() {
+    let sum = 0;
+    for (const u of this.users.values()) sum += u.chipBalance;
+    return sum;
+  }
+  async getRakeReport(_days = 30) {
+    // Group game hands by tableId and date
+    const groups = new Map<string, { handsPlayed: number; totalRake: number }>();
+    for (const h of this.gameHandsList) {
+      const dateStr = h.createdAt.toISOString().split("T")[0];
+      const key = `${h.tableId}:${dateStr}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.handsPlayed++;
+        existing.totalRake += h.totalRake;
+      } else {
+        groups.set(key, { handsPlayed: 1, totalRake: h.totalRake });
+      }
+    }
+    return Array.from(groups.entries()).map(([key, g]) => {
+      const [tableId, reportDate] = key.split(":");
+      return { tableId, handsPlayed: g.handsPlayed, totalRake: g.totalRake, reportDate };
+    });
+  }
+  async getRakeByPlayer(_days = 30) {
+    const map = new Map<string, { totalRake: number; handsPlayed: number }>();
+    for (const tx of this.transactionsList) {
+      if (tx.type !== "rake") continue;
+      const existing = map.get(tx.userId);
+      const rakeAbs = Math.abs(tx.amount);
+      if (existing) {
+        existing.totalRake += rakeAbs;
+        existing.handsPlayed++;
+      } else {
+        map.set(tx.userId, { totalRake: rakeAbs, handsPlayed: 1 });
+      }
+    }
+    return Array.from(map.entries()).map(([userId, g]) => ({ userId, ...g }));
   }
 
   // Game Hands
@@ -707,6 +792,19 @@ export class DatabaseStorage implements IStorage {
     return { success: true, newBalance: Number(rows[0].chip_balance) };
   }
 
+  async atomicAddChips(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    const result = await this.db.execute(sql`
+      UPDATE users SET chip_balance = chip_balance + ${amount}
+      WHERE id = ${userId}
+      RETURNING chip_balance
+    `);
+    const rows = result.rows as any[];
+    if (rows.length === 0) {
+      return { success: false, newBalance: 0 };
+    }
+    return { success: true, newBalance: Number(rows[0].chip_balance) };
+  }
+
   // Clubs
   async getClub(id: string) {
     const [club] = await this.db.select().from(clubs).where(eq(clubs.id, id));
@@ -764,6 +862,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Club Invitations
+  async getClubInvitation(id: string) {
+    const rows = await this.db.select().from(clubInvitations).where(eq(clubInvitations.id, id));
+    return rows[0];
+  }
   async getClubInvitations(clubId: string) {
     return this.db.select().from(clubInvitations).where(eq(clubInvitations.clubId, clubId))
       .orderBy(desc(clubInvitations.createdAt));
@@ -838,6 +940,7 @@ export class DatabaseStorage implements IStorage {
       buyInAmount: data.buyInAmount ?? 0,
       startingChips: data.startingChips ?? 1500,
       payoutStructure: data.payoutStructure || null,
+      gameSpeed: data.gameSpeed || "normal",
     }).returning();
     return table;
   }
@@ -882,6 +985,82 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(transactions.createdAt))
       .limit(limit)
       .offset(offset);
+  }
+  async getSessionSummaries(userId: string, limit = 20) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        table_id AS "tableId",
+        SUM(amount) AS "netResult",
+        MIN(created_at) AS "sessionStart",
+        MAX(created_at) AS "sessionEnd",
+        COUNT(*) AS "handsPlayed"
+      FROM transactions
+      WHERE user_id = ${userId}
+        AND table_id IS NOT NULL
+        AND type IN ('buyin', 'cashout', 'withdraw', 'prize')
+      GROUP BY table_id
+      ORDER BY MAX(created_at) DESC
+      LIMIT ${limit}
+    `);
+    return (rows.rows as any[]).map(r => ({
+      tableId: r.tableId,
+      netResult: Number(r.netResult),
+      sessionStart: new Date(r.sessionStart),
+      sessionEnd: new Date(r.sessionEnd),
+      handsPlayed: Number(r.handsPlayed),
+    }));
+  }
+  async getTransactionTotals() {
+    const rows = await this.db.execute(sql`
+      SELECT type, SUM(amount) AS total
+      FROM transactions
+      GROUP BY type
+    `);
+    return (rows.rows as any[]).map(r => ({ type: r.type as string, total: Number(r.total) }));
+  }
+  async getAllPlayerBalanceSum() {
+    const rows = await this.db.execute(sql`
+      SELECT COALESCE(SUM(chip_balance), 0) AS total FROM users
+    `);
+    return Number((rows.rows as any[])[0]?.total || 0);
+  }
+  async getRakeReport(days = 30) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        table_id AS "tableId",
+        COUNT(*) AS "handsPlayed",
+        COALESCE(SUM(total_rake), 0) AS "totalRake",
+        DATE(created_at)::text AS "reportDate"
+      FROM game_hands
+      WHERE created_at >= NOW() - INTERVAL '1 day' * ${days}
+        AND total_rake > 0
+      GROUP BY table_id, DATE(created_at)
+      ORDER BY DATE(created_at) DESC, SUM(total_rake) DESC
+    `);
+    return (rows.rows as any[]).map(r => ({
+      tableId: r.tableId as string,
+      handsPlayed: Number(r.handsPlayed),
+      totalRake: Number(r.totalRake),
+      reportDate: r.reportDate as string,
+    }));
+  }
+  async getRakeByPlayer(days = 30) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        user_id AS "userId",
+        COALESCE(SUM(ABS(amount)), 0) AS "totalRake",
+        COUNT(*) AS "handsPlayed"
+      FROM transactions
+      WHERE type = 'rake'
+        AND created_at >= NOW() - INTERVAL '1 day' * ${days}
+      GROUP BY user_id
+      ORDER BY SUM(ABS(amount)) DESC
+    `);
+    return (rows.rows as any[]).map(r => ({
+      userId: r.userId as string,
+      totalRake: Number(r.totalRake),
+      handsPlayed: Number(r.handsPlayed),
+    }));
   }
 
   // Game Hands

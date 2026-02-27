@@ -26,6 +26,7 @@ import { CardSqueeze } from "../components/poker/CardSqueeze";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useScreenInfo } from "@/hooks/use-screen-info";
 import { useDealingSequence } from "@/hooks/useDealingSequence";
+import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
 import { TournamentStatsPanel } from "@/components/game/TournamentStatsPanel";
 import { PlayerAnalyticsPanel } from "@/components/game/PlayerAnalyticsPanel";
 import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
@@ -117,6 +118,7 @@ function GameTable({
   blindIncrease, elimination, startingChips,
   addChips, maxBuyIn, minBuyIn, walletBalance,
   buyTime, acceptInsurance, declineInsurance, voteRunIt,
+  sitOut, sitIn,
 }: {
   players: Player[];
   gameState: any;
@@ -154,6 +156,8 @@ function GameTable({
   acceptInsurance?: () => void;
   declineInsurance?: () => void;
   voteRunIt?: (count: 1 | 2 | 3) => void;
+  sitOut?: () => void;
+  sitIn?: () => void;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showAddChips, setShowAddChips] = useState(false);
@@ -168,10 +172,17 @@ function GameTable({
   const isMobile = useIsMobile();
   const screen = useScreenInfo();
   const { compactMode, toggleCompactMode, feltPreset, setFeltColor } = useGameUI();
-  const dealing = useDealingSequence(players, gameState, heroId, compactMode);
+  const speedMultiplier = (gameState as any).speedMultiplier || 1.0;
+  const dealing = useDealingSequence(players, gameState, heroId, compactMode, speedMultiplier);
   const { opponentStats, hudEnabled, setHudEnabled } = useOpponentStats(gameState, players, heroId);
   const tableRef = useRef<HTMLDivElement>(null);
   const prevHeroTurn = useRef(false);
+
+  // Animated pot counter for the top bar (smooth count-up/down)
+  const { value: topBarPot } = useAnimatedCounter(gameState.pot || 0, 400);
+  // Animated hero chip counter for the top bar
+  const hero = players.find((p) => p.id === heroId);
+  const { value: animatedHeroChips } = useAnimatedCounter(hero?.chips || 0, 400);
 
   // Fetch real player stats for analytics panel (debounced to avoid rapid re-fetches)
   const [playerStats, setPlayerStats] = useState({ handsPlayed: 0, potsWon: 0, vpip: 0, pfr: 0, showdownCount: 0 });
@@ -220,7 +231,6 @@ function GameTable({
     }
   }, [showdown, players]);
 
-  const hero = players.find((p) => p.id === heroId);
   const isHeroTurn = gameState.currentTurnPlayerId === heroId;
   const heroCards = hero?.cards;
 
@@ -338,7 +348,7 @@ function GameTable({
           <span className="text-[0.625rem] text-amber-500/80 font-mono">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
           <span className="text-[0.625rem] text-gray-400 font-mono">
             {(gameState as any).handNumber
-              ? <>Hand: ${gameState.pot?.toLocaleString() || "0"}</>
+              ? <>Hand: ${topBarPot.toLocaleString()}</>
               : <>{tableId ? `#${tableId.slice(0, 6).toUpperCase()}` : ""}</>
             }
           </span>
@@ -347,7 +357,7 @@ function GameTable({
         <div className="flex items-center gap-3">
           <div className="px-3 py-1 rounded-lg bg-black/40 border border-amber-500/20">
             <span className="text-[0.625rem] text-gray-400 mr-1">POT:</span>
-            <span className="text-sm font-bold text-amber-400 font-mono">${gameState.pot?.toLocaleString() || "0"}</span>
+            <span className="text-sm font-bold text-amber-400 font-mono">${topBarPot.toLocaleString()}</span>
           </div>
 
           {showdown?.results?.some((r: any) => r.isWinner && r.playerId === heroId) && (
@@ -369,6 +379,27 @@ function GameTable({
             <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20">
               <Bot className="w-3 h-3" /> BOTS
             </button>
+          )}
+
+          {/* Sit Out / Sit In toggle */}
+          {isMultiplayer && sitOut && sitIn && hero && (
+            hero.isSittingOut || hero.status === "sitting-out" ? (
+              <button
+                onClick={sitIn}
+                className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-green-400 bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition-colors"
+                title="Return to the game"
+              >
+                <Play className="w-3 h-3" /> SIT IN
+              </button>
+            ) : (
+              <button
+                onClick={sitOut}
+                className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors"
+                title="Sit out next hand"
+              >
+                <Pause className="w-3 h-3" /> SIT OUT
+              </button>
+            )
           )}
 
           {/* Add Chips button — only for cash games when between hands */}
@@ -660,6 +691,23 @@ function GameTable({
               </>
             )}
           </div>
+
+          {/* Sitting out banner */}
+          {hero && (hero.isSittingOut || hero.status === "sitting-out") && sitIn && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative z-30 flex items-center justify-center gap-3 py-2 px-4 bg-orange-500/15 border border-orange-500/25 rounded-lg mx-4 mb-2"
+            >
+              <span className="text-sm font-bold text-orange-400 uppercase tracking-wider">You are sitting out</span>
+              <button
+                onClick={sitIn}
+                className="px-3 py-1 rounded text-xs font-bold text-white bg-green-600 hover:bg-green-500 transition-colors"
+              >
+                Rejoin Game
+              </button>
+            </motion.div>
+          )}
 
           {/* Bottom controls — inline, not fixed */}
           <div className="relative z-30 shrink-0">
@@ -1028,7 +1076,12 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
     formatInfo, blindIncrease, elimination, tournamentComplete,
     dismissTournamentComplete, bombPotActive, notifications, handCountdown,
     buyTime, acceptInsurance, declineInsurance, voteRunIt,
+    walletBalance: liveWalletBalance,
+    sitOut, sitIn,
   } = useMultiplayerGame(tableId, user?.id || "");
+
+  // Use live wallet balance from WebSocket when available, fall back to auth context
+  const effectiveWalletBalance = liveWalletBalance ?? user?.chipBalance ?? 0;
 
   // Fetch table info
   useEffect(() => {
@@ -1053,7 +1106,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   const handleJoin = () => {
     const amount = isSNG ? (tableInfo?.buyInAmount || buyIn) : buyIn;
-    joinTable(amount, selectedSeat);
+    const password = sessionStorage.getItem(`table-password-${tableId}`) || undefined;
+    joinTable(amount, selectedSeat, password);
     setJoined(true);
     soundEngine.init();
   };
@@ -1237,11 +1291,13 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         addChips={addChips}
         maxBuyIn={tableInfo?.maxBuyIn}
         minBuyIn={tableInfo?.minBuyIn}
-        walletBalance={user?.chipBalance}
+        walletBalance={effectiveWalletBalance}
         buyTime={buyTime}
         acceptInsurance={acceptInsurance}
         declineInsurance={declineInsurance}
         voteRunIt={voteRunIt}
+        sitOut={sitOut}
+        sitIn={sitIn}
       />
       {/* Join/Leave Notifications */}
       <div className="fixed top-16 right-4 z-[60] flex flex-col gap-2 pointer-events-none">

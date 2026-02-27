@@ -11,6 +11,7 @@ import { AvatarStatusRing } from "./AvatarStatusRing";
 import { TimerRing } from "./TimerRing";
 import { VideoThumbnail } from "./VideoOverlay";
 import { useTimerCountdown } from "@/hooks/useTimerCountdown";
+import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
 import type { AvatarOption } from "./AvatarSelect";
 import type { OpponentHudStats } from "@/lib/useOpponentStats";
 
@@ -178,9 +179,13 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   const isTurn = player.status === "thinking";
   const isFolded = player.status === "folded";
   const sound = useSoundEngine();
-  const prevBetRef = useRef(player.currentBet);
+  // Start at 0 so the first bet (blind posting) also triggers the animation
+  const prevBetRef = useRef(0);
   const timerTickRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const seatRef = useRef<HTMLDivElement>(null);
+
+  // Animated chip count — smooth count-up/down when chips change
+  const { value: animatedChips, animating: chipsAnimating, delta: chipsDelta } = useAnimatedCounter(player.chips, 400);
 
   // Smooth timer countdown
   const timer = useTimerCountdown(
@@ -249,8 +254,18 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         const rect = seatRef.current.getBoundingClientRect();
         const fromX = rect.left + rect.width / 2;
         const fromY = rect.top + rect.height / 2;
-        const toX = window.innerWidth / 2;
-        const toY = window.innerHeight * 0.38;
+        // Target the pot container ref (exposed by ImageTable) for accurate targeting
+        const potRef = (window as any).__potRef?.current as HTMLDivElement | null;
+        let toX: number, toY: number;
+        if (potRef) {
+          const potRect = potRef.getBoundingClientRect();
+          toX = potRect.left + potRect.width / 2;
+          toY = potRect.top + potRect.height / 2;
+        } else {
+          // Fallback to center of viewport
+          toX = window.innerWidth / 2;
+          toY = window.innerHeight * 0.38;
+        }
         triggerChipFlight(fromX, fromY, toX, toY, player.currentBet - prevBetRef.current);
       }
     }
@@ -355,7 +370,8 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
       <div
         className={cn(
           "relative flex flex-col items-center",
-          isFolded && "opacity-50 grayscale"
+          isFolded && "opacity-50 grayscale",
+          (player.isSittingOut || player.status === "sitting-out") && !isFolded && "opacity-50"
         )}
       >
         {/* Taunt bubble (above emotes) */}
@@ -500,6 +516,18 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             </motion.div>
           )}
 
+          {/* AWAY badge — shown when player is sitting out */}
+          {(player.isSittingOut || player.status === "sitting-out") && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-40 px-2 py-0.5 rounded text-[0.625rem] font-black uppercase tracking-wider text-orange-300 bg-black/80 border border-orange-500/50"
+              style={{ boxShadow: "0 0 12px rgba(249,115,22,0.3)" }}
+            >
+              AWAY
+            </motion.div>
+          )}
+
           {/* Seat index badge — small number in bottom-left */}
           <div
             className="absolute -left-1 -bottom-1 z-30 w-5 h-5 rounded-md flex items-center justify-center text-[0.5625rem] font-bold"
@@ -538,12 +566,18 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               {player.name}
             </span>
 
-            {/* Chip count — large, gold, mono */}
+            {/* Chip count — large, gold, mono — animated counter */}
             <span
-              className="text-sm font-mono font-bold leading-tight"
-              style={{ color: "#ffd700", textShadow: "0 0 8px rgba(255,215,0,0.3)" }}
+              className="text-sm font-mono font-bold leading-tight relative"
+              style={{
+                color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
+                textShadow: chipsAnimating
+                  ? chipsDelta < 0 ? "0 0 12px rgba(239,68,68,0.5)" : "0 0 12px rgba(34,197,94,0.5)"
+                  : "0 0 8px rgba(255,215,0,0.3)",
+                transition: "color 0.3s ease, text-shadow 0.3s ease",
+              }}
             >
-              {formatChips(player.chips)}
+              {formatChips(animatedChips)}
             </span>
           </div>
         </div>

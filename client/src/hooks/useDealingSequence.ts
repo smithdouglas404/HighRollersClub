@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Player, GameState } from "@/lib/poker-types";
+import { soundEngine } from "@/lib/sound-engine";
 
 export type DealPhase =
   | "idle"
@@ -47,6 +48,7 @@ export function useDealingSequence(
   gameState: GameState,
   heroId: string,
   compactMode: boolean = false,
+  speedMultiplier: number = 1.0,
 ): DealingState {
   const [state, setState] = useState<DealingState>(INITIAL_STATE);
   const prevHandNumber = useRef<number | undefined>(undefined);
@@ -118,7 +120,8 @@ export function useDealingSequence(
     }
 
     const dealOrder = getDealOrder();
-    const DEAL_INTERVAL = 100; // ms per card per player
+    const s = speedMultiplier; // scale factor for animations
+    const DEAL_INTERVAL = 100 * s; // ms per card per player
 
     // Phase 1: Dealer move
     setState(prev => ({
@@ -131,13 +134,14 @@ export function useDealingSequence(
       showBurnCard: false,
     }));
 
-    let elapsed = 250; // dealer move time
+    let elapsed = 250 * s; // dealer move time
 
-    // Phase 2: Posting blinds
+    // Phase 2: Posting blinds (with chip sound)
     schedule(() => {
+      soundEngine.playChipClink();
       setState(prev => ({ ...prev, dealPhase: "posting-blinds" }));
     }, elapsed);
-    elapsed += 350;
+    elapsed += 350 * s;
 
     // Phase 3: Dealing round 1 (one card each, clockwise)
     schedule(() => {
@@ -148,6 +152,7 @@ export function useDealingSequence(
       const playerId = dealOrder[i];
       const delay = elapsed + i * DEAL_INTERVAL;
       schedule(() => {
+        soundEngine.playCardDeal();
         setState(prev => {
           const newMap = new Map(prev.visiblePlayerCards);
           newMap.set(playerId, 1);
@@ -155,7 +160,7 @@ export function useDealingSequence(
         });
       }, delay);
     }
-    elapsed += dealOrder.length * DEAL_INTERVAL + 80;
+    elapsed += dealOrder.length * DEAL_INTERVAL + 80 * s;
 
     // Phase 4: Dealing round 2 (second card each, clockwise)
     schedule(() => {
@@ -166,6 +171,7 @@ export function useDealingSequence(
       const playerId = dealOrder[i];
       const delay = elapsed + i * DEAL_INTERVAL;
       schedule(() => {
+        soundEngine.playCardDeal();
         setState(prev => {
           const newMap = new Map(prev.visiblePlayerCards);
           newMap.set(playerId, 2);
@@ -173,7 +179,7 @@ export function useDealingSequence(
         });
       }, delay);
     }
-    elapsed += dealOrder.length * DEAL_INTERVAL + 150;
+    elapsed += dealOrder.length * DEAL_INTERVAL + 150 * s;
 
     // Phase 5: Ready
     schedule(() => {
@@ -184,7 +190,7 @@ export function useDealingSequence(
       }));
     }, elapsed);
 
-  }, [gameState.handNumber, compactMode, clearTimers, schedule, getDealOrder, players]);
+  }, [gameState.handNumber, compactMode, speedMultiplier, clearTimers, schedule, getDealOrder, players]);
 
   // === COMMUNITY CARD REVEALS: Trigger on phase change ===
   useEffect(() => {
@@ -205,22 +211,26 @@ export function useDealingSequence(
       return;
     }
 
+    const s = speedMultiplier;
+
     // Flop: pre-flop → flop
     if (prevP === "pre-flop" && phase === "flop") {
       clearTimers();
       let elapsed = 0;
 
       // Burn card
+      soundEngine.playCardDeal();
       setState(prev => ({
         ...prev,
         dealPhase: "community-burn",
         showBurnCard: true,
         controlsReady: false,
       }));
-      elapsed += 300;
+      elapsed += 300 * s;
 
       // Deal 3 cards face-down
       schedule(() => {
+        soundEngine.playPhaseReveal();
         setState(prev => ({
           ...prev,
           dealPhase: "community-deal",
@@ -229,7 +239,7 @@ export function useDealingSequence(
           communityFlipped: false,
         }));
       }, elapsed);
-      elapsed += 400;
+      elapsed += 400 * s;
 
       // Flip them face-up
       schedule(() => {
@@ -239,7 +249,7 @@ export function useDealingSequence(
           communityFlipped: true,
         }));
       }, elapsed);
-      elapsed += 600;
+      elapsed += 600 * s;
 
       // Ready
       schedule(() => {
@@ -256,15 +266,17 @@ export function useDealingSequence(
       clearTimers();
       let elapsed = 0;
 
+      soundEngine.playCardDeal();
       setState(prev => ({
         ...prev,
         dealPhase: "community-burn",
         showBurnCard: true,
         controlsReady: false,
       }));
-      elapsed += 300;
+      elapsed += 300 * s;
 
       schedule(() => {
+        soundEngine.playPhaseReveal();
         setState(prev => ({
           ...prev,
           dealPhase: "community-deal",
@@ -273,7 +285,7 @@ export function useDealingSequence(
           communityFlipped: false,
         }));
       }, elapsed);
-      elapsed += 300;
+      elapsed += 300 * s;
 
       schedule(() => {
         setState(prev => ({
@@ -282,7 +294,7 @@ export function useDealingSequence(
           communityFlipped: true,
         }));
       }, elapsed);
-      elapsed += 400;
+      elapsed += 400 * s;
 
       schedule(() => {
         setState(prev => ({
@@ -298,15 +310,17 @@ export function useDealingSequence(
       clearTimers();
       let elapsed = 0;
 
+      soundEngine.playCardDeal();
       setState(prev => ({
         ...prev,
         dealPhase: "community-burn",
         showBurnCard: true,
         controlsReady: false,
       }));
-      elapsed += 300;
+      elapsed += 300 * s;
 
       schedule(() => {
+        soundEngine.playPhaseReveal();
         setState(prev => ({
           ...prev,
           dealPhase: "community-deal",
@@ -315,7 +329,7 @@ export function useDealingSequence(
           communityFlipped: false,
         }));
       }, elapsed);
-      elapsed += 300;
+      elapsed += 300 * s;
 
       schedule(() => {
         setState(prev => ({
@@ -324,7 +338,7 @@ export function useDealingSequence(
           communityFlipped: true,
         }));
       }, elapsed);
-      elapsed += 400;
+      elapsed += 400 * s;
 
       schedule(() => {
         setState(prev => ({
@@ -349,7 +363,7 @@ export function useDealingSequence(
         showBurnCard: false,
       });
     }
-  }, [gameState.phase, gameState.communityCards.length, compactMode, clearTimers, schedule, players]);
+  }, [gameState.phase, gameState.communityCards.length, compactMode, speedMultiplier, clearTimers, schedule, players]);
 
   // Cleanup on unmount
   useEffect(() => {

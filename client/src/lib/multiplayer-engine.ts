@@ -41,8 +41,9 @@ function serverToClientGameState(serverState: any): GameState {
     dealerId: serverState.players?.find(
       (p: any) => p.seatIndex === serverState.dealerSeat
     )?.id || "",
-    phase: serverState.phase === "waiting" ? "pre-flop" : serverState.phase,
+    phase: serverState.phase,
     minBet: serverState.minBet || 0,
+    minRaise: serverState.minRaise || 0,
     dealingPhase: "dealt",
     lastAction: serverState.lastAction,
     actionNumber: serverState.actionNumber,
@@ -134,6 +135,13 @@ export function useMultiplayerGame(tableId: string, userId: string) {
   const [tournamentComplete, setTournamentComplete] = useState<TournamentCompleteInfo | null>(null);
   const [bombPotActive, setBombPotActive] = useState(false);
 
+  // Hand countdown (seconds remaining before next hand starts)
+  const [handCountdown, setHandCountdown] = useState<number | null>(null);
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Real-time wallet balance (updated on chips_added)
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+
   // Join/leave notifications
   const [notifications, setNotifications] = useState<TableNotification[]>([]);
   const notifIdRef = useRef(0);
@@ -163,7 +171,10 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         // Auto-rejoin table after reconnect
         if (joinedRef.current && lastBuyInRef.current > 0) {
           console.log("[ws] reconnected — auto-rejoining table", tableIdRef.current);
-          wsClient.send({ type: "join_table", tableId: tableIdRef.current, buyIn: lastBuyInRef.current });
+          const pw = sessionStorage.getItem(`table-password-${tableIdRef.current}`) || undefined;
+          const rejoinMsg: any = { type: "join_table", tableId: tableIdRef.current, buyIn: lastBuyInRef.current };
+          if (pw) rejoinMsg.password = pw;
+          wsClient.send(rejoinMsg);
         }
       })
     );
@@ -191,6 +202,15 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         setPlayers(serverToClientPlayers(state.players || []));
         setGameState(serverToClientGameState(state));
         setWaiting(state.phase === "waiting" || state.phase === "collecting-seeds");
+
+        // Clear countdown when hand actually starts
+        if (state.phase !== "waiting" && state.phase !== "collecting-seeds") {
+          setHandCountdown(null);
+          if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+          }
+        }
 
         // Track action number for stale action prevention
         if (state.actionNumber !== undefined) {
@@ -338,6 +358,32 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       })
     );
 
+    // Hand countdown — server sends seconds before next hand starts
+    unsubs.push(
+      wsClient.on("hand_countdown", (msg: any) => {
+        const seconds = msg.seconds || 5;
+        // Clear any existing countdown
+        if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
+        setHandCountdown(seconds);
+        let remaining = seconds;
+        countdownTimerRef.current = setInterval(() => {
+          remaining--;
+          if (remaining <= 0) {
+            setHandCountdown(null);
+            if (countdownTimerRef.current) {
+              clearInterval(countdownTimerRef.current);
+              countdownTimerRef.current = null;
+            }
+          } else {
+            setHandCountdown(remaining);
+          }
+        }, 1000);
+      })
+    );
+
     // Player join/leave notifications
     unsubs.push(
       wsClient.on("player_joined", (msg: any) => {
@@ -357,11 +403,25 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       })
     );
 
+    // Chips added confirmation — update wallet balance
+    unsubs.push(
+      wsClient.on("chips_added", (msg: any) => {
+        if (msg.newWalletBalance !== undefined) {
+          setWalletBalance(msg.newWalletBalance);
+        }
+      })
+    );
+
     unsubs.push(
       wsClient.on("error", (msg: any) => {
         setError(msg.message);
-        // Reset join state so player can retry
-        joinedRef.current = false;
+        // Only reset join state for join-related errors (e.g. "Table is full", "Insufficient chips")
+        // Do NOT reset for in-game action errors like "Not your turn", "Stale action", "Minimum raise is X"
+        const joinErrors = ["Table is full", "No seats available", "Insufficient chips", "Already at this table", "Table not found", "User not found", "Already registered", "Tournament already started", "Incorrect table password"];
+        const isJoinError = joinErrors.some(e => msg.message?.includes(e));
+        if (isJoinError) {
+          joinedRef.current = false;
+        }
         setTimeout(() => setError(null), 5000);
       })
     );
@@ -371,6 +431,10 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       if (joinedRef.current) {
         wsClient.send({ type: "leave_table" });
         joinedRef.current = false;
+      }
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
       }
       unsubs.forEach((u) => u());
     };
@@ -408,18 +472,25 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     wsClient.send({ type: "run_it_vote", count } as any);
   }, []);
 
+  // Add chips to table stack (between hands only)
+  const addChips = useCallback((amount: number) => {
+    wsClient.send({ type: "add_chips", amount } as any);
+  }, []);
+
   // Join table
   const joinTable = useCallback(
-    (buyIn: number, seatIndex?: number) => {
+    (buyIn: number, seatIndex?: number, password?: string) => {
       if (joinedRef.current) return;
       joinedRef.current = true;
       lastBuyInRef.current = buyIn;
-      wsClient.send({
+      const msg: any = {
         type: "join_table",
         tableId: tableIdRef.current,
         buyIn,
         seatIndex,
-      });
+      };
+      if (password) msg.password = password;
+      wsClient.send(msg);
     },
     []
   );
@@ -445,6 +516,15 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     wsClient.send({ type: "chat", message });
   }, []);
 
+  // Sit out / Sit in
+  const sitOut = useCallback(() => {
+    wsClient.send({ type: "sit_out" });
+  }, []);
+
+  const sitIn = useCallback(() => {
+    wsClient.send({ type: "sit_in" });
+  }, []);
+
   return {
     players,
     gameState,
@@ -456,6 +536,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     waiting,
     joinTable,
     leaveTable,
+    addChips,
     addBots,
     sendChat,
     commitmentHash,
@@ -472,10 +553,16 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     dismissTournamentComplete: () => setTournamentComplete(null),
     bombPotActive,
     notifications,
+    handCountdown,
     // Phase 3 features
     buyTime,
     acceptInsurance,
     declineInsurance,
     voteRunIt,
+    // Real-time wallet balance (updated after add_chips)
+    walletBalance,
+    // Sit out / sit in
+    sitOut,
+    sitIn,
   };
 }

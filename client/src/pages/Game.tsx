@@ -13,10 +13,12 @@ import { AVATAR_OPTIONS, type AvatarOption } from "../components/poker/AvatarSel
 import { GameSetup, type GameSetupConfig } from "../components/game/GameSetup";
 import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
 import { EmotePicker } from "../components/poker/EmoteSystem";
+import { TauntPicker } from "../components/poker/TauntSystem";
 import { ChatPanel } from "../components/poker/ChatPanel";
 import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
 import { VideoControlBar, VideoThumbnail } from "../components/poker/VideoOverlay";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
+import { HandBadge } from "../components/poker/HandBadge";
 import { ChipAnimation } from "../components/poker/ChipAnimation";
 import { InsurancePanel } from "../components/poker/InsurancePanel";
 import { RunItVotePanel, RunItResults } from "../components/poker/RunItMultiple";
@@ -37,7 +39,7 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet } from "lucide-react";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
 import { TournamentResults } from "@/components/game/TournamentResults";
@@ -113,6 +115,7 @@ function GameTable({
   playerSeedStatus, onChainCommitTx, onChainRevealTx,
   formatInfo, bombPotActive, tournamentComplete, dismissTournamentComplete,
   blindIncrease, elimination, startingChips,
+  addChips, maxBuyIn, minBuyIn, walletBalance,
   buyTime, acceptInsurance, declineInsurance, voteRunIt,
 }: {
   players: Player[];
@@ -143,12 +146,18 @@ function GameTable({
   blindIncrease?: import("@/lib/multiplayer-engine").BlindIncreaseInfo | null;
   elimination?: import("@/lib/multiplayer-engine").EliminationInfo | null;
   startingChips?: number;
+  addChips?: (amount: number) => void;
+  maxBuyIn?: number;
+  minBuyIn?: number;
+  walletBalance?: number;
   buyTime?: () => void;
   acceptInsurance?: () => void;
   declineInsurance?: () => void;
   voteRunIt?: (count: 1 | 2 | 3) => void;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
+  const [showAddChips, setShowAddChips] = useState(false);
+  const [addChipsAmount, setAddChipsAmount] = useState(maxBuyIn || 300);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
   const [showBgmPanel, setShowBgmPanel] = useState(false);
   const [bgmUrl, setBgmUrl] = useState(() => soundEngine.bgmUrl);
@@ -176,6 +185,27 @@ function GameTable({
     return () => clearTimeout(timer);
   }, [isMultiplayer, gameState.handNumber]);
 
+  // Auto-play BGM while waiting, stop when hand starts
+  const prevPhaseRef = useRef(gameState.phase);
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = gameState.phase;
+
+    if (gameState.phase === "waiting" || gameState.phase === "showdown") {
+      // Resume BGM if a track is selected and it's not already playing
+      if (soundEngine.bgmUrl && !soundEngine.bgmPlaying) {
+        soundEngine.playBgm();
+        setBgmPlaying(true);
+      }
+    } else if (prev === "waiting" || prev === "showdown") {
+      // Hand started — stop BGM
+      if (soundEngine.bgmPlaying) {
+        soundEngine.stopBgm();
+        setBgmPlaying(false);
+      }
+    }
+  }, [gameState.phase]);
+
   // Track win streaks from showdown results
   useEffect(() => {
     if (showdown?.results) {
@@ -199,32 +229,7 @@ function GameTable({
     return heroCards.map(c => ({ ...c, hidden: false })) as [typeof heroCards[0], typeof heroCards[1]];
   }, [heroCards]);
 
-  // Adaptive music — responds to game state
-  useEffect(() => {
-    sound.startAdaptiveMusic();
-    return () => sound.stopAdaptiveMusic();
-  }, [sound]);
-
-  // Adaptive music state tracking
-  const prevPhaseRef = useRef(gameState.phase);
-  useEffect(() => {
-    const heroFolded = hero?.status === "folded";
-    const anyAllIn = players.some(p => p.status === "all-in");
-    const phase = gameState.phase;
-
-    if (phase === "showdown") {
-      sound.setMusicState("showdown");
-    } else if (anyAllIn) {
-      sound.setMusicState("all_in");
-    } else if (!heroFolded && phase !== "pre-flop" && phase !== "waiting") {
-      sound.setMusicState("in_hand", { potSize: gameState.pot, blindLevel: gameState.minBet });
-    } else {
-      sound.setMusicState("idle");
-    }
-    prevPhaseRef.current = phase;
-  }, [gameState.phase, gameState.pot, gameState.minBet, hero?.status, players, sound]);
-
-  // Spatial sound for opponent actions
+  // Spatial sound for opponent actions (chips, fold, check, call, raise)
   const prevActionNumberRef = useRef<number | undefined>(undefined);
   useEffect(() => {
     const la = gameState.lastAction;
@@ -233,7 +238,6 @@ function GameTable({
     prevActionNumberRef.current = actionNum;
     if (la.playerId === heroId) return; // hero sounds handled by Controls
 
-    // Find the seat position of the acting player
     const playerIdx = players.findIndex(p => p.id === la.playerId);
     if (playerIdx < 0) return;
     const seat = TABLE_SEATS[playerIdx] || TABLE_SEATS[playerIdx % TABLE_SEATS.length];
@@ -243,8 +247,14 @@ function GameTable({
     switch (la.action) {
       case "fold": sound.playFoldAt(seatX, seatScale); break;
       case "check": sound.playCheckAt(seatX, seatScale); break;
-      case "call": sound.playCallAt(seatX, seatScale); break;
-      case "raise": sound.playRaiseAt(seatX, seatScale); break;
+      case "call":
+        sound.playCallAt(seatX, seatScale);
+        sound.playChipClinkAt(seatX, seatScale); // Chips going in
+        break;
+      case "raise":
+        sound.playRaiseAt(seatX, seatScale);
+        sound.playChipClinkAt(seatX, seatScale); // Chips going in
+        break;
     }
   }, [gameState.lastAction, gameState.actionNumber, heroId, players, sound]);
 
@@ -255,22 +265,50 @@ function GameTable({
     prevHeroTurn.current = isHeroTurn;
   }, [isHeroTurn, sound]);
 
+  // Sound: player elimination (dramatic)
+  useEffect(() => {
+    if (elimination) {
+      sound.playPhaseReveal();
+    }
+  }, [elimination, sound]);
+
+  // Sound: blind level increase
+  useEffect(() => {
+    if (blindIncrease) {
+      sound.playTurnNotify();
+    }
+  }, [blindIncrease, sound]);
+
+  // Sound: all-in detection — play dramatic sound when any player goes all-in
+  const prevAllInPlayers = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const currentAllIn = new Set(players.filter(p => p.status === "all-in").map(p => p.id));
+    // Check for new all-in players
+    for (const id of currentAllIn) {
+      if (!prevAllInPlayers.current.has(id)) {
+        sound.playShowdownFanfare();
+        break; // One sound per batch
+      }
+    }
+    prevAllInPlayers.current = currentAllIn;
+  }, [players, sound]);
+
   const handleMuteToggle = () => {
     const nowMuted = sound.toggleMute();
     setIsMuted(nowMuted);
   };
 
   return (
-    <div className="h-screen bg-[#0a1022] text-white overflow-hidden relative font-sans flex flex-col">
+    <div className="h-screen bg-[#0e1a2e] text-white overflow-hidden relative font-sans flex flex-col">
       {/* Background layers */}
       <div className="absolute inset-0">
-        <img src={casinoBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-45" style={{ filter: "brightness(0.6) saturate(1.5) blur(1px)" }} />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.25)_0%,rgba(10,16,34,0.7)_80%)]" />
+        <img src={casinoBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" style={{ filter: "brightness(0.75) saturate(1.8) blur(1px)" }} />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(40,55,90,0.2)_0%,rgba(12,20,40,0.55)_80%)]" />
         {!compactMode && <AmbientParticles />}
       </div>
 
       {!compactMode && (
-        <MatrixRain side="both" color="#00ff9d" opacity={0.08} density={0.25} className="absolute inset-0 z-[1]" />
+        <MatrixRain side="both" color="#c9a84c" opacity={0.12} density={0.25} className="absolute inset-0 z-[1]" />
       )}
 
       <ChipAnimation containerRef={tableRef} />
@@ -280,25 +318,25 @@ function GameTable({
       )}
 
       {/* ═══ TOP BAR ═══ */}
-      <div className="relative z-50 h-10 flex items-center justify-between px-4 bg-black/60 backdrop-blur-md border-b border-white/5 shrink-0">
+      <div className="relative z-50 h-10 flex items-center justify-between px-4 bg-[#0a1020]/75 backdrop-blur-md border-b border-amber-500/15 shrink-0">
         <div className="flex items-center gap-3">
           {onBack && (
             <button onClick={leaveTable || onBack} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Back to lobby">
               <ArrowLeft className="w-4 h-4 text-gray-400" />
             </button>
           )}
-          <span className="font-bold text-sm tracking-wider" style={{ background: "linear-gradient(135deg, #ff4444, #ff8800)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            CYBERPOKER
+          <span className="font-display font-bold text-sm tracking-wider gold-text">
+            HIGH ROLLERS
           </span>
           <span className="text-xs font-bold gold-text tracking-wider">{tableName || "HIGH ROLLERS MAIN"}</span>
-          <span className="text-[10px] text-gray-500 font-mono">
+          <span className="text-[0.625rem] text-gray-500 font-mono">
             {formatInfo?.smallBlind && formatInfo?.bigBlind
               ? <span className="text-emerald-400/80">${formatInfo.smallBlind}/${formatInfo.bigBlind} NLH</span>
               : <>{players.length}-MAX</>
             }
           </span>
-          <span className="text-[10px] text-cyan-500/80 font-mono">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
-          <span className="text-[10px] text-gray-400 font-mono">
+          <span className="text-[0.625rem] text-amber-500/80 font-mono">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
+          <span className="text-[0.625rem] text-gray-400 font-mono">
             {(gameState as any).handNumber
               ? <>Hand: ${gameState.pot?.toLocaleString() || "0"}</>
               : <>{tableId ? `#${tableId.slice(0, 6).toUpperCase()}` : ""}</>
@@ -308,18 +346,18 @@ function GameTable({
 
         <div className="flex items-center gap-3">
           <div className="px-3 py-1 rounded-lg bg-black/40 border border-amber-500/20">
-            <span className="text-[10px] text-gray-400 mr-1">POT:</span>
+            <span className="text-[0.625rem] text-gray-400 mr-1">POT:</span>
             <span className="text-sm font-bold text-amber-400 font-mono">${gameState.pot?.toLocaleString() || "0"}</span>
           </div>
 
           {showdown?.results?.some((r: any) => r.isWinner && r.playerId === heroId) && (
-            <span className="text-[10px] font-bold text-cyan-400">
+            <span className="text-[0.625rem] font-bold text-amber-400">
               WINNER: YOU ({showdown.results.find((r: any) => r.isWinner && r.playerId === heroId)?.handName || ""})
             </span>
           )}
 
           {isMultiplayer && (
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-[0.625rem] font-bold ${
               connected ? "text-green-400 bg-green-500/10" : "text-red-400 bg-red-500/10"
             }`}>
               {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
@@ -328,8 +366,19 @@ function GameTable({
           )}
 
           {waiting && addBots && (
-            <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20">
+            <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20">
               <Bot className="w-3 h-3" /> BOTS
+            </button>
+          )}
+
+          {/* Add Chips button — only for cash games when between hands */}
+          {isMultiplayer && addChips && maxBuyIn && hero && (gameState.phase === "pre-flop" && waiting || gameState.phase === "showdown" || gameState.phase === "waiting") && (
+            <button
+              onClick={() => { setAddChipsAmount(Math.min(maxBuyIn, walletBalance || maxBuyIn)); setShowAddChips(true); }}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
+              title="Add chips from wallet"
+            >
+              <Plus className="w-3 h-3" /> ADD CHIPS
             </button>
           )}
 
@@ -347,15 +396,18 @@ function GameTable({
               <Music className={`w-3.5 h-3.5 ${bgmPlaying ? "text-green-400" : "text-gray-500"}`} />
             </button>
             {showBgmPanel && (
-              <div className="absolute right-0 top-full mt-1 z-50 w-80 rounded-lg p-3 space-y-2.5" style={{ background: "rgba(10,16,34,0.95)", border: "1px solid rgba(0,240,255,0.15)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+              <div className="absolute right-0 top-full mt-1 z-50 w-80 rounded-lg p-3 space-y-2.5" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(212,168,67,0.15)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Music Library</span>
+                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400">Music Library</span>
                   <button onClick={() => setShowBgmPanel(false)} className="p-0.5 hover:bg-white/10 rounded"><X className="w-3 h-3 text-gray-500" /></button>
                 </div>
 
                 {/* Track library */}
                 <div className="space-y-1">
                   {[
+                    { name: "Fever", artist: "KLICKAUD", url: "/music/Fever_KLICKAUD.mp3" },
+                    { name: "Rather Be", artist: "KLICKAUD", url: "/music/Rather_Be_KLICKAUD.mp3" },
+                    { name: "There It Is", artist: "Uploaded", url: "/music/02 There It Is.m4a" },
                     { name: "Soar", artist: "KLICKAUD", url: "/music/soar.mp3" },
                   ].map((track) => {
                     const isActive = bgmUrl === track.url || bgmUrl === track.name;
@@ -369,25 +421,25 @@ function GameTable({
                           else { sound.playBgm(); setBgmPlaying(true); }
                         }}
                         className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all ${
-                          isActive && bgmPlaying ? "bg-cyan-500/15 border border-cyan-500/25" : "bg-white/5 border border-transparent hover:bg-white/8"
+                          isActive && bgmPlaying ? "bg-amber-500/15 border border-amber-500/25" : "bg-white/5 border border-transparent hover:bg-white/8"
                         }`}
                       >
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                          isActive && bgmPlaying ? "bg-cyan-500/25" : "bg-white/10"
+                          isActive && bgmPlaying ? "bg-amber-500/25" : "bg-white/10"
                         }`}>
                           {isActive && bgmPlaying
-                            ? <Pause className="w-3 h-3 text-cyan-400" />
+                            ? <Pause className="w-3 h-3 text-amber-400" />
                             : <Play className="w-3 h-3 text-gray-400 ml-0.5" />
                           }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-[11px] font-bold truncate ${isActive && bgmPlaying ? "text-cyan-400" : "text-white"}`}>{track.name}</div>
-                          <div className="text-[9px] text-gray-500 truncate">{track.artist}</div>
+                          <div className={`text-[0.6875rem] font-bold truncate ${isActive && bgmPlaying ? "text-amber-400" : "text-white"}`}>{track.name}</div>
+                          <div className="text-[0.5625rem] text-gray-500 truncate">{track.artist}</div>
                         </div>
                         {isActive && bgmPlaying && (
                           <div className="flex items-end gap-[2px] h-3">
                             {[0.6, 1, 0.4, 0.8, 0.5].map((h, i) => (
-                              <div key={i} className="w-[2px] bg-cyan-400 rounded-full animate-pulse" style={{ height: `${h * 12}px`, animationDelay: `${i * 0.15}s` }} />
+                              <div key={i} className="w-[2px] bg-amber-400 rounded-full animate-pulse" style={{ height: `${h * 12}px`, animationDelay: `${i * 0.15}s` }} />
                             ))}
                           </div>
                         )}
@@ -404,11 +456,11 @@ function GameTable({
                     onBlur={() => { if (bgmUrl && !bgmUrl.startsWith("/music/")) sound.setBgmUrl(bgmUrl); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' && bgmUrl) { sound.setBgmUrl(bgmUrl); sound.playBgm(); setBgmPlaying(true); } }}
                     placeholder="Paste audio URL..."
-                    className="flex-1 text-[10px] px-2 py-1.5 rounded text-white placeholder-gray-600 outline-none bg-white/5 border border-white/8"
+                    className="flex-1 text-[0.625rem] px-2 py-1.5 rounded text-white placeholder-gray-600 outline-none bg-white/5 border border-white/10"
                   />
                   <button
                     onClick={() => { if (bgmUrl) { sound.setBgmUrl(bgmUrl); if (bgmPlaying) { sound.stopBgm(); setBgmPlaying(false); } else { sound.playBgm(); setBgmPlaying(true); } } }}
-                    className={`px-2 py-1.5 rounded text-[10px] font-bold ${bgmPlaying ? "bg-red-500/20 text-red-400" : "bg-cyan-500/20 text-cyan-400"}`}
+                    className={`px-2 py-1.5 rounded text-[0.625rem] font-bold ${bgmPlaying ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}
                   >
                     {bgmPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                   </button>
@@ -417,7 +469,7 @@ function GameTable({
                 {/* Upload */}
                 <label className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/5 border border-dashed border-white/10 cursor-pointer hover:bg-white/8 transition-colors">
                   <Music className="w-3 h-3 text-gray-500" />
-                  <span className="text-[10px] text-gray-400">Upload from your device...</span>
+                  <span className="text-[0.625rem] text-gray-400">Upload from your device...</span>
                   <input type="file" accept="audio/*" className="hidden" onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -431,12 +483,12 @@ function GameTable({
 
                 {/* Volume */}
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] text-gray-500">Vol</span>
+                  <span className="text-[0.5625rem] text-gray-500">Vol</span>
                   <input type="range" min={0} max={100} value={Math.round(bgmVolume * 100)}
                     onChange={(e) => { const v = parseInt(e.target.value) / 100; setBgmVolume(v); sound.setBgmVolume(v); }}
-                    className="flex-1 h-1 accent-cyan-400"
+                    className="flex-1 h-1 accent-amber-400"
                   />
-                  <span className="text-[9px] text-gray-500 w-6 text-right">{Math.round(bgmVolume * 100)}%</span>
+                  <span className="text-[0.5625rem] text-gray-500 w-6 text-right">{Math.round(bgmVolume * 100)}%</span>
                 </div>
               </div>
             )}
@@ -447,7 +499,7 @@ function GameTable({
           </button>
 
           {gameState.phase === "showdown" && (
-            <button className="px-3 py-1 rounded-lg border border-green-500/30 text-[10px] font-bold text-green-400 hover:bg-green-500/10 transition-colors">
+            <button className="px-3 py-1 rounded-lg border border-green-500/30 text-[0.625rem] font-bold text-green-400 hover:bg-green-500/10 transition-colors">
               + NEW HAND
             </button>
           )}
@@ -461,11 +513,11 @@ function GameTable({
         {screen.showSidebars && (
         <div className="sidebar-responsive shrink-0 bg-black/40 backdrop-blur-sm border-r border-white/5 flex flex-col overflow-hidden">
           <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
               Hand #{(gameState as any).handNumber || "—"}
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3 text-[10px] scrollbar-thin">
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3 text-[0.625rem] scrollbar-thin">
             {["pre-flop", "flop", "turn", "river", "showdown"].map((street) => {
               const actions = (gameState as any).actionLog?.filter((a: any) => a.street === street) || [];
               const isCurrentStreet = gameState.phase === street;
@@ -478,7 +530,7 @@ function GameTable({
                   {actions.length > 0 ? actions.map((a: any, i: number) => (
                     <div key={i} className="text-gray-400 leading-relaxed pl-2">
                       <span className="text-white font-medium">{a.playerName || "Player"}</span>{" "}
-                      <span className={a.action === "fold" ? "text-red-400" : a.action === "raise" ? "text-cyan-400" : "text-green-400"}>
+                      <span className={a.action === "fold" ? "text-red-400" : a.action === "raise" ? "text-amber-400" : "text-green-400"}>
                         {a.action?.toUpperCase()}
                       </span>
                       {a.amount > 0 && <span className="text-amber-400 ml-1">${a.amount}</span>}
@@ -497,7 +549,7 @@ function GameTable({
                 {showdown.results.filter((r: any) => r.isWinner).map((r: any, i: number) => (
                   <div key={i} className="text-green-400 pl-2 font-bold">
                     {r.playerId === heroId ? "YOU" : players.find(p => p.id === r.playerId)?.name || "Player"} WIN!
-                    <div className="text-gray-400 font-normal text-[9px]">({r.handName})</div>
+                    <div className="text-gray-400 font-normal text-[0.5625rem]">({r.handName})</div>
                   </div>
                 ))}
               </div>
@@ -511,7 +563,7 @@ function GameTable({
           {/* Table area */}
           <div className="flex-1 relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, #1e2b4b 0%, #0a1022 70%)" }} />
+              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, #1e2b4b 0%, #111b2a 70%)" }} />
 
               <div
                 ref={tableRef}
@@ -528,12 +580,13 @@ function GameTable({
                   visibleCommunityCards={dealing.visibleCommunityCards}
                   communityFlipped={dealing.communityFlipped}
                   showBurnCard={dealing.showBurnCard}
+                  dealPhase={gameState.phase}
                 />
 
                 {isMultiplayer && waiting && players.length < 2 && (
                   <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 30 }}>
                     <div className="glass rounded-xl px-6 py-4 text-center border border-white/10 pointer-events-auto">
-                      <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+                      <Users className="w-8 h-8 text-amber-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
                       <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
                     </div>
@@ -574,29 +627,37 @@ function GameTable({
           </div>
 
           {/* Hero hole cards — below the table */}
-          <div className="relative z-20 flex justify-center py-1 shrink-0" style={{ minHeight: heroCards && gameState.phase !== "waiting" ? 80 : 0 }}>
+          <div className="relative z-20 flex justify-center items-center gap-4 py-1 shrink-0" style={{ minHeight: heroCards && gameState.phase !== "waiting" ? 80 : 0 }}>
             {heroCards && gameState.phase !== "waiting" && (dealing.visiblePlayerCards.get(heroId) ?? 2) > 0 && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 22 }}
-                className="flex gap-3"
-                style={{ filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.5))" }}
-              >
-                {isMobile && heroHoleCards ? (
-                  <CardSqueeze cards={heroHoleCards} />
-                ) : (
-                  heroCards.filter((_, i) => i < (dealing.visiblePlayerCards.get(heroId) ?? 2)).map((card, i) => (
-                    <Card
-                      key={`hero-${i}`}
-                      card={{ ...card, hidden: false }}
-                      size={compactMode ? "lg" : screen.cardSize}
-                      isHero={true}
-                      delay={compactMode ? 0 : 0.3 + i * 0.15}
-                    />
-                  ))
-                )}
-              </motion.div>
+              <>
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 22 }}
+                  className="flex gap-3"
+                  style={{ filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.5))" }}
+                >
+                  {isMobile && heroHoleCards ? (
+                    <CardSqueeze cards={heroHoleCards} />
+                  ) : (
+                    heroCards.filter((_, i) => i < (dealing.visiblePlayerCards.get(heroId) ?? 2)).map((card, i) => (
+                      <Card
+                        key={`hero-${i}`}
+                        card={{ ...card, hidden: false }}
+                        size={compactMode ? "lg" : screen.cardSize}
+                        isHero={true}
+                        delay={compactMode ? 0 : 0.3 + i * 0.15}
+                      />
+                    ))
+                  )}
+                </motion.div>
+                {/* Hand strength badge next to hero cards */}
+                <HandBadge
+                  holeCards={heroHoleCards}
+                  communityCards={gameState.communityCards}
+                  phase={gameState.phase}
+                />
+              </>
             )}
           </div>
 
@@ -605,8 +666,9 @@ function GameTable({
             <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" || !dealing.controlsReady ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
               <PokerControls
                 onAction={handlePlayerAction}
-                minBet={gameState.minBet}
-                maxBet={hero?.chips || 1000}
+                minBet={gameState.minRaise || gameState.minBet || 0}
+                maxBet={(hero?.chips || 0) + (hero?.currentBet || 0)}
+                callCost={Math.max(0, (gameState.minBet || 0) - (hero?.currentBet || 0))}
                 pot={gameState.pot}
                 phase={gameState.phase}
                 currentTurnSeat={players.findIndex(p => p.id === gameState.currentTurnPlayerId)}
@@ -626,12 +688,12 @@ function GameTable({
           {/* Chat section */}
           <div className="flex-1 flex flex-col border-b border-white/5 min-h-0">
             <div className="px-3 py-2 border-b border-white/5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Chat</span>
+              <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Chat</span>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 text-[10px] scrollbar-thin">
+            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 text-[0.625rem] scrollbar-thin">
               {(gameState as any).chatMessages?.map((msg: any, i: number) => (
                 <div key={i} className="leading-relaxed">
-                  <span className="font-bold text-cyan-400">{msg.playerName}:</span>{" "}
+                  <span className="font-bold text-amber-400">{msg.playerName}:</span>{" "}
                   <span className="text-gray-300">{msg.message}</span>
                 </div>
               )) || <div className="text-gray-600 italic">No messages yet</div>}
@@ -646,9 +708,9 @@ function GameTable({
                   <input
                     name="chatInput"
                     placeholder="Type a message..."
-                    className="flex-1 text-[10px] px-2 py-1.5 rounded bg-white/5 border border-white/8 text-white placeholder-gray-600 outline-none"
+                    className="flex-1 text-[0.625rem] px-2 py-1.5 rounded bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none"
                   />
-                  <button type="submit" className="px-2 py-1.5 rounded bg-cyan-500/20 text-cyan-400 text-[10px] font-bold hover:bg-cyan-500/30">
+                  <button type="submit" className="px-2 py-1.5 rounded bg-amber-500/20 text-amber-400 text-[0.625rem] font-bold hover:bg-amber-500/30">
                     &gt;
                   </button>
                 </form>
@@ -659,17 +721,17 @@ function GameTable({
           {/* Player Analytics section */}
           <div className="border-b border-white/5">
             <div className="px-3 py-2 border-b border-white/5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Player Analytics</span>
+              <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Player Analytics</span>
             </div>
             <div className="px-3 py-2 space-y-1.5">
               {players.filter(p => p.id !== heroId).slice(0, 3).map((p, i) => {
                 const stats = opponentStats.get(p.id);
                 const vpip = stats && stats.handsPlayed > 0 ? Math.round((stats.vpipCount / stats.handsPlayed) * 100) : 0;
                 return (
-                  <div key={p.id} className="flex items-center gap-2 text-[10px]">
+                  <div key={p.id} className="flex items-center gap-2 text-[0.625rem]">
                     <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-700 shrink-0">
                       {p.avatar ? <img src={p.avatar} alt="" className="w-full h-full object-cover" /> : (
-                        <div className="w-full h-full flex items-center justify-center text-[8px] text-gray-400">{p.name[0]}</div>
+                        <div className="w-full h-full flex items-center justify-center text-[0.5rem] text-gray-400">{p.name[0]}</div>
                       )}
                     </div>
                     <span className="text-gray-300 truncate flex-1">{p.name}</span>
@@ -683,13 +745,13 @@ function GameTable({
           {/* Tournament Stats section */}
           <div>
             <div className="px-3 py-2 border-b border-white/5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Tournament Stats</span>
+              <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Tournament Stats</span>
             </div>
-            <div className="px-3 py-2 space-y-1 text-[10px]">
+            <div className="px-3 py-2 space-y-1 text-[0.625rem]">
               <div className="flex justify-between"><span className="text-gray-500">Chips</span><span className="text-white font-mono">{hero?.chips?.toLocaleString() || "—"}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Players</span><span className="text-white font-mono">{formatInfo?.playersRemaining || players.length}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Current Bet</span><span className="text-white font-mono">${gameState.minBet || 0}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Round</span><span className="text-cyan-400 font-mono uppercase">{gameState.phase}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Round</span><span className="text-amber-400 font-mono uppercase">{gameState.phase}</span></div>
             </div>
           </div>
         </div>
@@ -698,6 +760,7 @@ function GameTable({
 
       {/* ═══ FLOATING OVERLAYS (keep existing) ═══ */}
       <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
+      <TauntPicker heroId={heroId} isMultiplayer={isMultiplayer} />
 
       {formatInfo && (formatInfo.gameFormat === "sng" || formatInfo.gameFormat === "tournament") && (
         <BlindLevelIndicator
@@ -723,7 +786,7 @@ function GameTable({
             style={{ boxShadow: "0 0 20px rgba(245,158,11,0.2)" }}
           >
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1">Blinds Increased</div>
+              <div className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400 mb-1">Blinds Increased</div>
               <div className="text-sm font-bold text-white font-mono">
                 Level {blindIncrease.level}: {blindIncrease.sb}/{blindIncrease.bb}
                 {blindIncrease.ante > 0 && <span className="text-gray-400 ml-1">(ante {blindIncrease.ante})</span>}
@@ -809,6 +872,141 @@ function GameTable({
           />
         )}
       </AnimatePresence>
+
+      {/* ═══ ADD CHIPS MODAL ═══ */}
+      <AnimatePresence>
+        {showAddChips && addChips && maxBuyIn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowAddChips(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass rounded-2xl p-6 w-full max-w-xs border border-white/10"
+              style={{ boxShadow: "0 0 40px rgba(212,168,67,0.1)" }}
+            >
+              <div className="text-center mb-5">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 mb-2">
+                  <Wallet className="w-5 h-5 text-emerald-400" />
+                </div>
+                <h3 className="font-bold text-sm tracking-wider text-white">ADD CHIPS</h3>
+                <p className="text-[0.625rem] text-gray-500 mt-1">
+                  Wallet: <span className="text-amber-400 font-mono">{(walletBalance || 0).toLocaleString()}</span> chips
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
+                  Amount (max {maxBuyIn.toLocaleString()} per request)
+                </label>
+                <input
+                  type="range"
+                  min={minBuyIn || 1}
+                  max={Math.min(maxBuyIn, walletBalance || maxBuyIn)}
+                  value={addChipsAmount}
+                  onChange={(e) => setAddChipsAmount(parseInt(e.target.value))}
+                  className="w-full mb-2"
+                />
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{minBuyIn || 1}</span>
+                  <span className="text-lg font-bold text-emerald-400 font-mono">{addChipsAmount.toLocaleString()}</span>
+                  <span>{Math.min(maxBuyIn, walletBalance || maxBuyIn).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {hero && (
+                <p className="text-center text-[0.625rem] text-gray-500 mb-4">
+                  Current stack: <span className="text-amber-400 font-mono">{hero.chips.toLocaleString()}</span>
+                  {" → "}
+                  <span className="text-emerald-400 font-mono">{(hero.chips + addChipsAmount).toLocaleString()}</span>
+                </p>
+              )}
+
+              {(walletBalance || 0) <= 0 && (
+                <p className="text-center text-[0.625rem] text-red-400 mb-3">Insufficient wallet balance</p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAddChips(false)}
+                  className="flex-1 glass rounded-lg py-2.5 text-xs font-bold tracking-wider text-gray-400 hover:text-white border border-white/10 hover:border-white/15 transition-all"
+                >
+                  CANCEL
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    addChips(addChipsAmount);
+                    setShowAddChips(false);
+                  }}
+                  disabled={addChipsAmount <= 0 || (walletBalance || 0) < addChipsAmount}
+                  className="flex-1 rounded-lg py-2.5 text-xs font-bold tracking-wider text-black disabled:opacity-50 transition-all"
+                  style={{ background: "linear-gradient(135deg, #c9a84c, #e8c566)" }}
+                >
+                  CONFIRM
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Hand Countdown Overlay ──────────────────────────────────────────────────
+function HandCountdownOverlay({ seconds }: { seconds: number | null }) {
+  const prevSecondsRef = useRef<number | null>(null);
+
+  // Play countdown beep each time seconds decrements
+  useEffect(() => {
+    if (seconds !== null && seconds !== prevSecondsRef.current && seconds > 0) {
+      soundEngine.playCountdown();
+    }
+    prevSecondsRef.current = seconds;
+  }, [seconds]);
+
+  if (seconds === null || seconds <= 0) return null;
+
+  return (
+    <div className="fixed inset-0 z-[55] pointer-events-none flex items-center justify-center">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={seconds}
+          initial={{ scale: 1.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.5, opacity: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="flex flex-col items-center"
+        >
+          <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-amber-400/70 mb-2">
+            Next hand in
+          </div>
+          <div
+            className="text-6xl font-black tabular-nums text-amber-400"
+            style={{
+              textShadow: "0 0 30px rgba(212,168,67,0.5), 0 0 60px rgba(212,168,67,0.2)",
+            }}
+          >
+            {seconds}
+          </div>
+          <div className="mt-3 w-16 h-1 rounded-full bg-amber-500/20 overflow-hidden">
+            <motion.div
+              className="h-full bg-amber-400 rounded-full"
+              initial={{ width: "100%" }}
+              animate={{ width: "0%" }}
+              transition={{ duration: 1, ease: "linear" }}
+            />
+          </div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
@@ -824,11 +1022,11 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   const {
     players, gameState, handlePlayerAction, showdown,
-    connected, error: mpError, waiting, joinTable, leaveTable, addBots, sendChat,
+    connected, error: mpError, waiting, joinTable, leaveTable, addChips, addBots, sendChat,
     commitmentHash, shuffleProof, verificationStatus, playerSeedStatus,
     onChainCommitTx, onChainRevealTx,
     formatInfo, blindIncrease, elimination, tournamentComplete,
-    dismissTournamentComplete, bombPotActive, notifications,
+    dismissTournamentComplete, bombPotActive, notifications, handCountdown,
     buyTime, acceptInsurance, declineInsurance, voteRunIt,
   } = useMultiplayerGame(tableId, user?.id || "");
 
@@ -842,10 +1040,14 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   const isSNG = tableInfo?.gameFormat === "sng" || tableInfo?.gameFormat === "tournament";
 
-  // Reset joined state if server rejects the join
+  // Reset joined state only for join-rejection errors (not in-game action errors)
   useEffect(() => {
     if (mpError && joined) {
-      setJoined(false);
+      const joinErrors = ["Table is full", "No seats available", "Insufficient chips", "Already at this table", "Table not found", "User not found", "Already registered", "Tournament already started"];
+      const isJoinError = joinErrors.some(e => mpError.includes(e));
+      if (isJoinError) {
+        setJoined(false);
+      }
     }
   }, [mpError, joined]);
 
@@ -866,9 +1068,9 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   if (!joined) {
     return (
-      <div className="min-h-screen bg-[#0a1022] text-white flex items-center justify-center relative overflow-hidden">
+      <div className="min-h-screen bg-[#111b2a] text-white flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.4)_0%,rgba(10,16,34,0.9)_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.4)_0%,rgba(20,31,40,0.88)_70%)]" />
           <AmbientParticles />
         </div>
 
@@ -896,25 +1098,25 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
           {isSNG ? (
             /* SNG: Fixed buy-in display */
             <div className="mb-6">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-2">
+              <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                 Fixed Buy-In
               </label>
               <div className="glass rounded-lg p-4 border border-amber-500/20 text-center">
                 <div className="text-2xl font-bold text-amber-400 font-mono">
                   {(tableInfo?.buyInAmount || 500).toLocaleString()}
                 </div>
-                <div className="text-[10px] text-gray-500 mt-1">
+                <div className="text-[0.625rem] text-gray-500 mt-1">
                   Starting chips: {(tableInfo?.startingChips || 1500).toLocaleString()}
                 </div>
               </div>
-              <p className="text-center text-[10px] text-gray-600 mt-2">
+              <p className="text-center text-[0.625rem] text-gray-600 mt-2">
                 Balance: {user?.chipBalance?.toLocaleString()} chips
               </p>
             </div>
           ) : (
             /* Cash game: Buy-in slider */
             <div className="mb-6">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-2">
+              <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                 Buy-In Amount
               </label>
               <input
@@ -930,7 +1132,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
                 <span className="text-lg font-bold text-amber-400">{buyIn}</span>
                 <span>{Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}</span>
               </div>
-              <p className="text-center text-[10px] text-gray-600 mt-1">
+              <p className="text-center text-[0.625rem] text-gray-600 mt-1">
                 Balance: {user?.chipBalance?.toLocaleString()} chips
               </p>
             </div>
@@ -939,7 +1141,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
           {/* Seat Selection */}
           {tableInfo && (
             <div className="mb-4">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-2">
+              <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                 Pick Your Seat (optional)
               </label>
               <div className="flex flex-wrap gap-2 justify-center">
@@ -960,8 +1162,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
                         isOccupied
                           ? "bg-red-500/10 border-red-500/20 text-red-400/40 cursor-not-allowed"
                           : isSelected
-                            ? "bg-cyan-500/25 border-cyan-400 text-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.3)]"
-                            : "bg-white/5 border-white/10 text-gray-400 hover:border-cyan-500/30 hover:text-white"
+                            ? "bg-amber-500/25 border-amber-400 text-amber-400 shadow-[0_0_10px_rgba(212,168,67,0.3)]"
+                            : "bg-white/5 border-white/10 text-gray-400 hover:border-amber-500/30 hover:text-white"
                       }`}
                     >
                       {i + 1}
@@ -969,7 +1171,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
                   );
                 })}
               </div>
-              <p className="text-center text-[9px] text-gray-600 mt-1.5">
+              <p className="text-center text-[0.5625rem] text-gray-600 mt-1.5">
                 {selectedSeat !== undefined ? `Seat ${selectedSeat + 1} selected` : "Auto-assign if none selected"}
               </p>
             </div>
@@ -978,7 +1180,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
           <div className="flex gap-3">
             <button
               onClick={() => navigate("/lobby")}
-              className="flex-1 glass rounded-lg py-3 text-sm font-bold tracking-wider text-gray-400 hover:text-white border border-white/10 hover:border-white/20 transition-all"
+              className="flex-1 glass rounded-lg py-3 text-sm font-bold tracking-wider text-gray-400 hover:text-white border border-white/10 hover:border-white/15 transition-all"
             >
               BACK
             </button>
@@ -1032,6 +1234,10 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         blindIncrease={blindIncrease}
         elimination={elimination}
         startingChips={tableInfo?.startingChips}
+        addChips={addChips}
+        maxBuyIn={tableInfo?.maxBuyIn}
+        minBuyIn={tableInfo?.minBuyIn}
+        walletBalance={user?.chipBalance}
         buyTime={buyTime}
         acceptInsurance={acceptInsurance}
         declineInsurance={declineInsurance}
@@ -1059,6 +1265,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
           ))}
         </AnimatePresence>
       </div>
+      {/* Hand Starting Countdown Overlay */}
+      <HandCountdownOverlay seconds={handCountdown} />
       </GameUIProvider>
     </SoundProvider>
   );

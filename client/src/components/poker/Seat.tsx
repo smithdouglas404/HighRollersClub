@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Player } from "@/lib/poker-types";
 import { EmoteBubble } from "./EmoteSystem";
+import { TauntBubble } from "./TauntSystem";
 import { useSoundEngine } from "@/lib/sound-context";
 import { useGameUI } from "@/lib/game-ui-context";
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -27,7 +28,7 @@ interface Particle {
   maxLife: number;
 }
 
-const WINNER_PARTICLE_COLORS = ["#ffd700", "#c9a84c", "#f5e6a3", "#00f0ff", "#00ff9d"];
+const WINNER_PARTICLE_COLORS = ["#ffd700", "#c9a84c", "#f5e6a3", "#f0d478", "#e8c566"];
 
 function useWinnerParticles(isWinner: boolean) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -119,31 +120,31 @@ function useWinnerParticles(isWinner: boolean) {
   return canvasRef;
 }
 
-// Seat glow color palette — each position gets a unique neon ring
+// Seat glow color palette — each position gets a unique neon ring (vivid & bright)
 const SEAT_COLORS = [
-  "#00f0ff", // cyan (hero)
-  "#ff3366", // red
-  "#b44dff", // purple
-  "#ffd700", // gold
-  "#00ff9d", // green
-  "#ff69b4", // pink
-  "#ff8c00", // orange
-  "#67e8f9", // light blue
-  "#facc15", // yellow
+  "#d4a843", // gold (hero)
+  "#e74c3c", // crimson red
+  "#a855f7", // purple
+  "#25a065", // emerald
+  "#f0d478", // light gold
+  "#e67e22", // warm orange
+  "#3498db", // steel blue
+  "#2ecc71", // green
+  "#c0392b", // deep red
 ];
 
 function getSeatColor(seatIndex: number, isHero: boolean): string {
-  if (isHero) return "#00f0ff";
+  if (isHero) return "#d4a843";
   return SEAT_COLORS[seatIndex % SEAT_COLORS.length];
 }
 
-// Action badge styling map
-const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  folded:  { bg: "bg-red-500/20",    text: "text-red-400",    border: "border-red-500/40" },
-  called:  { bg: "bg-green-500/20",  text: "text-green-400",  border: "border-green-500/40" },
-  checked: { bg: "bg-gray-500/20",   text: "text-gray-300",   border: "border-gray-500/40" },
-  raised:  { bg: "bg-cyan-500/20",   text: "text-cyan-400",   border: "border-cyan-500/40" },
-  "all-in":{ bg: "bg-amber-500/20",  text: "text-amber-400",  border: "border-amber-500/40" },
+// Action badge styling map — standardized opacities: bg /30, border /50, glow 0.20
+const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: string; glow?: string }> = {
+  folded:  { bg: "bg-red-500/30",    text: "text-red-400",    border: "border-red-500/50",   glow: "rgba(239,68,68,0.20)" },
+  called:  { bg: "bg-green-500/30",  text: "text-green-400",  border: "border-green-500/50", glow: "rgba(34,197,94,0.20)" },
+  checked: { bg: "bg-gray-500/30",   text: "text-gray-300",   border: "border-gray-500/50",  glow: "rgba(156,163,175,0.20)" },
+  raised:  { bg: "bg-amber-500/30",  text: "text-amber-400",  border: "border-amber-500/50", glow: "rgba(212,168,67,0.20)" },
+  "all-in":{ bg: "bg-amber-500/30",  text: "text-amber-400",  border: "border-amber-500/50", glow: "rgba(245,158,11,0.20)" },
 };
 
 
@@ -210,7 +211,8 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
       return () => clearTimeout(t);
     } else if (curr === "all-in") {
       setReactionStyle({ animation: "avatarAllInPulse 1.5s ease-in-out infinite" });
-      return;
+      // Clean up infinite animation when status changes away from all-in
+      return () => setReactionStyle(undefined);
     } else {
       setReactionStyle(undefined);
     }
@@ -255,34 +257,43 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
     prevBetRef.current = player.currentBet;
   }, [player.currentBet, sound]);
 
-  // Timer tick sound when it's this player's turn (hero only)
-  // Tick rate increases with urgency: 3s >50%, 1.5s 25-50%, 800ms 10-25%, 400ms <10%
+  // Timer tick sound — only plays when running low (≤50%), rate intensifies as time runs out
+  // >50%: silent, 25-50%: every 2s, 10-25%: every 1s, <10%: every 500ms
   useEffect(() => {
-    if (isTurn && isHero) {
-      const getInterval = () => {
-        const pct = timer.percent;
-        if (pct > 50) return 3000;
-        if (pct > 25) return 1500;
-        if (pct > 10) return 800;
-        return 400;
-      };
-      let currentInterval = getInterval();
-      const tick = () => {
-        const urgency = 1 - timer.percent / 100;
-        sound.playTimerTick(urgency);
-        const newInterval = getInterval();
-        if (newInterval !== currentInterval) {
-          currentInterval = newInterval;
-          if (timerTickRef.current) clearInterval(timerTickRef.current);
-          timerTickRef.current = setInterval(tick, currentInterval);
-        }
-      };
-      timerTickRef.current = setInterval(tick, currentInterval);
+    if (!isTurn || !isHero || timer.percent > 50) {
+      if (timerTickRef.current) clearInterval(timerTickRef.current);
+      timerTickRef.current = undefined;
+      return;
     }
+
+    const getInterval = () => {
+      const pct = timer.percent;
+      if (pct > 25) return 2000;
+      if (pct > 10) return 1000;
+      return 500;
+    };
+
+    let currentInterval = getInterval();
+    const tick = () => {
+      const urgency = 1 - timer.percent / 100;
+      sound.playTimerTick(urgency);
+      const newInterval = getInterval();
+      if (newInterval !== currentInterval) {
+        currentInterval = newInterval;
+        if (timerTickRef.current) clearInterval(timerTickRef.current);
+        timerTickRef.current = setInterval(tick, currentInterval);
+      }
+    };
+
+    // Play first tick immediately when crossing the 50% threshold
+    sound.playTimerTick(1 - timer.percent / 100);
+    timerTickRef.current = setInterval(tick, currentInterval);
+
     return () => {
       if (timerTickRef.current) clearInterval(timerTickRef.current);
+      timerTickRef.current = undefined;
     };
-  }, [isTurn, isHero, timer.percent, sound]);
+  }, [isTurn, isHero, timer.percent > 50, timer.percent > 25, timer.percent > 10, sound]);
 
   // Parallax depth effect for hero avatar only
   const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
@@ -347,6 +358,8 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           isFolded && "opacity-50 grayscale"
         )}
       >
+        {/* Taunt bubble (above emotes) */}
+        <TauntBubble playerId={player.id} />
         {/* Emote bubble */}
         <EmoteBubble playerId={player.id} />
 
@@ -370,20 +383,26 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         <AnimatePresence>
           {statusLabel[player.status] && player.status !== "waiting" && player.status !== "thinking" && (
             <motion.div
-              initial={{ opacity: 0, y: 6, scale: 0.8 }}
+              initial={{ opacity: 0, y: 8, scale: 0.7 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -4, scale: 0.8 }}
+              exit={{ opacity: 0, y: -6, scale: 0.7 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className={cn(
-                "mb-1 px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider z-30 border backdrop-blur-sm",
+                "mb-1.5 px-3 py-1 rounded-lg text-[0.6875rem] font-black uppercase tracking-wider z-30 border backdrop-blur-md",
                 ACTION_BADGE_STYLES[player.status]?.bg || "bg-black/40",
                 ACTION_BADGE_STYLES[player.status]?.text || "text-gray-300",
                 ACTION_BADGE_STYLES[player.status]?.border || "border-white/10",
               )}
+              style={{
+                boxShadow: ACTION_BADGE_STYLES[player.status]?.glow
+                  ? `0 0 14px ${ACTION_BADGE_STYLES[player.status].glow}`
+                  : undefined,
+              }}
             >
               {statusLabel[player.status]}
               {/* Show bet amount next to CALL/RAISE */}
               {(player.status === "called" || player.status === "raised") && player.currentBet > 0 && (
-                <span className="ml-1 font-mono">{formatChips(player.currentBet)}</span>
+                <span className="ml-1.5 font-mono text-[0.625rem]">{formatChips(player.currentBet)}</span>
               )}
             </motion.div>
           )}
@@ -407,36 +426,24 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           <div
             className="absolute -inset-[6px] z-0 rounded-xl pointer-events-none"
             style={{
-              border: `2px solid ${hexToRgba(glowColor, isTurn ? 0.8 : 0.3)}`,
+              border: `2px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
               boxShadow: isTurn
-                ? `0 0 12px ${hexToRgba(glowColor, 0.6)}, 0 0 24px ${hexToRgba(glowColor, 0.3)}, inset 0 0 8px ${hexToRgba(glowColor, 0.2)}`
-                : `0 0 6px ${hexToRgba(glowColor, 0.2)}`,
+                ? `0 0 16px ${hexToRgba(glowColor, 0.7)}, 0 0 32px ${hexToRgba(glowColor, 0.4)}, inset 0 0 10px ${hexToRgba(glowColor, 0.25)}`
+                : `0 0 8px ${hexToRgba(glowColor, 0.35)}`,
               transition: "all 0.3s ease",
               animation: isTurn && !compactMode ? "avatarGlowPulse 1.5s ease-in-out infinite" : "none",
             }}
           />
 
-          {/* Active turn: pulsing outer glow */}
+          {/* Active turn: pulsing outer glow (merged single layer) */}
           {isTurn && !compactMode && (
             <div
-              className="absolute -inset-[12px] rounded-xl"
+              className="absolute -inset-[14px] rounded-xl"
               style={{
-                boxShadow: `0 0 20px 6px ${hexToRgba(glowColor, 0.35)}`,
+                boxShadow: `0 0 28px 8px ${hexToRgba(glowColor, 0.45)}`,
                 animation: "avatarGlowPulse 1.5s ease-in-out infinite",
               }}
             />
-          )}
-          {/* Radial pulse glow behind avatar on turn */}
-          {isTurn && !compactMode && (
-            <div className="absolute -inset-6 z-0">
-              <div
-                className="w-full h-full rounded-xl"
-                style={{
-                  background: `radial-gradient(circle, ${hexToRgba(glowColor, 0.25)} 0%, transparent 70%)`,
-                  animation: "neonPulse 2s ease-in-out infinite",
-                }}
-              />
-            </div>
           )}
 
           {/* Circular countdown timer ring around avatar */}
@@ -487,7 +494,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -right-2 -top-2 z-30 w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black text-black gold-gradient shadow-[0_0_8px_rgba(201,168,76,0.5)]"
+              className="absolute -right-2 -top-2 z-30 w-6 h-6 rounded-full flex items-center justify-center text-[0.5625rem] font-black text-black gold-gradient shadow-[0_0_8px_rgba(201,168,76,0.5)]"
             >
               D
             </motion.div>
@@ -495,7 +502,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
 
           {/* Seat index badge — small number in bottom-left */}
           <div
-            className="absolute -left-1 -bottom-1 z-30 w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold"
+            className="absolute -left-1 -bottom-1 z-30 w-5 h-5 rounded-md flex items-center justify-center text-[0.5625rem] font-bold"
             style={{
               background: hexToRgba(glowColor, 0.25),
               border: `1px solid ${hexToRgba(glowColor, 0.5)}`,
@@ -510,12 +517,12 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         <div
           className="relative z-10 flex flex-col items-center nameplate-responsive rounded-lg overflow-hidden backdrop-blur-md"
           style={{
-            background: "rgba(0,0,0,0.60)",
-            borderTop: `2px solid ${glowColor}`,
-            border: `1px solid rgba(255,255,255,0.06)`,
+            background: "linear-gradient(180deg, rgba(8,12,24,0.80) 0%, rgba(4,8,16,0.85) 100%)",
+            border: `1px solid rgba(255,255,255,0.08)`,
             borderTopColor: glowColor,
-            borderTopWidth: "2px",
-            boxShadow: `0 0 12px ${hexToRgba(glowColor, 0.08)}`,
+            borderTopWidth: "3px",
+            borderTopStyle: "solid",
+            boxShadow: `0 0 16px ${hexToRgba(glowColor, 0.12)}, 0 2px 8px rgba(0,0,0,0.4)`,
           }}
         >
           {/* Timer arc removed — circular TimerRing is rendered around avatar above */}
@@ -524,7 +531,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             {/* Player name */}
             <span
               className={cn(
-                "text-[10px] uppercase font-bold tracking-wider leading-tight",
+                "text-[0.625rem] uppercase font-bold tracking-wider leading-tight",
                 isTurn ? "text-white" : "text-gray-400"
               )}
             >
@@ -534,7 +541,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             {/* Chip count — large, gold, mono */}
             <span
               className="text-sm font-mono font-bold leading-tight"
-              style={{ color: "#ffd700" }}
+              style={{ color: "#ffd700", textShadow: "0 0 8px rgba(255,215,0,0.3)" }}
             >
               {formatChips(player.chips)}
             </span>
@@ -549,7 +556,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               background: "rgba(0,0,0,0.70)",
               border: "1px solid rgba(255,255,255,0.06)",
               borderTop: "none",
-              fontSize: perspectiveScale < 0.7 ? "9px" : "8px",
+              fontSize: perspectiveScale < 0.7 ? "11px" : "10px",
               transform: perspectiveScale < 0.7 ? `scale(${1 / perspectiveScale * 0.8})` : undefined,
               transformOrigin: "top center",
             }}
@@ -601,7 +608,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 <circle cx="8" cy="8" r="4" fill="none" stroke="#b8860b" strokeWidth="0.8" />
                 <text x="8" y="10.5" textAnchor="middle" fontSize="6" fill="#8B6914" fontWeight="bold">$</text>
               </svg>
-              <span className="text-[10px] font-mono font-bold text-amber-400">
+              <span className="text-[0.625rem] font-mono font-bold text-amber-400">
                 {formatChips(player.currentBet)}
               </span>
             </motion.div>
@@ -657,7 +664,7 @@ function HudStat({ label, value, good, isFloat }: { label: string; value: number
 
   return (
     <span className="font-mono font-bold">
-      <span className="text-gray-500">{label}:</span>
+      <span className="text-gray-400">{label}:</span>
       <span className={`${color} ml-0.5`}>{display}</span>
     </span>
   );

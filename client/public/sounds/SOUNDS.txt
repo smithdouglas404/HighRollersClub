@@ -1,0 +1,42 @@
+CUSTOM SOUND EFFECTS
+====================
+
+Drop your own sound files into this folder to replace the default synthesized sounds.
+The game will automatically use your files instead of the built-in generated sounds.
+
+SUPPORTED FORMATS (in order of preference):
+  - MP3  (.mp3)  — Best compatibility, small file size. RECOMMENDED.
+  - WAV  (.wav)  — Lossless, larger files but zero decoding delay.
+  - OGG  (.ogg)  — Good quality/size ratio, not supported on Safari.
+  - M4A  (.m4a)  — Good quality, Apple-friendly.
+  - WEBM (.webm) — Modern format, good compression.
+
+FILE NAMES:
+  Name your files exactly as listed below (without extension shown):
+
+  card-deal        — Card being dealt / sliding across felt
+  card-flip        — Card flipping over (community card reveal)
+  chip-clink       — Single chip clink / stack sound
+  chip-slide       — Chips being pushed across the table
+  fold             — Player folds
+  check            — Player checks (table knock)
+  call             — Player calls
+  raise            — Player raises
+  phase-reveal     — New community cards phase (flop/turn/river whoosh)
+  showdown         — Showdown fanfare
+  win              — Winner celebration
+  timer-tick       — Turn timer tick (keep it short, < 0.1s)
+  turn-notify      — "Your turn" notification chime
+  countdown        — Hand starting countdown beep (3, 2, 1...)
+
+EXAMPLES:
+  card-deal.mp3
+  chip-clink.wav
+  showdown.mp3
+  countdown.mp3
+
+TIPS:
+  - Keep SFX files short (under 2 seconds for most, under 5s for win/showdown)
+  - Normalize volume levels across all files for consistent experience
+  - The timer-tick sound plays rapidly — keep it very short (50-100ms)
+  - The countdown sound plays once per second during the pre-hand countdown

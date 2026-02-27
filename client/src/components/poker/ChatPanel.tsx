@@ -94,12 +94,25 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
       });
     });
 
+    const unsubTaunt = wsClient.on("taunt", (msg: any) => {
+      if (msg.userId && msg.text) {
+        pushMessage({
+          id: makeId(),
+          userId: msg.userId,
+          displayName: msg.displayName || "Player",
+          message: `\ud83d\udce2 ${msg.text}`,
+          timestamp: Date.now(),
+        });
+      }
+    });
+
     return () => {
       unsubChat();
       unsubJoin();
       unsubLeave();
       unsubShowdown();
       unsubBlind();
+      unsubTaunt();
     };
   }, [isMultiplayer, pushMessage]);
 
@@ -144,11 +157,11 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
-            className="fixed right-4 bottom-32 z-40 glass rounded-full p-3 border border-white/10 hover:border-cyan-500/30 transition-all shadow-lg"
+            className="fixed right-4 bottom-32 z-40 glass rounded-full p-3 border border-white/10 hover:border-amber-500/30 transition-all shadow-lg"
           >
-            <MessageSquare className="w-5 h-5 text-cyan-400" />
+            <MessageSquare className="w-5 h-5 text-amber-400" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[0.5625rem] font-bold flex items-center justify-center">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
@@ -174,9 +187,9 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-cyan-400" />
+                <MessageSquare className="w-4 h-4 text-amber-400" />
                 <span className="text-xs font-bold uppercase tracking-wider text-white">Chat</span>
-                <span className="text-[9px] text-gray-600">{messages.length}</span>
+                <span className="text-[0.5625rem] text-gray-600">{messages.length}</span>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -191,8 +204,8 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <MessageSquare className="w-8 h-8 text-gray-700 mb-2" />
-                  <p className="text-[10px] text-gray-600">No messages yet</p>
-                  <p className="text-[9px] text-gray-700">Say something to the table!</p>
+                  <p className="text-[0.625rem] text-gray-600">No messages yet</p>
+                  <p className="text-[0.5625rem] text-gray-700">Say something to the table!</p>
                 </div>
               ) : (
                 messages.map((msg) => (
@@ -205,7 +218,7 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
                     {msg.isSystem ? (
                       <div className="flex items-center gap-1.5 py-0.5">
                         <div className="flex-1 h-px bg-white/5" />
-                        <span className="text-[9px] italic text-amber-500/60 shrink-0">
+                        <span className="text-[0.5625rem] italic text-amber-500/60 shrink-0">
                           {msg.message}
                         </span>
                         <div className="flex-1 h-px bg-white/5" />
@@ -213,10 +226,10 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
                     ) : (
                       <>
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-[10px] font-bold text-cyan-400 shrink-0">
+                          <span className="text-[0.625rem] font-bold text-amber-400 shrink-0">
                             {msg.displayName}
                           </span>
-                          <span className="text-[9px] text-gray-700">
+                          <span className="text-[0.5625rem] text-gray-700">
                             {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
@@ -242,14 +255,14 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
                   onKeyDown={handleKeyDown}
                   placeholder="Type a message..."
                   maxLength={200}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim()}
-                  className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 hover:bg-cyan-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-2 rounded-lg bg-amber-500/20 border border-amber-500/30 hover:bg-amber-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-3.5 h-3.5 text-cyan-400" />
+                  <Send className="w-3.5 h-3.5 text-amber-400" />
                 </button>
               </div>
             </div>

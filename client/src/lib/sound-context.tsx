@@ -16,6 +16,7 @@ interface SoundContextValue {
   playWinCelebration: () => void;
   playTimerTick: (urgency?: number) => void;
   playTurnNotify: () => void;
+  playCountdown: () => void;
   startAmbient: () => void;
   stopAmbient: () => void;
   toggleMute: () => boolean;
@@ -26,7 +27,7 @@ interface SoundContextValue {
   playCheckAt: (seatX: number, seatScale: number) => void;
   playCallAt: (seatX: number, seatScale: number) => void;
   playRaiseAt: (seatX: number, seatScale: number) => void;
-  // Adaptive music
+  // Adaptive music (stubs — removed, using uploaded library)
   startAdaptiveMusic: () => void;
   stopAdaptiveMusic: () => void;
   setMusicState: (state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) => void;
@@ -41,11 +42,14 @@ interface SoundContextValue {
   toggleBgm: () => boolean;
 }
 
+const noop = () => {};
+
 const SoundContext = createContext<SoundContextValue | null>(null);
 
 export function SoundProvider({ children }: { children: ReactNode }) {
   const value: SoundContextValue = {
     init: useCallback(() => soundEngine.init(), []),
+    // SFX — chips, cards, showdown, etc.
     playCardDeal: useCallback(() => soundEngine.playCardDeal(), []),
     playCardFlip: useCallback(() => soundEngine.playCardFlip(), []),
     playChipClink: useCallback(() => soundEngine.playChipClink(), []),
@@ -59,6 +63,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     playWinCelebration: useCallback(() => soundEngine.playWinCelebration(), []),
     playTimerTick: useCallback((urgency?: number) => soundEngine.playTimerTick(urgency), []),
     playTurnNotify: useCallback(() => soundEngine.playTurnNotify(), []),
+    playCountdown: useCallback(() => soundEngine.playCountdown(), []),
     startAmbient: useCallback(() => soundEngine.startAmbient(), []),
     stopAmbient: useCallback(() => soundEngine.stopAmbient(), []),
     toggleMute: useCallback(() => soundEngine.toggleMute(), []),
@@ -69,11 +74,11 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     playCheckAt: useCallback((seatX: number, seatScale: number) => soundEngine.playCheckAt(seatX, seatScale), []),
     playCallAt: useCallback((seatX: number, seatScale: number) => soundEngine.playCallAt(seatX, seatScale), []),
     playRaiseAt: useCallback((seatX: number, seatScale: number) => soundEngine.playRaiseAt(seatX, seatScale), []),
-    // Adaptive music
-    startAdaptiveMusic: useCallback(() => soundEngine.startAdaptiveMusic(), []),
-    stopAdaptiveMusic: useCallback(() => soundEngine.stopAdaptiveMusic(), []),
-    setMusicState: useCallback((state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) => soundEngine.setMusicState(state, opts), []),
-    // Background music
+    // Adaptive music — removed, using uploaded library instead
+    startAdaptiveMusic: noop,
+    stopAdaptiveMusic: noop,
+    setMusicState: noop,
+    // Background music — the real player
     getBgmUrl: useCallback(() => soundEngine.bgmUrl, []),
     getBgmVolume: useCallback(() => soundEngine.bgmVolume, []),
     isBgmPlaying: useCallback(() => soundEngine.bgmPlaying, []),

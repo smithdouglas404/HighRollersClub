@@ -7,6 +7,7 @@ import { storage } from "./storage";
 export async function seedData() {
   await seedMissions();
   await seedShopItems();
+  await seedTauntShopItems();
 }
 
 async function seedMissions() {
@@ -71,4 +72,34 @@ async function seedShopItems() {
     await storage.createShopItem({ ...item, isActive: true });
   }
   console.log(`[seed] Created ${items.length} shop items`);
+}
+
+async function seedTauntShopItems() {
+  // Check if taunt items already exist
+  const existing = await storage.getShopItems("taunt");
+  if (existing.length > 0) return;
+
+  const taunts = [
+    { name: "Ship it!", description: "Taunt: ship-it — Gold chip cascade effect", category: "taunt", rarity: "uncommon", price: 500, currency: "chips", imageUrl: null },
+    { name: "Easy money", description: "Taunt: easy-money — Dollar signs float effect", category: "taunt", rarity: "uncommon", price: 500, currency: "chips", imageUrl: null },
+    { name: "Pay me.", description: "Taunt: pay-me — Chips slide animation", category: "taunt", rarity: "rare", price: 1000, currency: "chips", imageUrl: null },
+    { name: "I own this table", description: "Taunt: own-table — Crown appears above", category: "taunt", rarity: "rare", price: 1000, currency: "chips", imageUrl: null },
+    { name: "Read you like a book", description: "Taunt: read-you — Book flip animation", category: "taunt", rarity: "rare", price: 1000, currency: "chips", imageUrl: null },
+    { name: "You're drawing dead", description: "Taunt: drawing-dead — Skull & crossbones effect", category: "taunt", rarity: "epic", price: 2500, currency: "chips", imageUrl: null },
+    { name: "Run it twice? I don't need to", description: "Taunt: run-it — Dice roll effect", category: "taunt", rarity: "epic", price: 2500, currency: "chips", imageUrl: null },
+    { name: "The nuts, baby!", description: "Taunt: the-nuts — Nut emoji explosion", category: "taunt", rarity: "epic", price: 2500, currency: "chips", imageUrl: null },
+    { name: "Call the clock!", description: "Taunt: call-clock — Timer animation", category: "taunt", rarity: "uncommon", price: 750, currency: "chips", imageUrl: null },
+    { name: "That's a crying call", description: "Taunt: crying-call — Tear drop effect", category: "taunt", rarity: "rare", price: 1000, currency: "chips", imageUrl: null },
+    { name: "My grandma plays better", description: "Taunt: grandma — Grandma emoji effect", category: "taunt", rarity: "legendary", price: 5000, currency: "chips", imageUrl: null },
+    { name: "Time to reload", description: "Taunt: reload — Bullet clip animation", category: "taunt", rarity: "uncommon", price: 500, currency: "chips", imageUrl: null },
+    { name: "I did the math", description: "Taunt: math — Calculator animation", category: "taunt", rarity: "rare", price: 1000, currency: "chips", imageUrl: null },
+    { name: "Scared money don't make money", description: "Taunt: scared-money — Money wings effect", category: "taunt", rarity: "epic", price: 2500, currency: "chips", imageUrl: null },
+    { name: "I can do this all day", description: "Taunt: all-day — Infinity symbol effect", category: "taunt", rarity: "legendary", price: 5000, currency: "chips", imageUrl: null },
+    { name: "Respect the raise", description: "Taunt: respect — Bow animation", category: "taunt", rarity: "rare", price: 1000, currency: "chips", imageUrl: null },
+  ];
+
+  for (const taunt of taunts) {
+    await storage.createShopItem({ ...taunt, isActive: true });
+  }
+  console.log(`[seed] Created ${taunts.length} premium taunt shop items`);
 }

@@ -1,48 +1,42 @@
 // Singleton Sound Engine — manages AudioContext + master gain
-// Must call init() from a user gesture (e.g. avatar select button)
-
-import {
-  synthCardDeal,
-  synthCardFlip,
-  synthChipClink,
-  synthChipSlide,
-  synthFold,
-  synthCheck,
-  synthCall,
-  synthRaise,
-  synthPhaseReveal,
-  synthShowdownFanfare,
-  synthWinCelebration,
-  synthTimerTick,
-  synthTurnNotify,
-  synthAmbient,
-  type AmbientHandle,
-} from './sound-synthesizers';
-
-import { AdaptiveMusicEngine } from './adaptive-music';
+// Loads high-fidelity audio files from /sounds/ generated via ElevenLabs
+// SFX for chips, cards, showdown etc. + BGM player for uploaded music library
 
 const STORAGE_KEY = 'poker-sound-muted';
 const VOLUME_KEY = 'poker-sound-volume';
 const BGM_URL_KEY = 'poker-bgm-url';
 const BGM_VOL_KEY = 'poker-bgm-volume';
 
+// Sound file names in /sounds/ folder (all generated via ElevenLabs)
+const SOUND_NAMES = [
+  'card-deal', 'card-flip', 'chip-clink', 'chip-slide',
+  'fold', 'check', 'call', 'raise',
+  'phase-reveal', 'showdown', 'win',
+  'timer-tick', 'turn-notify', 'countdown',
+] as const;
+type SoundName = typeof SOUND_NAMES[number];
+
+// Supported audio extensions (tried in order)
+const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.m4a', '.webm'];
+
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private _muted: boolean = false;
   private _volume: number = 0.7;
-  private ambientHandle: AmbientHandle | null = null;
   private initialized = false;
-  private adaptiveMusic: AdaptiveMusicEngine | null = null;
 
-  // BGM (background music from URL)
+  // Cached audio buffers from ElevenLabs sound files
+  private fileBuffers = new Map<SoundName, AudioBuffer>();
+  private fileLoadAttempted = false;
+
+  // BGM (background music from uploaded library)
   private bgmAudio: HTMLAudioElement | null = null;
   private _bgmUrl: string = '';
   private _bgmVolume: number = 0.3;
   private _bgmPlaying: boolean = false;
 
   constructor() {
-    // Restore persisted settings
     try {
       const storedMuted = localStorage.getItem(STORAGE_KEY);
       if (storedMuted !== null) this._muted = storedMuted === 'true';
@@ -63,8 +57,72 @@ class SoundEngine {
       this.masterGain.gain.value = this._muted ? 0 : this._volume;
       this.masterGain.connect(this.ctx.destination);
       this.initialized = true;
+      // Load ElevenLabs sound files
+      this.loadSounds();
     } catch (e) {
       console.warn('Web Audio API not available:', e);
+    }
+  }
+
+  // --- Sound File Loading ---
+
+  /** Load audio files from /sounds/ folder */
+  private async loadSounds() {
+    if (this.fileLoadAttempted || !this.ctx) return;
+    this.fileLoadAttempted = true;
+
+    for (const name of SOUND_NAMES) {
+      for (const ext of AUDIO_EXTENSIONS) {
+        try {
+          const url = `/sounds/${name}${ext}`;
+          const response = await fetch(url, { method: 'HEAD' });
+          if (!response.ok) continue;
+
+          const audioResponse = await fetch(url);
+          const arrayBuffer = await audioResponse.arrayBuffer();
+          const audioBuffer = await this.ctx!.decodeAudioData(arrayBuffer);
+          this.fileBuffers.set(name, audioBuffer);
+          console.log(`[sound] Loaded: ${name}${ext}`);
+          break;
+        } catch {
+          // Try next extension
+        }
+      }
+    }
+  }
+
+  /** Play a loaded audio buffer through the given destination node */
+  private playBuffer(buffer: AudioBuffer, dest: AudioNode, volume: number = 1) {
+    if (!this.ctx) return;
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    if (volume !== 1) {
+      const gain = this.ctx.createGain();
+      gain.gain.value = volume;
+      source.connect(gain).connect(dest);
+    } else {
+      source.connect(dest);
+    }
+    source.start();
+  }
+
+  /** Play a sound by name — does nothing if file not loaded */
+  private playSound(name: SoundName, volume: number = 1) {
+    const d = this.dest;
+    if (!d) return;
+    const buffer = this.fileBuffers.get(name);
+    if (buffer) {
+      this.playBuffer(buffer, d, volume);
+    }
+  }
+
+  /** Play a sound with spatial positioning */
+  private playSoundAt(name: SoundName, seatX: number, seatScale: number) {
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (!d) return;
+    const buffer = this.fileBuffers.get(name);
+    if (buffer) {
+      this.playBuffer(buffer, d);
     }
   }
 
@@ -76,9 +134,7 @@ class SoundEngine {
     return this.masterGain;
   }
 
-  get muted() {
-    return this._muted;
-  }
+  get muted() { return this._muted; }
 
   set muted(val: boolean) {
     this._muted = val;
@@ -88,20 +144,13 @@ class SoundEngine {
         this.ctx?.currentTime ?? 0
       );
     }
-    if (this.adaptiveMusic) {
-      if (val) this.adaptiveMusic.stop();
-      else this.adaptiveMusic.start();
-    }
-    // Mute/unmute BGM too
     if (this.bgmAudio) {
       this.bgmAudio.volume = val ? 0 : this._bgmVolume;
     }
     try { localStorage.setItem(STORAGE_KEY, String(val)); } catch {}
   }
 
-  get volume() {
-    return this._volume;
-  }
+  get volume() { return this._volume; }
 
   set volume(val: number) {
     this._volume = Math.max(0, Math.min(1, val));
@@ -130,134 +179,58 @@ class SoundEngine {
     return panner;
   }
 
-  // --- Spatial sound effects (positional audio for opponent actions) ---
-
   playChipClinkAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthChipClink(this.ctx, d);
+    this.playSoundAt('chip-clink', seatX, seatScale);
   }
 
   playFoldAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthFold(this.ctx, d);
+    this.playSoundAt('fold', seatX, seatScale);
   }
 
   playCheckAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthCheck(this.ctx, d);
+    this.playSoundAt('check', seatX, seatScale);
   }
 
   playCallAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthCall(this.ctx, d);
+    this.playSoundAt('call', seatX, seatScale);
   }
 
   playRaiseAt(seatX: number, seatScale: number) {
-    const d = this.createSpatialDest(seatX, seatScale);
-    if (d && this.ctx) synthRaise(this.ctx, d);
+    this.playSoundAt('raise', seatX, seatScale);
   }
 
-  // --- Adaptive Music ---
+  // --- Adaptive Music stubs (removed — using uploaded music library instead) ---
 
-  startAdaptiveMusic() {
-    if (!this.ctx || !this.masterGain || this._muted) return;
-    if (!this.adaptiveMusic) {
-      this.adaptiveMusic = new AdaptiveMusicEngine(this.ctx, this.masterGain);
-    }
-    this.adaptiveMusic.start();
-  }
-
-  stopAdaptiveMusic() {
-    this.adaptiveMusic?.stop();
-  }
-
-  setMusicState(state: "idle" | "in_hand" | "all_in" | "showdown", opts?: { potSize?: number; blindLevel?: number }) {
-    this.adaptiveMusic?.setState(state, opts);
-  }
+  startAdaptiveMusic() {}
+  stopAdaptiveMusic() {}
+  setMusicState(_state: "idle" | "in_hand" | "all_in" | "showdown", _opts?: { potSize?: number; blindLevel?: number }) {}
 
   // --- Direct (non-spatial) sound effects ---
 
-  playCardDeal() {
-    const d = this.dest;
-    if (d && this.ctx) synthCardDeal(this.ctx, d);
-  }
-
-  playCardFlip() {
-    const d = this.dest;
-    if (d && this.ctx) synthCardFlip(this.ctx, d);
-  }
-
-  playChipClink() {
-    const d = this.dest;
-    if (d && this.ctx) synthChipClink(this.ctx, d);
-  }
-
-  playChipSlide() {
-    const d = this.dest;
-    if (d && this.ctx) synthChipSlide(this.ctx, d);
-  }
-
-  playFold() {
-    const d = this.dest;
-    if (d && this.ctx) synthFold(this.ctx, d);
-  }
-
-  playCheck() {
-    const d = this.dest;
-    if (d && this.ctx) synthCheck(this.ctx, d);
-  }
-
-  playCall() {
-    const d = this.dest;
-    if (d && this.ctx) synthCall(this.ctx, d);
-  }
-
-  playRaise() {
-    const d = this.dest;
-    if (d && this.ctx) synthRaise(this.ctx, d);
-  }
-
-  playPhaseReveal() {
-    const d = this.dest;
-    if (d && this.ctx) synthPhaseReveal(this.ctx, d);
-  }
-
-  playShowdownFanfare() {
-    const d = this.dest;
-    if (d && this.ctx) synthShowdownFanfare(this.ctx, d);
-  }
-
-  playWinCelebration() {
-    const d = this.dest;
-    if (d && this.ctx) synthWinCelebration(this.ctx, d);
-  }
-
-  playTimerTick(urgency: number = 0) {
-    const d = this.dest;
-    if (d && this.ctx) synthTimerTick(this.ctx, d, urgency);
-  }
-
-  playTurnNotify() {
-    const d = this.dest;
-    if (d && this.ctx) synthTurnNotify(this.ctx, d);
-  }
+  playCardDeal() { this.playSound('card-deal'); }
+  playCardFlip() { this.playSound('card-flip'); }
+  playChipClink() { this.playSound('chip-clink'); }
+  playChipSlide() { this.playSound('chip-slide'); }
+  playFold() { this.playSound('fold'); }
+  playCheck() { this.playSound('check'); }
+  playCall() { this.playSound('call'); }
+  playRaise() { this.playSound('raise'); }
+  playPhaseReveal() { this.playSound('phase-reveal'); }
+  playShowdownFanfare() { this.playSound('showdown'); }
+  playWinCelebration() { this.playSound('win'); }
+  playTimerTick(urgency: number = 0) { this.playSound('timer-tick', 0.5 + urgency * 0.5); }
+  playTurnNotify() { this.playSound('turn-notify'); }
+  playCountdown() { this.playSound('countdown'); }
 
   startAmbient() {
-    if (this.ambientHandle) return;
-    const d = this.dest;
-    if (d && this.ctx) {
-      this.ambientHandle = synthAmbient(this.ctx, d);
-    }
+    // Ambient handled by BGM system now
   }
 
   stopAmbient() {
-    if (this.ambientHandle) {
-      this.ambientHandle.stop();
-      this.ambientHandle = null;
-    }
+    // Ambient handled by BGM system now
   }
 
-  // --- Background Music (URL-based) ---
+  // --- Background Music (uploaded library + custom uploads) ---
 
   get bgmUrl() { return this._bgmUrl; }
   get bgmVolume() { return this._bgmVolume; }
@@ -267,7 +240,6 @@ class SoundEngine {
     this._bgmUrl = url;
     try { localStorage.setItem(BGM_URL_KEY, url); } catch {}
 
-    // If currently playing, switch to new URL
     if (this._bgmPlaying) {
       this.stopBgm();
       if (url) this.playBgm();
@@ -285,7 +257,6 @@ class SoundEngine {
   playBgm() {
     if (!this._bgmUrl) return;
 
-    // Create or reuse audio element
     if (!this.bgmAudio || this.bgmAudio.src !== this._bgmUrl) {
       this.stopBgm();
       this.bgmAudio = new Audio(this._bgmUrl);

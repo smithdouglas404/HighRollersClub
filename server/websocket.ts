@@ -6,6 +6,7 @@ import passport from "passport";
 import { tableManager } from "./game/table-manager";
 import { storage } from "./storage";
 import { isIpBlocked } from "./middleware/geofence";
+import { isSystemLocked } from "./routes";
 
 // Client connection with metadata
 export interface WsClient {
@@ -26,6 +27,7 @@ export type ClientMessage =
   | { type: "add_bots" }
   | { type: "chat"; message: string }
   | { type: "emote"; emoteId: string }
+  | { type: "taunt"; tauntId: string }
   | { type: "seed_commit"; commitmentHash: string }
   | { type: "seed_reveal"; seed: string }
   | { type: "buy_time" }
@@ -51,6 +53,7 @@ export type ServerMessage =
   | { type: "shuffle_commitment"; commitmentHash: string; handNumber: number }
   | { type: "shuffle_reveal"; proof: any }
   | { type: "emote"; userId: string; displayName: string; emoteId: string }
+  | { type: "taunt"; userId: string; displayName: string; tauntId: string; text: string }
   | { type: "seed_request"; handNumber: number; deadline: number }
   | { type: "seeds_collected"; count: number }
   | { type: "onchain_proof"; commitTx: string | null; revealTx: string | null }
@@ -71,6 +74,34 @@ const clients = new Map<string, WsClient>();
 const RATE_LIMIT_MAX = 20; // max 20 messages per window
 const RATE_LIMIT_WINDOW_MS = 1000; // 1 second window
 const rateLimitBuckets = new Map<string, number[]>(); // userId → timestamps
+
+// Taunt cooldown: 5 seconds between taunts per user
+const TAUNT_COOLDOWN_MS = 5000;
+const tauntCooldowns = new Map<string, number>(); // userId → last taunt timestamp
+
+// Taunt definitions (server-side copy for validation and text lookup)
+const FREE_TAUNT_IDS = new Set([
+  "gg", "nice-hand", "gl", "well-played", "thats-poker", "nice-try",
+  "i-smell-bluff", "hmm", "patience", "bad-beat", "lets-go", "fold-pre",
+]);
+
+const TAUNT_TEXT: Record<string, string> = {
+  "gg": "Good game!", "nice-hand": "Nice hand!", "gl": "Good luck!",
+  "well-played": "Well played", "thats-poker": "That's poker, baby!",
+  "nice-try": "Nice try!", "i-smell-bluff": "I smell a bluff...",
+  "hmm": "Hmm... interesting", "patience": "Patience pays off",
+  "bad-beat": "Brutal bad beat", "lets-go": "Let's gooo!",
+  "fold-pre": "Should've folded pre",
+  // Premium
+  "ship-it": "Ship it!", "easy-money": "Easy money",
+  "pay-me": "Pay me.", "own-table": "I own this table",
+  "read-you": "Read you like a book", "drawing-dead": "You're drawing dead",
+  "run-it": "Run it twice? I don't need to", "the-nuts": "The nuts, baby!",
+  "call-clock": "Call the clock!", "crying-call": "That's a crying call",
+  "grandma": "My grandma plays better", "reload": "Time to reload",
+  "math": "I did the math", "scared-money": "Scared money don't make money",
+  "all-day": "I can do this all day", "respect": "Respect the raise",
+};
 
 function isRateLimited(userId: string): boolean {
   const now = Date.now();
@@ -100,6 +131,14 @@ export function sendToUser(userId: string, msg: ServerMessage) {
   const client = clients.get(userId);
   if (client && client.ws.readyState === WebSocket.OPEN) {
     client.ws.send(JSON.stringify(msg));
+  }
+}
+
+// Clear a user's table association (used when pending-leave cash-out completes)
+export function clearClientTable(userId: string) {
+  const client = clients.get(userId);
+  if (client) {
+    client.tableId = null;
   }
 }
 
@@ -234,6 +273,11 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
 async function handleMessage(client: WsClient, msg: ClientMessage) {
   switch (msg.type) {
     case "join_table": {
+      // Kill switch: block buy-ins when system is locked
+      if (isSystemLocked()) {
+        sendToUser(client.userId, { type: "error", message: "System is temporarily locked for maintenance" });
+        return;
+      }
       // Leave previous table first if switching tables
       if (client.tableId && client.tableId !== msg.tableId) {
         await tableManager.leaveTable(client.tableId, client.userId);
@@ -258,10 +302,19 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
 
     case "leave_table": {
       if (!client.tableId) return;
-      await tableManager.leaveTable(client.tableId, client.userId);
-      const leftTableId = client.tableId;
-      client.tableId = null;
-      sendGameStateToTable(leftTableId);
+      const leaveTableId = client.tableId;
+      await tableManager.leaveTable(leaveTableId, client.userId);
+
+      // Check if the player was flagged as pending leave (still in hand)
+      const stillAtTable = tableManager.getTable(leaveTableId)?.engine.getPlayer(client.userId);
+      if (!stillAtTable) {
+        // Immediate removal — clear client table reference
+        client.tableId = null;
+      } else {
+        // Pending leave — player stays until hand ends, then auto-removed
+        sendToUser(client.userId, { type: "info", message: "You will leave after this hand completes" } as any);
+      }
+      sendGameStateToTable(leaveTableId);
       break;
     }
 
@@ -305,6 +358,10 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
 
     case "add_chips": {
       if (!client.tableId) return;
+      if (isSystemLocked()) {
+        sendToUser(client.userId, { type: "error", message: "System is temporarily locked for maintenance" });
+        return;
+      }
       const amount = msg.amount;
       if (!amount || amount <= 0) return;
       // Verify user has enough chips and add to their stack
@@ -325,11 +382,11 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendToUser(client.userId, { type: "error", message: "Can only add chips between hands" });
         return;
       }
-      // Cap at table max buy-in
-      const maxAdd = table.maxBuyIn - player.chips;
+      // Cap each add-chips request at the table's maxBuyIn
+      const maxAdd = table.maxBuyIn;
       const addAmount = Math.min(amount, maxAdd);
       if (addAmount <= 0) {
-        sendToUser(client.userId, { type: "error", message: "Already at max buy-in" });
+        sendToUser(client.userId, { type: "error", message: "Invalid amount" });
         return;
       }
       // Re-read to prevent race condition (optimistic locking)
@@ -387,6 +444,52 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         userId: client.userId,
         displayName: client.displayName,
         emoteId,
+      });
+      break;
+    }
+
+    case "taunt": {
+      if (!client.tableId) return;
+      const tauntId = msg.tauntId?.slice(0, 30);
+      if (!tauntId) return;
+
+      // Validate taunt exists
+      const tauntText = TAUNT_TEXT[tauntId];
+      if (!tauntText) {
+        sendToUser(client.userId, { type: "error", message: "Unknown taunt" });
+        return;
+      }
+
+      // Check cooldown (5 seconds between taunts)
+      const now = Date.now();
+      const lastTaunt = tauntCooldowns.get(client.userId) || 0;
+      if (now - lastTaunt < TAUNT_COOLDOWN_MS) {
+        sendToUser(client.userId, { type: "error", message: "Taunt cooldown active" });
+        return;
+      }
+
+      // If premium taunt, validate ownership
+      if (!FREE_TAUNT_IDS.has(tauntId)) {
+        const inventory = await storage.getUserInventory(client.userId);
+        const shopItems = await storage.getShopItems("taunt");
+        const ownedItemIds = new Set(inventory.map(i => i.itemId));
+        // Find the shop item that corresponds to this taunt
+        const tauntShopItem = shopItems.find(item =>
+          item.description?.includes(tauntId) || item.name === tauntText
+        );
+        if (!tauntShopItem || !ownedItemIds.has(tauntShopItem.id)) {
+          sendToUser(client.userId, { type: "error", message: "You don't own this taunt" });
+          return;
+        }
+      }
+
+      tauntCooldowns.set(client.userId, now);
+      broadcastToTable(client.tableId, {
+        type: "taunt",
+        userId: client.userId,
+        displayName: client.displayName,
+        tauntId,
+        text: tauntText,
       });
       break;
     }

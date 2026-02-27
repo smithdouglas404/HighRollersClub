@@ -11,9 +11,9 @@ export interface Emote {
 }
 
 export const EMOTES: Emote[] = [
-  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#00ff9d" },
+  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#c9a84c" },
   { id: "nice", emoji: "\ud83d\udc4f", label: "Nice Hand", color: "#ffd700" },
-  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#00f0ff" },
+  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#d4a843" },
   { id: "allin", emoji: "\ud83d\ude80", label: "All In!", color: "#ff3366" },
   { id: "gl", emoji: "\ud83c\udf40", label: "Good Luck", color: "#22c55e" },
   { id: "think", emoji: "\ud83e\udde0", label: "Hmm...", color: "#b44dff" },
@@ -80,7 +80,7 @@ export function EmoteBubble({ playerId }: { playerId: string }) {
             }}
           >
             <span className="text-base">{b.emote.emoji}</span>
-            <span className="text-[10px] font-bold" style={{ color: b.emote.color }}>{b.emote.label}</span>
+            <span className="text-[0.625rem] font-bold" style={{ color: b.emote.color }}>{b.emote.label}</span>
           </div>
         </motion.div>
       ))}
@@ -153,7 +153,7 @@ export function EmotePicker({ heroId, isMultiplayer }: { heroId: string; isMulti
                 title={emote.label}
               >
                 <span className="text-xl">{emote.emoji}</span>
-                <span className="text-[8px] text-gray-500 font-bold">{emote.label}</span>
+                <span className="text-[0.5rem] text-gray-500 font-bold">{emote.label}</span>
               </motion.button>
             ))}
           </motion.div>
@@ -164,10 +164,10 @@ export function EmotePicker({ heroId, isMultiplayer }: { heroId: string; isMulti
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className={`glass rounded-xl p-3 transition-all ${isOpen ? "neon-border-cyan" : ""} ${cooldown ? "opacity-50" : ""}`}
+        className={`glass rounded-xl p-3 transition-all ${isOpen ? "neon-border-amber" : ""} ${cooldown ? "opacity-50" : ""}`}
         disabled={cooldown}
       >
-        <MessageCircle className={`w-5 h-5 ${isOpen ? "text-cyan-400" : "text-gray-500"}`} />
+        <MessageCircle className={`w-5 h-5 ${isOpen ? "text-amber-400" : "text-gray-500"}`} />
       </motion.button>
     </div>
   );

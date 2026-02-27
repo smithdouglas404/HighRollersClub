@@ -9,13 +9,15 @@ import {
   Tag, Zap, Gem, Coins, Clock, Loader2, ArrowUpRight, ArrowDownRight,
   Package, Check, ShoppingCart, X, Shield, Heart
 } from "lucide-react";
+import chipPile from "@assets/generated_images/chip_stack_gold_pile.png";
 
-const TABS = ["Avatars", "Table Themes", "Emotes", "Premium", "Wishlist", "Inventory"];
+const TABS = ["Avatars", "Table Themes", "Emotes", "Taunts", "Premium", "Wishlist", "Inventory"];
 
 const TAB_CATEGORY_MAP: Record<string, string> = {
   Avatars: "avatar",
   "Table Themes": "table_theme",
   Emotes: "emote",
+  Taunts: "taunt",
   Premium: "premium",
 };
 
@@ -45,21 +47,21 @@ const RARITY_COLORS: Record<string, string> = {
   mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
   legendary: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+  rare: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   uncommon: "text-green-400 bg-green-500/10 border-green-500/20",
   common: "text-gray-400 bg-gray-500/10 border-gray-500/20",
   // Also support capitalized keys for backward compatibility
   Mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
   Legendary: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   Epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  Rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+  Rare: "text-amber-400 bg-amber-500/10 border-amber-500/20",
 };
 
 const RARITY_GRADIENTS: Record<string, string> = {
   mythic: "from-fuchsia-600/40 via-pink-500/30 to-fuchsia-800/40",
   legendary: "from-amber-500/40 via-orange-500/30 to-amber-700/40",
   epic: "from-purple-500/40 via-indigo-500/30 to-purple-700/40",
-  rare: "from-cyan-500/40 via-blue-500/30 to-cyan-700/40",
+  rare: "from-amber-500/40 via-blue-500/30 to-amber-700/40",
   uncommon: "from-green-500/40 via-emerald-500/30 to-green-700/40",
   common: "from-gray-500/40 via-slate-500/30 to-gray-700/40",
 };
@@ -131,7 +133,7 @@ function PurchaseModal({
             <X className="w-4 h-4 text-white" />
           </button>
           <div className="absolute bottom-4 left-4 right-4">
-            <div className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border mb-2 ${getRarityColor(item.rarity)}`}>
+            <div className={`inline-block px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-wider border mb-2 ${getRarityColor(item.rarity)}`}>
               {item.rarity}
             </div>
             <h3 className="text-xl font-black text-white">{item.name}</h3>
@@ -145,14 +147,14 @@ function PurchaseModal({
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Price</div>
+              <div className="text-[0.625rem] text-gray-500 uppercase tracking-wider">Price</div>
               <div className="text-lg font-black text-amber-400 flex items-center gap-1.5">
                 <Coins className="w-4 h-4" />
                 {item.price.toLocaleString()} {item.currency}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Your Balance</div>
+              <div className="text-[0.625rem] text-gray-500 uppercase tracking-wider">Your Balance</div>
               <div className={`text-lg font-black ${canAfford ? "text-green-400" : "text-red-400"}`}>
                 {balance.toLocaleString()}
               </div>
@@ -168,7 +170,7 @@ function PurchaseModal({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 border border-white/10 hover:border-white/20 hover:text-white transition-all"
+              className="flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 border border-white/10 hover:border-white/15 hover:text-white transition-all"
             >
               Cancel
             </button>
@@ -180,9 +182,9 @@ function PurchaseModal({
               className="flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
                 background: canAfford
-                  ? "linear-gradient(135deg, #00ff9d, #00d4aa)"
+                  ? "linear-gradient(135deg, #c9a84c, #00d4aa)"
                   : "linear-gradient(135deg, #666, #555)",
-                boxShadow: canAfford ? "0 0 20px rgba(0,255,157,0.2)" : "none",
+                boxShadow: canAfford ? "0 0 20px rgba(201,168,76,0.2)" : "none",
               }}
             >
               {purchasing ? (
@@ -206,7 +208,7 @@ function SuccessToast({ message }: { message: string }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
       className="fixed bottom-6 right-6 z-50 glass rounded-xl border border-green-500/20 px-5 py-3 flex items-center gap-3"
-      style={{ boxShadow: "0 10px 40px rgba(0,255,157,0.15)" }}
+      style={{ boxShadow: "0 10px 40px rgba(201,168,76,0.15)" }}
     >
       <div className="w-8 h-8 rounded-full bg-green-500/15 border border-green-500/20 flex items-center justify-center">
         <Check className="w-4 h-4 text-green-400" />
@@ -239,11 +241,11 @@ function ShopItemCard({
       <div className="aspect-square relative overflow-hidden">
         <ItemImage item={item} className="group-hover:scale-110 transition-transform duration-500" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
+        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
           {item.rarity}
         </div>
         {owned && (
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border bg-green-500/15 border-green-500/30 text-green-400">
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider border bg-green-500/15 border-green-500/30 text-green-400">
             Owned
           </div>
         )}
@@ -269,14 +271,14 @@ function ShopItemCard({
         )}
       </div>
       <div className="p-3">
-        <div className="text-[9px] text-gray-500 uppercase tracking-wider">{item.category.replace("_", " ")}</div>
+        <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{item.category.replace("_", " ")}</div>
         <div className="text-sm font-bold text-white truncate">{item.name}</div>
         {item.description && (
-          <div className="text-[9px] text-gray-600 truncate mt-0.5">{item.description}</div>
+          <div className="text-[0.5625rem] text-gray-600 truncate mt-0.5">{item.description}</div>
         )}
         <div className="flex items-center justify-between mt-2">
           {owned ? (
-            <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider flex items-center gap-1">
+            <span className="text-[0.625rem] font-bold text-green-400 uppercase tracking-wider flex items-center gap-1">
               <Check className="w-3 h-3" /> Purchased
             </span>
           ) : (
@@ -310,26 +312,26 @@ function InventoryItemCard({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={`glass rounded-xl overflow-hidden border transition-all ${
-        isEquipped ? "border-cyan-500/30" : "border-white/5 hover:border-white/10"
+        isEquipped ? "border-amber-500/30" : "border-white/5 hover:border-white/10"
       }`}
-      style={{ boxShadow: isEquipped ? "0 0 25px rgba(0,200,255,0.08)" : "0 10px 40px rgba(0,0,0,0.3)" }}
+      style={{ boxShadow: isEquipped ? "0 0 25px rgba(212,168,67,0.08)" : "0 10px 40px rgba(0,0,0,0.3)" }}
     >
       <div className="aspect-square relative overflow-hidden">
         <ItemImage item={item} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
+        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
           {item.rarity}
         </div>
         {isEquipped && (
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center gap-1">
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center gap-1">
             <Shield className="w-2.5 h-2.5" /> Equipped
           </div>
         )}
       </div>
       <div className="p-3">
-        <div className="text-[9px] text-gray-500 uppercase tracking-wider">{item.category.replace("_", " ")}</div>
+        <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{item.category.replace("_", " ")}</div>
         <div className="text-sm font-bold text-white truncate">{item.name}</div>
-        <div className="text-[9px] text-gray-600 mt-0.5">
+        <div className="text-[0.5625rem] text-gray-600 mt-0.5">
           Purchased {new Date(entry.purchasedAt).toLocaleDateString()}
         </div>
         <motion.button
@@ -337,9 +339,9 @@ function InventoryItemCard({
           whileTap={{ scale: 0.98 }}
           onClick={() => onEquip(entry.id)}
           disabled={isEquipped || isEquipping}
-          className={`w-full mt-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+          className={`w-full mt-2 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
             isEquipped
-              ? "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 cursor-default"
+              ? "bg-amber-500/10 border border-amber-500/20 text-amber-400 cursor-default"
               : "bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white"
           }`}
         >
@@ -543,7 +545,23 @@ export default function Shop() {
 
   return (
     <DashboardLayout>
-      <div className="px-8 pb-8">
+      <div className="px-8 pb-8 relative">
+        {/* Shop banner with chip pile accent */}
+        <div className="relative mb-6 overflow-hidden rounded-xl glass border border-amber-500/10 p-5">
+          <img
+            src={chipPile}
+            alt=""
+            className="absolute -right-4 -bottom-4 w-44 h-32 object-contain opacity-20 pointer-events-none"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent pointer-events-none" />
+          <div className="relative z-10">
+            <h2 className="text-lg font-black tracking-[0.12em] uppercase gold-text flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-amber-400" />
+              Shop
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">Premium avatars, table themes, emotes and more</p>
+          </div>
+        </div>
         {/* Tabs */}
         <div className="flex items-center gap-1 mb-6 bg-white/[0.02] rounded-lg p-1 w-fit border border-white/5">
           {TABS.map((tab) => (
@@ -552,7 +570,7 @@ export default function Shop() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                 activeTab === tab
-                  ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20"
+                  ? "bg-amber-500/15 text-amber-400 border border-amber-500/20"
                   : "text-gray-500 hover:text-gray-300 border border-transparent"
               }`}
             >
@@ -560,12 +578,12 @@ export default function Shop() {
               {tab === "Wishlist" && <Heart className={`w-3.5 h-3.5 ${activeTab === "Wishlist" ? "fill-pink-400 text-pink-400" : ""}`} />}
               {tab}
               {tab === "Wishlist" && wishlist.size > 0 && (
-                <span className="ml-1 text-[9px] bg-pink-500/15 text-pink-400 px-1.5 py-0.5 rounded-full">
+                <span className="ml-1 text-[0.5625rem] bg-pink-500/15 text-pink-400 px-1.5 py-0.5 rounded-full">
                   {wishlist.size}
                 </span>
               )}
               {tab === "Inventory" && inventory.length > 0 && (
-                <span className="ml-1 text-[9px] bg-cyan-500/15 text-cyan-400 px-1.5 py-0.5 rounded-full">
+                <span className="ml-1 text-[0.5625rem] bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">
                   {inventory.length}
                 </span>
               )}
@@ -581,7 +599,7 @@ export default function Shop() {
               <h2 className="text-lg font-black uppercase tracking-wider text-white flex items-center gap-2">
                 {isInventoryTab ? (
                   <>
-                    <Package className="w-5 h-5 text-cyan-400" />
+                    <Package className="w-5 h-5 text-amber-400" />
                     Your Collection
                   </>
                 ) : isWishlistTab ? (
@@ -608,7 +626,7 @@ export default function Shop() {
               <>
                 {loadingInventory ? (
                   <div className="flex items-center justify-center py-16">
-                    <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                    <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
                   </div>
                 ) : inventory.length === 0 ? (
                   <motion.div
@@ -625,8 +643,8 @@ export default function Shop() {
                       onClick={() => setActiveTab("Avatars")}
                       className="mt-4 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
                       style={{
-                        background: "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                        boxShadow: "0 0 20px rgba(0,255,157,0.15)",
+                        background: "linear-gradient(135deg, #c9a84c, #00d4aa)",
+                        boxShadow: "0 0 20px rgba(201,168,76,0.15)",
                       }}
                     >
                       Browse Shop
@@ -728,7 +746,7 @@ export default function Shop() {
                         <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
                           <Zap className="w-4 h-4 text-green-400" />
                           New Arrivals
-                          <span className="text-[9px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full font-bold">
+                          <span className="text-[0.5625rem] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full font-bold">
                             Last 7 days
                           </span>
                         </h3>
@@ -763,7 +781,7 @@ export default function Shop() {
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-4 h-4 text-cyan-400" />
+                            <Sparkles className="w-4 h-4 text-amber-400" />
                             {filteredItems.length >= 3 ? "All Items" : activeTab}
                           </>
                         )}
@@ -803,7 +821,7 @@ export default function Shop() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
                   Transaction History
                 </h3>
-                <span className="text-[9px] text-gray-600">{transactions.length} transactions</span>
+                <span className="text-[0.5625rem] text-gray-600">{transactions.length} transactions</span>
               </div>
               {loadingTx ? (
                 <div className="flex items-center justify-center py-8">
@@ -812,7 +830,7 @@ export default function Shop() {
               ) : transactions.length === 0 ? (
                 <div className="py-8 text-center">
                   <Clock className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                  <p className="text-[11px] text-gray-600">No transactions yet. Claim your daily bonus to get started!</p>
+                  <p className="text-[0.6875rem] text-gray-600">No transactions yet. Claim your daily bonus to get started!</p>
                 </div>
               ) : (
                 <>
@@ -830,13 +848,13 @@ export default function Shop() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-medium text-white capitalize">{tx.type}</div>
-                          <div className="text-[9px] text-gray-600">{tx.description || tx.type}</div>
+                          <div className="text-[0.5625rem] text-gray-600">{tx.description || tx.type}</div>
                         </div>
                         <div className="text-right">
                           <div className={`text-xs font-bold ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
                             {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()}
                           </div>
-                          <div className="text-[9px] text-gray-600">
+                          <div className="text-[0.5625rem] text-gray-600">
                             {new Date(tx.createdAt).toLocaleDateString()}
                           </div>
                         </div>
@@ -846,7 +864,7 @@ export default function Shop() {
                   {hasMore && (
                     <button
                       onClick={loadMore}
-                      className="w-full py-2.5 text-[10px] font-bold uppercase tracking-wider text-cyan-400 hover:text-white transition-colors border-t border-white/[0.03]"
+                      className="w-full py-2.5 text-[0.625rem] font-bold uppercase tracking-wider text-amber-400 hover:text-white transition-colors border-t border-white/[0.03]"
                     >
                       Load More
                     </button>
@@ -867,12 +885,12 @@ export default function Shop() {
             >
               <div className="flex items-center gap-2 mb-3">
                 <Coins className="w-4 h-4 text-amber-400" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Your Balance</span>
+                <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Your Balance</span>
               </div>
               <div className="text-2xl font-black text-amber-400 tabular-nums">
                 {displayBalance.toLocaleString()}
               </div>
-              <div className="text-[9px] text-gray-600 uppercase">chips</div>
+              <div className="text-[0.5625rem] text-gray-600 uppercase">chips</div>
             </motion.div>
 
             {/* Daily Bonus Claim */}
@@ -886,9 +904,9 @@ export default function Shop() {
               <div className="relative">
                 <div className="flex items-center gap-2 mb-2">
                   <Gift className="w-4 h-4 text-green-400" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-green-400">Daily Bonus</span>
+                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-green-400">Daily Bonus</span>
                 </div>
-                <p className="text-[10px] text-gray-500 mb-3">
+                <p className="text-[0.625rem] text-gray-500 mb-3">
                   {!canClaim
                     ? "Come back when the timer expires!"
                     : "Claim your free chips every 24 hours!"}
@@ -908,8 +926,8 @@ export default function Shop() {
                   style={{
                     background: !canClaim
                       ? "rgba(255,255,255,0.05)"
-                      : "linear-gradient(135deg, #00ff9d, #00d4aa)",
-                    boxShadow: !canClaim ? "none" : "0 0 20px rgba(0,255,157,0.2)",
+                      : "linear-gradient(135deg, #c9a84c, #00d4aa)",
+                    boxShadow: !canClaim ? "none" : "0 0 20px rgba(201,168,76,0.2)",
                     color: !canClaim ? "rgba(156,163,175,1)" : "black",
                   }}
                 >
@@ -944,13 +962,13 @@ export default function Shop() {
                 >
                   <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 blur-3xl rounded-full" />
                   <div className="relative">
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-amber-400 mb-1">
+                    <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-amber-400 mb-1">
                       Limited-Time Offer:
                     </div>
                     <div className="text-sm font-black text-white uppercase tracking-wider mb-1">
                       Elite Player's Pass
                     </div>
-                    <div className="text-[9px] text-gray-600 mb-3">
+                    <div className="text-[0.5625rem] text-gray-600 mb-3">
                       <span className="text-amber-400/60 font-bold uppercase flex items-center gap-1">
                         <Coins className="w-3 h-3" /> {elitePass?.price.toLocaleString() ?? "5,000"} Chips
                       </span>
@@ -967,8 +985,8 @@ export default function Shop() {
                         disabled
                         className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-green-400 flex items-center justify-center gap-1.5"
                         style={{
-                          background: "linear-gradient(135deg, rgba(0,255,157,0.1), rgba(0,212,170,0.1))",
-                          border: "1px solid rgba(0,255,157,0.2)",
+                          background: "linear-gradient(135deg, rgba(201,168,76,0.1), rgba(0,212,170,0.1))",
+                          border: "1px solid rgba(201,168,76,0.2)",
                         }}
                       >
                         <Check className="w-3.5 h-3.5" /> Purchased
@@ -998,7 +1016,7 @@ export default function Shop() {
             <div className="flex gap-2">
               <button
                 disabled
-                className="flex-1 glass rounded-lg py-2.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 border border-white/5 opacity-50 cursor-not-allowed flex items-center justify-center gap-1.5"
+                className="flex-1 glass rounded-lg py-2.5 text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 border border-white/5 opacity-50 cursor-not-allowed flex items-center justify-center gap-1.5"
               >
                 <Wallet className="w-3 h-3" />
                 Deposit (Soon)

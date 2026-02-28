@@ -36,7 +36,6 @@ const CRYPTO_CURRENCIES = [
 
 const GATEWAYS = [
   { id: "nowpayments", name: "NOWPayments", desc: "200+ coins, simple setup", badge: "Most Coins" },
-  { id: "coinpayments", name: "CoinPayments", desc: "Established, competitive rates", badge: "Popular" },
   { id: "direct", name: "Direct Wallet", desc: "No middleman, lowest fees", badge: "Low Fees" },
 ];
 

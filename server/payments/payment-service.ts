@@ -432,15 +432,6 @@ export function getPaymentService(): PaymentService {
       }));
     }
 
-    if (process.env.COINPAYMENTS_API_KEY) {
-      const { CoinPaymentsGateway } = require("./coinpayments-gateway");
-      paymentServiceInstance.registerGateway(new CoinPaymentsGateway({
-        apiKey: process.env.COINPAYMENTS_API_KEY,
-        apiSecret: process.env.COINPAYMENTS_API_SECRET,
-        webhookSecret: process.env.COINPAYMENTS_IPN_SECRET,
-      }));
-    }
-
     if (process.env.DIRECT_WALLET_ENABLED === "true") {
       const { DirectWalletGateway } = require("./direct-wallet-gateway");
       paymentServiceInstance.registerGateway(new DirectWalletGateway({

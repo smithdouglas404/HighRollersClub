@@ -104,6 +104,9 @@ export const CARD_BACK_PRESETS: CardBackPreset[] = [
   { id: 'holographic', label: 'Holographic', imageUrl: '/attached_assets/generated_images/cardbacks/cardback_holographic.webp', swatch: '#c0c0ff' },
 ];
 
+export type RunItTwicePreference = "always" | "ask" | "once";
+export type GesturesVisibility = "show" | "sound-muted" | "hidden";
+
 interface GameUIContextValue {
   compactMode: boolean;
   toggleCompactMode: () => void;
@@ -113,6 +116,17 @@ interface GameUIContextValue {
   cardBack: string;
   setCardBack: (id: string) => void;
   cardBackPreset: CardBackPreset;
+  // Player preferences
+  disableChatBeep: boolean;
+  setDisableChatBeep: (v: boolean) => void;
+  runItTwicePreference: RunItTwicePreference;
+  setRunItTwicePreference: (v: RunItTwicePreference) => void;
+  autoActivateExtraTime: boolean;
+  setAutoActivateExtraTime: (v: boolean) => void;
+  hideHandReviewNotification: boolean;
+  setHideHandReviewNotification: (v: boolean) => void;
+  gesturesVisibility: GesturesVisibility;
+  setGesturesVisibility: (v: GesturesVisibility) => void;
 }
 
 const GameUIContext = createContext<GameUIContextValue | null>(null);
@@ -141,10 +155,33 @@ function getInitialCardBack(): string {
   return 'default';
 }
 
+function getInitialBool(key: string, defaultVal: boolean): boolean {
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored !== null) return stored === 'true';
+  } catch {}
+  return defaultVal;
+}
+
+function getInitialString<T extends string>(key: string, valid: T[], defaultVal: T): T {
+  try {
+    const stored = localStorage.getItem(key) as T | null;
+    if (stored && valid.includes(stored)) return stored;
+  } catch {}
+  return defaultVal;
+}
+
 export function GameUIProvider({ children }: { children: ReactNode }) {
   const [compactMode, setCompactMode] = useState(getInitialCompactMode);
   const [feltColor, setFeltColorState] = useState(getInitialFeltColor);
   const [cardBack, setCardBackState] = useState(getInitialCardBack);
+
+  // Player preferences
+  const [disableChatBeep, setDisableChatBeepState] = useState(() => getInitialBool('poker-disable-chat-beep', false));
+  const [runItTwicePreference, setRunItTwicePrefState] = useState<RunItTwicePreference>(() => getInitialString('poker-run-it-twice-pref', ['always', 'ask', 'once'], 'ask'));
+  const [autoActivateExtraTime, setAutoExtraTimeState] = useState(() => getInitialBool('poker-auto-extra-time', false));
+  const [hideHandReviewNotification, setHideHandReviewState] = useState(() => getInitialBool('poker-hide-hand-review', false));
+  const [gesturesVisibility, setGesturesVisState] = useState<GesturesVisibility>(() => getInitialString('poker-gestures-visibility', ['show', 'sound-muted', 'hidden'], 'show'));
 
   const toggleCompactMode = useCallback(() => {
     setCompactMode(prev => {
@@ -168,11 +205,45 @@ export function GameUIProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setDisableChatBeep = useCallback((v: boolean) => {
+    setDisableChatBeepState(v);
+    try { localStorage.setItem('poker-disable-chat-beep', String(v)); } catch {}
+  }, []);
+
+  const setRunItTwicePreference = useCallback((v: RunItTwicePreference) => {
+    setRunItTwicePrefState(v);
+    try { localStorage.setItem('poker-run-it-twice-pref', v); } catch {}
+  }, []);
+
+  const setAutoActivateExtraTime = useCallback((v: boolean) => {
+    setAutoExtraTimeState(v);
+    try { localStorage.setItem('poker-auto-extra-time', String(v)); } catch {}
+  }, []);
+
+  const setHideHandReviewNotification = useCallback((v: boolean) => {
+    setHideHandReviewState(v);
+    try { localStorage.setItem('poker-hide-hand-review', String(v)); } catch {}
+  }, []);
+
+  const setGesturesVisibility = useCallback((v: GesturesVisibility) => {
+    setGesturesVisState(v);
+    try { localStorage.setItem('poker-gestures-visibility', v); } catch {}
+  }, []);
+
   const feltPreset = FELT_PRESETS.find(p => p.id === feltColor) || FELT_PRESETS[0];
   const cardBackPreset = CARD_BACK_PRESETS.find(p => p.id === cardBack) || CARD_BACK_PRESETS[0];
 
   return (
-    <GameUIContext.Provider value={{ compactMode, toggleCompactMode, feltColor, setFeltColor, feltPreset, cardBack, setCardBack, cardBackPreset }}>
+    <GameUIContext.Provider value={{
+      compactMode, toggleCompactMode,
+      feltColor, setFeltColor, feltPreset,
+      cardBack, setCardBack, cardBackPreset,
+      disableChatBeep, setDisableChatBeep,
+      runItTwicePreference, setRunItTwicePreference,
+      autoActivateExtraTime, setAutoActivateExtraTime,
+      hideHandReviewNotification, setHideHandReviewNotification,
+      gesturesVisibility, setGesturesVisibility,
+    }}>
       {children}
     </GameUIContext.Provider>
   );

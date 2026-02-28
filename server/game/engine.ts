@@ -106,6 +106,11 @@ export interface GameEngineOpts {
   bigBlindAnte?: boolean; // BBA: only BB posts ante
   speedMultiplier?: number; // 1.0 = normal, 0.5 = fast, 0.25 = turbo
   showAllHands?: boolean; // true = reveal all cards at showdown, false = winner only
+  runItTwice?: "always" | "ask" | "no";
+  showdownSpeed?: "fast" | "normal" | "slow";
+  dealToAwayPlayers?: boolean;
+  timeBankRefillHands?: number; // 0 = no refill
+  sevenTwoBounty?: number; // 0 = disabled, else chips per player
 }
 
 // ─── Game Engine ─────────────────────────────────────────────────────────────
@@ -148,6 +153,12 @@ export class GameEngine {
   public speedMultiplier: number;
   public lastHandRake: number = 0; // rake taken from last hand (for persistence)
   public showAllHands: boolean;
+  private runItTwice: "always" | "ask" | "no";
+  public showdownSpeed: "fast" | "normal" | "slow";
+  private dealToAwayPlayers: boolean;
+  private timeBankRefillHands: number;
+  private sevenTwoBounty: number;
+  private handsPlayedSinceRefill = new Map<string, number>();
 
   // VPIP/PFR tracking for pre-flop voluntary actions
   public vpipPlayers: Set<string> = new Set();
@@ -182,6 +193,11 @@ export class GameEngine {
     this.bigBlindAnte = opts.bigBlindAnte || false;
     this.speedMultiplier = opts.speedMultiplier || 1.0;
     this.showAllHands = opts.showAllHands !== false; // default true
+    this.runItTwice = opts.runItTwice || "ask";
+    this.showdownSpeed = opts.showdownSpeed || "normal";
+    this.dealToAwayPlayers = opts.dealToAwayPlayers || false;
+    this.timeBankRefillHands = opts.timeBankRefillHands || 0;
+    this.sevenTwoBounty = opts.sevenTwoBounty || 0;
 
     this.state = {
       phase: "waiting",
@@ -473,7 +489,7 @@ export class GameEngine {
     }
 
     // ── Missed blind tracking ──
-    const eligible = this.state.players.filter(p => !p.isSittingOut && !p.awaitingReady && p.chips > 0 && !p.waitingForBB);
+    const eligible = this.state.players.filter(p => (this.dealToAwayPlayers || !p.isSittingOut) && !p.awaitingReady && p.chips > 0 && !p.waitingForBB);
     const isTournament = this.gameFormat === "sng" || this.gameFormat === "tournament";
 
     if (!isBombPot) {
@@ -1042,6 +1058,23 @@ export class GameEngine {
       return;
     }
 
+    // Run It Twice mode: "no" = never, "always" = auto-run twice, "ask" = vote
+    if (this.runItTwice === "no") {
+      this.runOutBoard();
+      return;
+    }
+
+    if (this.runItTwice === "always") {
+      // Auto-set all votes to 2 and resolve immediately
+      this.state.runItResponses = new Map();
+      for (const p of active) {
+        this.state.runItResponses.set(p.id, 2);
+      }
+      this.resolveRunIt();
+      return;
+    }
+
+    // "ask" — current voting behavior
     this.state.runItPending = true;
     this.state.runItResponses = new Map();
     this.emitState();
@@ -1317,6 +1350,39 @@ export class GameEngine {
     // Calculate pot distribution
     this.distributePot(results, scoreMap);
 
+    // 7-2 Bounty: if a winner holds 7-2, collect bounty from each non-folded opponent
+    if (this.sevenTwoBounty > 0) {
+      for (const r of results) {
+        if (!r.isWinner) continue;
+        const winner = this.state.players.find(p => p.id === r.playerId);
+        if (!winner?.cards) continue;
+        const ranks = winner.cards.map(c => c.rank).sort();
+        if (ranks[0] === "2" && ranks[1] === "7") {
+          const opponents = active.filter(p => p.id !== winner.id);
+          let totalBounty = 0;
+          for (const opp of opponents) {
+            const pay = Math.min(this.sevenTwoBounty, opp.chips);
+            opp.chips -= pay;
+            totalBounty += pay;
+          }
+          winner.chips += totalBounty;
+        }
+      }
+    }
+
+    // Time bank refill: track hands played and refill when threshold reached
+    if (this.timeBankRefillHands > 0) {
+      for (const p of active) {
+        const count = (this.handsPlayedSinceRefill.get(p.id) || 0) + 1;
+        if (count >= this.timeBankRefillHands) {
+          p.timeBank = this.timeBankSeconds;
+          this.handsPlayedSinceRefill.set(p.id, 0);
+        } else {
+          this.handsPlayedSinceRefill.set(p.id, count);
+        }
+      }
+    }
+
     // Calculate actual amounts each player won
     const winnerAmounts: { playerId: string; amount: number }[] = [];
     for (const p of this.state.players) {
@@ -1339,7 +1405,9 @@ export class GameEngine {
 
     this.emitState();
 
-    // Auto-start next hand after delay (scaled by speed multiplier)
+    // Auto-start next hand after delay (scaled by speed multiplier and showdown speed)
+    const showdownDelays = { fast: 2500, normal: 5000, slow: 8000 };
+    const baseDelay = showdownDelays[this.showdownSpeed] || 5000;
     this.showdownTimer = setTimeout(() => {
       if (this.canStartHand()) {
         this.startHand();
@@ -1347,7 +1415,7 @@ export class GameEngine {
         this.state.phase = "waiting";
         this.emitState();
       }
-    }, 5000 * this.speedMultiplier);
+    }, baseDelay * this.speedMultiplier);
   }
 
   // Calculate rake from pot: percentage of total pot, capped at rakeCap

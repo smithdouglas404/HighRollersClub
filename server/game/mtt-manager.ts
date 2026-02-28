@@ -133,6 +133,17 @@ export class MTTManager {
         straddleEnabled: false,
         awayTimeoutMinutes: 5,
         showAllHands: true,
+        runItTwice: "no",
+        showdownSpeed: "normal",
+        dealToAwayPlayers: false,
+        timeBankRefillHands: 0,
+        spectatorMode: true,
+        doubleBoard: false,
+        sevenTwoBounty: 0,
+        guestChatEnabled: true,
+        autoTrimExcessBets: false,
+        pokerVariant: "nlhe",
+        useCentsValues: false,
       });
 
       this.tableIds.add(tableRow.id);

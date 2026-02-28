@@ -146,6 +146,18 @@ export const tables = pgTable("tables", {
   bigBlindAnte: boolean("big_blind_ante").notNull().default(false),
   gameSpeed: text("game_speed").notNull().default("normal"), // normal | fast | turbo
   showAllHands: boolean("show_all_hands").notNull().default(true), // reveal all cards at showdown (false = winner only)
+  // Extended settings (PokerNow parity)
+  runItTwice: text("run_it_twice").notNull().default("ask"), // "always" | "ask" | "no"
+  showdownSpeed: text("showdown_speed").notNull().default("normal"), // "fast" | "normal" | "slow"
+  dealToAwayPlayers: boolean("deal_to_away_players").notNull().default(false),
+  timeBankRefillHands: integer("time_bank_refill_hands").notNull().default(0), // 0 = no refill
+  spectatorMode: boolean("spectator_mode").notNull().default(true),
+  doubleBoard: boolean("double_board").notNull().default(false),
+  sevenTwoBounty: integer("seven_two_bounty").notNull().default(0), // 0 = disabled, else chips/player
+  guestChatEnabled: boolean("guest_chat_enabled").notNull().default(true),
+  autoTrimExcessBets: boolean("auto_trim_excess_bets").notNull().default(false),
+  pokerVariant: text("poker_variant").notNull().default("nlhe"),
+  useCentsValues: boolean("use_cents_values").notNull().default(false),
   // Table management
   awayTimeoutMinutes: integer("away_timeout_minutes").notNull().default(5), // 1-60 min
   inviteCode: varchar("invite_code", { length: 8 }).unique(),
@@ -192,6 +204,17 @@ export const insertTableSchema = z.object({
   straddleEnabled: z.boolean().default(false),
   gameSpeed: z.enum(["normal", "fast", "turbo"]).default("normal"),
   showAllHands: z.boolean().default(true),
+  runItTwice: z.enum(["always", "ask", "no"]).default("ask"),
+  showdownSpeed: z.enum(["fast", "normal", "slow"]).default("normal"),
+  dealToAwayPlayers: z.boolean().default(false),
+  timeBankRefillHands: z.number().int().min(0).default(0),
+  spectatorMode: z.boolean().default(true),
+  doubleBoard: z.boolean().default(false),
+  sevenTwoBounty: z.number().int().min(0).default(0),
+  guestChatEnabled: z.boolean().default(true),
+  autoTrimExcessBets: z.boolean().default(false),
+  pokerVariant: z.enum(["nlhe", "plo", "plo5"]).default("nlhe"),
+  useCentsValues: z.boolean().default(false),
   awayTimeoutMinutes: z.number().int().min(1).max(60).default(5),
   scheduledStartTime: z.string().datetime().optional(),
   scheduledEndTime: z.string().datetime().optional(),

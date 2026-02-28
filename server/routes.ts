@@ -137,6 +137,29 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) { next(err); }
   });
 
+  // ─── Video (Daily.co) ──────────────────────────────────────────────────
+  app.post("/api/tables/:id/video-token", requireAuth, async (req, res, next) => {
+    try {
+      if (!process.env.DAILY_API_KEY) {
+        return res.status(503).json({ message: "Video not configured" });
+      }
+      const tableId = req.params.id;
+      const user = req.user!;
+      const table = await storage.getTable(tableId);
+      if (!table) return res.status(404).json({ message: "Table not found" });
+
+      const isOwner = String(table.createdById) === String(user.id);
+      const { createMeetingToken } = await import("./video/daily-rooms");
+      const token = await createMeetingToken(
+        tableId,
+        String(user.id),
+        user.displayName || user.username || "Player",
+        isOwner,
+      );
+      res.json({ token });
+    } catch (err) { next(err); }
+  });
+
   // Create table
   app.post("/api/tables", requireAuth, async (req, res, next) => {
     try {

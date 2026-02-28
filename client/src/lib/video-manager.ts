@@ -1,5 +1,8 @@
-// WebRTC Video Manager — peer-to-peer video at the poker table
-import { wsClient } from "./ws-client";
+// Daily.co Video Manager — managed video/audio for poker tables
+// Drop-in replacement for the old P2P WebRTC VideoManager.
+// Same public API so VideoOverlay, Seat, and Game need minimal changes.
+
+import DailyIframe, { type DailyCall } from "@daily-co/daily-js";
 
 export interface PeerState {
   userId: string;
@@ -8,110 +11,118 @@ export interface PeerState {
   audioEnabled: boolean;
 }
 
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-];
-
 export class VideoManager {
-  private peers = new Map<string, RTCPeerConnection>();
-  private remoteStreams = new Map<string, MediaStream>();
+  private daily: DailyCall | null = null;
   private localStream: MediaStream | null = null;
-  private userId: string = "";
-  private tableId: string = "";
+  private remoteStreams = new Map<string, MediaStream>();
   private videoEnabled = true;
   private audioEnabled = true;
+  private _recording = false;
   private listeners = new Set<() => void>();
-  private signalUnsub: (() => void) | null = null;
-  private toggleUnsub: (() => void) | null = null;
+  private userId: string = "";
+  private tableId: string = "";
   private peerMediaState = new Map<string, { video: boolean; audio: boolean }>();
 
-  async start(userId: string, tableId: string, playerIds: string[]) {
+  // ── Public API (preserved from original) ──────────────────────────────
+
+  async start(userId: string, tableId: string, _playerIds: string[]) {
+    if (this.daily) return; // already active
     this.userId = userId;
     this.tableId = tableId;
+    this.videoEnabled = true;
+    this.audioEnabled = true;
 
-    // Get local media
+    // Fetch meeting token from server
+    let token: string;
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 160, height: 120, frameRate: 15 },
-        audio: true,
+      const res = await fetch(`/api/tables/${tableId}/video-token`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       });
-    } catch {
-      // Camera/mic not available — continue without local stream
-      console.warn("[video] Could not access camera/mic");
-      this.localStream = null;
-    }
-
-    // Listen for WebRTC signals
-    this.signalUnsub = wsClient.on("rtc_signal", (msg: any) => {
-      this.handleSignal(msg.fromUserId, msg.signal);
-    });
-
-    this.toggleUnsub = wsClient.on("rtc_toggle", (msg: any) => {
-      this.peerMediaState.set(msg.userId, { video: msg.video, audio: msg.audio });
-      this.notifyListeners();
-    });
-
-    // Initiate connections to all existing players (higher ID initiates to avoid duplicates)
-    for (const peerId of playerIds) {
-      if (peerId === userId) continue;
-      if (userId > peerId) {
-        await this.createOffer(peerId);
+      if (!res.ok) {
+        console.warn("[video] Failed to get Daily token:", res.status);
+        return;
       }
+      const data = await res.json();
+      token = data.token;
+    } catch (err) {
+      console.warn("[video] Token fetch error:", err);
+      return;
     }
 
+    // Create Daily call object
+    this.daily = DailyIframe.createCallObject({
+      videoSource: true,
+      audioSource: true,
+    });
+
+    // Wire up event handlers
+    this.daily.on("participant-joined", this.handleParticipantChange);
+    this.daily.on("participant-updated", this.handleParticipantChange);
+    this.daily.on("participant-left", this.handleParticipantChange);
+    this.daily.on("track-started", this.handleTrackEvent);
+    this.daily.on("track-stopped", this.handleTrackEvent);
+    this.daily.on("recording-started", () => { this._recording = true; this.notifyListeners(); });
+    this.daily.on("recording-stopped", () => { this._recording = false; this.notifyListeners(); });
+    this.daily.on("error", (e) => console.error("[video] Daily error:", e));
+
+    try {
+      await this.daily.join({ token });
+
+      // Cap outgoing video quality for low bandwidth
+      await this.daily.updateSendSettings({
+        video: { maxQuality: "low" },
+      });
+    } catch (err) {
+      console.error("[video] Failed to join Daily room:", err);
+      this.daily.destroy();
+      this.daily = null;
+      return;
+    }
+
+    this.rebuildLocalStream();
+    this.rebuildRemoteStreams();
     this.notifyListeners();
   }
 
   stop() {
-    // Close all peer connections
-    this.peers.forEach((pc) => pc.close());
-    this.peers.clear();
+    if (this.daily) {
+      try { this.daily.leave(); } catch {}
+      try { this.daily.destroy(); } catch {}
+      this.daily = null;
+    }
+    this.localStream = null;
     this.remoteStreams.clear();
     this.peerMediaState.clear();
-
-    // Stop local stream
-    if (this.localStream) {
-      this.localStream.getTracks().forEach((t) => t.stop());
-      this.localStream = null;
-    }
-
-    // Unsubscribe from signals
-    this.signalUnsub?.();
-    this.toggleUnsub?.();
-    this.signalUnsub = null;
-    this.toggleUnsub = null;
-
+    this._recording = false;
     this.notifyListeners();
   }
 
   toggleVideo() {
+    if (!this.daily) return;
     this.videoEnabled = !this.videoEnabled;
-    if (this.localStream) {
-      this.localStream.getVideoTracks().forEach((t) => (t.enabled = this.videoEnabled));
-    }
-    wsClient.send({ type: "rtc_toggle", video: this.videoEnabled, audio: this.audioEnabled } as any);
+    this.daily.setLocalVideo(this.videoEnabled);
+    this.rebuildLocalStream();
     this.notifyListeners();
   }
 
   toggleAudio() {
+    if (!this.daily) return;
     this.audioEnabled = !this.audioEnabled;
-    if (this.localStream) {
-      this.localStream.getAudioTracks().forEach((t) => (t.enabled = this.audioEnabled));
-    }
-    wsClient.send({ type: "rtc_toggle", video: this.videoEnabled, audio: this.audioEnabled } as any);
+    this.daily.setLocalAudio(this.audioEnabled);
     this.notifyListeners();
   }
 
-  getLocalStream() {
+  getLocalStream(): MediaStream | null {
     return this.localStream;
   }
 
-  isVideoEnabled() {
+  isVideoEnabled(): boolean {
     return this.videoEnabled;
   }
 
-  isAudioEnabled() {
+  isAudioEnabled(): boolean {
     return this.audioEnabled;
   }
 
@@ -128,104 +139,89 @@ export class VideoManager {
     return () => this.listeners.delete(listener);
   }
 
-  addPeer(peerId: string) {
-    if (peerId === this.userId) return;
-    if (this.peers.has(peerId)) return;
-    if (this.userId > peerId) {
-      this.createOffer(peerId);
+  // Daily manages participants automatically — these are no-ops
+  addPeer(_peerId: string) {}
+  removePeer(_peerId: string) {}
+
+  // ── Recording (new) ───────────────────────────────────────────────────
+
+  async startRecording(): Promise<boolean> {
+    if (!this.daily) return false;
+    try {
+      await this.daily.startRecording();
+      this._recording = true;
+      this.notifyListeners();
+      return true;
+    } catch (e) {
+      console.error("[video] Failed to start recording:", e);
+      return false;
     }
-    // If peerId > userId, that peer will initiate
   }
 
-  removePeer(peerId: string) {
-    const pc = this.peers.get(peerId);
-    if (pc) {
-      pc.close();
-      this.peers.delete(peerId);
-    }
-    this.remoteStreams.delete(peerId);
-    this.peerMediaState.delete(peerId);
+  async stopRecording(): Promise<void> {
+    if (!this.daily) return;
+    try {
+      await this.daily.stopRecording();
+    } catch {}
+    this._recording = false;
     this.notifyListeners();
   }
 
-  private async createOffer(peerId: string) {
-    const pc = this.createPeerConnection(peerId);
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    wsClient.send({
-      type: "rtc_signal",
-      targetUserId: peerId,
-      signal: { type: "offer", sdp: offer.sdp },
-    } as any);
+  isRecording(): boolean {
+    return this._recording;
   }
 
-  private createPeerConnection(peerId: string): RTCPeerConnection {
-    if (this.peers.has(peerId)) {
-      return this.peers.get(peerId)!;
-    }
+  // ── Internal helpers ──────────────────────────────────────────────────
 
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-    this.peers.set(peerId, pc);
+  private rebuildLocalStream() {
+    if (!this.daily) { this.localStream = null; return; }
+    const local = this.daily.participants()?.local;
+    if (!local) { this.localStream = null; return; }
 
-    // Add local tracks
-    if (this.localStream) {
-      this.localStream.getTracks().forEach((track) => {
-        pc.addTrack(track, this.localStream!);
+    const tracks: MediaStreamTrack[] = [];
+    if (local.videoTrack) tracks.push(local.videoTrack);
+    if (local.audioTrack) tracks.push(local.audioTrack);
+    this.localStream = tracks.length > 0 ? new MediaStream(tracks) : null;
+  }
+
+  private rebuildRemoteStreams() {
+    if (!this.daily) return;
+    const participants = this.daily.participants();
+    this.remoteStreams.clear();
+    this.peerMediaState.clear();
+
+    for (const [sessionId, p] of Object.entries(participants)) {
+      if (sessionId === "local") continue;
+      const odPlayerId = p.user_id; // poker userId set in the meeting token
+      if (!odPlayerId) continue;
+
+      const tracks: MediaStreamTrack[] = [];
+      if (p.videoTrack) tracks.push(p.videoTrack);
+      if (p.audioTrack) tracks.push(p.audioTrack);
+
+      if (tracks.length > 0) {
+        this.remoteStreams.set(odPlayerId, new MediaStream(tracks));
+      }
+      this.peerMediaState.set(odPlayerId, {
+        video: !(p.video as any)?.off,
+        audio: !(p.audio as any)?.off,
       });
     }
-
-    // ICE candidates
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        wsClient.send({
-          type: "rtc_signal",
-          targetUserId: peerId,
-          signal: { type: "candidate", candidate: event.candidate },
-        } as any);
-      }
-    };
-
-    // Remote stream
-    pc.ontrack = (event) => {
-      const stream = event.streams[0];
-      if (stream) {
-        this.remoteStreams.set(peerId, stream);
-        this.notifyListeners();
-      }
-    };
-
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-        this.removePeer(peerId);
-      }
-    };
-
-    return pc;
   }
 
-  private async handleSignal(fromUserId: string, signal: any) {
-    if (signal.type === "offer") {
-      const pc = this.createPeerConnection(fromUserId);
-      await pc.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp: signal.sdp }));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      wsClient.send({
-        type: "rtc_signal",
-        targetUserId: fromUserId,
-        signal: { type: "answer", sdp: answer.sdp },
-      } as any);
-    } else if (signal.type === "answer") {
-      const pc = this.peers.get(fromUserId);
-      if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp: signal.sdp }));
-      }
-    } else if (signal.type === "candidate") {
-      const pc = this.peers.get(fromUserId);
-      if (pc) {
-        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-      }
-    }
-  }
+  // ── Daily event handlers ──────────────────────────────────────────────
+
+  private handleParticipantChange = () => {
+    this.rebuildLocalStream();
+    this.rebuildRemoteStreams();
+    this.notifyListeners();
+  };
+
+  private handleTrackEvent = () => {
+    this.rebuildLocalStream();
+    this.rebuildRemoteStreams();
+    this.notifyListeners();
+  };
 
   private notifyListeners() {
     this.listeners.forEach((fn) => fn());

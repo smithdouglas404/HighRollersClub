@@ -4,6 +4,7 @@ import { BotPlayer, getRandomPersonality, getBotDisplayName } from "./bot-player
 import { storage } from "../storage";
 import { sendGameStateToTable, broadcastToTable, clearClientTable, sendToUser } from "../websocket";
 import { hasSubscribers, onHandComplete as commentaryOnHandComplete, onBlindIncrease as commentaryOnBlindIncrease, onPlayerEliminated as commentaryOnPlayerEliminated, cleanupTable as commentaryCleanupTable } from "./commentary-engine";
+import { deleteRoom as deleteDailyRoom } from "../video/daily-rooms";
 import type { ShuffleProof } from "./crypto-shuffle";
 import { blockchainConfig } from "../blockchain/config";
 import { VRFClient } from "../blockchain/vrf-client";
@@ -106,6 +107,11 @@ class TableManager {
       bigBlindAnte: (tableRow as any).bigBlindAnte || false,
       speedMultiplier,
       showAllHands: tableRow.showAllHands !== false,
+      runItTwice: (tableRow as any).runItTwice || "ask",
+      showdownSpeed: (tableRow as any).showdownSpeed || "normal",
+      dealToAwayPlayers: (tableRow as any).dealToAwayPlayers || false,
+      timeBankRefillHands: (tableRow as any).timeBankRefillHands || 0,
+      sevenTwoBounty: (tableRow as any).sevenTwoBounty || 0,
     });
 
     // Pass VRF client if available
@@ -532,6 +538,7 @@ class TableManager {
         instance.engine.cleanup();
         instance.bots.forEach(b => b.cleanup());
         this.clearTableTimers(tableId);
+        deleteDailyRoom(tableId).catch(() => {});
         this.tables.delete(tableId);
       }
     }, 10000);
@@ -967,6 +974,7 @@ class TableManager {
       instance.engine.cleanup();
       instance.bots.forEach(b => b.cleanup());
       this.clearTableTimers(tableId);
+      deleteDailyRoom(tableId).catch(() => {});
       this.tables.delete(tableId);
     }
   }
@@ -1137,6 +1145,7 @@ class TableManager {
               }
               sendGameStateToTable(table.id);
               this.clearTableTimers(table.id);
+              deleteDailyRoom(table.id).catch(() => {});
               this.tables.delete(table.id);
             }
           }
@@ -1155,6 +1164,7 @@ class TableManager {
             }
             sendGameStateToTable(table.id);
             this.clearTableTimers(table.id);
+            deleteDailyRoom(table.id).catch(() => {});
             this.tables.delete(table.id);
           }
           // Clear scheduled end

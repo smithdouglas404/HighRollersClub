@@ -37,8 +37,6 @@ export type ClientMessage =
   | { type: "run_it_vote"; count: 1 | 2 | 3 }
   | { type: "post_blinds" }
   | { type: "wait_for_bb" }
-  | { type: "rtc_signal"; targetUserId: string; signal: any }
-  | { type: "rtc_toggle"; video: boolean; audio: boolean }
   | { type: "commentary_toggle"; enabled: boolean }
   | { type: "commentary_omniscient"; enabled: boolean };
 
@@ -69,8 +67,6 @@ export type ServerMessage =
   | { type: "bomb_pot_starting" }
   | { type: "tournament_status"; status: string; prizePool: number }
   | { type: "format_info"; gameFormat: string; currentBlindLevel: number; nextLevelIn: number; playersRemaining: number; isBombPot: boolean }
-  | { type: "rtc_signal"; fromUserId: string; signal: any }
-  | { type: "rtc_toggle"; userId: string; video: boolean; audio: boolean }
   | { type: "chat_history"; messages: { userId: string; displayName: string; message: string; timestamp: string }[] }
   | { type: "info"; message: string }
   | { type: "chips_added"; walletBalance: number; chipsAdded: number; newTableChips: number }
@@ -621,30 +617,6 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       if (!client.tableId) return;
       tableManager.handlePostBlindChoice(client.tableId, client.userId, "wait");
       sendGameStateToTable(client.tableId);
-      break;
-    }
-
-    case "rtc_signal": {
-      // Relay WebRTC signaling to target peer
-      const targetId = msg.targetUserId;
-      if (!targetId) return;
-      sendToUser(targetId, {
-        type: "rtc_signal",
-        fromUserId: client.userId,
-        signal: msg.signal,
-      });
-      break;
-    }
-
-    case "rtc_toggle": {
-      // Broadcast media toggle to table
-      if (!client.tableId) return;
-      broadcastToTable(client.tableId, {
-        type: "rtc_toggle",
-        userId: client.userId,
-        video: msg.video,
-        audio: msg.audio,
-      }, client.userId);
       break;
     }
 

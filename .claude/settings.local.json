@@ -70,7 +70,12 @@
       "Bash(pgrep -a node 2>/dev/null || echo \"no node processes\")",
       "Bash(kill -9 19859 19870 2>/dev/null; sleep 2 && pgrep -a node)",
       "Bash(NODE_ENV=development npx tsx server/index.ts)",
-      "Bash(grep -rn \"opacity-30\\\\|opacity-50\\\\|text-gray-600\\\\|text-gray-500\" /home/runner/workspace/client/src/pages/*.tsx | grep -i \"disabled\\\\|inactive\\\\|unavailable\" | head -10)"
+      "Bash(grep -rn \"opacity-30\\\\|opacity-50\\\\|text-gray-600\\\\|text-gray-500\" /home/runner/workspace/client/src/pages/*.tsx | grep -i \"disabled\\\\|inactive\\\\|unavailable\" | head -10)",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | grep -c \"error\")",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | grep \"error TS\")",
+      "Bash(npx drizzle-kit push 2>&1 | tail -20)",
+      "Bash(grep -r \"showVideo\" /home/runner/workspace/client/src --include=\"*.tsx\" 2>/dev/null | head -20)",
+      "Bash(npx vite build --config /home/runner/workspace/vite.config.ts 2>&1 | tail -10)"
     ]
   }
 }

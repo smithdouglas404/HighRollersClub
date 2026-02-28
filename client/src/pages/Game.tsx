@@ -39,7 +39,7 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS, CARD_BACK_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, Link2, Palette, Settings2 } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, MicOff, Eye, EyeOff, Link2, Palette, Settings2, LogOut, MoreVertical, DoorOpen } from "lucide-react";
 import { InGameAdminPanel, type InGameSettings } from "@/components/game/InGameAdminPanel";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
@@ -231,6 +231,7 @@ function GameTable({
   buyTime, acceptInsurance, declineInsurance, voteRunIt,
   sitOut, sitIn, postBlinds, waitForBB,
   rebuyHero, defaultBuyIn, inviteCode,
+  isAdmin, currentSettings, onAdminSettingsApply,
 }: {
   players: Player[];
   gameState: any;
@@ -276,6 +277,7 @@ function GameTable({
   // Practice mode rebuy
   rebuyHero?: (amount: number) => void;
   defaultBuyIn?: number;
+  // Admin panel
   isAdmin?: boolean;
   currentSettings?: InGameSettings;
   onAdminSettingsApply?: (settings: InGameSettings) => void;
@@ -297,6 +299,7 @@ function GameTable({
   const { compactMode, toggleCompactMode, feltPreset, setFeltColor, cardBack, setCardBack, cardBackPreset } = useGameUI();
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showPlayerMenu, setShowPlayerMenu] = useState(false);
   const speedMultiplier = (gameState as any).speedMultiplier || 1.0;
   const dealing = useDealingSequence(players, gameState, heroId, compactMode, speedMultiplier);
   const { opponentStats, hudEnabled, setHudEnabled } = useOpponentStats(gameState, players, heroId);
@@ -563,27 +566,6 @@ function GameTable({
             </button>
           )}
 
-          {/* Sit Out / Sit In toggle (hidden when awaiting ready — banner handles that) */}
-          {isMultiplayer && sitOut && sitIn && hero && !hero.awaitingReady && (
-            hero.isSittingOut || hero.status === "sitting-out" ? (
-              <button
-                onClick={sitIn}
-                className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-green-400 bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition-colors"
-                title="Return to the game"
-              >
-                <Play className="w-3 h-3" /> SIT IN
-              </button>
-            ) : (
-              <button
-                onClick={sitOut}
-                className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors"
-                title="Sit out next hand"
-              >
-                <Pause className="w-3 h-3" /> SIT OUT
-              </button>
-            )
-          )}
-
           {/* Add Chips button — only for cash games when between hands */}
           {isMultiplayer && addChips && maxBuyIn && hero && ((gameState.phase === "pre-flop" && waiting) || gameState.phase === "showdown" || gameState.phase === "waiting") && (
             <button
@@ -595,26 +577,153 @@ function GameTable({
             </button>
           )}
 
+          {/* Player Menu — Commentary, Sit Out / Away, Leave Table */}
+          {(!hero?.awaitingReady) && (
+            <div className="relative">
+              <button
+                onClick={() => setShowPlayerMenu(!showPlayerMenu)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.625rem] font-bold transition-colors ${
+                  hero && (hero.isSittingOut || hero.status === "sitting-out")
+                    ? "text-orange-400 bg-orange-500/15 border border-orange-500/30"
+                    : "text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10"
+                }`}
+                title="Player options"
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+                {hero && (hero.isSittingOut || hero.status === "sitting-out") ? "AWAY" : "MENU"}
+              </button>
+              {showPlayerMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowPlayerMenu(false)} />
+                  <div
+                    className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-lg overflow-hidden"
+                    style={{
+                      background: "rgba(15,23,35,0.95)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      backdropFilter: "blur(16px)",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                    }}
+                  >
+                    {/* AI Commentary Toggle */}
+                    <button
+                      onClick={() => {
+                        const next = !commentaryEnabled;
+                        setCommentaryEnabled(next);
+                        commentaryPlayer.enabled = next;
+                        if (isMultiplayer) wsClient.send({ type: "commentary_toggle", enabled: next } as any);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
+                    >
+                      {commentaryEnabled
+                        ? <Mic className="w-4 h-4 text-purple-400" />
+                        : <MicOff className="w-4 h-4 text-gray-500" />
+                      }
+                      <div className="flex-1">
+                        <div className={`text-xs font-bold ${commentaryEnabled ? "text-purple-400" : "text-gray-300"}`}>AI Commentary</div>
+                        <div className="text-[0.6rem] text-gray-500">Live play-by-play broadcast</div>
+                      </div>
+                      <div className={`w-7 h-4 rounded-full relative transition-colors ${commentaryEnabled ? "bg-purple-500" : "bg-gray-600"}`}>
+                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${commentaryEnabled ? "left-[14px]" : "left-0.5"}`} />
+                      </div>
+                    </button>
+
+                    {/* Show Hole Cards (omniscient) — only when commentary enabled */}
+                    {commentaryEnabled && (
+                      <button
+                        onClick={() => {
+                          const next = !commentaryOmniscient;
+                          setCommentaryOmniscient(next);
+                          if (isMultiplayer) wsClient.send({ type: "commentary_omniscient", enabled: next } as any);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/8 transition-colors border-b border-white/5"
+                      >
+                        {commentaryOmniscient
+                          ? <Eye className="w-4 h-4 text-amber-400" />
+                          : <EyeOff className="w-4 h-4 text-gray-500" />
+                        }
+                        <div className="flex-1">
+                          <div className={`text-xs font-bold ${commentaryOmniscient ? "text-amber-400" : "text-gray-300"}`}>Show Hole Cards</div>
+                          <div className="text-[0.6rem] text-gray-500">Commentators see all cards</div>
+                        </div>
+                        <div className={`w-7 h-4 rounded-full relative transition-colors ${commentaryOmniscient ? "bg-amber-500" : "bg-gray-600"}`}>
+                          <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${commentaryOmniscient ? "left-[14px]" : "left-0.5"}`} />
+                        </div>
+                      </button>
+                    )}
+
+                    {/* Sit Out / Sit In — multiplayer only */}
+                    {isMultiplayer && sitOut && sitIn && hero && (
+                      hero.isSittingOut || hero.status === "sitting-out" ? (
+                        <button
+                          onClick={() => { sitIn(); setShowPlayerMenu(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
+                        >
+                          <Play className="w-4 h-4 text-green-400" />
+                          <div>
+                            <div className="text-xs font-bold text-green-400">Sit Back In</div>
+                            <div className="text-[0.6rem] text-gray-500">Rejoin the next hand</div>
+                          </div>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { sitOut(); setShowPlayerMenu(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
+                        >
+                          <Pause className="w-4 h-4 text-orange-400" />
+                          <div>
+                            <div className="text-xs font-bold text-orange-400">Sit Out / Away</div>
+                            <div className="text-[0.6rem] text-gray-500">Skip hands until you return</div>
+                          </div>
+                        </button>
+                      )
+                    )}
+
+                    {/* Leave Table — multiplayer only */}
+                    {leaveTable && (
+                      <button
+                        onClick={() => { setShowPlayerMenu(false); leaveTable(); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-500/10 transition-colors"
+                      >
+                        <DoorOpen className="w-4 h-4 text-red-400" />
+                        <div>
+                          <div className="text-xs font-bold text-red-400">Leave Table</div>
+                          <div className="text-[0.6rem] text-gray-500">Cash out and leave your seat</div>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Video Chat — inline in top bar for easy access */}
+          {isMultiplayer && tableId && (
+            <>
+              <div className="w-px h-5 bg-white/10" />
+              <VideoControlBar heroId={heroId} tableId={tableId} playerIds={players.map(p => p.id)} isAdmin={isAdmin} />
+              <div className="w-px h-5 bg-white/10" />
+            </>
+          )}
+
           <button onClick={handleMuteToggle} className="p-1.5 hover:bg-white/5 rounded transition-colors" title={isMuted ? "Unmute" : "Mute"}>
             {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-gray-500" />}
           </button>
 
-          {/* AI Commentary controls */}
-          {isMultiplayer && (
-            <CommentaryControls
-              enabled={commentaryEnabled}
-              omniscientMode={commentaryOmniscient}
-              onToggle={(enabled) => {
-                setCommentaryEnabled(enabled);
-                commentaryPlayer.enabled = enabled;
-                wsClient.send({ type: "commentary_toggle", enabled } as any);
-              }}
-              onOmniscientToggle={(enabled) => {
-                setCommentaryOmniscient(enabled);
-                wsClient.send({ type: "commentary_omniscient", enabled } as any);
-              }}
-            />
-          )}
+          {/* AI Commentary controls — available in all game modes */}
+          <CommentaryControls
+            enabled={commentaryEnabled}
+            omniscientMode={commentaryOmniscient}
+            onToggle={(enabled) => {
+              setCommentaryEnabled(enabled);
+              commentaryPlayer.enabled = enabled;
+              if (isMultiplayer) wsClient.send({ type: "commentary_toggle", enabled } as any);
+            }}
+            onOmniscientToggle={(enabled) => {
+              setCommentaryOmniscient(enabled);
+              if (isMultiplayer) wsClient.send({ type: "commentary_omniscient", enabled } as any);
+            }}
+          />
 
           {/* BGM controls */}
           <div className="relative">
@@ -782,16 +891,14 @@ function GameTable({
             )}
           </div>
 
-          {isAdmin && (
-            <button
-              onClick={() => setShowAdminPanel(!showAdminPanel)}
-              className={`p-1.5 rounded transition-colors ${showAdminPanel ? "bg-amber-500/15" : "hover:bg-white/5"}`}
-              title="Admin Settings"
-              data-testid="button-admin-settings"
-            >
-              <Settings2 className={`w-3.5 h-3.5 ${showAdminPanel ? "text-amber-400" : "text-gray-500"}`} />
-            </button>
-          )}
+          <button
+            onClick={() => setShowAdminPanel(!showAdminPanel)}
+            className={`p-1.5 rounded transition-colors ${showAdminPanel ? "bg-amber-500/15" : "hover:bg-white/5"}`}
+            title={isAdmin ? "Admin Settings" : "Preferences"}
+            data-testid="button-admin-settings"
+          >
+            <Settings2 className={`w-3.5 h-3.5 ${showAdminPanel ? "text-amber-400" : "text-gray-500"}`} />
+          </button>
 
           <button onClick={() => setShowProvablyFair(!showProvablyFair)} className="p-1.5 hover:bg-white/5 rounded transition-colors">
             <ShieldCheck className={`w-3.5 h-3.5 ${verificationStatus === "verified" ? "text-green-400" : "text-gray-500"}`} />
@@ -893,6 +1000,7 @@ function GameTable({
               });
             })()}
           </div>
+
         </div>
         )}
 
@@ -1278,14 +1386,9 @@ function GameTable({
       {/* ═══ AI Commentary Subtitles ═══ */}
       <CommentarySubtitles enabled={commentaryEnabled} />
 
-      {/* ═══ FLOATING OVERLAYS (keep existing) ═══ */}
+      {/* ═══ FLOATING OVERLAYS ═══ */}
       <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
       <TauntPicker heroId={heroId} isMultiplayer={isMultiplayer} />
-
-      {/* Video Control Bar — multiplayer only */}
-      {isMultiplayer && tableId && (
-        <VideoControlBar heroId={heroId} tableId={tableId} playerIds={players.map(p => p.id)} />
-      )}
 
       {formatInfo && (formatInfo.gameFormat === "sng" || formatInfo.gameFormat === "tournament") && (
         <BlindLevelIndicator
@@ -1400,13 +1503,14 @@ function GameTable({
         )}
       </AnimatePresence>
 
-      {isAdmin && currentSettings && onAdminSettingsApply && (
+      {currentSettings && onAdminSettingsApply && (
         <InGameAdminPanel
           isOpen={showAdminPanel}
           onClose={() => setShowAdminPanel(false)}
           settings={currentSettings}
           onApply={onAdminSettingsApply}
           isMultiplayer={isMultiplayer}
+          isAdmin={isAdmin}
         />
       )}
 
@@ -1652,11 +1756,16 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
     String(tableInfo.createdById) === String(user.id) || user.role === "admin"
   ));
   const [mpAdminSettings, setMpAdminSettings] = useState<InGameSettings>({
-    straddleEnabled: false, bigBlindAnte: false, runItTwice: false,
+    straddleEnabled: false, bigBlindAnte: false, runItTwice: "ask",
     rabbitHunting: false, showAllHands: true, autoTopUp: false,
     actionTimerSeconds: 15, speedMultiplier: 1.0, autoStartDelay: 5,
     rakePercent: 5, rakeCap: 0, allowBots: true,
     smallBlind: 10, bigBlind: 20, ante: 0,
+    timeBankSeconds: 30, bombPotFrequency: 0, bombPotAnte: 0,
+    pokerVariant: "nlhe", useCentsValues: false, showdownSpeed: "normal",
+    dealToAwayPlayers: false, timeBankRefillHands: 0, spectatorMode: true,
+    doubleBoard: false, sevenTwoBounty: 0, guestChatEnabled: true,
+    autoTrimExcessBets: false,
   });
 
   useEffect(() => {
@@ -1929,13 +2038,18 @@ function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Pl
   const defaultBuyIn = initialPlayers.find(p => p.id === HERO_ID)?.chips || 1000;
   const [chatMessages, setChatMessages] = useState<{ playerName: string; message: string }[]>([]);
   const [adminSettings, setAdminSettings] = useState<InGameSettings>({
-    straddleEnabled: false, bigBlindAnte: false, runItTwice: false,
+    straddleEnabled: false, bigBlindAnte: false, runItTwice: "ask",
     rabbitHunting: false, showAllHands: true, autoTopUp: false,
     actionTimerSeconds: 15, speedMultiplier: 1.0, autoStartDelay: 5,
     rakePercent: 0, rakeCap: 0, allowBots: true,
     smallBlind: engineConfig?.smallBlind || 10,
     bigBlind: engineConfig?.bigBlind || 20,
     ante: engineConfig?.ante || 0,
+    timeBankSeconds: 30, bombPotFrequency: 0, bombPotAnte: 0,
+    pokerVariant: "nlhe", useCentsValues: false, showdownSpeed: "normal",
+    dealToAwayPlayers: false, timeBankRefillHands: 0, spectatorMode: true,
+    doubleBoard: false, sevenTwoBounty: 0, guestChatEnabled: true,
+    autoTrimExcessBets: false,
   });
 
   const sendChat = useCallback((message: string) => {

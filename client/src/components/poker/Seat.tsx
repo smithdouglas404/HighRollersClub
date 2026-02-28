@@ -701,7 +701,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               tier={avatarTier}
               winStreak={winStreak}
               vpipPercent={hudStats ? Math.round((hudStats.vpipCount / Math.max(1, hudStats.handsPlayed)) * 100) : undefined}
-              size={100}
+              size={130}
               isActive={isTurn}
             />
           )}
@@ -722,7 +722,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <TimerRing
               percent={timer.percent}
               secondsLeft={timer.secondsLeft}
-              size={110}
+              size={140}
               strokeWidth={4}
               inTimeBank={timer.inTimeBank}
               timeBankRemaining={timer.timeBankRemaining}

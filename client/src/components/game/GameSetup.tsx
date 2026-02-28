@@ -7,7 +7,7 @@ import {
   Gamepad2, Settings2, Wallet, AlertTriangle, ArrowRightLeft,
   Lock, Eye, EyeOff, Repeat, Gauge, Layers, RotateCcw,
   Timer, Rabbit, CreditCard, Percent, Hash, SlidersHorizontal,
-  Shuffle, Coffee, Award, DollarSign, Info,
+  Shuffle, Coffee, Award, DollarSign, Info, MessageSquare,
 } from "lucide-react";
 import { useWallet, type WalletType } from "@/lib/wallet-context";
 import { AVATAR_OPTIONS, type AvatarOption } from "../poker/AvatarSelect";
@@ -38,17 +38,28 @@ export interface GameSetupConfig {
   // Advanced — Table Rules
   straddleEnabled: boolean;
   bigBlindAnte: boolean;
-  runItTwice: boolean;
+  runItTwice: "always" | "ask" | "no";
   rabbitHunting: boolean;
   showAllHands: boolean;
   autoTopUp: boolean;
+  dealToAwayPlayers: boolean;
+  autoTrimExcessBets: boolean;
+  spectatorMode: boolean;
+  guestChatEnabled: boolean;
   // Advanced — Speed & Timing
   actionTimerSeconds: number;
   speedMultiplier: number;
   autoStartDelay: number;
+  showdownSpeed: "fast" | "normal" | "slow";
+  timeBankRefillHands: number;
   // Advanced — Rake
   rakePercent: number;
   rakeCap: number;
+  // Advanced — Special Rules
+  sevenTwoBounty: number;
+  doubleBoard: boolean;
+  pokerVariant: string;
+  useCentsValues: boolean;
   // Advanced — Privacy
   isPrivate: boolean;
   tablePassword: string;
@@ -59,6 +70,8 @@ export interface GameSetupConfig {
   breakIntervalMinutes: number;
   breakDurationMinutes: number;
   payoutStructure: string;
+  // Blind schedule (custom)
+  customBlindSchedule: { level: number; sb: number; bb: number; ante: number; durationSeconds: number }[];
 }
 
 const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string; color: string; rgb: string; tooltip: string }[] = [
@@ -114,17 +127,28 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
   // Advanced — Table Rules
   const [straddleEnabled, setStraddleEnabled] = useState(false);
   const [bigBlindAnte, setBigBlindAnte] = useState(false);
-  const [runItTwice, setRunItTwice] = useState(false);
+  const [runItTwice, setRunItTwice] = useState<"always" | "ask" | "no">("ask");
   const [rabbitHunting, setRabbitHunting] = useState(false);
   const [showAllHands, setShowAllHands] = useState(true);
   const [autoTopUp, setAutoTopUp] = useState(false);
+  const [dealToAwayPlayers, setDealToAwayPlayers] = useState(false);
+  const [autoTrimExcessBets, setAutoTrimExcessBets] = useState(false);
+  const [spectatorMode, setSpectatorMode] = useState(true);
+  const [guestChatEnabled, setGuestChatEnabled] = useState(true);
   // Advanced — Speed & Timing
   const [actionTimerSeconds, setActionTimerSeconds] = useState(15);
   const [speedMultiplier, setSpeedMultiplier] = useState(1.0);
   const [autoStartDelay, setAutoStartDelay] = useState(5);
+  const [showdownSpeed, setShowdownSpeed] = useState<"fast" | "normal" | "slow">("normal");
+  const [timeBankRefillHands, setTimeBankRefillHands] = useState(0);
   // Advanced — Rake
   const [rakePercent, setRakePercent] = useState(5);
   const [rakeCap, setRakeCap] = useState(0);
+  // Advanced — Special Rules
+  const [sevenTwoBounty, setSevenTwoBounty] = useState(0);
+  const [doubleBoard, setDoubleBoard] = useState(false);
+  const [pokerVariant, setPokerVariant] = useState("nlhe");
+  const [useCentsValues, setUseCentsValues] = useState(false);
   // Advanced — Privacy
   const [isPrivate, setIsPrivate] = useState(false);
   const [tablePassword, setTablePassword] = useState("");
@@ -136,6 +160,8 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
   const [breakIntervalMinutes, setBreakIntervalMinutes] = useState(60);
   const [breakDurationMinutes, setBreakDurationMinutes] = useState(5);
   const [payoutStructure, setPayoutStructure] = useState("standard");
+  // Blind schedule (custom)
+  const [customBlindSchedule, setCustomBlindSchedule] = useState<{ level: number; sb: number; bb: number; ante: number; durationSeconds: number }[]>([]);
   // UI
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -182,11 +208,21 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
     rabbitHunting,
     showAllHands,
     autoTopUp,
+    dealToAwayPlayers,
+    autoTrimExcessBets,
+    spectatorMode,
+    guestChatEnabled,
     actionTimerSeconds,
     speedMultiplier,
     autoStartDelay,
+    showdownSpeed,
+    timeBankRefillHands,
     rakePercent: mode === "offline" ? 0 : rakePercent,
     rakeCap: mode === "offline" ? 0 : rakeCap,
+    sevenTwoBounty,
+    doubleBoard,
+    pokerVariant,
+    useCentsValues,
     isPrivate,
     tablePassword: isPrivate ? tablePassword : "",
     allowReEntry,
@@ -195,6 +231,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
     breakIntervalMinutes,
     breakDurationMinutes,
     payoutStructure,
+    customBlindSchedule: blindPreset === "custom" ? customBlindSchedule : [],
   });
 
   const handleStart = () => {
@@ -281,17 +318,21 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
       </div>
 
       {/* Step 2 */}
-      <div
+      <button
+        onClick={() => step === 1 && playerName.trim() && setStep(2)}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
           step === 2
             ? "text-white"
-            : "text-gray-600"
+            : step === 1 && playerName.trim()
+              ? "text-gray-500 hover:text-gray-300 cursor-pointer"
+              : "text-gray-600 cursor-not-allowed"
         }`}
         style={step === 2 ? { color: selectedAvatar.borderColor } : {}}
+        disabled={step === 1 && !playerName.trim()}
       >
         <Settings2 className="w-3.5 h-3.5" />
         Settings
-      </div>
+      </button>
     </div>
   );
 
@@ -777,15 +818,86 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                               <label className={`${labelClass} flex items-center gap-1`}>
                                 <Gauge className="w-3 h-3" /> Blind Speed
                               </label>
-                              <select value={blindPreset} onChange={(e) => setBlindPreset(e.target.value)} className={inputClass} data-testid="select-blind-speed">
+                              <select value={blindPreset} onChange={(e) => {
+                                setBlindPreset(e.target.value);
+                                if (e.target.value === "custom" && customBlindSchedule.length === 0) {
+                                  setCustomBlindSchedule([
+                                    { level: 1, sb: 10, bb: 20, ante: 0, durationSeconds: 300 },
+                                    { level: 2, sb: 20, bb: 40, ante: 0, durationSeconds: 300 },
+                                    { level: 3, sb: 30, bb: 60, ante: 5, durationSeconds: 300 },
+                                    { level: 4, sb: 50, bb: 100, ante: 10, durationSeconds: 300 },
+                                    { level: 5, sb: 100, bb: 200, ante: 20, durationSeconds: 300 },
+                                  ]);
+                                }
+                              }} className={inputClass} data-testid="select-blind-speed">
                                 <option value="hyper" className="bg-gray-900">Hyper Turbo (2min)</option>
                                 <option value="turbo" className="bg-gray-900">Turbo (3min)</option>
                                 <option value="standard" className="bg-gray-900">Standard (5min)</option>
                                 <option value="mtt" className="bg-gray-900">Slow (10min)</option>
                                 <option value="deep" className="bg-gray-900">Deep Stack (15min)</option>
+                                <option value="custom" className="bg-gray-900">Custom Schedule</option>
                               </select>
                             </div>
                           </div>
+
+                          {/* Custom Blind Schedule Editor */}
+                          {blindPreset === "custom" && (
+                            <div className="space-y-2 mt-2">
+                              <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-cyan-400/60">Blind Schedule</div>
+                              <div className="space-y-1">
+                                <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_1.5rem] gap-1 text-[0.5rem] font-bold uppercase tracking-wider text-gray-600 px-1">
+                                  <span>Lvl</span><span>SB</span><span>BB</span><span>Ante</span><span>Time</span><span></span>
+                                </div>
+                                {customBlindSchedule.map((level, idx) => (
+                                  <div key={idx} className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_1.5rem] gap-1 items-center">
+                                    <span className="text-[0.625rem] text-gray-500 text-center">{level.level}</span>
+                                    <input type="number" value={level.sb} min={1} onChange={(e) => {
+                                      const v = parseInt(e.target.value) || 1;
+                                      setCustomBlindSchedule(prev => prev.map((l, i) => i === idx ? { ...l, sb: v } : l));
+                                    }} className="bg-white/5 border border-white/10 rounded px-1.5 py-1 text-[0.625rem] text-white w-full" />
+                                    <input type="number" value={level.bb} min={2} onChange={(e) => {
+                                      const v = parseInt(e.target.value) || 2;
+                                      setCustomBlindSchedule(prev => prev.map((l, i) => i === idx ? { ...l, bb: v } : l));
+                                    }} className="bg-white/5 border border-white/10 rounded px-1.5 py-1 text-[0.625rem] text-white w-full" />
+                                    <input type="number" value={level.ante} min={0} onChange={(e) => {
+                                      const v = parseInt(e.target.value) || 0;
+                                      setCustomBlindSchedule(prev => prev.map((l, i) => i === idx ? { ...l, ante: v } : l));
+                                    }} className="bg-white/5 border border-white/10 rounded px-1.5 py-1 text-[0.625rem] text-white w-full" />
+                                    <select value={level.durationSeconds} onChange={(e) => {
+                                      const v = parseInt(e.target.value);
+                                      setCustomBlindSchedule(prev => prev.map((l, i) => i === idx ? { ...l, durationSeconds: v } : l));
+                                    }} className="bg-white/5 border border-white/10 rounded px-1 py-1 text-[0.625rem] text-white w-full">
+                                      {[120, 180, 300, 420, 600, 900].map(s => (
+                                        <option key={s} value={s} className="bg-gray-900">{s / 60}m</option>
+                                      ))}
+                                    </select>
+                                    <button onClick={() => {
+                                      if (customBlindSchedule.length > 2) {
+                                        setCustomBlindSchedule(prev => prev.filter((_, i) => i !== idx).map((l, i) => ({ ...l, level: i + 1 })));
+                                      }
+                                    }} className="text-gray-600 hover:text-red-400 transition-colors text-center text-xs">
+                                      &times;
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const last = customBlindSchedule[customBlindSchedule.length - 1];
+                                  setCustomBlindSchedule(prev => [...prev, {
+                                    level: prev.length + 1,
+                                    sb: last ? last.sb * 2 : 10,
+                                    bb: last ? last.bb * 2 : 20,
+                                    ante: last ? Math.max(last.ante * 2, last.bb / 4) : 0,
+                                    durationSeconds: last?.durationSeconds || 300,
+                                  }]);
+                                }}
+                                className="w-full py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-cyan-400/80 border border-cyan-500/20 hover:bg-cyan-500/10 transition-colors"
+                              >
+                                + Add Level
+                              </button>
+                            </div>
+                          )}
 
                           <div className="h-px bg-white/[0.06]" />
 
@@ -939,12 +1051,38 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                   <div className="grid grid-cols-2 gap-x-4 gap-y-0">
                     <Toggle value={straddleEnabled} onChange={setStraddleEnabled} icon={DollarSign} label="Straddle" desc="UTG can post 2x BB blind pre-flop" />
                     <Toggle value={bigBlindAnte} onChange={setBigBlindAnte} icon={Coins} label="Big Blind Ante" desc="Only BB posts the ante each hand" />
-                    <Toggle value={runItTwice} onChange={setRunItTwice} icon={Repeat} label="Run It Twice" desc="Deal remaining board twice when all-in" />
                     <Toggle value={rabbitHunting} onChange={setRabbitHunting} icon={Rabbit} label="Rabbit Hunting" desc="Peek at undealt cards after fold" />
                     <Toggle value={showAllHands} onChange={setShowAllHands} icon={Eye} label="Show All Hands" desc="Reveal all cards at showdown" />
                     {gameFormat !== "sng" && gameFormat !== "tournament" && (
                       <Toggle value={autoTopUp} onChange={setAutoTopUp} icon={RotateCcw} label="Auto Top-Up" desc="Auto-rebuy to max buy-in when short" />
                     )}
+                    <Toggle value={dealToAwayPlayers} onChange={setDealToAwayPlayers} icon={Users} label="Deal to Away" desc="Deal cards to sitting-out players" />
+                    <Toggle value={spectatorMode} onChange={setSpectatorMode} icon={Eye} label="Spectators" desc="Allow non-players to watch" />
+                    <Toggle value={guestChatEnabled} onChange={setGuestChatEnabled} icon={MessageSquare} label="Guest Chat" desc="Allow guests to send chat messages" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`} title="Run It Twice: deal remaining board multiple times when all-in">
+                        <Repeat className="w-3 h-3" /> Run It Twice
+                      </label>
+                      <select value={runItTwice} onChange={(e) => setRunItTwice(e.target.value as "always" | "ask" | "no")} className={inputClass}>
+                        <option value="no" className="bg-gray-900">No</option>
+                        <option value="ask" className="bg-gray-900">Ask Players</option>
+                        <option value="always" className="bg-gray-900">Always</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`} title="7-2 Bounty: win with 7-2 to collect chips from opponents">
+                        <Swords className="w-3 h-3" /> 7-2 Bounty
+                      </label>
+                      <select value={sevenTwoBounty} onChange={(e) => setSevenTwoBounty(parseInt(e.target.value))} className={inputClass}>
+                        <option value={0} className="bg-gray-900">Disabled</option>
+                        <option value={5} className="bg-gray-900">5 chips/player</option>
+                        <option value={10} className="bg-gray-900">10 chips/player</option>
+                        <option value={20} className="bg-gray-900">20 chips/player</option>
+                        <option value={50} className="bg-gray-900">50 chips/player</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* ─── Speed & Timing ─── */}
@@ -988,15 +1126,36 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                       </select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className={`${labelClass} flex items-center gap-1`} title="Seconds to wait before auto-starting a new hand">
-                        <Shuffle className="w-3 h-3" /> Auto-Start Delay
+                        <Shuffle className="w-3 h-3" /> Auto-Start
                       </label>
                       <select value={autoStartDelay} onChange={(e) => setAutoStartDelay(parseInt(e.target.value))} className={inputClass} data-testid="select-auto-start">
                         {[0, 3, 5, 8, 10, 15].map(n => (
                           <option key={n} value={n} className="bg-gray-900">{n === 0 ? "Instant" : `${n}s`}</option>
                         ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`} title="How long showdown results are displayed">
+                        <Eye className="w-3 h-3" /> Showdown
+                      </label>
+                      <select value={showdownSpeed} onChange={(e) => setShowdownSpeed(e.target.value as "fast" | "normal" | "slow")} className={inputClass}>
+                        <option value="fast" className="bg-gray-900">Fast</option>
+                        <option value="normal" className="bg-gray-900">Normal</option>
+                        <option value="slow" className="bg-gray-900">Slow</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`} title="Number of hands until time bank refills">
+                        <RotateCcw className="w-3 h-3" /> Bank Refill
+                      </label>
+                      <select value={timeBankRefillHands} onChange={(e) => setTimeBankRefillHands(parseInt(e.target.value))} className={inputClass}>
+                        <option value={0} className="bg-gray-900">No refill</option>
+                        <option value={5} className="bg-gray-900">5 hands</option>
+                        <option value={10} className="bg-gray-900">10 hands</option>
+                        <option value={20} className="bg-gray-900">20 hands</option>
                       </select>
                     </div>
                   </div>

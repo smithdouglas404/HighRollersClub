@@ -490,8 +490,8 @@ function GameTable({
             </button>
           )}
 
-          {/* Sit Out / Sit In toggle */}
-          {isMultiplayer && sitOut && sitIn && hero && (
+          {/* Sit Out / Sit In toggle (hidden when awaiting ready — banner handles that) */}
+          {isMultiplayer && sitOut && sitIn && hero && !hero.awaitingReady && (
             hero.isSittingOut || hero.status === "sitting-out" ? (
               <button
                 onClick={sitIn}
@@ -762,8 +762,28 @@ function GameTable({
             </div>
           </div>
 
-          {/* Sitting out banner */}
-          {hero && (hero.isSittingOut || hero.status === "sitting-out") && sitIn && (
+          {/* "I'M READY" banner — shown when player just joined and hasn't started yet */}
+          {hero && hero.awaitingReady && sitIn && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative z-30 flex items-center justify-center gap-3 py-3 px-6 bg-green-500/15 border border-green-500/30 rounded-lg mx-4 mb-2"
+            >
+              <span className="text-sm font-bold text-green-300 uppercase tracking-wider">Click to start playing</span>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={sitIn}
+                className="px-5 py-2 rounded-lg text-sm font-bold text-black uppercase tracking-wider transition-colors"
+                style={{ background: "linear-gradient(to bottom, #22c55e, #16a34a)", boxShadow: "0 0 15px rgba(34,197,94,0.3)" }}
+              >
+                I'M READY
+              </motion.button>
+            </motion.div>
+          )}
+
+          {/* Sitting out banner — voluntary sit-out (not awaiting ready) */}
+          {hero && (hero.isSittingOut || hero.status === "sitting-out") && !hero.awaitingReady && sitIn && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

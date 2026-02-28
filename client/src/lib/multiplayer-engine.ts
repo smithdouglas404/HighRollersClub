@@ -35,6 +35,8 @@ function serverToClientPlayers(serverPlayers: any[], turnDeadline?: number, turn
     isBigBlind: p.isBigBlind || false,
     currentBet: p.currentBet || 0,
     status: p.status || "waiting",
+    isSittingOut: p.isSittingOut || false,
+    awaitingReady: p.awaitingReady || false,
     timeLeft,
     timeBankSeconds: p.timeBank ?? 30,
   };

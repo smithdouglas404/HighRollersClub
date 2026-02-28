@@ -704,6 +704,14 @@ class TableManager {
 
     engine.addPlayer(userId, displayName, seat, buyIn, false);
 
+    // New players join in "away" mode — must click "I'm Ready" to start playing
+    const newPlayer = engine.getPlayer(userId);
+    if (newPlayer) {
+      newPlayer.isSittingOut = true;
+      newPlayer.awaitingReady = true;
+      newPlayer.status = "sitting-out";
+    }
+
     // Use the player's profile avatar if set, otherwise assign first unused
     const usedAvatars = new Set(instance.avatarMap.values());
     const humanAvatar = (user.avatarId && AVATAR_IDS.includes(user.avatarId as any))
@@ -735,8 +743,15 @@ class TableManager {
       }
     }
 
-    // Auto-start if enough players — give a countdown (scaled by speed)
-    // Clear any existing countdown timer to prevent stacking
+    // Auto-start if enough players ready
+    this.maybeStartCountdown(tableId, instance);
+
+    return { ok: true };
+  }
+
+  /** Trigger hand-start countdown if 2+ non-sitting-out players with chips */
+  private maybeStartCountdown(tableId: string, instance: { engine: any; handCountdownTimer: ReturnType<typeof setTimeout> | null }) {
+    const { engine } = instance;
     if (engine.state.phase === "waiting" && engine.canStartHand()) {
       if (instance.handCountdownTimer) {
         clearTimeout(instance.handCountdownTimer);
@@ -755,8 +770,6 @@ class TableManager {
         }
       }, countdownSec * 1000);
     }
-
-    return { ok: true };
   }
 
   async leaveTable(tableId: string, userId: string): Promise<void> {
@@ -985,10 +998,15 @@ class TableManager {
     if (player) {
       player.isSittingOut = sitOut;
       player.voluntarySitOut = sitOut; // track intent: true = player chose to sit out
+      player.awaitingReady = false; // clear "awaiting ready" on any sit-in/sit-out action
       if (sitOut) {
         player.status = "sitting-out";
       } else if (player.status === "sitting-out") {
         player.status = "waiting";
+      }
+      // If a player just marked ready, check if we can start a hand
+      if (!sitOut) {
+        this.maybeStartCountdown(tableId, instance);
       }
     }
   }
@@ -1122,9 +1140,10 @@ class TableManager {
     // "Leave" and their connection flickered, we should still honor their leave intent
     // after the current hand ends.
 
-    // If player was marked sitting out from disconnect (not voluntary, and not pending leave), restore them
+    // If player was marked sitting out from disconnect (not voluntary, not pending leave,
+    // and not awaiting ready), restore them
     const isPendingLeave = this.pendingLeaves.get(tableId)?.has(userId) ?? false;
-    if (player.isSittingOut && player.chips > 0 && !player.voluntarySitOut && !isPendingLeave) {
+    if (player.isSittingOut && player.chips > 0 && !player.voluntarySitOut && !isPendingLeave && !player.awaitingReady) {
       player.isSittingOut = false;
       player.status = "waiting";
     }
@@ -1228,26 +1247,8 @@ class TableManager {
           return;
         }
 
-        // Auto-start hand if enough players and still waiting — with countdown (scaled by speed)
-        // Clear any existing countdown to prevent stacking
-        if (inst.engine.state.phase === "waiting" && inst.engine.canStartHand()) {
-          if (inst.handCountdownTimer) {
-            clearTimeout(inst.handCountdownTimer);
-            inst.handCountdownTimer = null;
-          }
-          const countdownSec = Math.max(1, Math.round(5 * inst.engine.speedMultiplier));
-          broadcastToTable(tableId, {
-            type: "hand_countdown",
-            seconds: countdownSec,
-          } as any);
-          inst.handCountdownTimer = setTimeout(() => {
-            const tbl = this.tables.get(tableId);
-            if (tbl) tbl.handCountdownTimer = null;
-            if (tbl && tbl.engine.state.phase === "waiting" && tbl.engine.canStartHand()) {
-              tbl.engine.startHand();
-            }
-          }, countdownSec * 1000);
-        }
+        // Auto-start hand if enough players and still waiting
+        this.maybeStartCountdown(tableId, inst);
       };
 
       if (delay === 0) {

@@ -22,6 +22,7 @@ export interface SeatPlayer {
   isConnected: boolean;
   isSittingOut: boolean;
   voluntarySitOut: boolean; // true = player chose to sit out, false = disconnected/auto
+  awaitingReady: boolean; // true = just joined, hasn't clicked "I'm Ready" yet
   missedBigBlind: boolean; // true = player sat out during BB position, must post dead blind on return
   totalBetThisHand: number;
   timeBank: number; // remaining time bank seconds
@@ -251,6 +252,7 @@ export class GameEngine {
       isConnected: true,
       isSittingOut: false,
       voluntarySitOut: false,
+      awaitingReady: false,
       missedBigBlind: false,
       totalBetThisHand: 0,
       timeBank: 30, // 30 seconds of time bank per player
@@ -1616,6 +1618,7 @@ export class GameEngine {
         isBot: p.isBot,
         isConnected: p.isConnected,
         isSittingOut: p.isSittingOut,
+        awaitingReady: p.awaitingReady || false,
         timeBank: p.timeBank,
         // Only show own cards, or all cards at showdown
         cards: p.id === playerId

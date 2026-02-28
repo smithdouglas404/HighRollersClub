@@ -1,16 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Lock, Smartphone, Bitcoin, CreditCard, Cpu, Users, Shield, ChevronRight, Play, Zap, Trophy, Globe, LayoutGrid } from "lucide-react";
+import { Shield, Users, Trophy, Zap, Play, ChevronRight, Eye, Gamepad2, Crown, Swords } from "lucide-react";
 
-// Cinematic DALL-E 3 assets
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
-import serverBg from "@assets/generated_images/cinematic_server_room_bg.png";
 import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.png";
-import entropyHud from "@assets/generated_images/holographic_hud_overlay.png";
-import avatar1 from "@assets/generated_images/player_seated_cyberpunk_1.png";
-import avatar2 from "@assets/generated_images/player_seated_cyberpunk_2.png";
-import avatar3 from "@assets/generated_images/player_seated_cyberpunk_3.png";
 import feltImg from "@assets/generated_images/poker_table_top_cinematic.png";
 import chipStack from "@assets/generated_images/gold_chip_stack_3d.png";
 
@@ -18,395 +12,365 @@ const FEATURES = [
   {
     icon: Shield,
     title: "Provably Fair",
-    desc: "SHA-256 verified shuffles with multi-source entropy. Every hand auditable.",
-    color: "#00d4ff",
+    desc: "Every shuffle uses SHA-256 cryptographic verification with multi-party entropy. You can audit any hand.",
+    accent: "#00d4ff",
   },
   {
     icon: Users,
-    title: "Club System",
-    desc: "Create or join poker clubs. Organize tournaments and climb inter-club rankings.",
-    color: "#00d4ff",
+    title: "Private Clubs",
+    desc: "Create your own poker club, invite friends, run tournaments, and compete on club leaderboards.",
+    accent: "#00ff9d",
   },
   {
     icon: Trophy,
-    title: "Tournaments",
-    desc: "Sit & Go, multi-table, and custom blind structures. Real-time leaderboards.",
-    color: "#ffd700",
+    title: "Tournaments & Leagues",
+    desc: "Sit & Go, custom blind structures, inter-club leagues with seasonal rankings and real competition.",
+    accent: "#ffd700",
   },
   {
     icon: Zap,
-    title: "Real-Time",
-    desc: "WebSocket-powered multiplayer. Sub-second response. No lag.",
-    color: "#f472b6",
+    title: "Real-Time Multiplayer",
+    desc: "WebSocket-powered gameplay with sub-second response. Video chat at the table. No lag, no waiting.",
+    accent: "#f472b6",
+  },
+  {
+    icon: Eye,
+    title: "Live Video Tables",
+    desc: "See your opponents face-to-face with built-in WebRTC video chat. Read their reactions in real time.",
+    accent: "#a78bfa",
+  },
+  {
+    icon: Swords,
+    title: "Club vs Club",
+    desc: "Form alliances, challenge rival clubs, and climb the league standings together as a team.",
+    accent: "#fb923c",
   },
 ];
 
 export default function Landing() {
-  const [stats, setStats] = useState([
-    { label: "Players Online", value: "0", icon: Globe },
-    { label: "Tables Active", value: "0", icon: LayoutGrid },
-    { label: "Prize Pool", value: "$0", icon: Trophy },
-  ]);
+  const [onlineCount, setOnlineCount] = useState(0);
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const [usersRes, tablesRes, tournamentsRes] = await Promise.all([
-          fetch("/api/online-users"),
-          fetch("/api/tables"),
-          fetch("/api/tournaments"),
-        ]);
-
-        const users = usersRes.ok ? await usersRes.json() : [];
-        const tables = tablesRes.ok ? await tablesRes.json() : [];
-        const tournaments = tournamentsRes.ok ? await tournamentsRes.json() : [];
-
-        const playersOnline = Array.isArray(users) ? users.length : 0;
-        const tablesActive = Array.isArray(tables) ? tables.length : 0;
-        const totalPrizePool = Array.isArray(tournaments)
-          ? tournaments.reduce((sum: number, t: any) => sum + (Number(t.prizePool) || 0), 0)
-          : 0;
-
-        setStats([
-          { label: "Players Online", value: playersOnline.toLocaleString(), icon: Globe },
-          { label: "Tables Active", value: tablesActive.toLocaleString(), icon: LayoutGrid },
-          {
-            label: "Prize Pool",
-            value: totalPrizePool >= 1000
-              ? `$${(totalPrizePool / 1000).toFixed(1)}K`
-              : `$${totalPrizePool.toLocaleString()}`,
-            icon: Trophy,
-          },
-        ]);
-      } catch (err) {
-        console.error("Failed to fetch landing stats:", err);
-      }
+        const res = await fetch("/api/online-users");
+        if (res.ok) {
+          const users = await res.json();
+          setOnlineCount(Array.isArray(users) ? users.length : 0);
+        }
+      } catch {}
     }
-
     fetchStats();
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#111b2a] text-white font-sans relative overflow-hidden">
-      {/* ─── Background Layers ─────────────────────────── */}
+    <div className="min-h-screen bg-[#0a0e1a] text-white font-sans relative overflow-hidden" data-testid="landing-page">
+
       <div className="absolute inset-0 z-0">
-        <img src={casinoBg} alt="" className="w-full h-full object-cover opacity-25 blur-[1px] scale-110" />
-        <img src={serverBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-10 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#111b2a]/35 via-[#111b2a]/70 to-[#111b2a]" />
+        <img src={casinoBg} alt="" className="w-full h-full object-cover opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e1a]/60 via-[#0a0e1a]/80 to-[#0a0e1a]" />
       </div>
 
+      <div className="absolute inset-0 z-[1] pointer-events-none overflow-hidden">
+        <div
+          className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%)" }}
+        />
+        <div
+          className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(255,215,0,0.04) 0%, transparent 70%)" }}
+        />
+      </div>
 
-      {/* Scan lines */}
-      <div
-        className="absolute inset-0 z-[2] pointer-events-none"
-        style={{
-          background: "repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,212,255,0.012) 3px, rgba(0,212,255,0.012) 4px)",
-        }}
-      />
-
-      {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
 
-        {/* ─── Navbar ─────────────────────────────────────── */}
         <motion.nav
-          initial={{ y: -40, opacity: 0 }}
+          initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.6 }}
-          className="flex items-center justify-between px-6 md:px-10 py-4"
+          transition={{ duration: 0.5 }}
+          className="flex items-center justify-between px-6 md:px-12 py-5"
         >
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 relative">
-              <div className="absolute inset-[-6px] bg-cyan-500/20 blur-xl rounded-full animate-pulse" />
-              <img src={lionLogo} alt="Logo" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(0,212,255,0.5)]" />
+            <div className="w-12 h-12 relative">
+              <div className="absolute inset-[-8px] bg-amber-500/15 blur-2xl rounded-full" />
+              <img
+                src={lionLogo}
+                alt="High Rollers Club"
+                className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_16px_rgba(255,215,0,0.4)]"
+                data-testid="img-logo"
+              />
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-bold text-sm tracking-[0.25em] gold-text leading-none">HIGH ROLLERS</span>
-              <span className="text-[0.5rem] text-gray-600 tracking-[0.3em] font-mono mt-0.5">POKER PLATFORM</span>
+              <span className="font-display font-extrabold text-base tracking-[0.2em] leading-none" style={{ color: "#d4a843" }}>
+                HIGH ROLLERS
+              </span>
+              <span className="text-[0.6rem] text-gray-500 tracking-[0.25em] font-mono mt-0.5">CLUB</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-6">
             <Link href="/lobby">
-              <span className="text-[0.6875rem] text-gray-400 uppercase tracking-wider font-semibold hidden md:block cursor-pointer hover:text-cyan-400 transition-colors">Clubs</span>
+              <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold hidden md:block cursor-pointer hover:text-cyan-400 transition-colors" data-testid="link-lobby">
+                Lobby
+              </span>
             </Link>
-            <span className="text-[0.6875rem] text-gray-500 uppercase tracking-wider font-semibold hidden md:block cursor-not-allowed">Leagues</span>
-            <span className="text-[0.6875rem] text-gray-500 uppercase tracking-wider font-semibold hidden md:block cursor-not-allowed">Provably Fair</span>
             <Link href="/lobby">
-              <button className="glass rounded-lg px-5 py-2.5 text-[0.6875rem] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,212,255,0.08)]">
-                <Play className="w-3 h-3 fill-current" />
-                Launch App
+              <button
+                className="rounded-lg px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+                style={{
+                  background: "linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.05))",
+                  border: "1px solid rgba(0,212,255,0.3)",
+                  color: "#00d4ff",
+                  boxShadow: "0 0 20px rgba(0,212,255,0.1)",
+                }}
+                data-testid="button-launch"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                Play Now
               </button>
             </Link>
           </div>
         </motion.nav>
 
-        {/* ─── Hero Section ───────────────────────────────── */}
-        <div className="flex-1 flex items-center px-6 md:px-10 lg:px-16 py-8">
+        <div className="flex-1 flex items-center px-6 md:px-12 lg:px-20 py-8 md:py-16">
           <div className="w-full max-w-7xl mx-auto">
-            {/* Decorative vertical line */}
-            <div className="absolute left-[42%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-amber-500/10 to-transparent -skew-x-12 hidden lg:block" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              {/* Left: Hero content */}
-              <div className="lg:col-span-5 space-y-7">
+              <div className="space-y-8">
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.7, delay: 0.2 }}
+                  transition={{ duration: 0.7, delay: 0.15 }}
                 >
-                  <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-5 border border-green-500/15">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(0,212,255,0.6)] animate-pulse" />
-                    <span className="text-[0.625rem] text-green-400/80 uppercase tracking-wider font-semibold">Live & Provably Fair</span>
+                  <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6" style={{ background: "rgba(0,255,157,0.08)", border: "1px solid rgba(0,255,157,0.15)" }}>
+                    <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(0,255,157,0.6)]" style={{ animation: "pulse 2s ease-in-out infinite" }} />
+                    <span className="text-[0.7rem] text-green-400 uppercase tracking-wider font-semibold">
+                      {onlineCount > 0 ? `${onlineCount} Players Online` : "Live Now"}
+                    </span>
                   </div>
 
-                  <h1 className="text-5xl lg:text-7xl font-black tracking-tight leading-[0.9] mb-4">
-                    <span className="block text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.08)]">Build Your</span>
-                    <span className="block gold-text drop-shadow-[0_0_30px_rgba(0,212,255,0.3)]">Poker</span>
-                    <span className="block text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.08)]">Empire</span>
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-black leading-[0.95] tracking-tight">
+                    <span className="block text-white">The Future</span>
+                    <span className="block text-white">of Online</span>
+                    <span
+                      className="block"
+                      style={{
+                        background: "linear-gradient(135deg, #00d4ff, #00ff9d)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        filter: "drop-shadow(0 0 30px rgba(0,212,255,0.3))",
+                      }}
+                    >
+                      Poker
+                    </span>
                   </h1>
                 </motion.div>
 
-                <motion.div
+                <motion.p
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.4 }}
+                  transition={{ duration: 0.6, delay: 0.35 }}
+                  className="text-lg text-gray-400 leading-relaxed max-w-lg"
                 >
-                  <p className="text-base text-gray-300 leading-relaxed">
-                    Create clubs, run tournaments, and compete in
-                    <span className="text-cyan-400 font-medium"> real-time multiplayer</span> poker
-                    with provably fair shuffles.
-                  </p>
-                </motion.div>
+                  Provably fair shuffles. Real-time multiplayer. Private clubs with video tables.
+                  Every hand is cryptographically verified — no trust required.
+                </motion.p>
 
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.6 }}
-                  className="flex items-center gap-4 pt-1"
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                  className="flex flex-wrap items-center gap-4 pt-2"
                 >
                   <Link href="/lobby">
                     <button
-                      className="group relative overflow-hidden rounded-xl px-8 py-4 font-bold text-base uppercase tracking-wider text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
+                      className="group relative overflow-hidden rounded-xl px-10 py-4 font-bold text-base uppercase tracking-wider text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
                       style={{
-                        background: "linear-gradient(135deg, #00d4ff, #00d4aa, #00d4ff)",
-                        boxShadow: "0 0 40px rgba(0,212,255,0.3), 0 0 80px rgba(0,212,255,0.08), inset 0 1px 0 rgba(255,255,255,0.3)",
+                        background: "linear-gradient(135deg, #00d4ff, #00b4d8)",
+                        boxShadow: "0 0 40px rgba(0,212,255,0.25), 0 4px 20px rgba(0,0,0,0.3)",
                       }}
+                      data-testid="button-play-now"
                     >
-                      <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="relative flex items-center gap-2">
-                        <Play className="w-4 h-4 fill-current" />
+                      <div className="absolute inset-0 bg-white/0 group-hover:bg-white/15 transition-all duration-300" />
+                      <div className="relative flex items-center gap-2.5">
+                        <Gamepad2 className="w-5 h-5" />
                         Play Now
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </button>
                   </Link>
+
                   <Link href="/game">
-                    <button className="glass rounded-xl px-6 py-3.5 text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all border border-white/5">
-                      Play Offline
+                    <button
+                      className="rounded-xl px-7 py-4 text-sm font-semibold text-gray-300 hover:text-white transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                      data-testid="button-play-offline"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Crown className="w-4 h-4 text-amber-500/70" />
+                        Practice Mode
+                      </div>
                     </button>
                   </Link>
                 </motion.div>
-
-                {/* Live player count */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.8 }}
-                  className="flex items-center gap-3 pt-3"
-                >
-                  <div className="flex -space-x-3">
-                    {[avatar1, avatar2, avatar3].map((av, i) => (
-                      <div
-                        key={i}
-                        className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#141f30] shadow-lg"
-                        style={{ boxShadow: "0 0 10px rgba(0,212,255,0.12)" }}
-                      >
-                        <img src={av} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                    <div className="w-10 h-10 rounded-full bg-[#111b2a] border-2 border-[#141f30] flex items-center justify-center text-[0.625rem] font-bold text-cyan-400">
-                      +2k
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-500">Playing right now</span>
-                </motion.div>
               </div>
 
-              {/* Right: Floating panels */}
-              <div className="lg:col-span-7 relative h-[550px] flex items-center justify-center">
-
-                {/* Table preview panel */}
-                <motion.div
-                  initial={{ opacity: 0, x: -40, y: 30 }}
-                  animate={{ opacity: 1, x: 0, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                  className="absolute left-0 lg:left-2 top-8 w-[300px] glass rounded-xl overflow-hidden transform -rotate-2 hover:scale-[1.03] hover:z-30 transition-all duration-300 z-10"
-                  style={{ border: "1px solid rgba(0,212,255,0.12)", boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 25px rgba(0,212,255,0.04)" }}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="relative hidden lg:block"
+              >
+                <div
+                  className="relative rounded-2xl overflow-hidden"
+                  style={{
+                    border: "1px solid rgba(0,212,255,0.12)",
+                    boxShadow: "0 30px 80px rgba(0,0,0,0.5), 0 0 40px rgba(0,212,255,0.06)",
+                  }}
                 >
-                  <div className="flex items-center justify-between p-3 border-b border-white/5">
-                    <div className="flex items-center gap-2 text-cyan-400 text-[0.625rem] font-mono uppercase tracking-wider">
-                      <Users className="w-3 h-3" />
-                      <span>Live Table Preview</span>
-                    </div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                  </div>
-                  <div className="aspect-[4/3] relative bg-[#141f30]">
-                    <img src={feltImg} className="w-full h-full object-cover opacity-70" alt="Table" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-                    {/* Mini chip stack */}
-                    <img src={chipStack} alt="" className="absolute bottom-4 right-4 w-14 h-14 object-contain opacity-80 drop-shadow-[0_0_10px_rgba(0,212,255,0.3)]" />
-                    <div className="absolute bottom-3 left-3">
-                      <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">High Stakes NLH</div>
-                      <div className="text-sm font-bold text-white">50/100 &middot; 6-Max</div>
-                    </div>
-                  </div>
-                </motion.div>
+                  <div className="aspect-[16/10] relative">
+                    <img src={feltImg} alt="Poker Table" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
 
-                {/* Provably Fair panel */}
-                <motion.div
-                  initial={{ opacity: 0, x: 40, y: -20 }}
-                  animate={{ opacity: 1, x: 0, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                  className="absolute right-0 lg:right-2 top-12 w-[320px] glass rounded-xl overflow-hidden transform rotate-1 hover:scale-[1.03] transition-all duration-300 z-20"
-                  style={{ border: "1px solid rgba(0,212,255,0.12)", boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 25px rgba(0,212,255,0.04)" }}
-                >
-                  <div className="flex items-center justify-between p-3 border-b border-white/5">
-                    <div className="flex items-center gap-2 text-green-400 text-[0.625rem] font-mono uppercase tracking-wider">
-                      <Lock className="w-3 h-3" />
-                      <span>Multi-Source Entropy</span>
-                    </div>
-                    <div className="text-[0.5rem] font-mono text-green-400/50">SHA-256</div>
-                  </div>
-                  <div className="aspect-[16/9] relative bg-black/40">
-                    <div
-                      className="absolute inset-0 z-10 pointer-events-none"
-                      style={{ background: "repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,212,255,0.03) 2px, rgba(0,212,255,0.03) 4px)" }}
+                    <img
+                      src={chipStack}
+                      alt=""
+                      className="absolute bottom-8 right-8 w-24 h-24 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
                     />
-                    <img src={entropyHud} className="w-full h-full object-cover opacity-70 mix-blend-screen" alt="Entropy" />
-                    <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-                      <div className="text-[0.5rem] font-mono text-green-400/60">VERIFIED ✓</div>
-                      <div className="text-[0.5rem] font-mono text-green-400/40">BLOCK #892,101</div>
+
+                    <div className="absolute top-5 left-5">
+                      <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(0,212,255,0.2)" }}>
+                        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                        <span className="text-[0.7rem] text-cyan-400 font-mono font-bold uppercase tracking-wider">Live</span>
+                      </div>
                     </div>
-                    <div className="absolute bottom-3 left-3">
-                      <div className="text-[0.5rem] text-gray-600 font-mono">Fisher-Yates + Chainlink VRF</div>
+
+                    <div className="absolute bottom-6 left-6">
+                      <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">No-Limit Hold'em</div>
+                      <div className="text-2xl font-black text-white">
+                        50/100 Blinds
+                      </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
 
-                {/* Bottom center: Shield badge */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.7 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6, delay: 0.9, type: "spring" }}
-                  className="absolute bottom-0 left-1/2 lg:left-[38%] -translate-x-1/2 z-30 glass rounded-xl p-4 flex items-center gap-4"
-                  style={{ border: "1px solid rgba(0,212,255,0.15)", boxShadow: "0 0 40px rgba(0,212,255,0.06), 0 20px 40px rgba(0,0,0,0.4)" }}
+                <div
+                  className="absolute -bottom-4 -right-4 rounded-xl px-5 py-3 flex items-center gap-3 z-20"
+                  style={{
+                    background: "rgba(10,14,26,0.9)",
+                    border: "1px solid rgba(0,255,157,0.2)",
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.4), 0 0 20px rgba(0,255,157,0.05)",
+                    backdropFilter: "blur(12px)",
+                  }}
                 >
-                  <div className="relative shrink-0">
-                    <div className="absolute inset-[-4px] bg-green-500 blur-xl opacity-20 animate-pulse" />
-                    <div className="relative w-12 h-12 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                      <Shield className="w-6 h-6 text-green-400" />
-                    </div>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "rgba(0,255,157,0.1)", border: "1px solid rgba(0,255,157,0.2)" }}>
+                    <Shield className="w-5 h-5 text-green-400" />
                   </div>
                   <div>
-                    <div className="text-[0.5625rem] text-gray-500 font-bold uppercase tracking-wider">Blockchain Verified</div>
-                    <div className="text-base font-bold text-white leading-tight">Provably Fair</div>
-                    <div className="text-[0.5625rem] text-gray-600 font-mono mt-0.5">Every shuffle. Every hand.</div>
+                    <div className="text-sm font-bold text-white">Provably Fair</div>
+                    <div className="text-[0.65rem] text-gray-500 font-mono">SHA-256 Verified</div>
                   </div>
-                </motion.div>
-              </div>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
 
-        {/* ─── Features Grid ──────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1, duration: 0.7 }}
-          className="px-6 md:px-10 lg:px-16 pb-12"
+          transition={{ delay: 0.7, duration: 0.7 }}
+          className="px-6 md:px-12 lg:px-20 pb-16"
         >
           <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl md:text-3xl font-black text-white mb-3">Why High Rollers Club?</h2>
+              <p className="text-sm text-gray-500 max-w-md mx-auto">Not just another poker app. Built for serious players who demand transparency and community.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {FEATURES.map((f, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.2 + i * 0.1 }}
-                  className="glass rounded-xl p-5 border border-white/[0.04] hover:border-white/[0.08] transition-all group"
+                  transition={{ delay: 0.8 + i * 0.08 }}
+                  className="group rounded-xl p-6 transition-all duration-300 hover:translate-y-[-2px]"
+                  style={{
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = `${f.accent}30`;
+                    (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 30px ${f.accent}08`;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.05)";
+                    (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                  }}
                 >
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-all group-hover:scale-110"
-                    style={{
-                      background: `${f.color}10`,
-                      border: `1px solid ${f.color}20`,
-                      boxShadow: `0 0 20px ${f.color}08`,
-                    }}
+                    className="w-11 h-11 rounded-lg flex items-center justify-center mb-4"
+                    style={{ background: `${f.accent}10`, border: `1px solid ${f.accent}20` }}
                   >
-                    <f.icon className="w-5 h-5" style={{ color: f.color }} />
+                    <f.icon className="w-5 h-5" style={{ color: f.accent }} />
                   </div>
-                  <h3 className="text-sm font-bold text-white mb-1">{f.title}</h3>
-                  <p className="text-[0.6875rem] text-gray-400 leading-relaxed">{f.desc}</p>
+                  <h3 className="text-base font-bold text-white mb-2">{f.title}</h3>
+                  <p className="text-sm text-gray-400 leading-relaxed">{f.desc}</p>
                 </motion.div>
               ))}
             </div>
           </div>
         </motion.div>
 
-        {/* ─── Stats Bar ──────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="px-6 md:px-10 lg:px-16 pb-6"
-        >
+        <div className="px-6 md:px-12 lg:px-20 pb-8">
           <div className="max-w-7xl mx-auto">
-            <div className="glass rounded-xl p-4 flex items-center justify-around border border-white/[0.04]">
-              {stats.map((s, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <s.icon className="w-4 h-4 text-cyan-400/60" />
-                  <div>
-                    <div className="text-lg font-bold text-white font-mono">{s.value}</div>
-                    <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{s.label}</div>
+            <div
+              className="rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6"
+              style={{
+                background: "linear-gradient(135deg, rgba(0,212,255,0.06), rgba(0,255,157,0.03))",
+                border: "1px solid rgba(0,212,255,0.1)",
+              }}
+            >
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1">Ready to play?</h3>
+                <p className="text-sm text-gray-400">Join the table in seconds. No download required.</p>
+              </div>
+              <Link href="/lobby">
+                <button
+                  className="rounded-xl px-8 py-3.5 font-bold text-sm uppercase tracking-wider text-black shrink-0"
+                  style={{
+                    background: "linear-gradient(135deg, #00d4ff, #00b4d8)",
+                    boxShadow: "0 0 25px rgba(0,212,255,0.2)",
+                  }}
+                  data-testid="button-cta-bottom"
+                >
+                  <div className="flex items-center gap-2">
+                    <Play className="w-4 h-4 fill-current" />
+                    Enter the Lobby
                   </div>
-                </div>
-              ))}
+                </button>
+              </Link>
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* ─── Footer ─────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 1.6 }}
-          className="px-6 md:px-10 lg:px-16 py-5 border-t border-white/[0.03]"
-        >
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4 opacity-50">
-              <div className="flex items-center gap-1.5">
-                <Smartphone className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-[0.625rem] text-gray-500 font-semibold">iOS & Android</span>
-              </div>
-              <div className="h-3 w-px bg-gray-800" />
-              <span className="text-[0.625rem] text-gray-500 font-semibold">USDT</span>
-              <Bitcoin className="w-3.5 h-3.5 text-gray-400" />
-              <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+        <div className="px-6 md:px-12 lg:px-20 py-6 border-t border-white/[0.04]">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2 opacity-50">
+              <img src={lionLogo} alt="" className="w-5 h-5 object-contain" />
+              <span className="text-[0.65rem] text-gray-500 font-semibold tracking-wider">HIGH ROLLERS CLUB</span>
             </div>
-
-            <div className="flex items-center gap-2.5 opacity-50">
-              <div className="text-right">
-                <div className="text-[0.5rem] text-gray-600 uppercase tracking-widest">Powered By</div>
-                <div className="text-[0.625rem] font-bold text-gray-400 uppercase tracking-widest">Adaptive AI</div>
-              </div>
-              <div className="w-7 h-7 glass rounded-lg flex items-center justify-center border border-white/5">
-                <Cpu className="w-3.5 h-3.5 text-gray-500" />
-              </div>
+            <div className="text-[0.6rem] text-gray-600 font-mono">
+              Provably Fair Texas Hold'em
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

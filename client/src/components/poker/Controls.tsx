@@ -56,6 +56,8 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
   // callCost is the amount the hero needs to add to match the current bet (0 = can check)
   const needsToCall = (callCost ?? 0) > 0;
   const callAmount = callCost ?? 0;
+  // Buttons are disabled when pending OR not hero's turn
+  const buttonsDisabled = isPending || !isHeroTurn;
 
   // Auto-fold: when hero's turn arrives and autoFold is checked, auto-fold immediately
   const autoFoldTriggeredRef = useRef(false);
@@ -66,6 +68,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
       setAutoFold(false);
       setIsPending(true);
       sound.playFold();
+      sound.stopBgm();
       onAction("fold");
     } else if (autoCheckFold) {
       autoFoldTriggeredRef.current = true;
@@ -77,6 +80,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
       } else {
         setIsPending(true);
         sound.playFold();
+        sound.stopBgm();
         onAction("fold");
       }
     }
@@ -133,6 +137,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     setIsPending(true);
     setFoldConfirm(false);
     sound.playFold();
+    sound.stopBgm();
     onAction("fold");
   }, [sound, onAction, isPending]);
 
@@ -184,7 +189,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
   // Keyboard shortcuts: F=fold (double-tap), C=check/call, R=raise, A=all-in
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (isPending) return;
+      if (isPending || !isHeroTurn) return;
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
@@ -251,14 +256,14 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
               </div>
             )}
 
-            {/* Action buttons (center) */}
-            <div className="flex items-center gap-2 flex-1 justify-center">
+            {/* Action buttons (center) — greyed out when not hero's turn */}
+            <div className={`flex items-center gap-2 flex-1 justify-center transition-all duration-200 ${!isHeroTurn ? "opacity-40 grayscale" : ""}`}>
               {/* FOLD */}
               <motion.button
-                whileHover={isPending ? {} : { scale: 1.03 }}
-                whileTap={isPending ? {} : { scale: 0.96 }}
+                whileHover={buttonsDisabled ? {} : { scale: 1.03 }}
+                whileTap={buttonsDisabled ? {} : { scale: 0.96 }}
                 onClick={handleFold}
-                disabled={isPending}
+                disabled={buttonsDisabled}
                 title="Fold (F)"
                 className={`
                   relative overflow-hidden rounded-xl py-2.5 px-5 min-w-[80px]
@@ -267,7 +272,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     ? "bg-red-700 text-white border-2 border-red-400 animate-pulse"
                     : "text-white border border-red-500/40"
                   }
-                  ${isPending ? "opacity-50 pointer-events-none" : "hover:brightness-110"}
+                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : "hover:brightness-110"}
                 `}
                 style={{
                   background: foldConfirm ? undefined : "linear-gradient(to bottom, #ef4444, #b91c1c)",
@@ -284,16 +289,16 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
               {/* CHECK / CALL */}
               <motion.button
-                whileHover={isPending ? {} : { scale: 1.03 }}
-                whileTap={isPending ? {} : { scale: 0.96 }}
+                whileHover={buttonsDisabled ? {} : { scale: 1.03 }}
+                whileTap={buttonsDisabled ? {} : { scale: 0.96 }}
                 onClick={needsToCall ? handleCall : handleCheck}
-                disabled={isPending}
+                disabled={buttonsDisabled}
                 title={needsToCall ? `Call $${callAmount} (C)` : "Check (C)"}
                 className={`
                   relative overflow-hidden rounded-xl py-2.5 px-5 min-w-[80px]
                   font-bold text-sm uppercase tracking-wider transition-all
                   text-white border border-emerald-500/40
-                  ${isPending ? "opacity-50 pointer-events-none" : "hover:brightness-110"}
+                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : "hover:brightness-110"}
                 `}
                 style={{
                   background: "linear-gradient(to bottom, #10b981, #047857)",
@@ -313,10 +318,10 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
               {/* RAISE — click to open sizing, or direct action */}
               <motion.button
-                whileHover={isPending ? {} : { scale: 1.03 }}
-                whileTap={isPending ? {} : { scale: 0.96 }}
+                whileHover={buttonsDisabled ? {} : { scale: 1.03 }}
+                whileTap={buttonsDisabled ? {} : { scale: 0.96 }}
                 onClick={() => {
-                  if (isPending) return;
+                  if (buttonsDisabled) return;
                   if (!showRaiseSlider) {
                     setShowRaiseSlider(true);
                   } else if (isAllIn) {
@@ -325,7 +330,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     handleRaise();
                   }
                 }}
-                disabled={isPending}
+                disabled={buttonsDisabled}
                 title={showRaiseSlider ? `Raise to $${betAmount.toLocaleString()} (R)` : "Open raise sizing (R)"}
                 className={`
                   relative overflow-hidden rounded-xl py-2.5 px-5 min-w-[80px]
@@ -336,7 +341,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     ? "text-white border border-cyan-400/60"
                     : "text-white border border-cyan-500/40"
                   }
-                  ${isPending ? "opacity-50 pointer-events-none" : "hover:brightness-110"}
+                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : "hover:brightness-110"}
                 `}
                 style={{
                   background: isAllIn && showRaiseSlider

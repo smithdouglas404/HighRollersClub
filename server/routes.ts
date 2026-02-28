@@ -2335,6 +2335,42 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // ─── Speech Translation ────────────────────────────────────────────────
+  app.post("/api/translate", requireAuth, async (req, res) => {
+    try {
+      const { text } = req.body;
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ message: "Text is required" });
+      }
+      if (text.length > 500) {
+        return res.status(400).json({ message: "Text too long" });
+      }
+
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return res.json({ translated: text, original: text, detected: "unknown" });
+      }
+
+      const OpenAI = (await import("openai")).default;
+      const openai = new OpenAI({ apiKey });
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a translator. Translate the following text to English. Return ONLY the translated text, nothing else. If the text is already in English, return it unchanged." },
+          { role: "user", content: text },
+        ],
+        max_tokens: 200,
+        temperature: 0.1,
+      });
+
+      const translated = completion.choices[0]?.message?.content?.trim() || text;
+      res.json({ translated, original: text, detected: "auto" });
+    } catch (err) {
+      console.error("[translate] Error:", err);
+      res.json({ translated: req.body?.text || "", original: req.body?.text || "", detected: "error" });
+    }
+  });
+
   // ─── Create HTTP Server + WebSocket ──────────────────────────────────────
   const httpServer = createServer(app);
   setupWebSocket(httpServer, sessionMiddleware);

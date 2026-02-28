@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Seat } from "../components/poker/Seat";
@@ -29,6 +29,7 @@ import { TournamentStatsPanel } from "@/components/game/TournamentStatsPanel";
 import { PlayerAnalyticsPanel } from "@/components/game/PlayerAnalyticsPanel";
 import { AIAnalysisPanel } from "@/components/game/AIAnalysisPanel";
 import { Player } from "../lib/poker-types";
+import { getHandStrength } from "../lib/hand-evaluator";
 import { TABLE_SEATS } from "@/lib/table-constants";
 import { useGameEngine, type GameEngineConfig } from "@/lib/game-engine";
 import { useMultiplayerGame } from "@/lib/multiplayer-engine";
@@ -38,7 +39,7 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic } from "lucide-react";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
 import { TournamentResults } from "@/components/game/TournamentResults";
@@ -104,6 +105,87 @@ function buildPlayersFromConfig(heroAvatar: AvatarOption, heroName: string, conf
     },
     ...bots,
   ];
+}
+
+// Speech-to-text hook using browser's SpeechRecognition API
+function useSpeechToChat(sendChat?: (msg: string) => void, isMultiplayer?: boolean) {
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const toggle = useCallback(() => {
+    // Stop if currently listening
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+      return;
+    }
+
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR || !sendChat) return;
+
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = async (event: any) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (!transcript) return;
+
+      // Check if non-English (non-ASCII characters present)
+      const isLikelyNonEnglish = /[^\x00-\x7F]/.test(transcript);
+
+      if (isLikelyNonEnglish && isMultiplayer) {
+        try {
+          const resp = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: transcript }),
+            credentials: "include",
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            sendChat(data.translated !== data.original ? `${data.translated} (translated)` : transcript);
+          } else {
+            sendChat(transcript);
+          }
+        } catch {
+          sendChat(transcript);
+        }
+      } else {
+        sendChat(transcript);
+      }
+    };
+
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => { setIsListening(false); recognitionRef.current = null; };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [sendChat, isMultiplayer]);
+
+  const supported = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+  return { isListening, toggle, supported };
+}
+
+// Player style classification from VPIP + PFR thresholds
+function classifyPlayerStyle(stats: OpponentHudStats): { label: string; color: string; tooltip: string } | null {
+  if (stats.handsPlayed < 4) return null;
+  const vpip = (stats.vpipCount / stats.handsPlayed) * 100;
+  const pfr = (stats.pfrCount / stats.handsPlayed) * 100;
+  const tight = vpip < 20, loose = vpip > 35;
+  const aggro = pfr > 20, passive = pfr < 10;
+  if (tight && aggro) return { label: "TAG", color: "#22c55e", tooltip: "Tight-Aggressive" };
+  if (loose && aggro) return { label: "LAG", color: "#f97316", tooltip: "Loose-Aggressive" };
+  if (tight && passive) return { label: "Rock", color: "#3b82f6", tooltip: "Tight-Passive" };
+  if (loose && passive) return { label: "Fish", color: "#ef4444", tooltip: "Calling Station" };
+  if (loose) return { label: "Loose", color: "#eab308", tooltip: "Plays many hands" };
+  if (tight) return { label: "Tight", color: "#06b6d4", tooltip: "Selective hand range" };
+  if (aggro) return { label: "Aggro", color: "#f97316", tooltip: "Aggressive bettor" };
+  if (passive) return { label: "Passive", color: "#3b82f6", tooltip: "Prefers calling" };
+  return { label: "Avg", color: "#9ca3af", tooltip: "Average play style" };
 }
 
 // Shared game table renderer
@@ -181,6 +263,22 @@ function GameTable({
   // Animated hero chip counter for the top bar
   const hero = players.find((p) => p.id === heroId);
   const { value: animatedHeroChips } = useAnimatedCounter(hero?.chips || 0, 400);
+
+  // Session ledger tracking
+  const startingChipsRef = useRef<number | null>(null);
+  const biggestPotRef = useRef(0);
+  if (startingChipsRef.current === null && hero && hero.chips > 0) {
+    startingChipsRef.current = hero.chips;
+  }
+  // Track biggest pot won by hero
+  useEffect(() => {
+    if (showdown?.winnerIds?.includes(heroId) && showdown.pot > biggestPotRef.current) {
+      biggestPotRef.current = showdown.pot;
+    }
+  }, [showdown, heroId]);
+
+  // Speech-to-text for chat
+  const speech = useSpeechToChat(sendChat, isMultiplayer);
 
   // Fetch real player stats for analytics panel (debounced to avoid rapid re-fetches)
   const [playerStats, setPlayerStats] = useState({ handsPlayed: 0, potsWon: 0, vpip: 0, pfr: 0, showdownCount: 0 });
@@ -669,7 +767,7 @@ function GameTable({
 
           {/* ═══ UNIFIED BOTTOM PANEL: Hero Cards + Controls ═══ */}
           <div className="relative z-30 shrink-0">
-            <div className={`transition-all duration-300 ${!isHeroTurn || gameState.phase === "showdown" || gameState.phase === "collecting-seeds" || !dealing.controlsReady ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
+            <div className={`transition-all duration-300 ${gameState.phase === "showdown" || gameState.phase === "collecting-seeds" || !dealing.controlsReady ? "opacity-40 grayscale pointer-events-none" : "opacity-100"}`}>
               <PokerControls
                 onAction={handlePlayerAction}
                 minBet={Math.max(gameState.minRaise || 0, gameState.minBet || 0, 1)}
@@ -747,9 +845,23 @@ function GameTable({
                 }} className="flex gap-1">
                   <input
                     name="chatInput"
-                    placeholder="Type a message..."
+                    placeholder="Type or speak..."
                     className="flex-1 text-[0.625rem] px-2 py-1.5 rounded bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none"
                   />
+                  {speech.supported && (
+                    <button
+                      type="button"
+                      onClick={speech.toggle}
+                      className={`px-2 py-1.5 rounded text-[0.625rem] font-bold transition-colors ${
+                        speech.isListening
+                          ? "bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse"
+                          : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"
+                      }`}
+                      title={speech.isListening ? "Stop recording" : "Voice message"}
+                    >
+                      <Mic className="w-3 h-3" />
+                    </button>
+                  )}
                   <button type="submit" className="px-2 py-1.5 rounded bg-cyan-500/20 text-cyan-400 text-[0.625rem] font-bold hover:bg-cyan-500/30">
                     &gt;
                   </button>
@@ -758,40 +870,129 @@ function GameTable({
             )}
           </div>
 
-          {/* Player Analytics section */}
+          {/* Player Analytics section — V/P/A + style badge */}
           <div className="border-b border-white/5">
             <div className="px-3 py-2 border-b border-white/5">
               <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Player Analytics</span>
             </div>
-            <div className="px-3 py-2 space-y-1.5">
-              {players.filter(p => p.id !== heroId).slice(0, 3).map((p, i) => {
+            <div className="px-3 py-2 space-y-2.5">
+              {players.filter(p => p.id !== heroId && p.isActive).slice(0, 4).map((p) => {
                 const stats = opponentStats.get(p.id);
-                const vpip = stats && stats.handsPlayed > 0 ? Math.round((stats.vpipCount / stats.handsPlayed) * 100) : 0;
+                const hands = stats?.handsPlayed || 0;
+                const vpip = hands > 0 ? Math.round((stats!.vpipCount / hands) * 100) : 0;
+                const pfr = hands > 0 ? Math.round((stats!.pfrCount / hands) * 100) : 0;
+                const af = stats && stats.passiveActions > 0
+                  ? Math.round((stats.aggressiveActions / stats.passiveActions) * 10) / 10
+                  : stats && stats.aggressiveActions > 0 ? 99 : 0;
+                const style = stats ? classifyPlayerStyle(stats) : null;
                 return (
-                  <div key={p.id} className="flex items-center gap-2 text-[0.625rem]">
-                    <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-700 shrink-0">
-                      {p.avatar ? <img src={p.avatar} alt="" className="w-full h-full object-cover" /> : (
-                        <div className="w-full h-full flex items-center justify-center text-[0.5rem] text-gray-400">{p.name[0]}</div>
+                  <div key={p.id} className="space-y-1">
+                    <div className="flex items-center gap-2 text-[0.625rem]">
+                      <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-700 shrink-0">
+                        {p.avatar ? <img src={p.avatar} alt="" className="w-full h-full object-cover" /> : (
+                          <div className="w-full h-full flex items-center justify-center text-[0.5rem] text-gray-400">{p.name[0]}</div>
+                        )}
+                      </div>
+                      <span className="text-gray-300 truncate flex-1">{p.name}</span>
+                      {style && (
+                        <span
+                          className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider"
+                          style={{ color: style.color, background: `${style.color}15`, border: `1px solid ${style.color}30` }}
+                          title={style.tooltip}
+                        >
+                          {style.label}
+                        </span>
                       )}
                     </div>
-                    <span className="text-gray-300 truncate flex-1">{p.name}</span>
-                    <span className="text-gray-300 font-mono font-bold">{vpip}%</span>
+                    {hands > 0 && (
+                      <div className="flex items-center gap-2 text-[0.5625rem] pl-7">
+                        <span className="text-gray-500" title="VPIP: Voluntarily Put $ In Pot">V:<span className="text-gray-300 font-mono font-bold ml-0.5">{vpip}%</span></span>
+                        <span className="text-gray-500" title="PFR: Pre-Flop Raise %">P:<span className="text-gray-300 font-mono font-bold ml-0.5">{pfr}%</span></span>
+                        <span className="text-gray-500" title="AF: Aggression Factor (raise/call ratio)">A:<span className="text-gray-300 font-mono font-bold ml-0.5">{af > 10 ? "99+" : af.toFixed(1)}</span></span>
+                        <span className="text-gray-600 font-mono">({hands})</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
+              {players.filter(p => p.id !== heroId && p.isActive).length === 0 && (
+                <div className="text-gray-600 italic text-[0.5625rem]">No opponents</div>
+              )}
             </div>
           </div>
 
-          {/* Tournament Stats section */}
-          <div>
+          {/* Hand Strength section (shown in sidebar instead of floating overlay) */}
+          {heroHoleCards && gameState.phase !== "showdown" && gameState.phase !== "waiting" && (() => {
+            const strength = getHandStrength(heroHoleCards, gameState.communityCards);
+            return (
+              <div className="border-b border-white/5">
+                <div className="px-3 py-2 border-b border-white/5">
+                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Hand Strength</span>
+                </div>
+                <div className="px-3 py-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[0.625rem] font-bold" style={{ color: strength.color }}>{strength.label}</span>
+                    <span className="text-[0.625rem] font-mono font-bold" style={{ color: strength.color }}>{strength.percentage}%</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full overflow-hidden bg-white/5">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${strength.percentage}%`, background: strength.color }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Game Stats section */}
+          <div className="border-b border-white/5">
             <div className="px-3 py-2 border-b border-white/5">
-              <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Tournament Stats</span>
+              <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Game Stats</span>
             </div>
             <div className="px-3 py-2 space-y-1 text-[0.625rem]">
               <div className="flex justify-between"><span className="text-gray-500">Chips</span><span className="text-white font-mono">{hero?.chips?.toLocaleString() || "—"}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Players</span><span className="text-white font-mono">{formatInfo?.playersRemaining || players.length}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Current Bet</span><span className="font-mono" style={{ color: "#ffd700" }}>${gameState.minBet || 0}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Round</span><span className="text-gray-300 font-mono uppercase">{gameState.phase}</span></div>
+            </div>
+          </div>
+
+          {/* Session Ledger */}
+          <div>
+            <div className="px-3 py-2 border-b border-white/5">
+              <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Session Ledger</span>
+            </div>
+            <div className="px-3 py-2 space-y-1 text-[0.625rem]">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Buy-In</span>
+                <span className="text-white font-mono">${(startingChipsRef.current || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Current Stack</span>
+                <span className="text-white font-mono">${(hero?.chips || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Profit / Loss</span>
+                {(() => {
+                  const pnl = (hero?.chips || 0) - (startingChipsRef.current || 0);
+                  return (
+                    <span className={`font-mono font-bold ${pnl > 0 ? "text-emerald-400" : pnl < 0 ? "text-red-400" : "text-gray-400"}`}>
+                      {pnl > 0 ? "+" : ""}{pnl.toLocaleString()}
+                    </span>
+                  );
+                })()}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Hands Played</span>
+                <span className="text-white font-mono">{(gameState as any).handNumber || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Biggest Pot Won</span>
+                <span className="font-mono" style={{ color: biggestPotRef.current > 0 ? "#ffd700" : undefined }}>
+                  {biggestPotRef.current > 0 ? `$${biggestPotRef.current.toLocaleString()}` : "—"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -801,6 +1002,11 @@ function GameTable({
       {/* ═══ FLOATING OVERLAYS (keep existing) ═══ */}
       <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
       <TauntPicker heroId={heroId} isMultiplayer={isMultiplayer} />
+
+      {/* Video Control Bar — multiplayer only */}
+      {isMultiplayer && tableId && (
+        <VideoControlBar heroId={heroId} tableId={tableId} playerIds={players.map(p => p.id)} />
+      )}
 
       {formatInfo && (formatInfo.gameFormat === "sng" || formatInfo.gameFormat === "tournament") && (
         <BlindLevelIndicator
@@ -893,11 +1099,13 @@ function GameTable({
         )}
       </AnimatePresence>
 
-      <HandStrengthMeter
-        holeCards={heroHoleCards}
-        communityCards={gameState.communityCards}
-        visible={gameState.phase !== "showdown" && !!heroCards}
-      />
+      {!screen.showSidebars && (
+        <HandStrengthMeter
+          holeCards={heroHoleCards}
+          communityCards={gameState.communityCards}
+          visible={gameState.phase !== "showdown" && !!heroCards}
+        />
+      )}
 
       <AnimatePresence>
         {showProvablyFair && (
@@ -1320,18 +1528,51 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 }
 
 // ─── Offline Game (Original) ──────────────────────────────────────────────────
+const BOT_CHAT_LINES = [
+  "Nice hand!", "Wow, really?", "I'll get you next time",
+  "Let's go!", "Too rich for me", "Good fold",
+  "Interesting play...", "All day", "Ship it!",
+  "That's poker", "I had the nuts, I swear", "GG",
+];
+
 function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Player[]; engineConfig?: GameEngineConfig }) {
   const { players, gameState, handlePlayerAction, showdown } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
   const [, navigate] = useLocation();
+  const [chatMessages, setChatMessages] = useState<{ playerName: string; message: string }[]>([]);
+
+  const sendChat = useCallback((message: string) => {
+    const hero = players.find(p => p.id === HERO_ID);
+    setChatMessages(prev => [...prev.slice(-50), { playerName: hero?.name || "You", message }]);
+    // Bot responds occasionally
+    if (Math.random() < 0.4) {
+      const bots = players.filter(p => p.id !== HERO_ID && p.isActive);
+      if (bots.length > 0) {
+        const bot = bots[Math.floor(Math.random() * bots.length)];
+        setTimeout(() => {
+          setChatMessages(prev => [...prev.slice(-50), {
+            playerName: bot.name,
+            message: BOT_CHAT_LINES[Math.floor(Math.random() * BOT_CHAT_LINES.length)],
+          }]);
+        }, 1500 + Math.random() * 2000);
+      }
+    }
+  }, [players]);
+
+  // Merge chat messages into gameState for the sidebar
+  const gameStateWithChat = useMemo(() => ({
+    ...gameState,
+    chatMessages,
+  }), [gameState, chatMessages]);
 
   return (
     <GameTable
       players={players}
-      gameState={gameState}
+      gameState={gameStateWithChat}
       handlePlayerAction={handlePlayerAction}
       showdown={showdown}
       heroId={HERO_ID}
       onBack={() => navigate("/lobby")}
+      sendChat={sendChat}
     />
   );
 }

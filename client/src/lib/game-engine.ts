@@ -292,7 +292,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
         allCommunity.push(currentDeck2.pop()!);
       }
       setDeck(currentDeck2);
-      setGameState(prev => ({ ...prev, communityCards: allCommunity, phase: nextPhaseName }));
+      setGameState(prev => ({ ...prev, communityCards: allCommunity, phase: nextPhaseName, minBet: 0 }));
       setPlayers(prev => prev.map(p => ({ ...p, currentBet: 0 })));
       // Continue advancing phases until showdown
       setTimeout(nextPhase, 800);
@@ -304,6 +304,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       ...prev,
       communityCards: newCommunityCards,
       phase: nextPhaseName,
+      minBet: 0,
       currentTurnPlayerId: currentPlayers[nextIndex].id,
       lastAggressorId: undefined,
     }));

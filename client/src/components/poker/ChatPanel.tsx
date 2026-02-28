@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { wsClient } from "@/lib/ws-client";
-import { MessageSquare, Send, X, ChevronRight } from "lucide-react";
+import { MessageSquare, Send, X, ChevronRight, Mic } from "lucide-react";
 
 interface ChatMessage {
   id: string;
@@ -157,6 +157,47 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
     }
   };
 
+  // Speech-to-text
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const hasSpeechAPI = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+
+  const toggleSpeech = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR || !sendChat) return;
+
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = async (event: any) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (!transcript) return;
+      const isNonEnglish = /[^\x00-\x7F]/.test(transcript);
+      if (isNonEnglish) {
+        try {
+          const resp = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: transcript }), credentials: "include" });
+          if (resp.ok) {
+            const data = await resp.json();
+            sendChat(data.translated !== data.original ? `${data.translated} (translated)` : transcript);
+          } else sendChat(transcript);
+        } catch { sendChat(transcript); }
+      } else sendChat(transcript);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => { setIsListening(false); recognitionRef.current = null; };
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [sendChat]);
+
   if (!isMultiplayer) return null;
 
   return (
@@ -267,10 +308,23 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type a message..."
+                  placeholder="Type or speak..."
                   maxLength={200}
                   className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
                 />
+                {hasSpeechAPI && (
+                  <button
+                    onClick={toggleSpeech}
+                    className={`p-2 rounded-lg border transition-colors ${
+                      isListening
+                        ? "bg-red-500/20 border-red-500/30 animate-pulse"
+                        : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
+                    title={isListening ? "Stop recording" : "Voice input"}
+                  >
+                    <Mic className={`w-3.5 h-3.5 ${isListening ? "text-red-400" : "text-gray-400"}`} />
+                  </button>
+                )}
                 <button
                   onClick={handleSend}
                   disabled={!input.trim()}

@@ -199,6 +199,7 @@ function GameTable({
   addChips, maxBuyIn, minBuyIn, walletBalance,
   buyTime, acceptInsurance, declineInsurance, voteRunIt,
   sitOut, sitIn,
+  rebuyHero, defaultBuyIn,
 }: {
   players: Player[];
   gameState: any;
@@ -238,6 +239,9 @@ function GameTable({
   voteRunIt?: (count: 1 | 2 | 3) => void;
   sitOut?: () => void;
   sitIn?: () => void;
+  // Practice mode rebuy
+  rebuyHero?: (amount: number) => void;
+  defaultBuyIn?: number;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showAddChips, setShowAddChips] = useState(false);
@@ -263,6 +267,13 @@ function GameTable({
   // Animated hero chip counter for the top bar
   const hero = players.find((p) => p.id === heroId);
   const { value: animatedHeroChips } = useAnimatedCounter(hero?.chips || 0, 400);
+
+  // Stop all audio when leaving the game
+  useEffect(() => {
+    return () => {
+      soundEngine.stopBgm();
+    };
+  }, []);
 
   // Session ledger tracking
   const startingChipsRef = useRef<number | null>(null);
@@ -1205,6 +1216,49 @@ function GameTable({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ═══ BUST OVERLAY — practice mode rebuy or exit ═══ */}
+      <AnimatePresence>
+        {hero && hero.chips <= 0 && !hero.isActive && rebuyHero && gameState.phase !== "showdown" && (
+          <motion.div
+            key="bust-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, y: 30 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="bg-gradient-to-b from-gray-900 to-gray-950 border border-white/10 rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl"
+            >
+              <div className="text-5xl mb-4">💀</div>
+              <h2 className="text-2xl font-black text-white mb-2">You're Busted!</h2>
+              <p className="text-gray-400 text-sm mb-6">You ran out of chips. Rebuy to get back in the action or head back to the lobby.</p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => rebuyHero(defaultBuyIn || 1000)}
+                  className="w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider text-white transition-all hover:brightness-110"
+                  style={{ background: "linear-gradient(to bottom, #10b981, #047857)" }}
+                >
+                  Rebuy ${(defaultBuyIn || 1000).toLocaleString()}
+                </button>
+                {onBack && (
+                  <button
+                    onClick={onBack}
+                    className="w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                  >
+                    Exit to Lobby
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
@@ -1536,8 +1590,9 @@ const BOT_CHAT_LINES = [
 ];
 
 function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Player[]; engineConfig?: GameEngineConfig }) {
-  const { players, gameState, handlePlayerAction, showdown } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
+  const { players, gameState, handlePlayerAction, showdown, rebuyHero } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
   const [, navigate] = useLocation();
+  const defaultBuyIn = initialPlayers.find(p => p.id === HERO_ID)?.chips || 1000;
   const [chatMessages, setChatMessages] = useState<{ playerName: string; message: string }[]>([]);
 
   const sendChat = useCallback((message: string) => {
@@ -1573,6 +1628,8 @@ function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Pl
       heroId={HERO_ID}
       onBack={() => navigate("/lobby")}
       sendChat={sendChat}
+      rebuyHero={(amount) => rebuyHero(amount)}
+      defaultBuyIn={defaultBuyIn}
     />
   );
 }

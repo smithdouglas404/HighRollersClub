@@ -515,11 +515,23 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     };
   }, []);
 
+  // Rebuy hero back into the game with fresh chips
+  const rebuyHero = useCallback((chipAmount: number) => {
+    setPlayers(prev => prev.map(p =>
+      p.id === heroId
+        ? { ...p, chips: chipAmount, isActive: true, status: 'waiting' as const, currentBet: 0 }
+        : p
+    ));
+    // If game is stalled (not enough players), restart
+    setTimeout(() => startGame(), 500);
+  }, [heroId, startGame]);
+
   return {
     players,
     gameState,
     handlePlayerAction,
     showdown,
     dismissShowdown: () => setShowdown(null),
+    rebuyHero,
   };
 }

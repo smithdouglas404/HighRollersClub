@@ -414,6 +414,16 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         metadata: null,
       });
       player.chips += addAmount;
+      // Persist chip change to table_players for atomicity
+      try {
+        await storage.updateTablePlayerChips(client.tableId, client.userId, player.chips);
+      } catch (persistErr) {
+        // Rollback in-memory change and refund wallet
+        player.chips -= addAmount;
+        await storage.atomicAddToWallet(client.userId, "cash_game", addAmount);
+        sendToUser(client.userId, { type: "error", message: "Failed to add chips, please try again" });
+        break;
+      }
       // Send confirmation with new wallet balance so client can update display
       sendToUser(client.userId, {
         type: "chips_added",

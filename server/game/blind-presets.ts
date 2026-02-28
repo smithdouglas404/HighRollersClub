@@ -60,7 +60,7 @@ export const MTT_SCHEDULE: BlindLevel[] = [
   { level: 15, sb: 2000, bb: 4000, ante: 400, durationSeconds: 600 },
 ];
 
-// Default payout structures by player count
+// Default payout structures by player count (small fields, <= 18 players)
 export function getDefaultPayouts(playerCount: number): PayoutEntry[] {
   if (playerCount <= 2) {
     return [{ place: 1, percentage: 100 }];
@@ -83,6 +83,88 @@ export function getDefaultPayouts(playerCount: number): PayoutEntry[] {
     { place: 2, percentage: 30 },
     { place: 3, percentage: 20 },
   ];
+}
+
+// Large field payout structure (MTTs with > 18 players)
+// Pays top ~15% of the field with a smooth payout curve
+export function getLargeFieldPayouts(playerCount: number): PayoutEntry[] {
+  const paidPlaces = Math.max(3, Math.floor(playerCount * 0.15));
+
+  // Base payout percentages — top-heavy curve inspired by real MTT structures
+  // 1st gets the largest share, decaying smoothly toward min-cash
+  if (paidPlaces <= 3) {
+    return [
+      { place: 1, percentage: 50 },
+      { place: 2, percentage: 30 },
+      { place: 3, percentage: 20 },
+    ];
+  }
+
+  if (paidPlaces <= 5) {
+    return [
+      { place: 1, percentage: 40 },
+      { place: 2, percentage: 25 },
+      { place: 3, percentage: 17 },
+      { place: 4, percentage: 11 },
+      { place: 5, percentage: 7 },
+    ].slice(0, paidPlaces);
+  }
+
+  if (paidPlaces <= 9) {
+    const base: PayoutEntry[] = [
+      { place: 1, percentage: 30 },
+      { place: 2, percentage: 20 },
+      { place: 3, percentage: 14 },
+      { place: 4, percentage: 10.5 },
+      { place: 5, percentage: 8 },
+      { place: 6, percentage: 6 },
+      { place: 7, percentage: 4.5 },
+      { place: 8, percentage: 3.8 },
+      { place: 9, percentage: 3.2 },
+    ];
+    return base.slice(0, paidPlaces);
+  }
+
+  // For larger fields (10+ paid places), generate a smooth curve
+  // Top 3 get fixed shares, rest follows a geometric decay
+  const payouts: PayoutEntry[] = [];
+  const topFixed = [
+    { place: 1, pct: 25 },
+    { place: 2, pct: 16 },
+    { place: 3, pct: 11 },
+  ];
+
+  let remaining = 100 - topFixed.reduce((s, e) => s + e.pct, 0); // 48%
+  const decayPlaces = paidPlaces - topFixed.length;
+
+  // Geometric decay: each place gets ratio * previous place
+  // Sum of geometric series: a * (1 - r^n) / (1 - r) = remaining
+  // We pick r = 0.75 and solve for a
+  const ratio = 0.75;
+  const geoSum = (1 - Math.pow(ratio, decayPlaces)) / (1 - ratio);
+  const firstPct = remaining / geoSum;
+
+  for (const f of topFixed) {
+    payouts.push({ place: f.place, percentage: Math.round(f.pct * 100) / 100 });
+  }
+
+  for (let i = 0; i < decayPlaces; i++) {
+    const pct = firstPct * Math.pow(ratio, i);
+    payouts.push({
+      place: topFixed.length + 1 + i,
+      percentage: Math.round(pct * 100) / 100,
+    });
+  }
+
+  // Normalize to exactly 100%
+  const total = payouts.reduce((s, p) => s + p.percentage, 0);
+  if (Math.abs(total - 100) > 0.01) {
+    const diff = 100 - total;
+    // Adjust 1st place to absorb rounding error
+    payouts[0].percentage = Math.round((payouts[0].percentage + diff) * 100) / 100;
+  }
+
+  return payouts;
 }
 
 export function getBlindPreset(name: string): BlindLevel[] {

@@ -39,7 +39,13 @@
       "WebFetch(domain:replit.com)",
       "Bash(curl -s http://localhost:5000/api/auth/me 2>&1 | head -5)",
       "Bash(npx tsc --noEmit --pretty 2>&1 | head -30.jpeg to help you and you still suck)",
-      "Bash(cd /home/runner/workspace && npx vite build 2>&1 | tail -10)"
+      "Bash(cd /home/runner/workspace && npx vite build 2>&1 | tail -10)",
+      "WebFetch(domain:www.cdnfonts.com)",
+      "WebFetch(domain:nanobananas.ai)",
+      "WebFetch(domain:elevenlabs.io)",
+      "Bash(sleep 2 && curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5000)",
+      "Bash(timeout 30 node /tmp/test-tables.mjs 2>&1)",
+      "Bash(npx tsc --noEmit --skipLibCheck 2>&1 | head -30ojoejoe)"
     ]
   }
 }

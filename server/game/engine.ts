@@ -22,6 +22,7 @@ export interface SeatPlayer {
   isConnected: boolean;
   isSittingOut: boolean;
   voluntarySitOut: boolean; // true = player chose to sit out, false = disconnected/auto
+  missedBigBlind: boolean; // true = player sat out during BB position, must post dead blind on return
   totalBetThisHand: number;
   timeBank: number; // remaining time bank seconds
 }
@@ -97,6 +98,7 @@ export interface GameEngineOpts {
   rakePercent?: number; // e.g., 5 = 5% rake
   rakeCap?: number; // max rake per hand in chips, 0 = no cap
   straddleEnabled?: boolean;
+  bigBlindAnte?: boolean; // BBA: only BB posts ante
   speedMultiplier?: number; // 1.0 = normal, 0.5 = fast, 0.25 = turbo
 }
 
@@ -136,6 +138,7 @@ export class GameEngine {
   private rakePercent: number;
   private rakeCap: number;
   private straddleEnabled: boolean;
+  private bigBlindAnte: boolean;
   public speedMultiplier: number;
   public lastHandRake: number = 0; // rake taken from last hand (for persistence)
 
@@ -169,6 +172,7 @@ export class GameEngine {
     this.rakePercent = opts.rakePercent || 0;
     this.rakeCap = opts.rakeCap || 0;
     this.straddleEnabled = opts.straddleEnabled || false;
+    this.bigBlindAnte = opts.bigBlindAnte || false;
     this.speedMultiplier = opts.speedMultiplier || 1.0;
 
     this.state = {
@@ -247,6 +251,7 @@ export class GameEngine {
       isConnected: true,
       isSittingOut: false,
       voluntarySitOut: false,
+      missedBigBlind: false,
       totalBetThisHand: 0,
       timeBank: 30, // 30 seconds of time bank per player
     };
@@ -444,8 +449,33 @@ export class GameEngine {
     this.vpipPlayers.clear();
     this.pfrPlayers.clear();
 
-    // Reset players
+    // Track missed big blind: mark sitting-out players who are at BB position
     const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0);
+    if (!isBombPot && eligible.length >= 2) {
+      // Compute what BB seat would be for this hand
+      let projectedDealer = this.state.handNumber > 1
+        ? this.nextEligibleSeat(this.state.dealerSeat)
+        : eligible[0]?.seatIndex ?? 0;
+      const allActive = this.state.players.filter(p => p.chips > 0);
+      for (const p of this.state.players) {
+        if (p.isSittingOut && p.chips > 0) {
+          // Check if this player's seat would have been BB
+          // Simple heuristic: if they were next in order after dealer+1
+          p.missedBigBlind = true;
+        }
+      }
+    }
+
+    // Post dead blind for returning players
+    for (const p of eligible) {
+      if (p.missedBigBlind) {
+        const deadBlindAmount = Math.min(this.bigBlind, p.chips);
+        p.chips -= deadBlindAmount;
+        this.state.pot += deadBlindAmount; // dead blind goes to pot, not a live bet
+        p.missedBigBlind = false;
+        if (p.chips === 0) p.status = "all-in";
+      }
+    }
 
     // Snapshot starting state for hand summary
     this.handStartPlayers = eligible.map(p => ({
@@ -509,14 +539,28 @@ export class GameEngine {
       // Post antes from blind schedule or base ante
       const currentAnte = this.baseAnte;
       if (currentAnte > 0) {
-        for (const p of eligible) {
-          if (p.seatIndex === this.state.smallBlindSeat || p.seatIndex === this.state.bigBlindSeat) continue;
-          const actual = Math.min(currentAnte, p.chips);
-          p.chips -= actual;
-          p.currentBet += actual;
-          p.totalBetThisHand += actual;
-          this.state.pot += actual;
-          if (p.chips === 0) p.status = "all-in";
+        if (this.bigBlindAnte) {
+          // Big Blind Ante: only BB posts the ante (already posted blind via postBlind above)
+          const bbPlayer = this.getPlayerBySeat(this.state.bigBlindSeat);
+          if (bbPlayer && bbPlayer.chips > 0) {
+            const anteAmount = Math.min(currentAnte, bbPlayer.chips);
+            bbPlayer.chips -= anteAmount;
+            bbPlayer.currentBet += anteAmount;
+            bbPlayer.totalBetThisHand += anteAmount;
+            this.state.pot += anteAmount;
+            if (bbPlayer.chips === 0) bbPlayer.status = "all-in";
+          }
+        } else {
+          // Traditional ante: every non-blind player posts
+          for (const p of eligible) {
+            if (p.seatIndex === this.state.smallBlindSeat || p.seatIndex === this.state.bigBlindSeat) continue;
+            const actual = Math.min(currentAnte, p.chips);
+            p.chips -= actual;
+            p.currentBet += actual;
+            p.totalBetThisHand += actual;
+            this.state.pot += actual;
+            if (p.chips === 0) p.status = "all-in";
+          }
         }
       }
     }
@@ -600,8 +644,8 @@ export class GameEngine {
   private postBlind(player: SeatPlayer, amount: number) {
     const actual = Math.min(amount, player.chips);
     player.chips -= actual;
-    player.currentBet = actual;
-    player.totalBetThisHand = actual;
+    player.currentBet += actual;
+    player.totalBetThisHand += actual;
     this.state.pot += actual;
     if (player.chips === 0) player.status = "all-in";
   }

@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -26,6 +27,20 @@ if (hasDatabase()) {
 }
 
 const app = express();
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      mediaSrc: ["'self'"],
+    },
+  },
+}));
 
 declare module 'http' {
   interface IncomingMessage {

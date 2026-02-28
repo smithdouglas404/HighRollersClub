@@ -97,6 +97,7 @@ class TableManager {
       rakePercent: tableRow.rakePercent || 0,
       rakeCap: tableRow.rakeCap || 0,
       straddleEnabled: tableRow.straddleEnabled || false,
+      bigBlindAnte: (tableRow as any).bigBlindAnte || false,
       speedMultiplier,
     });
 

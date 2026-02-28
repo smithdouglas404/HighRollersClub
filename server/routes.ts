@@ -10,6 +10,7 @@ import { analyzeHand } from "./game/hand-analyzer";
 import { geofenceMiddleware } from "./middleware/geofence";
 import { setAnthropicApiKey, getAnthropicApiKey, hasAIEnabled } from "./game/ai-bot-engine";
 import { hasDatabase } from "./db";
+import { MTTManager, activeMTTs } from "./game/mtt-manager";
 
 // Global kill switch — blocks buy-ins and withdrawals if integrity check fails
 let globalSystemLocked = false;
@@ -1556,6 +1557,115 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       });
 
       res.status(201).json(reg);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Start an MTT tournament
+  app.post("/api/tournaments/:id/start", requireAuth, async (req, res, next) => {
+    try {
+      const tourney = await storage.getTournament(req.params.id);
+      if (!tourney) return res.status(404).json({ message: "Tournament not found" });
+
+      if (tourney.status !== "registering") {
+        return res.status(400).json({ message: "Tournament already started or completed" });
+      }
+
+      // Verify user is admin or tournament creator
+      const userId = req.user!.id;
+      let isAuthorized = tourney.createdById === userId;
+
+      if (!isAuthorized && tourney.clubId) {
+        const members = await storage.getClubMembers(tourney.clubId);
+        const member = members.find((m: any) => m.userId === userId);
+        if (member && (member.role === "owner" || member.role === "admin")) {
+          isAuthorized = true;
+        }
+      }
+
+      if (!isAuthorized) {
+        return res.status(403).json({ message: "Only the tournament creator or club admin can start this tournament" });
+      }
+
+      // Check minimum registrations
+      const regs = await storage.getTournamentRegistrations(tourney.id);
+      if (regs.length < 2) {
+        return res.status(400).json({ message: "Need at least 2 registered players to start" });
+      }
+
+      // Already running?
+      if (activeMTTs.has(tourney.id)) {
+        return res.status(400).json({ message: "Tournament is already running" });
+      }
+
+      // Resolve display names for all registrations
+      const registrations = await Promise.all(
+        regs.map(async (r) => {
+          const user = await storage.getUser(r.userId);
+          return {
+            userId: r.userId,
+            username: user?.username ?? r.userId,
+            displayName: user?.displayName ?? user?.username ?? r.userId,
+          };
+        }),
+      );
+
+      // Create and start the MTT
+      const blindSchedule = (tourney.blindSchedule as any[]) || undefined;
+      const mtt = new MTTManager(tourney.id, registrations, {
+        maxPlayersPerTable: Math.min(9, tourney.maxPlayers),
+        prizePool: tourney.prizePool,
+        startingChips: tourney.startingChips,
+        buyInAmount: tourney.buyIn,
+        blindSchedule,
+        clubId: tourney.clubId,
+      });
+
+      activeMTTs.set(tourney.id, mtt);
+      await mtt.start();
+
+      res.json({
+        message: "Tournament started",
+        tournamentId: tourney.id,
+        tables: mtt.getTableInfo(),
+        totalPlayers: registrations.length,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Get live MTT status
+  app.get("/api/tournaments/:id/status", async (req, res, next) => {
+    try {
+      const tourney = await storage.getTournament(req.params.id);
+      if (!tourney) return res.status(404).json({ message: "Tournament not found" });
+
+      const mtt = activeMTTs.get(tourney.id);
+      if (!mtt) {
+        // Not running in memory — return DB status
+        const regs = await storage.getTournamentRegistrations(tourney.id);
+        return res.json({
+          tournamentId: tourney.id,
+          status: tourney.status,
+          registrations: regs.length,
+          maxPlayers: tourney.maxPlayers,
+          prizePool: tourney.prizePool,
+          tables: [],
+          standings: [],
+        });
+      }
+
+      res.json({
+        tournamentId: tourney.id,
+        status: mtt.status,
+        totalPlayers: mtt.registrations.length,
+        remainingPlayers: mtt.getTotalRemainingPlayers(),
+        tables: mtt.getTableInfo(),
+        standings: mtt.getStandings(),
+        prizePool: mtt.prizePool,
+      });
     } catch (err) {
       next(err);
     }

@@ -10,6 +10,7 @@ import {
   type ClubAlliance, type LeagueSeason,
   type HandPlayer, type HandAction, type TournamentRegistration,
   type Wallet, type WalletType, type Payment, type WithdrawalRequest, type SupportedCurrency,
+  type ChatMessage, type CollusionAlert, type PlayerNote,
   walletTypeEnum,
   users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, tournamentRegistrations, playerStats,
   clubInvitations, clubAnnouncements, clubEvents,
@@ -18,6 +19,7 @@ import {
   clubAlliances, leagueSeasons,
   handPlayers, handActions,
   wallets, payments, withdrawalRequests, supportedCurrencies,
+  chatMessages, collusionAlerts, playerNotes,
 } from "@shared/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -182,6 +184,27 @@ export interface IStorage {
   // Supported Currencies
   getSupportedCurrencies(): Promise<SupportedCurrency[]>;
   upsertSupportedCurrency(data: SupportedCurrency): Promise<SupportedCurrency>;
+
+  // Chat Messages
+  saveChatMessage(tableId: string, userId: string, username: string, message: string): Promise<ChatMessage>;
+  getRecentChatMessages(tableId: string, limit?: number): Promise<ChatMessage[]>;
+
+  // Collusion Alerts
+  saveCollusionAlert(data: Omit<CollusionAlert, "id" | "createdAt" | "reviewedBy" | "reviewedAt">): Promise<CollusionAlert>;
+  getCollusionAlerts(status?: string): Promise<CollusionAlert[]>;
+  reviewCollusionAlert(id: string, reviewerId: string, status: string): Promise<CollusionAlert | undefined>;
+
+  // Player Notes
+  getPlayerNote(authorId: string, targetId: string): Promise<PlayerNote | undefined>;
+  upsertPlayerNote(authorId: string, targetId: string, note: string, color: string): Promise<PlayerNote>;
+  deletePlayerNote(authorId: string, targetId: string): Promise<void>;
+  getPlayerNotes(authorId: string): Promise<PlayerNote[]>;
+
+  // Table Player Chips (atomicity)
+  updateTablePlayerChips(tableId: string, odId: string, newChips: number): Promise<void>;
+
+  // OAuth
+  getUserByProvider(provider: string, providerId: string): Promise<User | undefined>;
 }
 
 // ─── In-Memory Storage (fallback when no DATABASE_URL) ───────────────────────
@@ -208,6 +231,9 @@ export class MemStorage implements IStorage {
   private tournamentRegsList: TournamentRegistration[] = [];
   private clubAlliancesList: ClubAlliance[] = [];
   private leagueSeasonsList: LeagueSeason[] = [];
+  private chatMessagesList: ChatMessage[] = [];
+  private collusionAlertsList: CollusionAlert[] = [];
+  private playerNotesList: PlayerNote[] = [];
 
   // Users
   async getUser(id: string) { return this.users.get(id); }
@@ -912,6 +938,69 @@ export class MemStorage implements IStorage {
     if (idx >= 0) { this.supportedCurrenciesList[idx] = data; return data; }
     this.supportedCurrenciesList.push(data);
     return data;
+  }
+
+  // ── Chat Messages ──────────────────────────────────────────────────────
+  async saveChatMessage(tableId: string, userId: string, username: string, message: string) {
+    const msg: ChatMessage = { id: randomUUID(), tableId, userId, username, message, createdAt: new Date() };
+    this.chatMessagesList.push(msg);
+    return msg;
+  }
+  async getRecentChatMessages(tableId: string, limit = 50) {
+    return this.chatMessagesList.filter(m => m.tableId === tableId).slice(-limit);
+  }
+
+  // ── Collusion Alerts ───────────────────────────────────────────────────
+  async saveCollusionAlert(data: Omit<CollusionAlert, "id" | "createdAt" | "reviewedBy" | "reviewedAt">) {
+    const alert: CollusionAlert = { ...data, id: randomUUID(), reviewedBy: null, reviewedAt: null, createdAt: new Date() };
+    this.collusionAlertsList.push(alert);
+    return alert;
+  }
+  async getCollusionAlerts(status?: string) {
+    const filtered = status ? this.collusionAlertsList.filter(a => a.status === status) : this.collusionAlertsList;
+    return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  async reviewCollusionAlert(id: string, reviewerId: string, status: string) {
+    const alert = this.collusionAlertsList.find(a => a.id === id);
+    if (!alert) return undefined;
+    alert.status = status;
+    alert.reviewedBy = reviewerId;
+    alert.reviewedAt = new Date();
+    return alert;
+  }
+
+  // ── Player Notes ───────────────────────────────────────────────────────
+  async getPlayerNote(authorId: string, targetId: string) {
+    return this.playerNotesList.find(n => n.authorUserId === authorId && n.targetUserId === targetId);
+  }
+  async upsertPlayerNote(authorId: string, targetId: string, note: string, color: string) {
+    const existing = this.playerNotesList.find(n => n.authorUserId === authorId && n.targetUserId === targetId);
+    if (existing) {
+      existing.note = note;
+      existing.color = color;
+      existing.updatedAt = new Date();
+      return existing;
+    }
+    const pn: PlayerNote = { id: randomUUID(), authorUserId: authorId, targetUserId: targetId, note, color, createdAt: new Date(), updatedAt: new Date() };
+    this.playerNotesList.push(pn);
+    return pn;
+  }
+  async deletePlayerNote(authorId: string, targetId: string) {
+    this.playerNotesList = this.playerNotesList.filter(n => !(n.authorUserId === authorId && n.targetUserId === targetId));
+  }
+  async getPlayerNotes(authorId: string) {
+    return this.playerNotesList.filter(n => n.authorUserId === authorId);
+  }
+
+  // ── Table Player Chips ─────────────────────────────────────────────────
+  async updateTablePlayerChips(tableId: string, odId: string, newChips: number) {
+    const tp = this.tablePlayersList.find(p => p.tableId === tableId && p.userId === odId);
+    if (tp) tp.chipStack = newChips;
+  }
+
+  // ── OAuth ──────────────────────────────────────────────────────────────
+  async getUserByProvider(provider: string, providerId: string) {
+    return Array.from(this.users.values()).find(u => u.provider === provider && u.providerId === providerId);
   }
 }
 
@@ -1718,6 +1807,75 @@ export class DatabaseStorage implements IStorage {
         },
       }).returning();
     return c;
+  }
+
+  // ── Chat Messages ──────────────────────────────────────────────────────
+  async saveChatMessage(tableId: string, userId: string, username: string, message: string) {
+    const [msg] = await this.db.insert(chatMessages).values({ tableId, userId, username, message }).returning();
+    return msg;
+  }
+  async getRecentChatMessages(tableId: string, limit = 50) {
+    return this.db.select().from(chatMessages)
+      .where(eq(chatMessages.tableId, tableId))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(limit);
+  }
+
+  // ── Collusion Alerts ───────────────────────────────────────────────────
+  async saveCollusionAlert(data: Omit<CollusionAlert, "id" | "createdAt" | "reviewedBy" | "reviewedAt">) {
+    const [alert] = await this.db.insert(collusionAlerts).values(data).returning();
+    return alert;
+  }
+  async getCollusionAlerts(status?: string) {
+    if (status) {
+      return this.db.select().from(collusionAlerts)
+        .where(eq(collusionAlerts.status, status))
+        .orderBy(desc(collusionAlerts.createdAt));
+    }
+    return this.db.select().from(collusionAlerts).orderBy(desc(collusionAlerts.createdAt));
+  }
+  async reviewCollusionAlert(id: string, reviewerId: string, status: string) {
+    const [alert] = await this.db.update(collusionAlerts)
+      .set({ status, reviewedBy: reviewerId, reviewedAt: new Date() })
+      .where(eq(collusionAlerts.id, id)).returning();
+    return alert;
+  }
+
+  // ── Player Notes ───────────────────────────────────────────────────────
+  async getPlayerNote(authorId: string, targetId: string) {
+    const [note] = await this.db.select().from(playerNotes)
+      .where(and(eq(playerNotes.authorUserId, authorId), eq(playerNotes.targetUserId, targetId)));
+    return note;
+  }
+  async upsertPlayerNote(authorId: string, targetId: string, note: string, color: string) {
+    const [pn] = await this.db.insert(playerNotes)
+      .values({ authorUserId: authorId, targetUserId: targetId, note, color })
+      .onConflictDoUpdate({
+        target: [playerNotes.authorUserId, playerNotes.targetUserId],
+        set: { note, color, updatedAt: new Date() },
+      }).returning();
+    return pn;
+  }
+  async deletePlayerNote(authorId: string, targetId: string) {
+    await this.db.delete(playerNotes)
+      .where(and(eq(playerNotes.authorUserId, authorId), eq(playerNotes.targetUserId, targetId)));
+  }
+  async getPlayerNotes(authorId: string) {
+    return this.db.select().from(playerNotes).where(eq(playerNotes.authorUserId, authorId));
+  }
+
+  // ── Table Player Chips ─────────────────────────────────────────────────
+  async updateTablePlayerChips(tableId: string, odId: string, newChips: number) {
+    await this.db.update(tablePlayers)
+      .set({ chipStack: newChips })
+      .where(and(eq(tablePlayers.tableId, tableId), eq(tablePlayers.userId, odId)));
+  }
+
+  // ── OAuth ──────────────────────────────────────────────────────────────
+  async getUserByProvider(provider: string, providerId: string) {
+    const [user] = await this.db.select().from(users)
+      .where(and(eq(users.provider, provider), eq(users.providerId, providerId)));
+    return user;
   }
 }
 

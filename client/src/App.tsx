@@ -23,8 +23,10 @@ import HandReplay from "@/pages/HandReplay";
 import BrowseClubs from "@/pages/BrowseClubs";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
+import AdminDashboard from "@/pages/AdminDashboard";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function ProtectedLobby() {
   return <AuthGate><Lobby /></AuthGate>;
@@ -74,8 +76,12 @@ function ProtectedProfile() {
   return <AuthGate><Profile /></AuthGate>;
 }
 
+function ProtectedAdmin() {
+  return <AuthGate><AdminDashboard /></AuthGate>;
+}
+
 function GameWithTable({ params }: { params: { tableId: string } }) {
-  return <AuthGate><Game tableId={params.tableId} /></AuthGate>;
+  return <AuthGate><ErrorBoundary fallbackTitle="Game Error"><Game tableId={params.tableId} /></ErrorBoundary></AuthGate>;
 }
 
 function HandReplayPage({ params }: { params: { handId: string } }) {
@@ -111,6 +117,7 @@ function Router() {
       <Route path="/clubs/browse" component={ProtectedBrowseClubs} />
       <Route path="/leaderboard" component={ProtectedLeaderboard} />
       <Route path="/profile" component={ProtectedProfile} />
+      <Route path="/admin" component={ProtectedAdmin} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -124,7 +131,9 @@ function App() {
           <ClubProvider>
             <TooltipProvider>
               <Toaster />
-              <Router />
+              <ErrorBoundary>
+                <Router />
+              </ErrorBoundary>
             </TooltipProvider>
           </ClubProvider>
         </WalletProvider>

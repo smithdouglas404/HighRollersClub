@@ -142,6 +142,7 @@ export const tables = pgTable("tables", {
   rakePercent: integer("rake_percent").notNull().default(0), // rake % (e.g., 5 = 5%), 0 = no rake
   rakeCap: integer("rake_cap").notNull().default(0), // max rake per hand in chips, 0 = no cap
   straddleEnabled: boolean("straddle_enabled").notNull().default(false),
+  bigBlindAnte: boolean("big_blind_ante").notNull().default(false),
   gameSpeed: text("game_speed").notNull().default("normal"), // normal | fast | turbo
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
@@ -609,3 +610,53 @@ export const initiateWithdrawalSchema = z.object({
   currency: z.string().min(1),
   address: z.string().min(10),
 });
+
+// ─── Chat Messages ─────────────────────────────────────────────────────────
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tableId: varchar("table_id").notNull().references(() => tables.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  username: text("username").notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("chat_messages_table_idx").on(table.tableId),
+]);
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+
+// ─── Collusion Alerts ──────────────────────────────────────────────────────
+export const collusionAlerts = pgTable("collusion_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tableId: varchar("table_id").notNull(),
+  player1Id: varchar("player1_id").notNull(),
+  player2Id: varchar("player2_id").notNull(),
+  alertType: text("alert_type").notNull(),
+  severity: text("severity").notNull(), // low | medium | high
+  details: jsonb("details"),
+  status: text("status").notNull().default("pending"), // pending | reviewed | dismissed
+  reviewedBy: varchar("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("collusion_alerts_status_idx").on(table.status),
+  index("collusion_alerts_table_idx").on(table.tableId),
+]);
+
+export type CollusionAlert = typeof collusionAlerts.$inferSelect;
+
+// ─── Player Notes ──────────────────────────────────────────────────────────
+export const playerNotes = pgTable("player_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  authorUserId: varchar("author_user_id").notNull().references(() => users.id),
+  targetUserId: varchar("target_user_id").notNull().references(() => users.id),
+  note: text("note").notNull(),
+  color: text("color").notNull().default("gray"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("player_notes_unique").on(table.authorUserId, table.targetUserId),
+  index("player_notes_author_idx").on(table.authorUserId),
+]);
+
+export type PlayerNote = typeof playerNotes.$inferSelect;

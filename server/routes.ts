@@ -2,7 +2,8 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { registerAuthRoutes, requireAuth } from "./auth";
-import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema } from "@shared/schema";
+import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema, users } from "@shared/schema";
+import { sql } from "drizzle-orm";
 import { setupWebSocket, sendGameStateToTable, getClients } from "./websocket";
 import { getBlindPreset } from "./game/blind-presets";
 import { tableManager } from "./game/table-manager";
@@ -2224,6 +2225,112 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       res.json({ success: true });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
+    }
+  });
+
+  // ─── Admin Stats ──────────────────────────────────────────────────────────
+
+  app.get("/api/admin/stats", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      const allTables = await storage.getTables();
+      const activeTables = allTables.filter(t => t.status !== "closed");
+
+      // Use getTransactionTotals for deposit/withdrawal sums
+      const totals = await storage.getTransactionTotals();
+      const depositTotal = totals.find(t => t.type === "deposit")?.total ?? 0;
+      const withdrawalTotal = totals.find(t => t.type === "withdrawal")?.total ?? 0;
+
+      // Count users
+      let totalUsers = 0;
+      if ((storage as any).db) {
+        const result = await (storage as any).db.select({ count: sql`count(*)` }).from(users);
+        totalUsers = Number(result[0]?.count ?? 0);
+      } else {
+        totalUsers = (storage as any).users?.size ?? 0;
+      }
+
+      res.json({
+        totalUsers,
+        activeTables: activeTables.length,
+        totalDeposits: depositTotal,
+        totalWithdrawals: Math.abs(withdrawalTotal),
+        totalTables: allTables.length,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Admin Collusion Alerts ─────────────────────────────────────────────
+
+  app.get("/api/admin/collusion-alerts", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const alerts = await storage.getCollusionAlerts(status);
+      res.json(alerts);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/admin/collusion-alerts/:id/review", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const { status } = req.body;
+      if (!status || !["reviewed", "dismissed"].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'reviewed' or 'dismissed'" });
+      }
+      const alert = await storage.reviewCollusionAlert(req.params.id, req.user!.id, status);
+      if (!alert) return res.status(404).json({ message: "Alert not found" });
+      res.json(alert);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Player Notes ──────────────────────────────────────────────────────
+
+  app.get("/api/player-notes", requireAuth, async (req, res, next) => {
+    try {
+      const notes = await storage.getPlayerNotes(req.user!.id);
+      res.json(notes);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/player-notes/:targetId", requireAuth, async (req, res, next) => {
+    try {
+      const note = await storage.getPlayerNote(req.user!.id, req.params.targetId);
+      res.json(note ?? null);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.put("/api/player-notes/:targetId", requireAuth, async (req, res, next) => {
+    try {
+      const { note, color } = req.body;
+      if (!note || typeof note !== "string") {
+        return res.status(400).json({ message: "Note text is required" });
+      }
+      const result = await storage.upsertPlayerNote(
+        req.user!.id,
+        req.params.targetId,
+        note.slice(0, 500),
+        color || "gray",
+      );
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.delete("/api/player-notes/:targetId", requireAuth, async (req, res, next) => {
+    try {
+      await storage.deletePlayerNote(req.user!.id, req.params.targetId);
+      res.json({ success: true });
+    } catch (err) {
+      next(err);
     }
   });
 

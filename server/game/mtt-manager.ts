@@ -126,6 +126,11 @@ export class MTTManager {
         payoutStructure: this.payoutStructure ?? undefined,
         createdById: "system",
         gameSpeed: "normal" as const,
+        bombPotFrequency: 0,
+        bombPotAnte: 0,
+        rakePercent: 0,
+        rakeCap: 0,
+        straddleEnabled: false,
       });
 
       this.tableIds.add(tableRow.id);

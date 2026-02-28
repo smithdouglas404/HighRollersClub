@@ -425,6 +425,7 @@ export class MemStorage implements IStorage {
       rakePercent: data.rakePercent ?? 0,
       rakeCap: data.rakeCap ?? 0,
       straddleEnabled: data.straddleEnabled ?? false,
+      bigBlindAnte: (data as any).bigBlindAnte ?? false,
       gameSpeed: data.gameSpeed || "normal",
       createdAt: new Date(),
     };

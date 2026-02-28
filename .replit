@@ -45,3 +45,9 @@ waitForPort = 5000
 
 [agent]
 mockupState = "FULLSTACK"
+
+[userenv]
+
+[userenv.shared]
+NOWPAYMENTS_SANDBOX = "true"
+NOWPAYMENTS_WEBHOOK_SECRET = "hrc_webhook_x44xo6gmx5o3fldmnukjl"

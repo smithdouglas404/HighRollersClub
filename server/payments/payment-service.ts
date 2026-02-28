@@ -417,9 +417,9 @@ let paymentServiceInstance: PaymentService | null = null;
 
 export function getPaymentService(): PaymentService {
   if (!paymentServiceInstance) {
-    const baseUrl = process.env.WEBHOOK_BASE_URL || process.env.REPL_SLUG
-      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-      : "http://localhost:5000";
+    const baseUrl = process.env.WEBHOOK_BASE_URL
+      || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
+      || "http://localhost:5000";
     paymentServiceInstance = new PaymentService(baseUrl);
 
     // Register configured gateways

@@ -239,18 +239,18 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
       )}
 
       {/* Gradient fade from table */}
-      <div className="h-5 bg-gradient-to-t from-[#080e18] to-transparent pointer-events-none" />
+      <div className="h-3 bg-gradient-to-t from-[#080e18] to-transparent pointer-events-none" />
 
       {/* Main controls container */}
       <div
-        className="px-4 pb-4 pt-2"
+        className="px-4 pb-3 pt-1.5"
         style={{
           background: "linear-gradient(180deg, rgba(8,14,24,0.97) 0%, rgba(4,8,16,0.99) 100%)",
           borderTop: "1px solid rgba(0,212,255,0.08)",
           boxShadow: "0 -8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
         }}
       >
-        <div className="max-w-5xl mx-auto flex flex-col gap-3">
+        <div className="max-w-5xl mx-auto flex flex-col gap-2">
 
           {/* === ROW 1: Bet Sizing (presets + slider + amount) === */}
           <AnimatePresence>
@@ -262,23 +262,23 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className={`flex items-center gap-3 transition-opacity duration-200 ${!isHeroTurn ? "opacity-25 pointer-events-none" : ""}`}>
+                <div className={`flex items-center gap-2 transition-opacity duration-200 ${!isHeroTurn ? "opacity-25 pointer-events-none" : ""}`}>
 
                   {/* Preset chips */}
-                  <div className="flex gap-1.5 shrink-0">
+                  <div className="flex gap-1 shrink-0">
                     {presets.map((p) => {
                       const isActive = betAmount === p.value;
                       return (
                         <motion.button
                           key={p.label}
-                          whileHover={{ scale: 1.08, y: -2 }}
+                          whileHover={{ scale: 1.08, y: -1 }}
                           whileTap={{ scale: 0.92 }}
                           onClick={() => handlePreset(p.value)}
                           title={p.tooltip}
                           data-testid={`preset-${p.label.toLowerCase()}`}
-                          className="relative overflow-hidden rounded-xl text-[0.75rem] font-black uppercase tracking-wider transition-all"
+                          className="relative overflow-hidden rounded-lg text-[0.65rem] font-black uppercase tracking-wider transition-all"
                           style={{
-                            padding: "0.5rem 0.875rem",
+                            padding: "0.35rem 0.65rem",
                             color: isActive ? "#b5f5ff" : "#9ca3af",
                             background: isActive
                               ? "linear-gradient(180deg, rgba(0,212,255,0.25) 0%, rgba(0,120,180,0.2) 100%)"
@@ -297,14 +297,14 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
                     {/* ALL-IN preset */}
                     <motion.button
-                      whileHover={{ scale: 1.08, y: -2 }}
+                      whileHover={{ scale: 1.08, y: -1 }}
                       whileTap={{ scale: 0.92 }}
                       onClick={() => handlePreset(maxBet)}
                       title="Shove your entire stack"
                       data-testid="preset-allin"
-                      className="relative overflow-hidden rounded-xl text-[0.75rem] font-black uppercase tracking-wider transition-all"
+                      className="relative overflow-hidden rounded-lg text-[0.65rem] font-black uppercase tracking-wider transition-all"
                       style={{
-                        padding: "0.5rem 0.875rem",
+                        padding: "0.35rem 0.65rem",
                         color: betAmount === maxBet ? "#fde68a" : "#9ca3af",
                         background: betAmount === maxBet
                           ? "linear-gradient(180deg, rgba(245,158,11,0.3) 0%, rgba(180,83,9,0.2) 100%)"
@@ -325,7 +325,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.85 }}
                     onClick={stepDown}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-cyan-300 transition-all shrink-0"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-cyan-300 transition-all shrink-0"
                     style={{
                       background: "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
                       border: "1px solid rgba(255,255,255,0.1)",
@@ -358,7 +358,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.85 }}
                     onClick={stepUp}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-cyan-300 transition-all shrink-0"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-cyan-300 transition-all shrink-0"
                     style={{
                       background: "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
                       border: "1px solid rgba(255,255,255,0.1)",
@@ -397,17 +397,17 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                         whileTap={{ scale: 0.96 }}
                         onClick={() => setShowCustomInput(true)}
                         data-testid="bet-amount-display"
-                        className="rounded-xl min-w-[110px] text-center cursor-text transition-all"
+                        className="rounded-lg min-w-[90px] text-center cursor-text transition-all"
                         title="Click to type a custom amount"
                         style={{
-                          padding: "0.625rem 1.25rem",
+                          padding: "0.4rem 0.875rem",
                           background: "linear-gradient(180deg, rgba(0,212,255,0.12) 0%, rgba(0,100,150,0.08) 100%)",
                           border: "1.5px solid rgba(0,212,255,0.3)",
                           boxShadow: "0 0 12px rgba(0,212,255,0.1), inset 0 1px 0 rgba(0,212,255,0.05)",
                         }}
                       >
                         <span
-                          className="text-lg font-mono font-black text-cyan-300"
+                          className="text-sm font-mono font-black text-cyan-300"
                           style={{ textShadow: "0 0 10px rgba(0,212,255,0.35)" }}
                         >
                           ${betAmount.toLocaleString()}
@@ -443,12 +443,12 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 title="Fold (F)"
                 data-testid="button-fold"
                 className={`
-                  relative overflow-hidden rounded-2xl min-w-[110px]
+                  relative overflow-hidden rounded-xl min-w-[100px]
                   font-bold uppercase tracking-wider transition-all
                   ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
                 `}
                 style={{
-                  padding: "1.125rem 1.75rem",
+                  padding: "0.7rem 1.25rem",
                   color: "#fff",
                   background: foldConfirm
                     ? "linear-gradient(180deg, #ef4444 0%, #dc2626 40%, #b91c1c 100%)"
@@ -469,7 +469,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 )}
                 <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent h-1/2" />
                 <span className="relative flex items-center justify-center gap-2">
-                  <span className="text-[1rem] font-black tracking-[0.15em]">{foldConfirm ? "CONFIRM" : "FOLD"}</span>
+                  <span className="text-[0.8rem] font-black tracking-[0.15em]">{foldConfirm ? "CONFIRM" : "FOLD"}</span>
                   <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">F</kbd>
                 </span>
               </motion.button>
@@ -483,12 +483,12 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 title={needsToCall ? `Call $${callAmount} (C)` : "Check (C)"}
                 data-testid="button-call"
                 className={`
-                  relative overflow-hidden rounded-2xl min-w-[130px]
+                  relative overflow-hidden rounded-xl min-w-[100px]
                   font-bold uppercase tracking-wider transition-all
                   ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
                 `}
                 style={{
-                  padding: "1.125rem 1.75rem",
+                  padding: "0.7rem 1.25rem",
                   color: "#fff",
                   background: "linear-gradient(180deg, #16a34a 0%, #15803d 30%, #166534 70%, #14532d 100%)",
                   border: "1px solid rgba(34,197,94,0.3)",
@@ -498,7 +498,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent h-1/2" />
                 <span className="relative flex flex-col items-center justify-center gap-0.5">
                   <span className="flex items-center gap-2">
-                    <span className="text-[1rem] font-black tracking-[0.15em]">{needsToCall ? "CALL" : "CHECK"}</span>
+                    <span className="text-[0.8rem] font-black tracking-[0.15em]">{needsToCall ? "CALL" : "CHECK"}</span>
                     <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">C</kbd>
                   </span>
                   {needsToCall && (
@@ -525,12 +525,12 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 title={`Raise to $${betAmount.toLocaleString()} (R)`}
                 data-testid="button-raise"
                 className={`
-                  relative overflow-hidden rounded-2xl min-w-[140px]
+                  relative overflow-hidden rounded-xl min-w-[100px]
                   font-bold uppercase tracking-wider transition-all
                   ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
                 `}
                 style={{
-                  padding: "1.125rem 1.75rem",
+                  padding: "0.7rem 1.25rem",
                   color: "#fff",
                   background: isAllIn
                     ? "linear-gradient(180deg, #f59e0b 0%, #d97706 30%, #b45309 60%, #92400e 100%)"
@@ -556,7 +556,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent h-1/2" />
                 <span className="relative flex flex-col items-center justify-center gap-0.5">
                   <span className="flex items-center gap-2">
-                    <span className="text-[1rem] font-black tracking-[0.15em]">
+                    <span className="text-[0.8rem] font-black tracking-[0.15em]">
                       {isAllIn ? "ALL-IN" : "RAISE"}
                     </span>
                     <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">R</kbd>
@@ -582,9 +582,9 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                   whileTap={{ scale: 0.9 }}
                   onClick={onBuyTime}
                   data-testid="button-buytime"
-                  className={`relative overflow-hidden rounded-2xl font-bold text-sm uppercase tracking-wider text-white ${timerUrgent ? "animate-pulse" : ""}`}
+                  className={`relative overflow-hidden rounded-xl font-bold text-sm uppercase tracking-wider text-white ${timerUrgent ? "animate-pulse" : ""}`}
                   style={{
-                    padding: "1.125rem 1.25rem",
+                    padding: "0.7rem 1rem",
                     background: "linear-gradient(180deg, #b45309 0%, #92400e 50%, #78350f 100%)",
                     border: "1px solid rgba(245,158,11,0.3)",
                     boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 0 12px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
@@ -600,7 +600,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
             {/* Pot + Phase + Auto toggles (right side) */}
             <div className="shrink-0 flex flex-col items-end gap-2">
               <div
-                className="flex items-center gap-4 px-5 py-3 rounded-2xl"
+                className="flex items-center gap-3 px-4 py-2 rounded-xl"
                 style={{
                   background: "linear-gradient(135deg, rgba(15,10,3,0.8) 0%, rgba(5,3,1,0.6) 100%)",
                   border: "1px solid rgba(255,215,0,0.15)",
@@ -618,7 +618,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 <div className="flex flex-col items-center">
                   <span className="text-[0.5625rem] font-black text-amber-600/70 uppercase tracking-[0.2em] leading-none">POT</span>
                   <span
-                    className="font-mono font-black text-2xl leading-none mt-0.5"
+                    className="font-mono font-black text-lg leading-none mt-0.5"
                     style={{
                       color: "#ffd700",
                       textShadow: "0 0 16px rgba(255,215,0,0.5), 0 0 4px rgba(255,215,0,0.2)",

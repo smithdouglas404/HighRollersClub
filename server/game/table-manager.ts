@@ -51,8 +51,10 @@ class TableManager {
   private handsTracked = 0;
   // Players flagged as "pending leave" — will be cashed out after the current hand ends
   private pendingLeaves = new Map<string, Set<string>>(); // tableId → Set<userId>
-  // Auto-cashout timers for disconnected players (5 min)
+  // Auto-cashout timers for disconnected players
   private autoCashoutTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  // Track last chip count for return buy-in enforcement: "tableId:userId" → chipCount
+  private lastChipCounts = new Map<string, number>();
   // Lock set to prevent concurrent join_table for the same user
   private joiningUsers = new Set<string>();
 
@@ -626,9 +628,12 @@ class TableManager {
       return { ok: true };
     }
 
-    // Normal cash game path
-    if (buyIn < config.minBuyIn || buyIn > config.maxBuyIn) {
-      return { ok: false, error: `Buy-in must be between ${config.minBuyIn} and ${config.maxBuyIn}` };
+    // Normal cash game path — enforce return buy-in minimum
+    const returnKey = `${tableId}:${userId}`;
+    const lastChips = this.lastChipCounts.get(returnKey);
+    const effectiveMinBuyIn = lastChips ? Math.max(config.minBuyIn, lastChips) : config.minBuyIn;
+    if (buyIn < effectiveMinBuyIn || buyIn > config.maxBuyIn) {
+      return { ok: false, error: `Buy-in must be between ${effectiveMinBuyIn} and ${config.maxBuyIn}` };
     }
 
     // Check if player already at table
@@ -705,6 +710,9 @@ class TableManager {
     if (seat === undefined) return { ok: false, error: "No seats available" };
 
     engine.addPlayer(userId, displayName, seat, buyIn, false);
+
+    // Clear return buy-in record after successful rejoin
+    this.lastChipCounts.delete(returnKey);
 
     // New players join in "away" mode — must click "I'm Ready" to start playing
     const newPlayer = engine.getPlayer(userId);
@@ -876,6 +884,13 @@ class TableManager {
     const seatIndex = player.seatIndex;
     const displayName = player.displayName || "Player";
 
+    // Save chip count for return buy-in enforcement (cash games only)
+    if (instance.config.gameFormat === "cash" || instance.config.gameFormat === "bomb_pot" || instance.config.gameFormat === "heads_up") {
+      if (cashOut > instance.config.minBuyIn) {
+        this.lastChipCounts.set(`${tableId}:${userId}`, cashOut);
+      }
+    }
+
     // Remove from engine first (folds if mid-hand)
     instance.engine.removePlayer(userId);
     instance.avatarMap.delete(userId);
@@ -1022,6 +1037,11 @@ class TableManager {
         this.maybeStartCountdown(tableId, instance);
       }
     }
+  }
+
+  /** Get the minimum buy-in for a returning player (enforces last chip count) */
+  getReturnMinBuyIn(tableId: string, userId: string): number | null {
+    return this.lastChipCounts.get(`${tableId}:${userId}`) ?? null;
   }
 
   /** Handle player's choice to post missed blinds now or wait for BB */

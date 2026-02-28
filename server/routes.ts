@@ -89,7 +89,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (!table) return res.status(404).json({ message: "Table not found" });
       const players = await storage.getTablePlayers(table.id);
       const occupiedSeats = players.map(p => p.seatIndex);
-      res.json({ ...table, password: undefined, players, occupiedSeats });
+      // Include return buy-in minimum if the requesting user has one
+      const userId = (req as any).user?.id;
+      const returnMinBuyIn = userId ? tableManager.getReturnMinBuyIn(table.id, userId) : null;
+      res.json({ ...table, password: undefined, players, occupiedSeats, returnMinBuyIn });
     } catch (err) {
       next(err);
     }

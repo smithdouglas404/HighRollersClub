@@ -1493,14 +1493,14 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
               </label>
               <input
                 type="range"
-                min={tableInfo?.minBuyIn || 200}
+                min={tableInfo?.returnMinBuyIn || tableInfo?.minBuyIn || 200}
                 max={Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}
                 value={buyIn}
                 onChange={(e) => setBuyIn(parseInt(e.target.value))}
                 className="w-full mb-2"
               />
               <div className="flex justify-between text-xs text-gray-500">
-                <span>{tableInfo?.minBuyIn || 200}</span>
+                <span>{tableInfo?.returnMinBuyIn || tableInfo?.minBuyIn || 200}</span>
                 <span className="text-lg font-bold text-cyan-400">{buyIn}</span>
                 <span>{Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}</span>
               </div>

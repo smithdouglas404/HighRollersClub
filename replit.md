@@ -62,6 +62,10 @@ Preferred communication style: Simple, everyday language.
 
 8. **GameSetup advanced settings:** The pre-game setup screen (`GameSetup.tsx`) includes expandable sections for table rules, speed/timing, rake, privacy (password-protected tables), bot control, and tournament-specific settings (re-entry, rebuy, late registration, breaks, payout structures).
 
+9. **AI Commentary System:** Two-voice poker broadcast using ElevenLabs TTS + Anthropic Claude. Play-by-play ("Adam"/LON) and analyst ("Josh"/NORMAN) commentate showdowns, big pots, all-ins, blind increases, player eliminations, and player tendencies. Server: `server/game/commentary-engine.ts` + `server/game/tts-engine.ts`. Client: `client/src/components/poker/CommentaryOverlay.tsx` (subtitles + controls panel). Currently multiplayer-only toggle in top bar (mic icon). Requires `ELEVENLABS_API_KEY` and `ANTHROPIC_API_KEY` secrets.
+
+10. **Premium UI pages:** Profile (hero banner, rank tiers, animated stat counters, 64px achievement badges with progress bars, taunt voice picker), Members (gold/silver/bronze podium styling for top 3, trend indicators, gradient invite panel), Club Dashboard (club logo picker, animated stat cards, alliance info, tab animations), Browse Clubs (featured clubs section, sort options, club logos, activity indicators), Lobby (hot tables section, format tab counts, seat dot indicators, gradient table cards).
+
 ### Project Structure
 
 ```

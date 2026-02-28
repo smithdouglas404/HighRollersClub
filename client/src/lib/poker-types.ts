@@ -23,6 +23,8 @@ export interface Player {
   currentBet: number;
   isSittingOut?: boolean;
   awaitingReady?: boolean;
+  waitingForBB?: boolean;
+  missedBlinds?: boolean;
   status: 'thinking' | 'folded' | 'all-in' | 'checked' | 'waiting' | 'called' | 'raised' | 'sitting-out';
   timeLeft?: number; // percentage 0-100
   timeBankSeconds?: number; // personal time bank remaining (seconds)

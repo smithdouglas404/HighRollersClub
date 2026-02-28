@@ -198,7 +198,7 @@ function GameTable({
   blindIncrease, elimination, startingChips,
   addChips, maxBuyIn, minBuyIn, walletBalance,
   buyTime, acceptInsurance, declineInsurance, voteRunIt,
-  sitOut, sitIn,
+  sitOut, sitIn, postBlinds, waitForBB,
   rebuyHero, defaultBuyIn,
 }: {
   players: Player[];
@@ -239,6 +239,8 @@ function GameTable({
   voteRunIt?: (count: 1 | 2 | 3) => void;
   sitOut?: () => void;
   sitIn?: () => void;
+  postBlinds?: () => void;
+  waitForBB?: () => void;
   // Practice mode rebuy
   rebuyHero?: (amount: number) => void;
   defaultBuyIn?: number;
@@ -782,8 +784,48 @@ function GameTable({
             </motion.div>
           )}
 
+          {/* Waiting for BB banner — player chose to wait for big blind */}
+          {hero && hero.waitingForBB && !hero.awaitingReady && postBlinds && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative z-30 flex items-center justify-center gap-3 py-2 px-4 bg-blue-500/15 border border-blue-500/25 rounded-lg mx-4 mb-2"
+            >
+              <span className="text-sm font-bold text-blue-300 uppercase tracking-wider">Waiting for Big Blind</span>
+              <button
+                onClick={postBlinds}
+                className="px-3 py-1 rounded text-xs font-bold text-white bg-green-600 hover:bg-green-500 transition-colors"
+              >
+                Post Blinds Now
+              </button>
+            </motion.div>
+          )}
+
+          {/* Missed blinds choice — shown when returning with missed blinds */}
+          {hero && hero.missedBlinds && !hero.waitingForBB && !hero.isSittingOut && !hero.awaitingReady && postBlinds && waitForBB && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative z-30 flex items-center justify-center gap-3 py-2 px-4 bg-yellow-500/15 border border-yellow-500/25 rounded-lg mx-4 mb-2"
+            >
+              <span className="text-sm font-bold text-yellow-300 uppercase tracking-wider">You missed blinds</span>
+              <button
+                onClick={postBlinds}
+                className="px-3 py-1 rounded text-xs font-bold text-white bg-green-600 hover:bg-green-500 transition-colors"
+              >
+                Post Now
+              </button>
+              <button
+                onClick={waitForBB}
+                className="px-3 py-1 rounded text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors"
+              >
+                Wait for BB
+              </button>
+            </motion.div>
+          )}
+
           {/* Sitting out banner — voluntary sit-out (not awaiting ready) */}
-          {hero && (hero.isSittingOut || hero.status === "sitting-out") && !hero.awaitingReady && sitIn && (
+          {hero && (hero.isSittingOut || hero.status === "sitting-out") && !hero.awaitingReady && !hero.waitingForBB && sitIn && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1354,7 +1396,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
     dismissTournamentComplete, bombPotActive, notifications, handCountdown,
     buyTime, acceptInsurance, declineInsurance, voteRunIt,
     walletBalance: liveWalletBalance,
-    sitOut, sitIn,
+    sitOut, sitIn, postBlinds, waitForBB,
   } = useMultiplayerGame(tableId, user?.id || "");
 
   // Use live wallet balance from WebSocket when available, fall back to auth context
@@ -1574,6 +1616,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         voteRunIt={voteRunIt}
         sitOut={sitOut}
         sitIn={sitIn}
+        postBlinds={postBlinds}
+        waitForBB={waitForBB}
       />
       {/* Join/Leave Notifications */}
       <div className="fixed top-16 right-4 z-[60] flex flex-col gap-2 pointer-events-none">

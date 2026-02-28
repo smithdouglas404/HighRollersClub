@@ -37,6 +37,8 @@ function serverToClientPlayers(serverPlayers: any[], turnDeadline?: number, turn
     status: p.status || "waiting",
     isSittingOut: p.isSittingOut || false,
     awaitingReady: p.awaitingReady || false,
+    waitingForBB: p.waitingForBB || false,
+    missedBlinds: p.missedBlinds || false,
     timeLeft,
     timeBankSeconds: p.timeBank ?? 30,
   };
@@ -548,6 +550,14 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     wsClient.send({ type: "sit_in" });
   }, []);
 
+  const postBlinds = useCallback(() => {
+    wsClient.send({ type: "post_blinds" });
+  }, []);
+
+  const waitForBB = useCallback(() => {
+    wsClient.send({ type: "wait_for_bb" });
+  }, []);
+
   return {
     players,
     gameState,
@@ -587,5 +597,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     // Sit out / sit in
     sitOut,
     sitIn,
+    postBlinds,
+    waitForBB,
   };
 }

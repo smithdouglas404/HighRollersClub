@@ -23,7 +23,9 @@ export interface SeatPlayer {
   isSittingOut: boolean;
   voluntarySitOut: boolean; // true = player chose to sit out, false = disconnected/auto
   awaitingReady: boolean; // true = just joined, hasn't clicked "I'm Ready" yet
-  missedBigBlind: boolean; // true = player sat out during BB position, must post dead blind on return
+  missedBigBlind: boolean; // true = must post live BB on return (cash games)
+  missedSmallBlind: boolean; // true = must post dead SB on return (cash games)
+  waitingForBB: boolean; // true = player chose to wait for BB instead of posting missed blinds
   totalBetThisHand: number;
   timeBank: number; // remaining time bank seconds
 }
@@ -254,6 +256,8 @@ export class GameEngine {
       voluntarySitOut: false,
       awaitingReady: false,
       missedBigBlind: false,
+      missedSmallBlind: false,
+      waitingForBB: false,
       totalBetThisHand: 0,
       timeBank: 30, // 30 seconds of time bank per player
     };
@@ -451,31 +455,20 @@ export class GameEngine {
     this.vpipPlayers.clear();
     this.pfrPlayers.clear();
 
-    // Track missed big blind: mark sitting-out players who are at BB position
-    const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0);
-    if (!isBombPot && eligible.length >= 2) {
-      // Compute what BB seat would be for this hand
-      let projectedDealer = this.state.handNumber > 1
-        ? this.nextEligibleSeat(this.state.dealerSeat)
-        : eligible[0]?.seatIndex ?? 0;
-      const allActive = this.state.players.filter(p => p.chips > 0);
-      for (const p of this.state.players) {
-        if (p.isSittingOut && p.chips > 0) {
-          // Check if this player's seat would have been BB
-          // Simple heuristic: if they were next in order after dealer+1
-          p.missedBigBlind = true;
-        }
-      }
-    }
+    // ── Missed blind tracking ──
+    const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0 && !p.waitingForBB);
+    const isTournament = this.gameFormat === "sng" || this.gameFormat === "tournament";
 
-    // Post dead blind for returning players
-    for (const p of eligible) {
-      if (p.missedBigBlind) {
-        const deadBlindAmount = Math.min(this.bigBlind, p.chips);
-        p.chips -= deadBlindAmount;
-        this.state.pot += deadBlindAmount; // dead blind goes to pot, not a live bet
-        p.missedBigBlind = false;
-        if (p.chips === 0) p.status = "all-in";
+    if (!isBombPot) {
+      // Mark sitting-out players as having missed blinds (cash games)
+      // In tournaments, we'll auto-post their blinds below instead
+      if (!isTournament) {
+        for (const p of this.state.players) {
+          if (p.isSittingOut && p.chips > 0) {
+            p.missedBigBlind = true;
+            p.missedSmallBlind = true;
+          }
+        }
       }
     }
 
@@ -522,10 +515,46 @@ export class GameEngine {
         this.state.bigBlindSeat = this.nextEligibleSeat(this.state.smallBlindSeat);
       }
 
+      // Check if any waitingForBB players are now at the BB seat — restore them
+      for (const p of this.state.players) {
+        if (p.waitingForBB && p.chips > 0 && p.seatIndex === this.state.bigBlindSeat) {
+          p.waitingForBB = false;
+          p.isSittingOut = false;
+          p.missedBigBlind = false;
+          p.missedSmallBlind = false;
+          p.status = "waiting";
+        }
+      }
+
       const sb = this.getPlayerBySeat(this.state.smallBlindSeat);
       const bb = this.getPlayerBySeat(this.state.bigBlindSeat);
       if (sb) this.postBlind(sb, this.smallBlind);
       if (bb) this.postBlind(bb, this.bigBlind);
+
+      // Cash games: post dead SB + live BB for returning players with missed blinds
+      if (!isTournament) {
+        for (const p of eligible) {
+          if (p.missedBigBlind || p.missedSmallBlind) {
+            // Dead blind (missed SB) — goes directly to pot, NOT a live bet
+            if (p.missedSmallBlind) {
+              const deadAmount = Math.min(this.smallBlind, p.chips);
+              p.chips -= deadAmount;
+              this.state.pot += deadAmount;
+              p.missedSmallBlind = false;
+            }
+            // Live blind (missed BB) — counts as currentBet (must be matched)
+            if (p.missedBigBlind && p.chips > 0) {
+              const liveAmount = Math.min(this.bigBlind, p.chips);
+              p.chips -= liveAmount;
+              p.currentBet = liveAmount;
+              p.totalBetThisHand = liveAmount;
+              this.state.pot += liveAmount;
+              p.missedBigBlind = false;
+            }
+            if (p.chips === 0) p.status = "all-in";
+          }
+        }
+      }
 
       // Post straddle (UTG posts 2x BB, becomes new effective big blind)
       if (this.straddleEnabled && eligible.length > 2) {
@@ -562,6 +591,39 @@ export class GameEngine {
             p.totalBetThisHand += actual;
             this.state.pot += actual;
             if (p.chips === 0) p.status = "all-in";
+          }
+        }
+      }
+    }
+
+    // Tournament/SNG: auto-post blinds + antes from sitting-out players (they bleed down)
+    if (isTournament && !isBombPot) {
+      for (const p of this.state.players) {
+        if (p.isSittingOut && p.chips > 0) {
+          // Post ante if applicable
+          const currentAnte = this.baseAnte;
+          if (currentAnte > 0) {
+            const anteAmt = Math.min(currentAnte, p.chips);
+            p.chips -= anteAmt;
+            this.state.pot += anteAmt;
+          }
+          // Post SB if they're in SB position
+          if (p.seatIndex === this.state.smallBlindSeat && p.chips > 0) {
+            const sbAmt = Math.min(this.smallBlind, p.chips);
+            p.chips -= sbAmt;
+            this.state.pot += sbAmt;
+          }
+          // Post BB if they're in BB position
+          if (p.seatIndex === this.state.bigBlindSeat && p.chips > 0) {
+            const bbAmt = Math.min(this.bigBlind, p.chips);
+            p.chips -= bbAmt;
+            this.state.pot += bbAmt;
+          }
+          // If busted from auto-posted blinds, trigger elimination
+          if (p.chips <= 0) {
+            p.chips = 0;
+            p.status = "all-in"; // will be caught by checkEliminations after hand
+            this.onPlayerEliminated?.(p.id, p.displayName);
           }
         }
       }
@@ -1619,6 +1681,8 @@ export class GameEngine {
         isConnected: p.isConnected,
         isSittingOut: p.isSittingOut,
         awaitingReady: p.awaitingReady || false,
+        waitingForBB: p.waitingForBB || false,
+        missedBlinds: (p.missedBigBlind || p.missedSmallBlind) ? true : false,
         timeBank: p.timeBank,
         // Only show own cards, or all cards at showdown
         cards: p.id === playerId

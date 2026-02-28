@@ -34,6 +34,8 @@ export type ClientMessage =
   | { type: "accept_insurance" }
   | { type: "decline_insurance" }
   | { type: "run_it_vote"; count: 1 | 2 | 3 }
+  | { type: "post_blinds" }
+  | { type: "wait_for_bb" }
   | { type: "rtc_signal"; targetUserId: string; signal: any }
   | { type: "rtc_toggle"; video: boolean; audio: boolean };
 
@@ -598,6 +600,20 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
       }
+      sendGameStateToTable(client.tableId);
+      break;
+    }
+
+    case "post_blinds": {
+      if (!client.tableId) return;
+      tableManager.handlePostBlindChoice(client.tableId, client.userId, "post");
+      sendGameStateToTable(client.tableId);
+      break;
+    }
+
+    case "wait_for_bb": {
+      if (!client.tableId) return;
+      tableManager.handlePostBlindChoice(client.tableId, client.userId, "wait");
       sendGameStateToTable(client.tableId);
       break;
     }

@@ -996,18 +996,47 @@ class TableManager {
     if (!instance) return;
     const player = instance.engine.getPlayer(userId);
     if (player) {
-      player.isSittingOut = sitOut;
-      player.voluntarySitOut = sitOut; // track intent: true = player chose to sit out
       player.awaitingReady = false; // clear "awaiting ready" on any sit-in/sit-out action
       if (sitOut) {
+        player.isSittingOut = true;
+        player.voluntarySitOut = true;
         player.status = "sitting-out";
-      } else if (player.status === "sitting-out") {
-        player.status = "waiting";
-      }
-      // If a player just marked ready, check if we can start a hand
-      if (!sitOut) {
+      } else {
+        // Sitting back in
+        player.voluntarySitOut = false;
+        // Cash game: if player missed blinds, default to waiting for BB
+        // Player can then choose to post immediately via post_blinds message
+        const isTournament = instance.config.gameFormat === "sng" || instance.config.gameFormat === "tournament";
+        if (!isTournament && (player.missedBigBlind || player.missedSmallBlind)) {
+          player.isSittingOut = false;
+          player.waitingForBB = true;
+          player.status = "waiting";
+        } else {
+          player.isSittingOut = false;
+          if (player.status === "sitting-out") {
+            player.status = "waiting";
+          }
+        }
         this.maybeStartCountdown(tableId, instance);
       }
+    }
+  }
+
+  /** Handle player's choice to post missed blinds now or wait for BB */
+  handlePostBlindChoice(tableId: string, userId: string, choice: "post" | "wait") {
+    const instance = this.tables.get(tableId);
+    if (!instance) return;
+    const player = instance.engine.getPlayer(userId);
+    if (!player) return;
+
+    if (choice === "post") {
+      // Player wants to post missed blinds immediately — clear waitingForBB
+      player.waitingForBB = false;
+      // missedBigBlind/missedSmallBlind remain true so engine posts them next hand
+      this.maybeStartCountdown(tableId, instance);
+    } else {
+      // Player chose to wait — ensure waitingForBB is set
+      player.waitingForBB = true;
     }
   }
 

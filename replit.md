@@ -58,6 +58,10 @@ Preferred communication style: Simple, everyday language.
 
 6. **Shared schema:** The `shared/` directory contains types and schemas used by both frontend and backend, ensuring type safety across the stack.
 
+7. **In-game admin panel:** Table creators and global admins can access a settings panel (gear icon in top bar) during gameplay to adjust blinds, table rules (straddle, run-it-twice, rabbit hunting, etc.), speed/timing, rake, and bot settings. Changes apply at the start of the next hand. Access is gated by `tables.createdById === user.id || user.role === "admin"`. Offline mode always has admin access. Component: `client/src/components/game/InGameAdminPanel.tsx`.
+
+8. **GameSetup advanced settings:** The pre-game setup screen (`GameSetup.tsx`) includes expandable sections for table rules, speed/timing, rake, privacy (password-protected tables), bot control, and tournament-specific settings (re-entry, rebuy, late registration, breaks, payout structures).
+
 ### Project Structure
 
 ```

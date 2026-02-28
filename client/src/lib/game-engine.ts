@@ -41,8 +41,10 @@ export interface GameEngineConfig {
 
 // --- Hook Implementation ---
 export function useGameEngine(initialPlayers: Player[], heroId: string = 'player-1', config?: GameEngineConfig) {
-  const sb = config?.smallBlind ?? 10;
-  const bb = config?.bigBlind ?? 20;
+  const sbRef = useRef(config?.smallBlind ?? 10);
+  const bbRef = useRef(config?.bigBlind ?? 20);
+  const sb = sbRef.current;
+  const bb = bbRef.current;
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [deck, setDeck] = useState<CardType[]>([]);
   const [showdown, setShowdown] = useState<ShowdownData | null>(null);
@@ -560,6 +562,11 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     }
   }, [heroId, startGame]);
 
+  const updateConfig = useCallback((newConfig: Partial<GameEngineConfig>) => {
+    if (newConfig.smallBlind !== undefined) sbRef.current = newConfig.smallBlind;
+    if (newConfig.bigBlind !== undefined) bbRef.current = newConfig.bigBlind;
+  }, []);
+
   return {
     players,
     gameState,
@@ -568,5 +575,6 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     dismissShowdown: () => setShowdown(null),
     rebuyHero,
     sitIn,
+    updateConfig,
   };
 }

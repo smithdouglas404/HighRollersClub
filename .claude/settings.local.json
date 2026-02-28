@@ -69,7 +69,8 @@
       "Bash(curl -s -c /tmp/cookies2.txt -X POST http://localhost:5000/api/auth/guest 2>&1 | python3 -m json.tool)",
       "Bash(pgrep -a node 2>/dev/null || echo \"no node processes\")",
       "Bash(kill -9 19859 19870 2>/dev/null; sleep 2 && pgrep -a node)",
-      "Bash(NODE_ENV=development npx tsx server/index.ts)"
+      "Bash(NODE_ENV=development npx tsx server/index.ts)",
+      "Bash(grep -rn \"opacity-30\\\\|opacity-50\\\\|text-gray-600\\\\|text-gray-500\" /home/runner/workspace/client/src/pages/*.tsx | grep -i \"disabled\\\\|inactive\\\\|unavailable\" | head -10)"
     ]
   }
 }

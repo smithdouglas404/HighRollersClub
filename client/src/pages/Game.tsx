@@ -39,7 +39,8 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS, CARD_BACK_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, Link2, Palette } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, Link2, Palette, Settings2 } from "lucide-react";
+import { InGameAdminPanel, type InGameSettings } from "@/components/game/InGameAdminPanel";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
 import { TournamentResults } from "@/components/game/TournamentResults";
@@ -275,6 +276,9 @@ function GameTable({
   // Practice mode rebuy
   rebuyHero?: (amount: number) => void;
   defaultBuyIn?: number;
+  isAdmin?: boolean;
+  currentSettings?: InGameSettings;
+  onAdminSettingsApply?: (settings: InGameSettings) => void;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showAddChips, setShowAddChips] = useState(false);
@@ -292,6 +296,7 @@ function GameTable({
   const screen = useScreenInfo();
   const { compactMode, toggleCompactMode, feltPreset, setFeltColor, cardBack, setCardBack, cardBackPreset } = useGameUI();
   const [showThemePanel, setShowThemePanel] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const speedMultiplier = (gameState as any).speedMultiplier || 1.0;
   const dealing = useDealingSequence(players, gameState, heroId, compactMode, speedMultiplier);
   const { opponentStats, hudEnabled, setHudEnabled } = useOpponentStats(gameState, players, heroId);
@@ -776,6 +781,17 @@ function GameTable({
               </div>
             )}
           </div>
+
+          {isAdmin && (
+            <button
+              onClick={() => setShowAdminPanel(!showAdminPanel)}
+              className={`p-1.5 rounded transition-colors ${showAdminPanel ? "bg-amber-500/15" : "hover:bg-white/5"}`}
+              title="Admin Settings"
+              data-testid="button-admin-settings"
+            >
+              <Settings2 className={`w-3.5 h-3.5 ${showAdminPanel ? "text-amber-400" : "text-gray-500"}`} />
+            </button>
+          )}
 
           <button onClick={() => setShowProvablyFair(!showProvablyFair)} className="p-1.5 hover:bg-white/5 rounded transition-colors">
             <ShieldCheck className={`w-3.5 h-3.5 ${verificationStatus === "verified" ? "text-green-400" : "text-gray-500"}`} />
@@ -1384,6 +1400,16 @@ function GameTable({
         )}
       </AnimatePresence>
 
+      {isAdmin && currentSettings && onAdminSettingsApply && (
+        <InGameAdminPanel
+          isOpen={showAdminPanel}
+          onClose={() => setShowAdminPanel(false)}
+          settings={currentSettings}
+          onApply={onAdminSettingsApply}
+          isMultiplayer={isMultiplayer}
+        />
+      )}
+
       {/* ═══ ADD CHIPS MODAL ═══ */}
       <AnimatePresence>
         {showAddChips && addChips && maxBuyIn && (
@@ -1622,6 +1648,29 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
   }, [tableId]);
 
   const isSNG = tableInfo?.gameFormat === "sng" || tableInfo?.gameFormat === "tournament";
+  const isTableAdmin = !!(user && tableInfo && (
+    String(tableInfo.createdById) === String(user.id) || user.role === "admin"
+  ));
+  const [mpAdminSettings, setMpAdminSettings] = useState<InGameSettings>({
+    straddleEnabled: false, bigBlindAnte: false, runItTwice: false,
+    rabbitHunting: false, showAllHands: true, autoTopUp: false,
+    actionTimerSeconds: 15, speedMultiplier: 1.0, autoStartDelay: 5,
+    rakePercent: 5, rakeCap: 0, allowBots: true,
+    smallBlind: 10, bigBlind: 20, ante: 0,
+  });
+
+  useEffect(() => {
+    if (tableInfo) {
+      setMpAdminSettings(prev => ({
+        ...prev,
+        smallBlind: tableInfo.smallBlind || prev.smallBlind,
+        bigBlind: tableInfo.bigBlind || prev.bigBlind,
+        ante: tableInfo.ante || 0,
+        rakePercent: tableInfo.rakePercent ?? prev.rakePercent,
+        rakeCap: tableInfo.rakeCap ?? prev.rakeCap,
+      }));
+    }
+  }, [tableInfo]);
 
   // Reset joined state only for join-rejection errors (not in-game action errors)
   useEffect(() => {
@@ -1833,6 +1882,9 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         postBlinds={postBlinds}
         waitForBB={waitForBB}
         inviteCode={tableInfo?.inviteCode}
+        isAdmin={isTableAdmin}
+        currentSettings={mpAdminSettings}
+        onAdminSettingsApply={(newSettings) => setMpAdminSettings(newSettings)}
       />
       {/* Join/Leave Notifications */}
       <div className="fixed top-16 right-4 z-[60] flex flex-col gap-2 pointer-events-none">
@@ -1872,10 +1924,19 @@ const BOT_CHAT_LINES = [
 ];
 
 function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Player[]; engineConfig?: GameEngineConfig }) {
-  const { players, gameState, handlePlayerAction, showdown, rebuyHero, sitIn } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
+  const { players, gameState, handlePlayerAction, showdown, rebuyHero, sitIn, updateConfig } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
   const [, navigate] = useLocation();
   const defaultBuyIn = initialPlayers.find(p => p.id === HERO_ID)?.chips || 1000;
   const [chatMessages, setChatMessages] = useState<{ playerName: string; message: string }[]>([]);
+  const [adminSettings, setAdminSettings] = useState<InGameSettings>({
+    straddleEnabled: false, bigBlindAnte: false, runItTwice: false,
+    rabbitHunting: false, showAllHands: true, autoTopUp: false,
+    actionTimerSeconds: 15, speedMultiplier: 1.0, autoStartDelay: 5,
+    rakePercent: 0, rakeCap: 0, allowBots: true,
+    smallBlind: engineConfig?.smallBlind || 10,
+    bigBlind: engineConfig?.bigBlind || 20,
+    ante: engineConfig?.ante || 0,
+  });
 
   const sendChat = useCallback((message: string) => {
     const hero = players.find(p => p.id === HERO_ID);
@@ -1913,6 +1974,12 @@ function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Pl
       rebuyHero={(amount) => rebuyHero(amount)}
       defaultBuyIn={defaultBuyIn}
       sitIn={sitIn}
+      isAdmin={true}
+      currentSettings={adminSettings}
+      onAdminSettingsApply={(newSettings) => {
+        setAdminSettings(newSettings);
+        updateConfig({ smallBlind: newSettings.smallBlind, bigBlind: newSettings.bigBlind, ante: newSettings.ante });
+      }}
     />
   );
 }

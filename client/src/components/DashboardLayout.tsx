@@ -13,9 +13,9 @@ import {
   Shield, ChevronDown, Check, Menu, X
 } from "lucide-react";
 
-import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
-import serverBg from "@assets/generated_images/cinematic_server_room_bg.png";
-import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.png";
+import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
+import serverBg from "@assets/generated_images/cinematic_server_room_bg.webp";
+import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.webp";
 
 interface NavItem {
   icon: any;

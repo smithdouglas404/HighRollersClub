@@ -7,7 +7,7 @@ import { TABLE_SEATS, DEALER_POSITIONS } from "@/lib/table-constants";
 import { useGameUI } from "@/lib/game-ui-context";
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
 
-import pokerTableImg from "@assets/generated_images/poker_table_clean_topdown.png";
+import pokerTableImg from "@assets/generated_images/poker_table_clean_topdown.webp";
 
 interface ImageTableProps {
   communityCards: CardType[];

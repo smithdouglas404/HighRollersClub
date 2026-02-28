@@ -3,10 +3,10 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Shield, Users, Trophy, Zap, Play, ChevronRight, Eye, Gamepad2, Crown, Swords } from "lucide-react";
 
-import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
-import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.png";
-import feltImg from "@assets/generated_images/poker_table_top_cinematic.png";
-import chipStack from "@assets/generated_images/gold_chip_stack_3d.png";
+import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
+import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.webp";
+import feltImg from "@assets/generated_images/poker_table_top_cinematic.webp";
+import chipStack from "@assets/generated_images/gold_chip_stack_3d.webp";
 
 const FEATURES = [
   {
@@ -234,12 +234,13 @@ export default function Landing() {
                   }}
                 >
                   <div className="aspect-[16/10] relative">
-                    <img src={feltImg} alt="Poker Table" className="w-full h-full object-cover" />
+                    <img src={feltImg} alt="Poker Table" loading="lazy" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
 
                     <img
                       src={chipStack}
                       alt=""
+                      loading="lazy"
                       className="absolute bottom-8 right-8 w-24 h-24 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
                     />
 

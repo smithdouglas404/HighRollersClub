@@ -9,7 +9,7 @@ import {
 import { useWallet, type WalletType } from "@/lib/wallet-context";
 import { AVATAR_OPTIONS, type AvatarOption } from "../poker/AvatarSelect";
 
-import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
+import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
 
 type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
 

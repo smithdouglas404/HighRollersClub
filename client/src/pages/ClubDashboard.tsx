@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { ClubTournaments } from "@/components/club/ClubTournaments";
 import { ClubLeaderboard } from "@/components/club/ClubLeaderboard";
-import pokerTableImg from "@assets/generated_images/poker_table_perspective.png";
+import pokerTableImg from "@assets/generated_images/poker_table_perspective.webp";
 
 /* ── Circuit Board SVG Pattern ────────────────────────── */
 const CIRCUIT_SVG = `url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cstyle%3Eline%7Bstroke:%23d4a843;stroke-width:0.5;opacity:0.15%7Dcircle%7Bfill:%23d4a843;opacity:0.2%7D%3C/style%3E%3C/defs%3E%3Cline x1='20' y1='0' x2='20' y2='60'/%3E%3Cline x1='20' y1='60' x2='80' y2='60'/%3E%3Cline x1='80' y1='60' x2='80' y2='120'/%3E%3Cline x1='80' y1='120' x2='140' y2='120'/%3E%3Cline x1='140' y1='120' x2='140' y2='180'/%3E%3Cline x1='140' y1='180' x2='200' y2='180'/%3E%3Cline x1='60' y1='0' x2='60' y2='40'/%3E%3Cline x1='60' y1='40' x2='120' y2='40'/%3E%3Cline x1='120' y1='40' x2='120' y2='100'/%3E%3Cline x1='160' y1='0' x2='160' y2='30'/%3E%3Cline x1='160' y1='30' x2='200' y2='30'/%3E%3Cline x1='0' y1='140' x2='40' y2='140'/%3E%3Cline x1='40' y1='140' x2='40' y2='200'/%3E%3Ccircle cx='20' cy='60' r='2'/%3E%3Ccircle cx='80' cy='60' r='2'/%3E%3Ccircle cx='80' cy='120' r='2'/%3E%3Ccircle cx='140' cy='120' r='2'/%3E%3Ccircle cx='60' cy='40' r='2'/%3E%3Ccircle cx='120' cy='40' r='2'/%3E%3Ccircle cx='160' cy='30' r='2'/%3E%3Ccircle cx='40' cy='140' r='2'/%3E%3C/svg%3E")`;
@@ -111,6 +111,7 @@ export default function ClubDashboard() {
           <img
             src={pokerTableImg}
             alt=""
+            loading="lazy"
             className="w-full h-64 object-cover opacity-15 blur-[1px]"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#111b2a]/80 to-[#111b2a]" />

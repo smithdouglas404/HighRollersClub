@@ -44,12 +44,12 @@ import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
 import { TournamentResults } from "@/components/game/TournamentResults";
 import { BombPotIndicator } from "@/components/game/BombPotIndicator";
 
-import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.png";
-import avatar1 from "@assets/generated_images/avatars/avatar_red_wolf.png";
-import avatar2 from "@assets/generated_images/avatars/avatar_steel_ghost.png";
-import avatar3 from "@assets/generated_images/avatars/avatar_dark_ace.png";
-import avatar4 from "@assets/generated_images/avatars/avatar_neon_fox.png";
-import avatar5 from "@assets/generated_images/avatars/avatar_cyber_punk.png";
+import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.webp";
+import avatar1 from "@assets/generated_images/avatars/avatar_red_wolf.webp";
+import avatar2 from "@assets/generated_images/avatars/avatar_steel_ghost.webp";
+import avatar3 from "@assets/generated_images/avatars/avatar_dark_ace.webp";
+import avatar4 from "@assets/generated_images/avatars/avatar_neon_fox.webp";
+import avatar5 from "@assets/generated_images/avatars/avatar_cyber_punk.webp";
 
 const HERO_ID = "player-1";
 

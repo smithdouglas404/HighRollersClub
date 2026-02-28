@@ -8,7 +8,7 @@ import {
   User, Coins, Trophy, TrendingUp, Gamepad2,
   Zap, BookOpen, Wallet, Users, Loader2
 } from "lucide-react";
-import goldChips from "@assets/generated_images/gold_chip_stack_3d.png";
+import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
 interface PlayerStats {
   handsPlayed: number;
@@ -58,6 +58,7 @@ export default function Profile() {
           <img
             src={goldChips}
             alt=""
+            loading="lazy"
             className="absolute -top-4 -right-8 w-40 h-40 object-contain opacity-15 pointer-events-none rotate-12"
           />
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />

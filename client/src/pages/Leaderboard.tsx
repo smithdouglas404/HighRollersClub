@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { Trophy, Coins, Target, TrendingUp, Loader2, Medal } from "lucide-react";
-import goldChips from "@assets/generated_images/gold_chip_stack_3d.png";
+import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
 type MetricKey = "chips" | "wins" | "winRate";
 
@@ -57,6 +57,7 @@ export default function Leaderboard() {
           <img
             src={goldChips}
             alt=""
+            loading="lazy"
             className="absolute -right-6 -top-2 w-36 h-36 object-contain opacity-20 pointer-events-none"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />

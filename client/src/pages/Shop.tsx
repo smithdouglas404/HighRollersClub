@@ -9,7 +9,7 @@ import {
   Tag, Zap, Gem, Coins, Clock, Loader2, ArrowUpRight, ArrowDownRight,
   Package, Check, ShoppingCart, X, Shield, Heart
 } from "lucide-react";
-import chipPile from "@assets/generated_images/chip_stack_gold_pile.png";
+import chipPile from "@assets/generated_images/chip_stack_gold_pile.webp";
 
 const TABS = ["Avatars", "Table Themes", "Emotes", "Taunts", "Premium", "Wishlist", "Inventory"];
 
@@ -551,6 +551,7 @@ export default function Shop() {
           <img
             src={chipPile}
             alt=""
+            loading="lazy"
             className="absolute -right-4 -bottom-4 w-44 h-32 object-contain opacity-20 pointer-events-none"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent pointer-events-none" />

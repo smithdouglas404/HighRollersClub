@@ -10,7 +10,7 @@ import {
   Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search,
   Brain, Key, CheckCircle, XCircle
 } from "lucide-react";
-import feltBg from "@assets/generated_images/poker_felt_top_down.png";
+import feltBg from "@assets/generated_images/poker_felt_top_down.webp";
 
 type GameFormat = "all" | "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
 
@@ -238,6 +238,7 @@ export default function Lobby() {
           <img
             src={feltBg}
             alt=""
+            loading="lazy"
             className="w-full h-48 object-cover opacity-10"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#111b2a]/85 to-[#111b2a]" />

@@ -2,21 +2,21 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Zap, Shield, Crown, Star, Trophy, Flame } from "lucide-react";
 
-import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.png";
+import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
 
 // ─── 12 DALL-E 3 Avatars ─────────────────────────────────────────────────────
-import avNeonViper from "@assets/generated_images/avatars/avatar_neon_viper.png";
-import avChromeSiren from "@assets/generated_images/avatars/avatar_chrome_siren.png";
-import avGoldPhantom from "@assets/generated_images/avatars/avatar_gold_phantom.png";
-import avShadowKing from "@assets/generated_images/avatars/avatar_shadow_king.png";
-import avRedWolf from "@assets/generated_images/avatars/avatar_red_wolf.png";
-import avIceQueen from "@assets/generated_images/avatars/avatar_ice_queen.png";
-import avTechMonk from "@assets/generated_images/avatars/avatar_tech_monk.png";
-import avCyberPunk from "@assets/generated_images/avatars/avatar_cyber_punk.png";
-import avSteelGhost from "@assets/generated_images/avatars/avatar_steel_ghost.png";
-import avNeonFox from "@assets/generated_images/avatars/avatar_neon_fox.png";
-import avDarkAce from "@assets/generated_images/avatars/avatar_dark_ace.png";
-import avBoltRunner from "@assets/generated_images/avatars/avatar_bolt_runner.png";
+import avNeonViper from "@assets/generated_images/avatars/avatar_neon_viper.webp";
+import avChromeSiren from "@assets/generated_images/avatars/avatar_chrome_siren.webp";
+import avGoldPhantom from "@assets/generated_images/avatars/avatar_gold_phantom.webp";
+import avShadowKing from "@assets/generated_images/avatars/avatar_shadow_king.webp";
+import avRedWolf from "@assets/generated_images/avatars/avatar_red_wolf.webp";
+import avIceQueen from "@assets/generated_images/avatars/avatar_ice_queen.webp";
+import avTechMonk from "@assets/generated_images/avatars/avatar_tech_monk.webp";
+import avCyberPunk from "@assets/generated_images/avatars/avatar_cyber_punk.webp";
+import avSteelGhost from "@assets/generated_images/avatars/avatar_steel_ghost.webp";
+import avNeonFox from "@assets/generated_images/avatars/avatar_neon_fox.webp";
+import avDarkAce from "@assets/generated_images/avatars/avatar_dark_ace.webp";
+import avBoltRunner from "@assets/generated_images/avatars/avatar_bolt_runner.webp";
 
 export interface AvatarOption {
   id: string;

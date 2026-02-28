@@ -49,6 +49,10 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
   const handNumberRef = useRef(0);
   const actionNumberRef = useRef(0);
 
+  // Refs to always have latest state (avoids stale closures in setTimeout callbacks)
+  const playersRef = useRef<Player[]>(initialPlayers);
+  const gameStateRef = useRef<GameState>(null!);
+
   const [gameState, setGameState] = useState<GameState>({
     pot: 0,
     communityCards: [],
@@ -61,14 +65,20 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     actionNumber: 0,
   });
 
+  // Keep refs in sync with state
+  playersRef.current = players;
+  gameStateRef.current = gameState;
+
   const showdownTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Initialize Game
+  // Initialize Game — reads from refs so it always has latest state
   const startGame = useCallback(() => {
     const newDeck = shuffleDeck(createDeck());
+    const currentPlayers = playersRef.current;
+    const currentDealerId = gameStateRef.current.dealerId;
 
     // Only deal in players with chips > 0
-    const updatedPlayers: Player[] = players.map(p => {
+    const updatedPlayers: Player[] = currentPlayers.map(p => {
       if (p.chips <= 0) {
         return { ...p, isActive: false, status: 'folded' as const, cards: undefined, currentBet: 0 };
       }
@@ -85,7 +95,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     const activePlayers = updatedPlayers.filter(p => p.isActive);
     if (activePlayers.length < 2) return; // Not enough players to play
 
-    const dealerIndex = updatedPlayers.findIndex(p => p.id === gameState.dealerId);
+    const dealerIndex = updatedPlayers.findIndex(p => p.id === currentDealerId);
     // Find next active player for each position
     const findNextActive = (startIdx: number) => {
       let idx = (startIdx + 1) % updatedPlayers.length;
@@ -150,26 +160,28 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     setTimeout(() => {
       setGameState(prev => ({ ...prev, dealingPhase: 'dealt' }));
     }, 1500);
-  }, [players, gameState.dealerId, heroId]);
+  }, [heroId, sb, bb]);
 
-  // Advance Phase
+  // Advance Phase — reads from refs to avoid stale closures
   const nextPhase = useCallback(() => {
+    const gs = gameStateRef.current;
+    const currentPlayers = playersRef.current;
     let cardsToDeal = 0;
-    let nextPhaseName: GamePhase = gameState.phase;
+    let nextPhaseName: GamePhase = gs.phase;
 
-    if (gameState.phase === 'pre-flop') {
+    if (gs.phase === 'pre-flop') {
       cardsToDeal = 3; nextPhaseName = 'flop';
-    } else if (gameState.phase === 'flop') {
+    } else if (gs.phase === 'flop') {
       cardsToDeal = 1; nextPhaseName = 'turn';
-    } else if (gameState.phase === 'turn') {
+    } else if (gs.phase === 'turn') {
       cardsToDeal = 1; nextPhaseName = 'river';
-    } else if (gameState.phase === 'river') {
+    } else if (gs.phase === 'river') {
       nextPhaseName = 'showdown';
     }
 
     if (nextPhaseName === 'showdown') {
       // Real hand evaluation!
-      const activePlayers = players.filter(p => p.status !== 'folded' && p.cards);
+      const activePlayers = currentPlayers.filter(p => p.status !== 'folded' && p.cards);
       const playerHands = activePlayers.map(p => ({
         id: p.id,
         cards: p.cards!.map(c => ({ ...c, hidden: false })),
@@ -177,7 +189,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
 
       // Deal remaining community cards if needed
       const currentDeck = [...deck];
-      const finalCommunity = [...gameState.communityCards];
+      const finalCommunity = [...gs.communityCards];
       while (finalCommunity.length < 5 && currentDeck.length > 0) {
         finalCommunity.push(currentDeck.pop()!);
       }
@@ -196,31 +208,42 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       setGameState(prev => ({ ...prev, phase: 'showdown', communityCards: finalCommunity }));
       setDeck(currentDeck);
 
+      // Capture pot value now (before any state resets)
+      const currentPot = gs.pot;
+
       // Show showdown overlay
-      setShowdown({ results, winnerIds, pot: gameState.pot });
+      setShowdown({ results, winnerIds, pot: currentPot });
 
       // Award chips and restart after delay
       showdownTimerRef.current = setTimeout(() => {
-        const potShare = Math.floor(gameState.pot / winnerIds.length);
-        setPlayers(prev => prev.map(p =>
-          winnerIds.includes(p.id) ? { ...p, chips: p.chips + potShare } : p
-        ));
+        const potShare = Math.floor(currentPot / winnerIds.length);
 
-        // Rotate dealer to next player who will have chips
-        const currentDealerIdx = players.findIndex(p => p.id === gameState.dealerId);
-        let nextDealerIdx = (currentDealerIdx + 1) % players.length;
+        // Award winnings — use functional updater so we always get latest state
+        setPlayers(prev => {
+          const awarded = prev.map(p =>
+            winnerIds.includes(p.id) ? { ...p, chips: p.chips + potShare } : p
+          );
+          // Update ref immediately so startGame sees the awarded chips
+          playersRef.current = awarded;
+          return awarded;
+        });
+
+        // Rotate dealer to next player who will have chips (read from ref for latest)
+        const latestPlayers = playersRef.current;
+        const currentDealerId = gameStateRef.current.dealerId;
+        const currentDealerIdx = latestPlayers.findIndex(p => p.id === currentDealerId);
+        let nextDealerIdx = (currentDealerIdx + 1) % latestPlayers.length;
         let dlrSafety = 0;
-        while (dlrSafety < players.length) {
-          const p = players[nextDealerIdx];
-          // Will this player have chips next hand? (winners get potShare)
+        while (dlrSafety < latestPlayers.length) {
+          const p = latestPlayers[nextDealerIdx];
           const willHaveChips = winnerIds.includes(p.id) ? p.chips + potShare > 0 : p.chips > 0;
           if (willHaveChips) break;
-          nextDealerIdx = (nextDealerIdx + 1) % players.length;
+          nextDealerIdx = (nextDealerIdx + 1) % latestPlayers.length;
           dlrSafety++;
         }
         setGameState(prev => ({
           ...prev,
-          dealerId: players[nextDealerIdx].id,
+          dealerId: latestPlayers[nextDealerIdx].id,
         }));
 
         // Brief delay then start new hand
@@ -233,31 +256,31 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       return;
     }
 
-    const newCommunityCards = [...gameState.communityCards];
+    const newCommunityCards = [...gs.communityCards];
     const currentDeck = [...deck];
 
     for (let i = 0; i < cardsToDeal; i++) {
       if (currentDeck.length > 0) newCommunityCards.push(currentDeck.pop()!);
     }
 
-    const dealerIndex = players.findIndex(p => p.id === gameState.dealerId);
+    const dealerIndex = currentPlayers.findIndex(p => p.id === gs.dealerId);
 
     // Find next player who can act (not folded, not all-in, has chips)
-    let nextIndex = (dealerIndex + 1) % players.length;
+    let nextIndex = (dealerIndex + 1) % currentPlayers.length;
     let safety = 0;
-    while (safety < players.length) {
-      const p = players[nextIndex];
+    while (safety < currentPlayers.length) {
+      const p = currentPlayers[nextIndex];
       if (p.status !== 'folded' && p.isActive && p.chips > 0) break;
-      nextIndex = (nextIndex + 1) % players.length;
+      nextIndex = (nextIndex + 1) % currentPlayers.length;
       safety++;
     }
 
     // Check if everyone is all-in or only one can act — skip straight to showdown
-    const canAct = players.filter(p => p.status !== 'folded' && p.isActive && p.chips > 0);
+    const canAct = currentPlayers.filter(p => p.status !== 'folded' && p.isActive && p.chips > 0);
     if (canAct.length <= 1) {
       // Run out all community cards and go to showdown
       const currentDeck2 = [...deck];
-      const allCommunity = [...gameState.communityCards];
+      const allCommunity = [...gs.communityCards];
       while (allCommunity.length < 5 && currentDeck2.length > 0) {
         allCommunity.push(currentDeck2.pop()!);
       }
@@ -274,42 +297,44 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       ...prev,
       communityCards: newCommunityCards,
       phase: nextPhaseName,
-      currentTurnPlayerId: players[nextIndex].id,
+      currentTurnPlayerId: currentPlayers[nextIndex].id,
       lastAggressorId: undefined,
     }));
 
     setPlayers(prev => prev.map((p, idx) => ({
       ...p,
       currentBet: 0,
-      status: idx === nextIndex ? 'thinking' : (p.status === 'folded' ? 'folded' : (p.chips === 0 ? 'waiting' : 'waiting')),
+      status: idx === nextIndex ? 'thinking' : (p.status === 'folded' ? 'folded' : 'waiting'),
     })));
 
-  }, [gameState, deck, players, startGame]);
+  }, [deck, startGame]);
 
-  // Handle Player Actions
+  // Handle Player Actions — reads from refs to avoid stale closures
   const handlePlayerAction = useCallback((action: string, amount?: number) => {
-    const currentPlayerIndex = players.findIndex(p => p.id === gameState.currentTurnPlayerId);
+    const gs = gameStateRef.current;
+    const currentPlayers = playersRef.current;
+    const currentPlayerIndex = currentPlayers.findIndex(p => p.id === gs.currentTurnPlayerId);
     if (currentPlayerIndex === -1) return;
 
     actionNumberRef.current++;
 
-    const player = players[currentPlayerIndex];
-    const newPlayers = [...players];
-    let newPot = gameState.pot;
-    let newMinBet = gameState.minBet;
+    const player = currentPlayers[currentPlayerIndex];
+    const newPlayers = [...currentPlayers];
+    let newPot = gs.pot;
+    let newMinBet = gs.minBet;
 
     if (action === 'fold') {
       newPlayers[currentPlayerIndex] = { ...newPlayers[currentPlayerIndex], status: 'folded' };
     } else if (action === 'check') {
       newPlayers[currentPlayerIndex] = { ...newPlayers[currentPlayerIndex], status: 'checked' };
     } else if (action === 'call') {
-      const callAmount = Math.min(gameState.minBet - player.currentBet, player.chips);
+      const callAmount = Math.min(gs.minBet - player.currentBet, player.chips);
       const newChips = player.chips - callAmount;
       newPlayers[currentPlayerIndex] = {
         ...newPlayers[currentPlayerIndex],
         chips: newChips,
         currentBet: player.currentBet + callAmount,
-        status: newChips === 0 ? 'called' : 'called',
+        status: 'called',
       };
       newPot += callAmount;
     } else if (action === 'raise' && amount) {
@@ -332,13 +357,16 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       const winner = activePlayers[0];
       const winnerIdx = newPlayers.findIndex(p => p.id === winner.id);
       newPlayers[winnerIdx] = { ...winner, chips: winner.chips + newPot };
+
+      // Update ref so startGame sees the awarded chips
+      playersRef.current = newPlayers;
       setPlayers(newPlayers);
 
       // Rotate dealer for next hand (skip eliminated players)
-      const currentDealerIdx = newPlayers.findIndex(p => p.id === gameState.dealerId);
+      const currentDealerIdx = newPlayers.findIndex(p => p.id === gs.dealerId);
       let nextDealerIdx = (currentDealerIdx + 1) % newPlayers.length;
       let dlrSafety = 0;
-      while (newPlayers[nextDealerIdx].chips <= 0 && !newPlayers[nextDealerIdx].isActive && dlrSafety < newPlayers.length) {
+      while (newPlayers[nextDealerIdx].chips <= 0 && dlrSafety < newPlayers.length) {
         nextDealerIdx = (nextDealerIdx + 1) % newPlayers.length;
         dlrSafety++;
       }
@@ -376,6 +404,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       newPlayers.filter(p => p.status !== 'folded' && p.isActive).every(p => p.status === 'checked' || p.chips === 0);
 
     if (isRoundOver) {
+      playersRef.current = newPlayers;
       setPlayers(newPlayers);
       setGameState(prev => ({
         ...prev,
@@ -390,6 +419,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
 
     newPlayers[nextIndex] = { ...newPlayers[nextIndex], status: 'thinking', timeLeft: 100 };
 
+    playersRef.current = newPlayers;
     setPlayers(newPlayers);
     setGameState(prev => ({
       ...prev,
@@ -400,7 +430,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       actionNumber: actionNumberRef.current,
     }));
 
-  }, [players, gameState, nextPhase, startGame]);
+  }, [nextPhase, startGame]);
 
   // Bot AI with slightly smarter logic and realistic delay
   useEffect(() => {
@@ -413,15 +443,16 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
         return;
       }
 
+      const minBet = gameState.minBet;
       const timer = setTimeout(() => {
         const roll = Math.random();
-        if (gameState.minBet > 0 && currentPlayer.currentBet < gameState.minBet) {
+        if (minBet > 0 && currentPlayer.currentBet < minBet) {
           if (roll > 0.85) handlePlayerAction('fold');
           else if (roll > 0.15) handlePlayerAction('call');
-          else handlePlayerAction('raise', Math.min(gameState.minBet * 2, currentPlayer.chips + currentPlayer.currentBet));
+          else handlePlayerAction('raise', Math.min(minBet * 2, currentPlayer.chips + currentPlayer.currentBet));
         } else {
           if (roll > 0.65) handlePlayerAction('check');
-          else handlePlayerAction('raise', Math.min(gameState.minBet + bb * 2, currentPlayer.chips + currentPlayer.currentBet));
+          else handlePlayerAction('raise', Math.min(minBet + bb * 2, currentPlayer.chips + currentPlayer.currentBet));
         }
       }, 2000 + Math.random() * 2500); // 2-4.5s realistic delay
 

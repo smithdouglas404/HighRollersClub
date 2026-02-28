@@ -49,5 +49,5 @@ mockupState = "FULLSTACK"
 [userenv]
 
 [userenv.shared]
-NOWPAYMENTS_SANDBOX = "true"
+NOWPAYMENTS_SANDBOX = "false"
 NOWPAYMENTS_WEBHOOK_SECRET = "hrc_webhook_x44xo6gmx5o3fldmnukjl"

@@ -28,11 +28,12 @@ if (hasDatabase()) {
 
 const app = express();
 
+const isDev = process.env.NODE_ENV !== "production";
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: isDev ? false : {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],

@@ -38,6 +38,7 @@ export interface TableInstance {
     gameFormat: GameFormat;
     buyInAmount: number;
     startingChips: number;
+    awayTimeoutMinutes: number;
   };
   getStateForPlayer(playerId: string): any;
 }
@@ -446,6 +447,7 @@ class TableManager {
         gameFormat,
         buyInAmount: tableRow.buyInAmount || tableRow.minBuyIn,
         startingChips: tableRow.startingChips || 1500,
+        awayTimeoutMinutes: tableRow.awayTimeoutMinutes ?? 5,
       },
       getStateForPlayer: (playerId: string) => {
         const baseState = engine.getStateForPlayer(playerId);
@@ -1133,7 +1135,7 @@ class TableManager {
         console.log(`[table-manager] Auto-cashout for disconnected player ${userId} at table ${tableId}`);
         await this.processCashOut(tableId, userId, tableInst);
         sendGameStateToTable(tableId);
-      }, 5 * 60 * 1000); // 5 minutes
+      }, (instance?.config.awayTimeoutMinutes ?? 5) * 60 * 1000); // configurable away timeout
 
       this.autoCashoutTimers.set(cashoutTimerKey, autoCashout);
     }, 60000);

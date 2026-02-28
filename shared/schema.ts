@@ -144,6 +144,11 @@ export const tables = pgTable("tables", {
   straddleEnabled: boolean("straddle_enabled").notNull().default(false),
   bigBlindAnte: boolean("big_blind_ante").notNull().default(false),
   gameSpeed: text("game_speed").notNull().default("normal"), // normal | fast | turbo
+  // Table management
+  awayTimeoutMinutes: integer("away_timeout_minutes").notNull().default(5), // 1-60 min
+  inviteCode: varchar("invite_code", { length: 8 }).unique(),
+  scheduledStartTime: timestamp("scheduled_start_time"),
+  scheduledEndTime: timestamp("scheduled_end_time"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   index("tables_club_idx").on(table.clubId),
@@ -183,6 +188,9 @@ export const insertTableSchema = z.object({
   rakeCap: z.number().int().min(0).default(0),
   straddleEnabled: z.boolean().default(false),
   gameSpeed: z.enum(["normal", "fast", "turbo"]).default("normal"),
+  awayTimeoutMinutes: z.number().int().min(1).max(60).default(5),
+  scheduledStartTime: z.string().datetime().optional(),
+  scheduledEndTime: z.string().datetime().optional(),
 });
 
 export type TableRow = typeof tables.$inferSelect;

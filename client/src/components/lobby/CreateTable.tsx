@@ -40,6 +40,8 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
   const [bombPotAnte, setBombPotAnte] = useState(0);
   // Game speed
   const [gameSpeed, setGameSpeed] = useState<"normal" | "fast" | "turbo">("normal");
+  // Away timeout
+  const [awayTimeoutMinutes, setAwayTimeoutMinutes] = useState(5);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +59,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
       replaceBots: allowBots ? replaceBots : false,
       gameFormat,
       gameSpeed,
+      awayTimeoutMinutes,
     };
 
     if (gameFormat === "sng" || gameFormat === "tournament") {
@@ -208,6 +211,20 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 <option value="normal" className="bg-gray-900">Normal</option>
                 <option value="fast" className="bg-gray-900">Fast (2x)</option>
                 <option value="turbo" className="bg-gray-900">Turbo (4x)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1 mb-1.5">
+                <Clock className="w-3 h-3" /> Away Timeout
+              </label>
+              <select
+                value={awayTimeoutMinutes}
+                onChange={(e) => setAwayTimeoutMinutes(Number(e.target.value))}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,212,255,0.15)]"
+              >
+                {[1, 2, 5, 10, 15, 30, 60].map((n) => (
+                  <option key={n} value={n} className="bg-gray-900">{n} min</option>
+                ))}
               </select>
             </div>
           </div>

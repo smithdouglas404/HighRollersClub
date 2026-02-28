@@ -67,6 +67,7 @@ export interface IStorage {
 
   // Tables
   getTable(id: string): Promise<TableRow | undefined>;
+  getTableByInviteCode(code: string): Promise<TableRow | undefined>;
   getTables(): Promise<TableRow[]>;
   createTable(table: InsertTable & { createdById: string }): Promise<TableRow>;
   updateTable(id: string, data: Partial<TableRow>): Promise<TableRow | undefined>;
@@ -394,6 +395,9 @@ export class MemStorage implements IStorage {
 
   // Tables
   async getTable(id: string) { return this.tablesList.get(id); }
+  async getTableByInviteCode(code: string) {
+    return Array.from(this.tablesList.values()).find(t => t.inviteCode === code);
+  }
   async getTables() { return Array.from(this.tablesList.values()); }
   async createTable(data: InsertTable & { createdById: string }): Promise<TableRow> {
     const id = randomUUID();
@@ -427,10 +431,20 @@ export class MemStorage implements IStorage {
       straddleEnabled: data.straddleEnabled ?? false,
       bigBlindAnte: (data as any).bigBlindAnte ?? false,
       gameSpeed: data.gameSpeed || "normal",
+      awayTimeoutMinutes: data.awayTimeoutMinutes ?? 5,
+      inviteCode: this.generateMemInviteCode(),
+      scheduledStartTime: data.scheduledStartTime ? new Date(data.scheduledStartTime) : null,
+      scheduledEndTime: data.scheduledEndTime ? new Date(data.scheduledEndTime) : null,
       createdAt: new Date(),
     };
     this.tablesList.set(id, table);
     return table;
+  }
+  private generateMemInviteCode(): string {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let code = "";
+    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
   }
   async updateTable(id: string, data: Partial<TableRow>) {
     const table = this.tablesList.get(id);
@@ -1199,9 +1213,27 @@ export class DatabaseStorage implements IStorage {
       startingChips: data.startingChips ?? 1500,
       payoutStructure: data.payoutStructure || null,
       gameSpeed: data.gameSpeed || "normal",
+      awayTimeoutMinutes: data.awayTimeoutMinutes ?? 5,
+      inviteCode: this.generateInviteCode(),
+      scheduledStartTime: data.scheduledStartTime ? new Date(data.scheduledStartTime) : null,
+      scheduledEndTime: data.scheduledEndTime ? new Date(data.scheduledEndTime) : null,
     }).returning();
     return table;
   }
+
+  private generateInviteCode(): string {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let code = "";
+    for (let i = 0; i < 8; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
+  }
+  async getTableByInviteCode(code: string) {
+    const [table] = await this.db.select().from(tables).where(eq(tables.inviteCode, code));
+    return table;
+  }
+
   async updateTable(id: string, data: Partial<TableRow>) {
     const [table] = await this.db.update(tables).set(data).where(eq(tables.id, id)).returning();
     return table;

@@ -131,6 +131,7 @@ export class MTTManager {
         rakePercent: 0,
         rakeCap: 0,
         straddleEnabled: false,
+        awayTimeoutMinutes: 5,
       });
 
       this.tableIds.add(tableRow.id);

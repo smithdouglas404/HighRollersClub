@@ -1082,6 +1082,37 @@ class TableManager {
           }
         }
 
+        // Recurring schedule: check if current day/time falls within the window
+        const recurring = table.recurringSchedule as { days: string[]; startTime: string; endTime: string } | null;
+        if (recurring && recurring.days?.length > 0) {
+          const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+          const today = dayNames[now.getDay()];
+          const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+          if (recurring.days.includes(today)) {
+            const instance = this.tables.get(table.id);
+            // Auto-start if within the start window (within 1 minute of start time)
+            if (currentTime >= recurring.startTime && currentTime < recurring.startTime.replace(/:(\d+)$/, (_, m) => `:${String(Math.min(59, Number(m) + 1)).padStart(2, "0")}`)) {
+              if (instance && instance.engine.state.phase === "waiting" && instance.engine.canStartHand()) {
+                console.log(`[scheduler] Auto-starting recurring table ${table.id} (${today} ${recurring.startTime})`);
+                this.maybeStartCountdown(table.id, instance);
+              }
+            }
+            // Auto-close at end time
+            if (currentTime >= recurring.endTime && instance) {
+              console.log(`[scheduler] Auto-closing recurring table ${table.id} (${today} ${recurring.endTime})`);
+              broadcastToTable(table.id, { type: "info", message: "Table closing — scheduled end time reached" } as any);
+              const playerIds = instance.engine.state.players.map(p => p.id);
+              for (const pid of playerIds) {
+                await this.processCashOut(table.id, pid, instance);
+              }
+              sendGameStateToTable(table.id);
+              this.clearTableTimers(table.id);
+              this.tables.delete(table.id);
+            }
+          }
+        }
+
         // Auto-close: if scheduled end time has passed, cash out all players
         if (table.scheduledEndTime && new Date(table.scheduledEndTime) <= now) {
           const instance = this.tables.get(table.id);

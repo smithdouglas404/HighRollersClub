@@ -435,6 +435,7 @@ export class MemStorage implements IStorage {
       inviteCode: this.generateMemInviteCode(),
       scheduledStartTime: data.scheduledStartTime ? new Date(data.scheduledStartTime) : null,
       scheduledEndTime: data.scheduledEndTime ? new Date(data.scheduledEndTime) : null,
+      recurringSchedule: data.recurringSchedule || null,
       createdAt: new Date(),
     };
     this.tablesList.set(id, table);
@@ -1217,6 +1218,7 @@ export class DatabaseStorage implements IStorage {
       inviteCode: this.generateInviteCode(),
       scheduledStartTime: data.scheduledStartTime ? new Date(data.scheduledStartTime) : null,
       scheduledEndTime: data.scheduledEndTime ? new Date(data.scheduledEndTime) : null,
+      recurringSchedule: data.recurringSchedule || null,
     }).returning();
     return table;
   }

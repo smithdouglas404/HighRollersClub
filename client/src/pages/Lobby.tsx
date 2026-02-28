@@ -33,6 +33,7 @@ interface TableInfo {
   createdAt: string;
   scheduledStartTime?: string | null;
   scheduledEndTime?: string | null;
+  recurringSchedule?: { days: string[]; startTime: string; endTime: string } | null;
 }
 
 const FORMAT_TABS: { key: GameFormat; label: string; icon: any }[] = [
@@ -103,6 +104,11 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
             {table.scheduledStartTime && new Date(table.scheduledStartTime) > new Date() && (
               <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400 border border-purple-500/20">
                 Starts {new Date(table.scheduledStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            {table.recurringSchedule && table.recurringSchedule.days?.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-400 border border-indigo-500/20">
+                {table.recurringSchedule.days.map(d => d.charAt(0).toUpperCase()).join("")} {table.recurringSchedule.startTime}–{table.recurringSchedule.endTime}
               </span>
             )}
           </div>

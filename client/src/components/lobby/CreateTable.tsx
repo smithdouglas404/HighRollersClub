@@ -45,6 +45,10 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
   // Schedule
   const [scheduledStart, setScheduledStart] = useState("");
   const [scheduledEnd, setScheduledEnd] = useState("");
+  // Recurring schedule
+  const [recurringDays, setRecurringDays] = useState<string[]>([]);
+  const [recurringStartTime, setRecurringStartTime] = useState("20:00");
+  const [recurringEndTime, setRecurringEndTime] = useState("23:00");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +94,13 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
 
     if (scheduledStart) config.scheduledStartTime = new Date(scheduledStart).toISOString();
     if (scheduledEnd) config.scheduledEndTime = new Date(scheduledEnd).toISOString();
+    if (recurringDays.length > 0) {
+      config.recurringSchedule = {
+        days: recurringDays,
+        startTime: recurringStartTime,
+        endTime: recurringEndTime,
+      };
+    }
 
     onCreate(config);
   };
@@ -426,11 +437,11 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
             )}
           </div>
 
-          {/* Schedule (optional) */}
+          {/* One-time schedule (optional) */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1 mb-1.5">
-                <Clock className="w-3 h-3" /> Start Time
+                <Clock className="w-3 h-3" /> One-Time Start
               </label>
               <input
                 type="datetime-local"
@@ -441,7 +452,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
             </div>
             <div>
               <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1 mb-1.5">
-                <Clock className="w-3 h-3" /> End Time
+                <Clock className="w-3 h-3" /> One-Time End
               </label>
               <input
                 type="datetime-local"
@@ -450,6 +461,64 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 [color-scheme:dark]"
               />
             </div>
+          </div>
+
+          {/* Recurring schedule */}
+          <div>
+            <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1 mb-2">
+              <Clock className="w-3 h-3" /> Recurring Schedule
+            </label>
+            <div className="flex gap-1.5 mb-2">
+              {[
+                { key: "mon", label: "M" },
+                { key: "tue", label: "T" },
+                { key: "wed", label: "W" },
+                { key: "thu", label: "T" },
+                { key: "fri", label: "F" },
+                { key: "sat", label: "S" },
+                { key: "sun", label: "S" },
+              ].map((day, idx) => (
+                <button
+                  key={day.key}
+                  type="button"
+                  onClick={() => setRecurringDays(prev =>
+                    prev.includes(day.key)
+                      ? prev.filter(d => d !== day.key)
+                      : [...prev, day.key]
+                  )}
+                  className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${
+                    recurringDays.includes(day.key)
+                      ? "bg-cyan-500 text-black border border-cyan-400"
+                      : "bg-white/5 text-gray-400 border border-white/10 hover:border-cyan-500/30"
+                  }`}
+                  title={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][idx]}
+                >
+                  {day.label}
+                </button>
+              ))}
+            </div>
+            {recurringDays.length > 0 && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[0.5rem] text-gray-500 uppercase tracking-wider mb-1 block">Start</label>
+                  <input
+                    type="time"
+                    value={recurringStartTime}
+                    onChange={(e) => setRecurringStartTime(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 [color-scheme:dark]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[0.5rem] text-gray-500 uppercase tracking-wider mb-1 block">End</label>
+                  <input
+                    type="time"
+                    value={recurringEndTime}
+                    onChange={(e) => setRecurringEndTime(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Submit */}

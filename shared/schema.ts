@@ -149,6 +149,7 @@ export const tables = pgTable("tables", {
   inviteCode: varchar("invite_code", { length: 8 }).unique(),
   scheduledStartTime: timestamp("scheduled_start_time"),
   scheduledEndTime: timestamp("scheduled_end_time"),
+  recurringSchedule: jsonb("recurring_schedule"), // { days: string[], startTime: "HH:MM", endTime: "HH:MM" }
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   index("tables_club_idx").on(table.clubId),
@@ -191,6 +192,11 @@ export const insertTableSchema = z.object({
   awayTimeoutMinutes: z.number().int().min(1).max(60).default(5),
   scheduledStartTime: z.string().datetime().optional(),
   scheduledEndTime: z.string().datetime().optional(),
+  recurringSchedule: z.object({
+    days: z.array(z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])).min(1),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/),
+  }).optional(),
 });
 
 export type TableRow = typeof tables.$inferSelect;

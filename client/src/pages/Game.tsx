@@ -269,8 +269,10 @@ function GameTable({
   const { value: animatedHeroChips } = useAnimatedCounter(hero?.chips || 0, 400);
 
   // Stop all audio when leaving the game
+  const unmountedRef = useRef(false);
   useEffect(() => {
     return () => {
+      unmountedRef.current = true;
       soundEngine.stopBgm();
     };
   }, []);
@@ -306,6 +308,7 @@ function GameTable({
   // Auto-play BGM while waiting, stop when hand starts
   const prevPhaseRef = useRef(gameState.phase);
   useEffect(() => {
+    if (unmountedRef.current) return;
     const prev = prevPhaseRef.current;
     prevPhaseRef.current = gameState.phase;
 

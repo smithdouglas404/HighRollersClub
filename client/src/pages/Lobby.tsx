@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { soundEngine } from "@/lib/sound-engine";
 import { useToast } from "@/hooks/use-toast";
 import { CreateTableModal } from "@/components/lobby/CreateTable";
 import {
@@ -156,6 +157,11 @@ export default function Lobby() {
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiHasKey, setAiHasKey] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
+
+  // Kill any lingering game audio when returning to lobby
+  useEffect(() => {
+    soundEngine.stopBgm();
+  }, []);
 
   const fetchTables = async () => {
     try {

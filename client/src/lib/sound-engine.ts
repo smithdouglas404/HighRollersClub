@@ -9,7 +9,7 @@ const BGM_VOL_KEY = 'poker-bgm-volume';
 
 // Sound file names in /sounds/ folder (all generated via ElevenLabs)
 const SOUND_NAMES = [
-  'card-deal', 'card-flip', 'chip-clink', 'chip-slide',
+  'card-deal', 'card-flip', 'chip-clink', 'chip-slide', 'chip-bet',
   'fold', 'check', 'call', 'raise',
   'phase-reveal', 'showdown', 'win',
   'timer-tick', 'turn-notify', 'countdown',
@@ -180,7 +180,7 @@ class SoundEngine {
   }
 
   playChipClinkAt(seatX: number, seatScale: number) {
-    this.playSoundAt('chip-slide', seatX, seatScale);
+    this.playSoundAt('chip-bet', seatX, seatScale);
   }
 
   playFoldAt(seatX: number, seatScale: number) {
@@ -209,8 +209,8 @@ class SoundEngine {
 
   playCardDeal() { this.playSound('card-deal'); }
   playCardFlip() { this.playSound('card-flip'); }
-  playChipClink() { this.playSound('chip-slide'); }
-  playChipSlide() { this.playSound('chip-slide'); }
+  playChipClink() { this.playSound('chip-bet'); }
+  playChipSlide() { this.playSound('chip-bet'); }
   playFold() { this.playSound('fold'); }
   playCheck() { this.playSound('check'); }
   playCall() { this.playSound('call'); }

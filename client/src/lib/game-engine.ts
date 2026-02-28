@@ -439,7 +439,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
 
   }, [nextPhase, startGame]);
 
-  // Bot AI with slightly smarter logic and realistic delay
+  // Bot AI — position-aware with realistic fold rates and timing
   useEffect(() => {
     const currentPlayer = players.find(p => p.id === gameState.currentTurnPlayerId);
 
@@ -451,17 +451,50 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       }
 
       const minBet = gameState.minBet;
+      const phase = gameStateRef.current.phase;
+      const pot = gameStateRef.current.pot;
+      const callCost = Math.max(0, minBet - currentPlayer.currentBet);
+      const potOdds = pot > 0 ? callCost / (pot + callCost) : 0;
+
       const timer = setTimeout(() => {
         const roll = Math.random();
-        if (minBet > 0 && currentPlayer.currentBet < minBet) {
-          if (roll > 0.85) handlePlayerAction('fold');
-          else if (roll > 0.15) handlePlayerAction('call');
-          else handlePlayerAction('raise', Math.min(minBet * 2, currentPlayer.chips + currentPlayer.currentBet));
+
+        if (callCost > 0) {
+          // Facing a bet — fold more in later streets and with bad pot odds
+          const isExpensive = callCost > currentPlayer.chips * 0.3;
+          const isPostFlop = phase !== 'pre-flop';
+          let foldChance = 0.25; // Base 25% fold rate
+
+          if (isPostFlop) foldChance += 0.10; // More folds post-flop
+          if (isExpensive) foldChance += 0.15; // More folds facing big bets
+          if (potOdds > 0.4) foldChance += 0.10; // Bad pot odds
+          foldChance = Math.min(foldChance, 0.60); // Cap at 60%
+
+          if (roll < foldChance) {
+            handlePlayerAction('fold');
+          } else if (roll < foldChance + 0.55 * (1 - foldChance)) {
+            // Call — majority of remaining range
+            handlePlayerAction('call');
+          } else {
+            // Raise — aggressive play
+            const raiseSize = Math.min(minBet * (1.5 + Math.random() * 1.5), currentPlayer.chips + currentPlayer.currentBet);
+            handlePlayerAction('raise', Math.round(raiseSize));
+          }
         } else {
-          if (roll > 0.65) handlePlayerAction('check');
-          else handlePlayerAction('raise', Math.min(minBet + bb * 2, currentPlayer.chips + currentPlayer.currentBet));
+          // Not facing a bet — can check or bet
+          if (roll < 0.60) {
+            handlePlayerAction('check');
+          } else if (roll < 0.85) {
+            // Small bet (30-60% pot)
+            const betSize = Math.max(bb, Math.round(pot * (0.3 + Math.random() * 0.3)));
+            handlePlayerAction('raise', Math.min(betSize + currentPlayer.currentBet, currentPlayer.chips + currentPlayer.currentBet));
+          } else {
+            // Big bet (60-100% pot)
+            const betSize = Math.max(bb * 2, Math.round(pot * (0.6 + Math.random() * 0.4)));
+            handlePlayerAction('raise', Math.min(betSize + currentPlayer.currentBet, currentPlayer.chips + currentPlayer.currentBet));
+          }
         }
-      }, 2000 + Math.random() * 2500); // 2-4.5s realistic delay
+      }, 2500 + Math.random() * 3500); // 2.5-6s realistic delay
 
       return () => clearTimeout(timer);
     }

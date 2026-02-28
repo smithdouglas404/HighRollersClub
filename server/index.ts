@@ -139,13 +139,35 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
 
+  // Kill any stale node server on our port before we try to bind.
+  // Exclude Replit's pid2 (PID typically < 100) since we can't/shouldn't kill it.
+  try {
+    const pids = execSync(`fuser ${port}/tcp 2>/dev/null || true`, { timeout: 3000 }).toString().trim().split(/\s+/);
+    for (const p of pids) {
+      const pid = parseInt(p, 10);
+      if (pid > 100) {
+        try { process.kill(pid, "SIGKILL"); } catch {}
+      }
+    }
+    if (pids.some(p => parseInt(p, 10) > 100)) {
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  } catch {}
+
+  let retries = 0;
+  const MAX_RETRIES = 3;
+
   server.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
-      log(`Port ${port} is busy — killing stale process and retrying...`);
+    if (err.code === "EADDRINUSE" && retries < MAX_RETRIES) {
+      retries++;
+      log(`Port ${port} is busy — retry ${retries}/${MAX_RETRIES} in 2s...`);
       try { execSync(`fuser -k -9 ${port}/tcp 2>/dev/null`, { timeout: 3000 }); } catch {}
       setTimeout(() => {
         server.listen({ port, host: "0.0.0.0", reusePort: true });
       }, 2000);
+    } else if (err.code === "EADDRINUSE") {
+      console.error(`[server] Port ${port} still busy after ${MAX_RETRIES} retries. Is another instance running?`);
+      process.exit(1);
     } else {
       console.error("[server] Fatal error:", err);
       process.exit(1);

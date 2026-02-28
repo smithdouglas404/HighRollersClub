@@ -46,6 +46,7 @@ function CardFace({ card, isHero }: { card: CardType; isHero: boolean }) {
   return (
     <div className="absolute inset-0 rounded-lg overflow-hidden" style={{
       border: isHero ? "2px solid #00d4ff" : "1.5px solid #c9a84c",
+      boxShadow: isHero ? "inset 0 0 8px rgba(0,212,255,0.1)" : "inset 0 0 4px rgba(201,168,76,0.08)",
     }}>
       <img
         src={getCardFaceUrl(card.rank, card.suit)}
@@ -55,7 +56,7 @@ function CardFace({ card, isHero }: { card: CardType; isHero: boolean }) {
       />
       {/* Light sheen overlay */}
       <div className="absolute inset-0 rounded-lg pointer-events-none" style={{
-        background: "linear-gradient(155deg, rgba(255,255,255,0.20) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.06) 100%)",
+        background: "linear-gradient(155deg, rgba(255,255,255,0.18) 0%, transparent 25%, transparent 65%, rgba(255,255,255,0.05) 100%)",
       }} />
     </div>
   );

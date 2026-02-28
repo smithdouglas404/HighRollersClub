@@ -40,29 +40,29 @@ export function HandBadge({ holeCards, communityCards, phase }: HandBadgeProps) 
 
         {/* Hand name badge */}
         <div
-          className="px-3 py-1 rounded-lg border backdrop-blur-md"
+          className="px-4 py-1.5 rounded-xl border backdrop-blur-md"
           style={{
-            background: `linear-gradient(135deg, ${strength.color}15, ${strength.color}08)`,
-            borderColor: `${strength.color}40`,
-            boxShadow: `0 0 12px ${strength.color}20`,
+            background: `linear-gradient(135deg, ${strength.color}18, ${strength.color}0a)`,
+            borderColor: `${strength.color}35`,
+            boxShadow: `0 0 16px ${strength.color}15, inset 0 1px 0 rgba(255,255,255,0.05)`,
           }}
         >
           <span
-            className="text-xs font-bold tracking-wide"
-            style={{ color: strength.color }}
+            className="text-sm font-black tracking-wide uppercase"
+            style={{ color: strength.color, textShadow: `0 0 8px ${strength.color}40` }}
           >
             {strength.label}
           </span>
         </div>
 
         {/* Strength bar */}
-        <div className="w-16 h-1 rounded-full overflow-hidden bg-white/5 mt-0.5">
+        <div className="w-20 h-1.5 rounded-full overflow-hidden bg-white/5 mt-0.5">
           <motion.div
             className="h-full rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${strength.percentage}%` }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            style={{ background: strength.color }}
+            style={{ background: `linear-gradient(90deg, ${strength.color}80, ${strength.color})`, boxShadow: `0 0 6px ${strength.color}40` }}
           />
         </div>
       </motion.div>

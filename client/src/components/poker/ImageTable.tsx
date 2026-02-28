@@ -180,10 +180,14 @@ export function ImageTable({
               }}
             >
               <div
-                className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center"
-                style={{ borderColor: "rgba(255,255,255,0.20)", background: "rgba(0,0,0,0.5)" }}
+                className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all hover:border-white/30"
+                style={{
+                  borderColor: "rgba(255,255,255,0.15)",
+                  background: "radial-gradient(circle, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 100%)",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.3), inset 0 1px 3px rgba(0,0,0,0.2)",
+                }}
               >
-                <span className="text-[0.5625rem] text-white/50 font-mono font-bold">{i + 1}</span>
+                <span className="text-[0.5625rem] text-white/40 font-mono font-bold">{i + 1}</span>
               </div>
             </div>
           );
@@ -216,6 +220,22 @@ export function ImageTable({
           )}
         </AnimatePresence>
 
+        {/* ── Community cards glow backdrop ── */}
+        {communityCards.length > 0 && (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: "50%",
+              top: "48%",
+              transform: "translate(-50%, -50%)",
+              width: "420px",
+              height: "180px",
+              background: "radial-gradient(ellipse at center, rgba(0,212,255,0.06) 0%, rgba(0,212,255,0.02) 40%, transparent 70%)",
+              zIndex: 9,
+            }}
+          />
+        )}
+
         {/* ── Community cards — large, center of felt ── */}
         <AnimatePresence>
           {(() => {
@@ -233,7 +253,7 @@ export function ImageTable({
                   left: "50%",
                   top: "48%",
                   transform: "translate(-50%, -50%)",
-                  filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.7))",
+                  filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.7))",
                 }}
               >
                 {cardsToShow.map((card, i) => (
@@ -286,25 +306,28 @@ export function ImageTable({
               <motion.div
                 animate={potAnimating && !compactMode ? {
                   boxShadow: [
-                    "0 0 20px rgba(255,215,0,0.2), 0 2px 8px rgba(0,0,0,0.5)",
-                    "0 0 30px rgba(255,215,0,0.6), 0 0 60px rgba(255,215,0,0.3), 0 2px 8px rgba(0,0,0,0.5)",
-                    "0 0 20px rgba(255,215,0,0.2), 0 2px 8px rgba(0,0,0,0.5)",
+                    "0 0 24px rgba(255,215,0,0.25), 0 0 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    "0 0 40px rgba(255,215,0,0.6), 0 0 80px rgba(255,215,0,0.25), 0 0 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    "0 0 24px rgba(255,215,0,0.25), 0 0 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
                   ],
-                  scale: [1, 1.08, 1],
+                  scale: [1, 1.06, 1],
                 } : {
-                  boxShadow: "0 0 20px rgba(255,215,0,0.2), 0 2px 8px rgba(0,0,0,0.5)",
+                  boxShadow: "0 0 24px rgba(255,215,0,0.25), 0 0 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
                   scale: 1,
                 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className="px-3 py-1 rounded-lg border border-amber-500/30"
+                className="px-5 py-2 rounded-xl border border-amber-500/40"
                 style={{
-                  background: "linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.85) 100%)",
-                  backdropFilter: "blur(8px)",
+                  background: "linear-gradient(180deg, rgba(20,15,5,0.85) 0%, rgba(10,8,3,0.92) 100%)",
+                  backdropFilter: "blur(12px)",
                 }}
               >
-                <span className="text-lg font-mono font-bold" style={{ color: "#ffd700", textShadow: "0 0 12px rgba(255,215,0,0.5)" }}>
-                  ${animatedPot.toLocaleString()}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-amber-500/70">POT</span>
+                  <span className="text-xl font-mono font-black" style={{ color: "#ffd700", textShadow: "0 0 16px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2)" }}>
+                    ${animatedPot.toLocaleString()}
+                  </span>
+                </div>
                 {/* Floating delta indicator */}
                 <AnimatePresence>
                   {potAnimating && potDelta > 0 && !compactMode && (
@@ -350,9 +373,9 @@ export function ImageTable({
                 className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm text-black"
                 data-testid="dealer-button"
                 style={{
-                  background: "radial-gradient(circle at 35% 35%, #ffffff, #f0e8d0 40%, #d4a843 90%)",
-                  border: "3px solid #d4a843",
-                  boxShadow: "0 3px 12px rgba(0,0,0,0.5), 0 0 16px rgba(212,168,67,0.25), inset 0 2px 4px rgba(255,255,255,0.6), inset 0 -1px 3px rgba(0,0,0,0.2)",
+                  background: "radial-gradient(circle at 35% 30%, #ffffff 0%, #f5ecd4 30%, #d4a843 70%, #b8860b 100%)",
+                  border: "3px solid #c9a84c",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.6), 0 0 20px rgba(212,168,67,0.3), inset 0 2px 6px rgba(255,255,255,0.7), inset 0 -2px 4px rgba(0,0,0,0.2)",
                 }}
               >
                 D

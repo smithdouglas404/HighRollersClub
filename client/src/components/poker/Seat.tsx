@@ -656,12 +656,12 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         <div
           className="relative z-10 flex flex-col items-center nameplate-responsive rounded-lg overflow-hidden backdrop-blur-md"
           style={{
-            background: "linear-gradient(180deg, rgba(8,12,24,0.85) 0%, rgba(4,8,16,0.90) 100%)",
-            border: `1px solid rgba(255,255,255,0.10)`,
+            background: "linear-gradient(180deg, rgba(10,14,28,0.88) 0%, rgba(6,10,20,0.92) 100%)",
+            border: `1px solid rgba(255,255,255,0.08)`,
             borderTopColor: glowColor,
             borderTopWidth: "3px",
             borderTopStyle: "solid",
-            boxShadow: `0 0 16px ${hexToRgba(glowColor, 0.15)}, 0 2px 8px rgba(0,0,0,0.5)`,
+            boxShadow: `0 0 20px ${hexToRgba(glowColor, 0.12)}, 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`,
           }}
         >
           <div className="px-4 py-2 flex flex-col items-center gap-0.5">

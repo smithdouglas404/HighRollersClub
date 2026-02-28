@@ -236,8 +236,9 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
       <div
         className="px-3 pb-3 pt-2"
         style={{
-          background: "linear-gradient(180deg, rgba(10,17,29,0.95) 0%, rgba(8,14,24,0.98) 100%)",
+          background: "linear-gradient(180deg, rgba(10,17,29,0.96) 0%, rgba(6,12,22,0.98) 100%)",
           borderTop: "1px solid rgba(255,255,255,0.06)",
+          boxShadow: "0 -4px 20px rgba(0,0,0,0.3)",
         }}
       >
         <div className="max-w-6xl mx-auto flex flex-col gap-2">
@@ -300,11 +301,11 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
                   <button
                     onClick={stepDown}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white border border-white/10 hover:border-white/25 transition-all shrink-0"
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-white border border-white/10 hover:border-cyan-400/30 transition-all shrink-0 active:scale-90"
                     style={{ background: "rgba(255,255,255,0.04)" }}
                     data-testid="bet-minus"
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    <Minus className="w-4 h-4" />
                   </button>
 
                   <div className="flex-1 relative px-1">
@@ -325,11 +326,11 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
                   <button
                     onClick={stepUp}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white border border-white/10 hover:border-white/25 transition-all shrink-0"
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-white border border-white/10 hover:border-cyan-400/30 transition-all shrink-0 active:scale-90"
                     style={{ background: "rgba(255,255,255,0.04)" }}
                     data-testid="bet-plus"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                   </button>
 
                   <div className="relative shrink-0">
@@ -383,7 +384,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
               </div>
             )}
 
-            <div className={`flex items-center gap-2.5 flex-1 justify-center transition-all duration-200 ${!isHeroTurn ? "opacity-40 grayscale" : ""}`}>
+            <div className={`flex items-center gap-3 flex-1 justify-center transition-all duration-200 ${!isHeroTurn ? "opacity-40 grayscale" : ""}`}>
 
               <motion.button
                 whileHover={buttonsDisabled ? {} : { scale: 1.04, y: -1 }}
@@ -402,13 +403,13 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                   ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
                 `}
                 style={{
-                  padding: "0.875rem 1.5rem",
+                  padding: "1rem 1.75rem",
                   background: foldConfirm
                     ? "linear-gradient(180deg, #dc2626 0%, #991b1b 100%)"
-                    : "linear-gradient(180deg, #b91c1c 0%, #7f1d1d 50%, #991b1b 100%)",
+                    : "linear-gradient(180deg, #c62828 0%, #b71c1c 40%, #8b1a1a 100%)",
                   boxShadow: foldConfirm
                     ? "0 0 30px rgba(220,38,38,0.5), inset 0 1px 0 rgba(255,255,255,0.15)"
-                    : "0 4px 16px rgba(0,0,0,0.4), 0 0 8px rgba(220,38,38,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    : "0 4px 16px rgba(0,0,0,0.5), 0 0 12px rgba(220,38,38,0.2), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.2)",
                 }}
               >
                 {foldConfirm && (
@@ -434,9 +435,9 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                   ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
                 `}
                 style={{
-                  padding: "0.875rem 1.5rem",
-                  background: "linear-gradient(180deg, #059669 0%, #047857 50%, #065f46 100%)",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 0 12px rgba(5,150,105,0.2), inset 0 1px 0 rgba(255,255,255,0.12)",
+                  padding: "1rem 1.75rem",
+                  background: "linear-gradient(180deg, #0d9f6e 0%, #059669 40%, #047857 100%)",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.5), 0 0 14px rgba(5,150,105,0.25), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)",
                 }}
               >
                 <span className="relative flex items-center justify-center gap-2">
@@ -472,15 +473,13 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                   ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
                 `}
                 style={{
-                  padding: "0.875rem 1.5rem",
+                  padding: "1rem 1.75rem",
                   background: isAllIn && showRaiseSlider
-                    ? "linear-gradient(180deg, #d97706 0%, #b45309 50%, #92400e 100%)"
-                    : "linear-gradient(180deg, #d97706 0%, #b45309 50%, #92400e 100%)",
+                    ? "linear-gradient(180deg, #e68a00 0%, #d97706 40%, #b45309 100%)"
+                    : "linear-gradient(180deg, #d97706 0%, #c2710a 40%, #92400e 100%)",
                   boxShadow: isAllIn && showRaiseSlider
-                    ? "0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(245,158,11,0.35), inset 0 1px 0 rgba(255,255,255,0.15)"
-                    : showRaiseSlider
-                    ? "0 4px 16px rgba(0,0,0,0.4), 0 0 12px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.12)"
-                    : "0 4px 16px rgba(0,0,0,0.4), 0 0 8px rgba(245,158,11,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    ? "0 4px 24px rgba(0,0,0,0.5), 0 0 24px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.2)"
+                    : "0 4px 16px rgba(0,0,0,0.5), 0 0 12px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)",
                 }}
               >
                 {isAllIn && showRaiseSlider && (
@@ -516,7 +515,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                   data-testid="button-buytime"
                   className="relative overflow-hidden rounded-xl font-bold text-sm uppercase tracking-wider text-white border border-amber-500/30"
                   style={{
-                    padding: "0.875rem 1rem",
+                    padding: "1rem 1.25rem",
                     background: "linear-gradient(180deg, #b45309 0%, #78350f 100%)",
                     boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 0 10px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
                   }}
@@ -529,22 +528,22 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
             <div className="shrink-0 flex flex-col items-end gap-1.5">
               <div
-                className="flex items-center gap-3 px-4 py-2 rounded-xl"
+                className="flex items-center gap-3 px-5 py-2.5 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.3) 100%)",
-                  border: "1px solid rgba(255,215,0,0.15)",
-                  boxShadow: "0 0 12px rgba(0,0,0,0.3)",
+                  background: "linear-gradient(135deg, rgba(10,8,3,0.7) 0%, rgba(0,0,0,0.5) 100%)",
+                  border: "1px solid rgba(255,215,0,0.12)",
+                  boxShadow: "0 0 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
                 }}
               >
                 <span className="text-[0.6875rem] font-black uppercase tracking-widest text-cyan-400" style={{ textShadow: "0 0 8px rgba(0,212,255,0.3)" }}>
                   {phase === "pre-flop" ? "Pre-Flop" : phase === "flop" ? "Flop" : phase === "turn" ? "Turn" : phase === "river" ? "River" : phase || "—"}
                 </span>
-                <div className="w-px h-4 bg-white/10" />
+                <div className="w-px h-5 bg-white/10" />
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider">Pot</span>
+                  <span className="text-[0.625rem] font-bold text-amber-500/50 uppercase tracking-wider">Pot</span>
                   <span
-                    className="font-mono font-black text-lg"
-                    style={{ color: "#ffd700", textShadow: "0 0 10px rgba(255,215,0,0.4)" }}
+                    className="font-mono font-black text-xl"
+                    style={{ color: "#ffd700", textShadow: "0 0 12px rgba(255,215,0,0.4)" }}
                   >
                     ${pot.toLocaleString()}
                   </span>

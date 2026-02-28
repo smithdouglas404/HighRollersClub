@@ -474,7 +474,15 @@ function GameTable({
       )}
 
       {/* ═══ TOP BAR ═══ */}
-      <div className="relative z-50 h-10 flex items-center justify-between px-4 bg-[#0a1020]/75 backdrop-blur-md border-b border-cyan-500/15 shrink-0">
+      <div
+        className="relative z-50 h-11 flex items-center justify-between px-4 shrink-0"
+        style={{
+          background: "linear-gradient(180deg, rgba(8,14,28,0.92) 0%, rgba(6,10,22,0.88) 100%)",
+          backdropFilter: "blur(16px)",
+          borderBottom: "1px solid rgba(0,212,255,0.1)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+        }}
+      >
         <div className="flex items-center gap-3">
           {onBack && (
             <button onClick={leaveTable || onBack} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Back to lobby">
@@ -484,13 +492,15 @@ function GameTable({
           <span className="font-display font-bold text-sm tracking-wider gold-text">
             HIGH ROLLERS
           </span>
-          <span className="text-xs font-bold gold-text tracking-wider">{tableName || "HIGH ROLLERS MAIN"}</span>
+          <div className="w-px h-5 bg-white/10" />
+          <span className="text-xs font-bold text-gray-300 tracking-wider">{tableName || "HIGH ROLLERS MAIN"}</span>
           <span className="text-[0.625rem] text-gray-500 font-mono">
             {formatInfo?.smallBlind && formatInfo?.bigBlind
               ? <span className="text-emerald-400/80">${formatInfo.smallBlind}/${formatInfo.bigBlind} NLH</span>
               : <>{players.length}-MAX</>
             }
           </span>
+          <div className="w-px h-5 bg-white/10" />
           <span className="text-sm font-bold text-cyan-400 font-mono tracking-wider" style={{ textShadow: "0 0 8px rgba(0,212,255,0.4)" }}>{phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
           <span className="text-[0.625rem] text-gray-500 font-mono">
             {(gameState as any).handNumber
@@ -501,9 +511,15 @@ function GameTable({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="px-4 py-1.5 rounded-lg bg-black/50 border border-amber-500/30" style={{ boxShadow: "0 0 12px rgba(255,215,0,0.15)" }}>
-            <span className="text-xs font-bold text-gray-300 mr-1.5 uppercase tracking-wider">POT</span>
-            <span className="text-lg font-black font-mono" style={{ color: "#ffd700", textShadow: "0 0 10px rgba(255,215,0,0.5)" }}>${topBarPot.toLocaleString()}</span>
+          <div
+            className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-amber-500/30"
+            style={{
+              background: "linear-gradient(135deg, rgba(20,15,5,0.7) 0%, rgba(10,8,3,0.8) 100%)",
+              boxShadow: "0 0 16px rgba(255,215,0,0.12), inset 0 1px 0 rgba(255,255,255,0.05)",
+            }}
+          >
+            <span className="text-[0.625rem] font-bold text-amber-500/60 uppercase tracking-wider">POT</span>
+            <span className="text-lg font-black font-mono" style={{ color: "#ffd700", textShadow: "0 0 12px rgba(255,215,0,0.5)" }}>${topBarPot.toLocaleString()}</span>
           </div>
 
           {showdown?.results?.some((r: any) => r.isWinner && r.playerId === heroId) && (
@@ -869,7 +885,7 @@ function GameTable({
           {/* Table area */}
           <div className="flex-1 relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, #1e2b4b 0%, #111b2a 70%)" }} />
+              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 45%, #1a2744 0%, #131d30 40%, #0e1624 70%, #0a101c 100%)" }} />
 
               <div
                 ref={tableRef}
@@ -1031,8 +1047,8 @@ function GameTable({
                       initial={{ y: 15, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 22 }}
-                      className="flex gap-2"
-                      style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }}
+                      className="flex gap-2.5"
+                      style={{ filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.6))" }}
                     >
                       {isMobile && heroHoleCards ? (
                         <CardSqueeze cards={heroHoleCards} />
@@ -1903,6 +1919,7 @@ function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Pl
 
 // ─── Main Game Page ───────────────────────────────────────────────────────────
 export default function Game({ tableId }: { tableId?: string }) {
+  const [, navigate] = useLocation();
   const [gameStarted, setGameStarted] = useState(false);
   const [initialPlayers, setInitialPlayers] = useState<Player[]>([]);
   const [engineConfig, setEngineConfig] = useState<GameEngineConfig | undefined>(undefined);
@@ -1930,6 +1947,7 @@ export default function Game({ tableId }: { tableId?: string }) {
       <GameSetup
         mode="offline"
         onStartOffline={handleGameSetup}
+        onExit={() => navigate("/")}
       />
     );
   }

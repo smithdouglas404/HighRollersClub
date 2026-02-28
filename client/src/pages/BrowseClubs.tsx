@@ -218,7 +218,7 @@ export default function BrowseClubs() {
                           className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider ${
                             club.isPublic
                               ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
-                              : "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                              : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                           }`}
                         >
                           {club.isPublic ? (

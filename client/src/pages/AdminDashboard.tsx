@@ -80,11 +80,10 @@ export default function AdminDashboard() {
     }
   }, [activeTab, user]);
 
-  const handleWithdrawalAction = async (id: string, action: "processing" | "cancelled") => {
-    const res = await fetch(`/api/admin/withdrawals/${id}`, {
-      method: "PATCH",
+  const handleWithdrawalAction = async (id: string, action: "approve" | "reject") => {
+    const res = await fetch(`/api/admin/withdrawals/${id}/${action}`, {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: action }),
     });
     if (res.ok) {
       setWithdrawals(prev => prev.filter(w => w.id !== id));
@@ -172,13 +171,13 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleWithdrawalAction(w.id, "processing")}
+                    onClick={() => handleWithdrawalAction(w.id, "approve")}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 text-xs font-bold hover:bg-green-500/30 transition-colors"
                   >
                     <CheckCircle className="w-3 h-3" /> Approve
                   </button>
                   <button
-                    onClick={() => handleWithdrawalAction(w.id, "cancelled")}
+                    onClick={() => handleWithdrawalAction(w.id, "reject")}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
                   >
                     <XCircle className="w-3 h-3" /> Deny

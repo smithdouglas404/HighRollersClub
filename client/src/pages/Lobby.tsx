@@ -63,7 +63,7 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
   const isFull = table.playerCount >= table.maxPlayers;
   const isPlaying = table.status === "playing";
   const isHot = table.playerCount > 0 && table.playerCount >= table.maxPlayers * 0.7;
-  const avgPot = table.bigBlind * 10; // heuristic estimate
+  const blindsLabel = `${table.smallBlind}/${table.bigBlind}`;
 
   return (
     <motion.div
@@ -123,8 +123,8 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
             <Coins className="w-3 h-3" />
             {table.gameFormat === "sng" ? table.buyInAmount : `${table.minBuyIn}-${table.maxBuyIn}`}
           </span>
-          <span className="flex items-center gap-1 text-gray-500" title="Avg Pot">
-            ~{avgPot}
+          <span className="flex items-center gap-1 text-gray-500" title="Blinds">
+            Blinds {blindsLabel}
           </span>
           {table.allowBots && (
             <span className="flex items-center gap-1 text-gray-500">

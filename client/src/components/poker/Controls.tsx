@@ -3,39 +3,28 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { useSoundEngine } from "@/lib/sound-context";
 import { useGameUI } from "@/lib/game-ui-context";
+import { Minus, Plus } from "lucide-react";
 
 interface ControlsProps {
   onAction: (action: string, amount?: number) => void;
-  /** Minimum raise total (used for slider min and presets) */
   minBet: number;
   maxBet: number;
-  /** Amount hero needs to add to call (0 = can check) */
   callCost?: number;
   pot?: number;
-  /** Current game phase (preflop, flop, etc.) — used to reset pending state */
   phase?: string;
-  /** Current turn seat index — used to reset pending state */
   currentTurnSeat?: number;
-  /** Whether it's currently the hero's turn */
   isHeroTurn?: boolean;
-  /** Buy extra time callback */
   onBuyTime?: () => void;
-  /** Big blind amount for buy-time cost display */
   bigBlind?: number;
-  /** Hero time remaining percentage (0-100) */
   heroTimeLeft?: number;
-  /** Hero's status (folded, all-in, etc.) */
   heroStatus?: string;
-  /** Hero cards slot — rendered left of action buttons */
   heroCardsSlot?: ReactNode;
-  /** Hand badge slot — rendered after hero cards */
   handBadgeSlot?: ReactNode;
 }
 
 export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, phase, currentTurnSeat, isHeroTurn, onBuyTime, bigBlind, heroTimeLeft, heroStatus, heroCardsSlot, handBadgeSlot }: ControlsProps) {
   const [betAmount, setBetAmount] = useState(minBet);
   const [showRaiseSlider, setShowRaiseSlider] = useState(false);
-  // Sync betAmount when minBet increases (e.g. opponent raises)
   useEffect(() => {
     setBetAmount(prev => prev < minBet ? minBet : prev);
   }, [minBet]);
@@ -53,13 +42,10 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
   const isPreFlop = phase === "pre-flop";
   const bb = bigBlind || 1;
-  // callCost is the amount the hero needs to add to match the current bet (0 = can check)
   const needsToCall = (callCost ?? 0) > 0;
   const callAmount = callCost ?? 0;
-  // Buttons are disabled when pending OR not hero's turn
   const buttonsDisabled = isPending || !isHeroTurn;
 
-  // Auto-fold: when hero's turn arrives and autoFold is checked, auto-fold immediately
   const autoFoldTriggeredRef = useRef(false);
   useEffect(() => {
     if (!isHeroTurn || isPending) return;
@@ -86,25 +72,18 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     }
   }, [isHeroTurn, autoFold, autoCheckFold, needsToCall, isPending, sound, onAction]);
 
-  // Reset pending state when game state advances (server confirmed the action)
   useEffect(() => {
     setIsPending(false);
     setFoldConfirm(false);
     setShowCustomInput(false);
-    setShowRaiseSlider(false);
+    setShowRaiseSlider(true);
     setBetAmount(minBet);
   }, [phase, currentTurnSeat, minBet]);
 
-  // Scale slider step with blind level
   const sliderStep = Math.max(1, Math.floor(bb / 2)) || 1;
-
-  // Pot-sized raise: pot + 2 * call amount (standard poker pot-raise formula)
   const potRaiseTotal = Math.min(Math.max(pot + callAmount * 2, minBet), maxBet);
-
-  // Clamp helper: every preset must be at least minBet (min legal raise) and at most maxBet
   const clamp = (v: number) => Math.min(Math.max(Math.round(v), minBet), maxBet);
 
-  // Context-aware presets: Pre-flop = BB multiples, Post-flop = pot percentages
   const presets = isPreFlop
     ? [
         { label: "2x", value: clamp(bb * 2), tooltip: "Min-raise (2x BB)" },
@@ -141,7 +120,6 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     onAction("fold");
   }, [sound, onAction, isPending]);
 
-  // Keyboard fold requires double-tap: first press shows confirm, second press folds
   const handleFoldKeyboard = useCallback(() => {
     if (isPending) return;
     if (foldConfirm) {
@@ -186,7 +164,6 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
   const isAllIn = betAmount >= maxBet;
 
-  // Keyboard shortcuts: F=fold (double-tap), C=check/call, R=raise, A=all-in
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (isPending || !isHeroTurn) return;
@@ -202,7 +179,6 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
           else handleCheck();
           break;
         case "r":
-          if (!showRaiseSlider) { setShowRaiseSlider(true); break; }
           if (isAllIn) handleAllIn();
           else handleRaise();
           break;
@@ -218,12 +194,10 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isPending, needsToCall, isAllIn, showRaiseSlider, handleFoldKeyboard, handleCall, handleCheck, handleRaise, handleAllIn]);
 
-  // Clean up fold timer
   useEffect(() => {
     return () => { if (foldTimerRef.current) clearTimeout(foldTimerRef.current); };
   }, []);
 
-  // Focus custom input when opened
   useEffect(() => {
     if (showCustomInput && customInputRef.current) {
       customInputRef.current.focus();
@@ -231,250 +205,109 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     }
   }, [showCustomInput, betAmount]);
 
+  const stepDown = () => setBetAmount(prev => Math.max(minBet, prev - sliderStep));
+  const stepUp = () => setBetAmount(prev => Math.min(maxBet, prev + sliderStep));
+
+  const timerPct = heroTimeLeft ?? 100;
+  const timerColor = timerPct > 50 ? "#00d4ff" : timerPct > 25 ? "#f59e0b" : "#ef4444";
+
   return (
     <motion.div
       initial={compactMode ? { y: 0, opacity: 1 } : { y: 60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 25 }}
       className="relative z-50"
+      data-testid="poker-controls"
     >
-      {/* Gradient fade above controls */}
-      <div className="h-6 bg-gradient-to-t from-[#0d1525]/90 to-transparent pointer-events-none" />
+      {isHeroTurn && (
+        <div className="h-[3px] w-full overflow-hidden" style={{ background: "rgba(0,0,0,0.4)" }}>
+          <motion.div
+            className="h-full"
+            style={{ background: timerColor, boxShadow: `0 0 8px ${timerColor}` }}
+            initial={{ width: "100%" }}
+            animate={{ width: `${timerPct}%` }}
+            transition={{ duration: 0.5, ease: "linear" }}
+          />
+        </div>
+      )}
 
-      <div className="py-2 px-4 bg-[#0d1525]/90 backdrop-blur-xl border-t border-white/10">
-        {/* ═══ UNIFIED BOTTOM PANEL: Hero Cards + Actions ═══ */}
-        <div className="max-w-5xl mx-auto">
+      <div className="h-4 bg-gradient-to-t from-[#0a111d] to-transparent pointer-events-none" />
 
-          {/* Main row: Hero cards | Action buttons | Raise amount */}
-          <div className="flex items-center gap-4">
+      <div
+        className="px-3 pb-3 pt-2"
+        style={{
+          background: "linear-gradient(180deg, rgba(10,17,29,0.95) 0%, rgba(8,14,24,0.98) 100%)",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <div className="max-w-6xl mx-auto flex flex-col gap-2">
 
-            {/* Hero cards slot (left side) */}
-            {heroCardsSlot && (
-              <div className="flex items-center gap-2 shrink-0">
-                {heroCardsSlot}
-                {handBadgeSlot}
-              </div>
-            )}
-
-            {/* Action buttons (center) — greyed out when not hero's turn */}
-            <div className={`flex items-center gap-2 flex-1 justify-center transition-all duration-200 ${!isHeroTurn ? "opacity-40 grayscale" : ""}`}>
-              {/* FOLD */}
-              <motion.button
-                whileHover={buttonsDisabled ? {} : { scale: 1.03 }}
-                whileTap={buttonsDisabled ? {} : { scale: 0.96 }}
-                onClick={handleFold}
-                disabled={buttonsDisabled}
-                title="Fold (F)"
-                className={`
-                  relative overflow-hidden rounded-xl py-2.5 px-5 min-w-[80px]
-                  font-bold text-sm uppercase tracking-wider transition-all
-                  ${foldConfirm
-                    ? "bg-red-700 text-white border-2 border-red-400 animate-pulse"
-                    : "text-white border border-red-500/40"
-                  }
-                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : "hover:brightness-110"}
-                `}
-                style={{
-                  background: foldConfirm ? undefined : "linear-gradient(to bottom, #ef4444, #b91c1c)",
-                  boxShadow: foldConfirm
-                    ? "0 0 30px rgba(220,38,38,0.5)"
-                    : "0 0 12px rgba(220,38,38,0.2)",
-                }}
-              >
-                <span className="flex items-center justify-center gap-1.5">
-                  {foldConfirm ? "CONFIRM?" : "FOLD"}
-                  <kbd className="text-[0.5rem] font-mono opacity-40 bg-white/10 px-1 rounded">F</kbd>
-                </span>
-              </motion.button>
-
-              {/* CHECK / CALL */}
-              <motion.button
-                whileHover={buttonsDisabled ? {} : { scale: 1.03 }}
-                whileTap={buttonsDisabled ? {} : { scale: 0.96 }}
-                onClick={needsToCall ? handleCall : handleCheck}
-                disabled={buttonsDisabled}
-                title={needsToCall ? `Call $${callAmount} (C)` : "Check (C)"}
-                className={`
-                  relative overflow-hidden rounded-xl py-2.5 px-5 min-w-[80px]
-                  font-bold text-sm uppercase tracking-wider transition-all
-                  text-white border border-emerald-500/40
-                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : "hover:brightness-110"}
-                `}
-                style={{
-                  background: "linear-gradient(to bottom, #10b981, #047857)",
-                  boxShadow: "0 0 12px rgba(5,150,105,0.2)",
-                }}
-              >
-                <span className="flex items-center justify-center gap-1.5">
-                  {needsToCall ? "CALL" : "CHECK"}
-                  {needsToCall && (
-                    <span className="font-mono text-xs bg-white/15 px-1.5 py-0.5 rounded">
-                      ${callAmount.toLocaleString()}
-                    </span>
-                  )}
-                  <kbd className="text-[0.5rem] font-mono opacity-40 bg-white/10 px-1 rounded">C</kbd>
-                </span>
-              </motion.button>
-
-              {/* RAISE — click to open sizing, or direct action */}
-              <motion.button
-                whileHover={buttonsDisabled ? {} : { scale: 1.03 }}
-                whileTap={buttonsDisabled ? {} : { scale: 0.96 }}
-                onClick={() => {
-                  if (buttonsDisabled) return;
-                  if (!showRaiseSlider) {
-                    setShowRaiseSlider(true);
-                  } else if (isAllIn) {
-                    handleAllIn();
-                  } else {
-                    handleRaise();
-                  }
-                }}
-                disabled={buttonsDisabled}
-                title={showRaiseSlider ? `Raise to $${betAmount.toLocaleString()} (R)` : "Open raise sizing (R)"}
-                className={`
-                  relative overflow-hidden rounded-xl py-2.5 px-5 min-w-[80px]
-                  font-bold text-sm uppercase tracking-wider transition-all
-                  ${isAllIn && showRaiseSlider
-                    ? "text-cyan-400 border border-cyan-500/50"
-                    : showRaiseSlider
-                    ? "text-white border border-cyan-400/60"
-                    : "text-white border border-cyan-500/40"
-                  }
-                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : "hover:brightness-110"}
-                `}
-                style={{
-                  background: isAllIn && showRaiseSlider
-                    ? "linear-gradient(to bottom, #78350f, #451a03)"
-                    : "linear-gradient(to bottom, #00d4ff, #009ec2)",
-                  boxShadow: showRaiseSlider
-                    ? "0 0 16px rgba(0,212,255,0.35)"
-                    : "0 0 12px rgba(0,212,255,0.2)",
-                }}
-              >
-                <span className="flex items-center justify-center gap-1.5">
-                  {isAllIn && showRaiseSlider ? "ALL-IN" : showRaiseSlider ? "RAISE" : "RAISE"}
-                  {showRaiseSlider && (
-                    <span className={`font-mono text-xs px-1.5 py-0.5 rounded ${isAllIn ? "bg-cyan-500/15 text-cyan-300" : "bg-white/15 text-white"}`}>
-                      ${betAmount.toLocaleString()}
-                    </span>
-                  )}
-                  <kbd className="text-[0.5rem] font-mono opacity-40 bg-white/10 px-1 rounded">R</kbd>
-                </span>
-              </motion.button>
-
-              {/* BUY TIME button */}
-              {onBuyTime && isHeroTurn && heroTimeLeft !== undefined && heroTimeLeft < 30 && (
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={onBuyTime}
-                  className="relative overflow-hidden rounded-xl py-2.5 px-4
-                    font-bold text-[0.6875rem] uppercase tracking-wider
-                    bg-amber-600/80 text-white border border-amber-500/40 hover:bg-amber-600/90"
-                  style={{
-                    boxShadow: "0 0 12px rgba(245,158,11,0.25)",
-                  }}
-                >
-                  +10s
-                  {bigBlind && <span className="font-mono text-[0.5rem] opacity-70 ml-1">(${bigBlind})</span>}
-                </motion.button>
-              )}
-            </div>
-
-            {/* Pot / info badge (right side) */}
-            <div className="shrink-0 flex flex-col items-end gap-1">
-              <div className="flex items-center gap-2 px-3 py-1 rounded-lg" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <span className="text-xs font-black uppercase tracking-wider text-cyan-400" style={{ textShadow: "0 0 6px rgba(0,212,255,0.3)" }}>
-                  {isPreFlop ? "Pre-Flop" : "Post-Flop"}
-                </span>
-                <span className="text-gray-600">|</span>
-                <span className="text-xs font-bold text-gray-300">Pot <span className="font-mono font-black text-sm" style={{ color: "#ffd700", textShadow: "0 0 8px rgba(255,215,0,0.4)" }}>${pot.toLocaleString()}</span></span>
-              </div>
-              {/* Pre-action toggles (inline when not hero's turn) */}
-              {!isHeroTurn && heroStatus !== "folded" && heroStatus !== "all-in" && (
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1 cursor-pointer select-none group">
-                    <input
-                      type="checkbox"
-                      checked={autoFold}
-                      onChange={(e) => { setAutoFold(e.target.checked); if (e.target.checked) setAutoCheckFold(false); }}
-                      className="w-3 h-3 rounded border-gray-600 bg-white/5 accent-red-500"
-                    />
-                    <span className="text-[0.5625rem] font-semibold uppercase tracking-wider text-gray-500 group-hover:text-gray-300 transition-colors">
-                      Auto-Fold
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-1 cursor-pointer select-none group">
-                    <input
-                      type="checkbox"
-                      checked={autoCheckFold}
-                      onChange={(e) => { setAutoCheckFold(e.target.checked); if (e.target.checked) setAutoFold(false); }}
-                      className="w-3 h-3 rounded border-gray-600 bg-white/5 accent-emerald-500"
-                    />
-                    <span className="text-[0.5625rem] font-semibold uppercase tracking-wider text-gray-500 group-hover:text-gray-300 transition-colors">
-                      Check/Fold
-                    </span>
-                  </label>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ─── Raise Sizing Panel (slides open when RAISE is clicked) ─── */}
           <AnimatePresence>
-            {showRaiseSlider && (
+            {(showRaiseSlider || isHeroTurn) && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="flex items-center gap-2 pt-2 pb-1 px-1">
-                  {/* Context-aware presets */}
-                  <div className="flex gap-1.5">
+                <div className={`flex items-center gap-2 transition-opacity duration-200 ${!isHeroTurn ? "opacity-30 pointer-events-none" : ""}`}>
+                  <div className="flex gap-1.5 shrink-0">
                     {presets.map((p) => (
                       <button
                         key={p.label}
                         onClick={() => handlePreset(p.value)}
                         title={p.tooltip}
+                        data-testid={`preset-${p.label.toLowerCase()}`}
                         className={`
-                          px-3 py-1.5 rounded-lg text-sm font-black uppercase tracking-wider transition-all
+                          px-3 py-2 rounded-lg text-[0.6875rem] font-black uppercase tracking-wider transition-all
                           ${betAmount === p.value
-                            ? "bg-cyan-500/30 text-cyan-300 border-2 border-cyan-400/60"
-                            : "bg-white/[0.08] text-gray-300 border-2 border-white/20 hover:bg-white/[0.12] hover:text-white hover:border-white/30"
+                            ? "text-cyan-200 border border-cyan-400/60"
+                            : "text-gray-400 border border-white/10 hover:text-white hover:border-white/25"
                           }
                         `}
                         style={{
-                          boxShadow: betAmount === p.value ? "0 0 10px rgba(0,212,255,0.25)" : undefined,
-                          textShadow: betAmount === p.value ? "0 0 6px rgba(0,212,255,0.4)" : undefined,
+                          background: betAmount === p.value
+                            ? "linear-gradient(135deg, rgba(0,212,255,0.2) 0%, rgba(0,100,150,0.15) 100%)"
+                            : "rgba(255,255,255,0.04)",
+                          boxShadow: betAmount === p.value ? "0 0 12px rgba(0,212,255,0.2), inset 0 1px 0 rgba(0,212,255,0.1)" : undefined,
                         }}
                       >
                         {p.label}
                       </button>
                     ))}
-                    {/* ALL IN preset */}
                     <button
                       onClick={() => handlePreset(maxBet)}
                       title="Shove your entire stack"
+                      data-testid="preset-allin"
                       className={`
-                        px-3 py-1.5 rounded-lg text-sm font-black uppercase tracking-wider transition-all
+                        px-3 py-2 rounded-lg text-[0.6875rem] font-black uppercase tracking-wider transition-all
                         ${betAmount === maxBet
-                          ? "bg-amber-500/30 text-amber-300 border-2 border-amber-400/60"
-                          : "bg-white/[0.08] text-gray-300 border-2 border-white/20 hover:bg-white/[0.12] hover:text-white hover:border-white/30"
+                          ? "text-amber-200 border border-amber-400/60"
+                          : "text-gray-400 border border-white/10 hover:text-amber-300 hover:border-amber-500/30"
                         }
                       `}
                       style={{
-                        boxShadow: betAmount === maxBet ? "0 0 10px rgba(245,158,11,0.25)" : undefined,
+                        background: betAmount === maxBet
+                          ? "linear-gradient(135deg, rgba(245,158,11,0.25) 0%, rgba(180,83,9,0.15) 100%)"
+                          : "rgba(255,255,255,0.04)",
+                        boxShadow: betAmount === maxBet ? "0 0 12px rgba(245,158,11,0.2), inset 0 1px 0 rgba(245,158,11,0.1)" : undefined,
                       }}
                     >
                       ALL IN
                     </button>
                   </div>
 
-                  {/* Slider */}
-                  <div className="flex-1 px-2">
+                  <button
+                    onClick={stepDown}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white border border-white/10 hover:border-white/25 transition-all shrink-0"
+                    style={{ background: "rgba(255,255,255,0.04)" }}
+                    data-testid="bet-minus"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+
+                  <div className="flex-1 relative px-1">
                     <Slider
                       value={[betAmount]}
                       max={maxBet}
@@ -482,11 +315,24 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                       step={sliderStep}
                       onValueChange={(val) => { setBetAmount(val[0]); setShowCustomInput(false); }}
                       className="flex-1"
+                      data-testid="bet-slider"
                     />
+                    <div className="flex justify-between mt-1">
+                      <span className="text-[0.5625rem] font-mono text-gray-600">${minBet}</span>
+                      <span className="text-[0.5625rem] font-mono text-gray-600">${maxBet.toLocaleString()}</span>
+                    </div>
                   </div>
 
-                  {/* Amount badge — click to type custom amount */}
-                  <div className="relative">
+                  <button
+                    onClick={stepUp}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white border border-white/10 hover:border-white/25 transition-all shrink-0"
+                    style={{ background: "rgba(255,255,255,0.04)" }}
+                    data-testid="bet-plus"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+
+                  <div className="relative shrink-0">
                     {showCustomInput ? (
                       <div className="flex items-center gap-1">
                         <span className="text-sm font-mono text-cyan-400">$</span>
@@ -502,33 +348,239 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                           onBlur={handleCustomAmount}
                           min={minBet}
                           max={maxBet}
-                          className="w-20 rounded-lg px-2 py-1 text-sm font-mono font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 outline-none focus:border-cyan-400/60"
+                          data-testid="custom-bet-input"
+                          className="w-24 rounded-lg px-3 py-2 text-sm font-mono font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 outline-none focus:border-cyan-400/60"
                           style={{ appearance: "textfield" }}
                         />
                       </div>
                     ) : (
                       <button
                         onClick={() => setShowCustomInput(true)}
-                        className="rounded-lg px-3 py-1 min-w-[70px] text-center bg-cyan-500/10 border border-cyan-500/20 hover:border-cyan-500/40 transition-colors cursor-text"
+                        data-testid="bet-amount-display"
+                        className="rounded-xl px-4 py-2 min-w-[90px] text-center border border-cyan-500/30 hover:border-cyan-400/50 transition-all cursor-text"
                         title="Click to type a custom amount"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,100,150,0.08) 100%)",
+                        }}
                       >
-                        <span className="text-sm font-mono font-bold text-cyan-300">${betAmount.toLocaleString()}</span>
+                        <span className="text-base font-mono font-black text-cyan-300" style={{ textShadow: "0 0 8px rgba(0,212,255,0.3)" }}>
+                          ${betAmount.toLocaleString()}
+                        </span>
                       </button>
                     )}
                   </div>
-
-                  {/* Close raise panel */}
-                  <button
-                    onClick={() => setShowRaiseSlider(false)}
-                    className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors"
-                    title="Close (Esc)"
-                  >
-                    <span className="text-xs font-bold">&times;</span>
-                  </button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
+
+          <div className="flex items-center gap-3">
+
+            {heroCardsSlot && (
+              <div className="flex items-center gap-2 shrink-0">
+                {heroCardsSlot}
+                {handBadgeSlot}
+              </div>
+            )}
+
+            <div className={`flex items-center gap-2.5 flex-1 justify-center transition-all duration-200 ${!isHeroTurn ? "opacity-40 grayscale" : ""}`}>
+
+              <motion.button
+                whileHover={buttonsDisabled ? {} : { scale: 1.04, y: -1 }}
+                whileTap={buttonsDisabled ? {} : { scale: 0.95 }}
+                onClick={handleFold}
+                disabled={buttonsDisabled}
+                title="Fold (F)"
+                data-testid="button-fold"
+                className={`
+                  relative overflow-hidden rounded-xl min-w-[100px]
+                  font-bold text-base uppercase tracking-wider transition-all
+                  ${foldConfirm
+                    ? "text-white border-2 border-red-400"
+                    : "text-white/90 border border-red-500/30"
+                  }
+                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                `}
+                style={{
+                  padding: "0.875rem 1.5rem",
+                  background: foldConfirm
+                    ? "linear-gradient(180deg, #dc2626 0%, #991b1b 100%)"
+                    : "linear-gradient(180deg, #b91c1c 0%, #7f1d1d 50%, #991b1b 100%)",
+                  boxShadow: foldConfirm
+                    ? "0 0 30px rgba(220,38,38,0.5), inset 0 1px 0 rgba(255,255,255,0.15)"
+                    : "0 4px 16px rgba(0,0,0,0.4), 0 0 8px rgba(220,38,38,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+                }}
+              >
+                {foldConfirm && (
+                  <div className="absolute inset-0 animate-pulse" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%)" }} />
+                )}
+                <span className="relative flex items-center justify-center gap-2">
+                  <span className="text-base font-black tracking-widest">{foldConfirm ? "CONFIRM" : "FOLD"}</span>
+                  <kbd className="text-[0.5625rem] font-mono opacity-30 bg-white/10 px-1.5 py-0.5 rounded">F</kbd>
+                </span>
+              </motion.button>
+
+              <motion.button
+                whileHover={buttonsDisabled ? {} : { scale: 1.04, y: -1 }}
+                whileTap={buttonsDisabled ? {} : { scale: 0.95 }}
+                onClick={needsToCall ? handleCall : handleCheck}
+                disabled={buttonsDisabled}
+                title={needsToCall ? `Call $${callAmount} (C)` : "Check (C)"}
+                data-testid="button-call"
+                className={`
+                  relative overflow-hidden rounded-xl min-w-[120px]
+                  font-bold uppercase tracking-wider transition-all
+                  text-white border border-emerald-500/30
+                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                `}
+                style={{
+                  padding: "0.875rem 1.5rem",
+                  background: "linear-gradient(180deg, #059669 0%, #047857 50%, #065f46 100%)",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 0 12px rgba(5,150,105,0.2), inset 0 1px 0 rgba(255,255,255,0.12)",
+                }}
+              >
+                <span className="relative flex items-center justify-center gap-2">
+                  <span className="text-base font-black tracking-widest">{needsToCall ? "CALL" : "CHECK"}</span>
+                  {needsToCall && (
+                    <span className="font-mono text-sm font-black px-2 py-0.5 rounded-md" style={{ background: "rgba(255,255,255,0.15)", textShadow: "0 0 6px rgba(255,255,255,0.3)" }}>
+                      ${callAmount.toLocaleString()}
+                    </span>
+                  )}
+                  <kbd className="text-[0.5625rem] font-mono opacity-30 bg-white/10 px-1.5 py-0.5 rounded">C</kbd>
+                </span>
+              </motion.button>
+
+              <motion.button
+                whileHover={buttonsDisabled ? {} : { scale: 1.04, y: -1 }}
+                whileTap={buttonsDisabled ? {} : { scale: 0.95 }}
+                onClick={() => {
+                  if (buttonsDisabled) return;
+                  if (isAllIn) {
+                    handleAllIn();
+                  } else {
+                    handleRaise();
+                  }
+                }}
+                disabled={buttonsDisabled}
+                title={`Raise to $${betAmount.toLocaleString()} (R)`}
+                data-testid="button-raise"
+                className={`
+                  relative overflow-hidden rounded-xl min-w-[120px]
+                  font-bold uppercase tracking-wider transition-all
+                  text-white
+                  ${isAllIn && showRaiseSlider ? "border-2 border-amber-400/60" : "border border-amber-500/30"}
+                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                `}
+                style={{
+                  padding: "0.875rem 1.5rem",
+                  background: isAllIn && showRaiseSlider
+                    ? "linear-gradient(180deg, #d97706 0%, #b45309 50%, #92400e 100%)"
+                    : "linear-gradient(180deg, #d97706 0%, #b45309 50%, #92400e 100%)",
+                  boxShadow: isAllIn && showRaiseSlider
+                    ? "0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(245,158,11,0.35), inset 0 1px 0 rgba(255,255,255,0.15)"
+                    : showRaiseSlider
+                    ? "0 4px 16px rgba(0,0,0,0.4), 0 0 12px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.12)"
+                    : "0 4px 16px rgba(0,0,0,0.4), 0 0 8px rgba(245,158,11,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+                }}
+              >
+                {isAllIn && showRaiseSlider && (
+                  <div className="absolute inset-0" style={{
+                    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
+                    animation: "shimmer 2s infinite",
+                  }} />
+                )}
+                <span className="relative flex items-center justify-center gap-2">
+                  <span className="text-base font-black tracking-widest">
+                    {isAllIn && showRaiseSlider ? "ALL-IN" : "RAISE"}
+                  </span>
+                  {showRaiseSlider && (
+                    <span
+                      className="font-mono text-sm font-black px-2 py-0.5 rounded-md"
+                      style={{
+                        background: isAllIn ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.15)",
+                        textShadow: "0 0 6px rgba(255,255,255,0.3)",
+                      }}
+                    >
+                      ${betAmount.toLocaleString()}
+                    </span>
+                  )}
+                  <kbd className="text-[0.5625rem] font-mono opacity-30 bg-white/10 px-1.5 py-0.5 rounded">R</kbd>
+                </span>
+              </motion.button>
+
+              {onBuyTime && isHeroTurn && heroTimeLeft !== undefined && heroTimeLeft < 30 && (
+                <motion.button
+                  whileHover={{ scale: 1.04, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onBuyTime}
+                  data-testid="button-buytime"
+                  className="relative overflow-hidden rounded-xl font-bold text-sm uppercase tracking-wider text-white border border-amber-500/30"
+                  style={{
+                    padding: "0.875rem 1rem",
+                    background: "linear-gradient(180deg, #b45309 0%, #78350f 100%)",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 0 10px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
+                  }}
+                >
+                  +10s
+                  {bigBlind && <span className="font-mono text-[0.5625rem] opacity-50 ml-1">(${bigBlind})</span>}
+                </motion.button>
+              )}
+            </div>
+
+            <div className="shrink-0 flex flex-col items-end gap-1.5">
+              <div
+                className="flex items-center gap-3 px-4 py-2 rounded-xl"
+                style={{
+                  background: "linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.3) 100%)",
+                  border: "1px solid rgba(255,215,0,0.15)",
+                  boxShadow: "0 0 12px rgba(0,0,0,0.3)",
+                }}
+              >
+                <span className="text-[0.6875rem] font-black uppercase tracking-widest text-cyan-400" style={{ textShadow: "0 0 8px rgba(0,212,255,0.3)" }}>
+                  {phase === "pre-flop" ? "Pre-Flop" : phase === "flop" ? "Flop" : phase === "turn" ? "Turn" : phase === "river" ? "River" : phase || "—"}
+                </span>
+                <div className="w-px h-4 bg-white/10" />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider">Pot</span>
+                  <span
+                    className="font-mono font-black text-lg"
+                    style={{ color: "#ffd700", textShadow: "0 0 10px rgba(255,215,0,0.4)" }}
+                  >
+                    ${pot.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {!isHeroTurn && heroStatus !== "folded" && heroStatus !== "all-in" && (
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none group">
+                    <input
+                      type="checkbox"
+                      checked={autoFold}
+                      onChange={(e) => { setAutoFold(e.target.checked); if (e.target.checked) setAutoCheckFold(false); }}
+                      className="w-3.5 h-3.5 rounded border-gray-600 bg-white/5 accent-red-500"
+                      data-testid="toggle-autofold"
+                    />
+                    <span className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 group-hover:text-gray-300 transition-colors">
+                      Auto-Fold
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none group">
+                    <input
+                      type="checkbox"
+                      checked={autoCheckFold}
+                      onChange={(e) => { setAutoCheckFold(e.target.checked); if (e.target.checked) setAutoFold(false); }}
+                      className="w-3.5 h-3.5 rounded border-gray-600 bg-white/5 accent-emerald-500"
+                      data-testid="toggle-checkfold"
+                    />
+                    <span className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 group-hover:text-gray-300 transition-colors">
+                      Check/Fold
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>

@@ -376,8 +376,8 @@ export function ShowdownOverlay({ visible, results, players, pot }: ShowdownOver
 
                     {/* Cards with staggered flip reveal */}
                     <div className="flex gap-1.5 justify-center">
-                      <Card card={{ ...player.cards[0], hidden: false }} size="sm" delay={0.8 + i * 0.12} />
-                      <Card card={{ ...player.cards[1], hidden: false }} size="sm" delay={0.95 + i * 0.12} />
+                      <Card card={{ ...player.cards[0], hidden: false }} size="md" delay={0.8 + i * 0.12} />
+                      <Card card={{ ...player.cards[1], hidden: false }} size="md" delay={0.95 + i * 0.12} />
                     </div>
                   </motion.div>
                 );

@@ -95,7 +95,11 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     const activePlayers = updatedPlayers.filter(p => p.isActive);
     if (activePlayers.length < 2) return; // Not enough players to play
 
-    const dealerIndex = updatedPlayers.findIndex(p => p.id === currentDealerId);
+    let dealerIndex = updatedPlayers.findIndex(p => p.id === currentDealerId);
+    // If dealer was eliminated, find next active player as dealer
+    if (dealerIndex === -1 || !updatedPlayers[dealerIndex].isActive) {
+      dealerIndex = updatedPlayers.findIndex(p => p.isActive);
+    }
     // Find next active player for each position
     const findNextActive = (startIdx: number) => {
       let idx = (startIdx + 1) % updatedPlayers.length;
@@ -130,9 +134,12 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     }
     updatedPlayers[firstToAct].status = 'thinking';
 
-    // Hide opponent cards (hero can see their own)
-    const finalPlayers = updatedPlayers.map(p => ({
+    // Sync positional flags (dealer, SB, BB) and hide opponent cards
+    const finalPlayers = updatedPlayers.map((p, idx) => ({
       ...p,
+      isDealer: idx === dealerIndex,
+      isSmallBlind: idx === sbIndex,
+      isBigBlind: idx === bbIndex,
       cards: p.cards ? [
         { ...p.cards[0], hidden: p.id !== heroId },
         { ...p.cards[1], hidden: p.id !== heroId },
@@ -251,7 +258,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
           setShowdown(null);
           startGame();
         }, 500);
-      }, 5000);
+      }, 8000);
 
       return;
     }

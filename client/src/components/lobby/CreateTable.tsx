@@ -42,6 +42,9 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
   const [gameSpeed, setGameSpeed] = useState<"normal" | "fast" | "turbo">("normal");
   // Away timeout
   const [awayTimeoutMinutes, setAwayTimeoutMinutes] = useState(5);
+  // Schedule
+  const [scheduledStart, setScheduledStart] = useState("");
+  const [scheduledEnd, setScheduledEnd] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +87,9 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
       config.minBuyIn = minBuyIn;
       config.maxBuyIn = maxBuyIn;
     }
+
+    if (scheduledStart) config.scheduledStartTime = new Date(scheduledStart).toISOString();
+    if (scheduledEnd) config.scheduledEndTime = new Date(scheduledEnd).toISOString();
 
     onCreate(config);
   };
@@ -418,6 +424,32 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Schedule (optional) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1 mb-1.5">
+                <Clock className="w-3 h-3" /> Start Time
+              </label>
+              <input
+                type="datetime-local"
+                value={scheduledStart}
+                onChange={(e) => setScheduledStart(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 [color-scheme:dark]"
+              />
+            </div>
+            <div>
+              <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1 mb-1.5">
+                <Clock className="w-3 h-3" /> End Time
+              </label>
+              <input
+                type="datetime-local"
+                value={scheduledEnd}
+                onChange={(e) => setScheduledEnd(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 [color-scheme:dark]"
+              />
+            </div>
           </div>
 
           {/* Submit */}

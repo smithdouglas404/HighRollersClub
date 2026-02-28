@@ -67,6 +67,8 @@ class TableManager {
         console.warn("Blockchain clients failed to initialize, running without blockchain");
       }
     }
+    // Scheduling: check every 30 seconds for tables that should auto-start or auto-close
+    setInterval(() => this.checkScheduledTables(), 30000);
   }
 
   getTable(tableId: string): TableInstance | undefined {
@@ -1059,6 +1061,48 @@ class TableManager {
     } else {
       // Player chose to wait — ensure waitingForBB is set
       player.waitingForBB = true;
+    }
+  }
+
+  /** Check scheduled tables for auto-start and auto-close */
+  private async checkScheduledTables() {
+    try {
+      const allTables = await storage.getTables();
+      const now = new Date();
+
+      for (const table of allTables) {
+        // Auto-start: if scheduled start time has arrived and 2+ ready players
+        if (table.scheduledStartTime && new Date(table.scheduledStartTime) <= now) {
+          const instance = this.tables.get(table.id);
+          if (instance && instance.engine.state.phase === "waiting" && instance.engine.canStartHand()) {
+            console.log(`[scheduler] Auto-starting table ${table.id} (scheduled start reached)`);
+            this.maybeStartCountdown(table.id, instance);
+            // Clear scheduled start so it doesn't trigger again
+            await storage.updateTable(table.id, { scheduledStartTime: null });
+          }
+        }
+
+        // Auto-close: if scheduled end time has passed, cash out all players
+        if (table.scheduledEndTime && new Date(table.scheduledEndTime) <= now) {
+          const instance = this.tables.get(table.id);
+          if (instance) {
+            console.log(`[scheduler] Auto-closing table ${table.id} (scheduled end reached)`);
+            broadcastToTable(table.id, { type: "info", message: "Table closing — scheduled end time reached" } as any);
+            // Cash out all players
+            const playerIds = instance.engine.state.players.map(p => p.id);
+            for (const pid of playerIds) {
+              await this.processCashOut(table.id, pid, instance);
+            }
+            sendGameStateToTable(table.id);
+            this.clearTableTimers(table.id);
+            this.tables.delete(table.id);
+          }
+          // Clear scheduled end
+          await storage.updateTable(table.id, { scheduledEndTime: null, status: "waiting" });
+        }
+      }
+    } catch (err) {
+      console.error("[scheduler] Error checking scheduled tables:", err);
     }
   }
 

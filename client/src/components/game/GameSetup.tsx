@@ -248,8 +248,8 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
 
   const selectedFormat = FORMAT_OPTIONS.find(f => f.key === gameFormat)!;
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,212,255,0.15)] transition-colors";
-  const labelClass = "text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-1.5";
+  const inputClass = "w-full bg-white/[0.07] border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,212,255,0.15)] transition-colors placeholder:text-gray-500";
+  const labelClass = "text-[0.625rem] font-bold uppercase tracking-wider text-amber-400/80 block mb-1.5";
 
   const Toggle = ({ value, onChange, label, icon: Icon, desc }: { value: boolean; onChange: (v: boolean) => void; label: string; icon: any; desc?: string }) => (
     <label className="flex items-center gap-3 cursor-pointer group py-1.5">
@@ -263,9 +263,9 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
       </button>
       <div className="flex-1 min-w-0">
         <span className="text-xs text-gray-300 flex items-center gap-1.5 group-hover:text-white transition-colors">
-          <Icon className="w-3 h-3 text-gray-500 shrink-0" /> {label}
+          <Icon className="w-3 h-3 text-cyan-400/60 shrink-0" /> {label}
         </span>
-        {desc && <div className="text-[0.5625rem] text-gray-600 mt-0.5 leading-relaxed">{desc}</div>}
+        {desc && <div className="text-[0.5625rem] text-gray-400 mt-0.5 leading-relaxed">{desc}</div>}
       </div>
     </label>
   );
@@ -643,7 +643,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-bold text-emerald-300">Practice Mode</div>
-                    <div className="text-[0.625rem] text-gray-500 mt-0.5">Micro stakes, slow timer, 4 players — perfect for learning</div>
+                    <div className="text-[0.625rem] text-gray-400 mt-0.5">Micro stakes, slow timer, 4 players — perfect for learning</div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-emerald-500/50" />
                 </motion.button>
@@ -651,7 +651,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                 {/* Divider */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-px bg-white/[0.06]" />
-                  <span className="text-[0.5625rem] text-gray-600 font-bold uppercase tracking-wider">or customize</span>
+                  <span className="text-[0.5625rem] text-gray-400 font-bold uppercase tracking-wider">or customize</span>
                   <div className="flex-1 h-px bg-white/[0.06]" />
                 </div>
 
@@ -660,7 +660,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                   initial={{ y: 15, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.12 }}
-                  className="rounded-2xl backdrop-blur-md bg-white/[0.03] border border-white/[0.06] p-5 space-y-4"
+                  className="rounded-2xl backdrop-blur-md bg-white/[0.04] border border-white/[0.1] p-5 space-y-4"
                   style={{ boxShadow: `0 0 40px ${selectedAvatar.glowColor.replace("0.3", "0.05")}` }}
                 >
                   {/* Format Selector */}
@@ -683,7 +683,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                             className={`p-2 rounded-lg border text-center transition-all ${
                               isSelected
                                 ? "border-transparent"
-                                : "bg-white/[0.02] border-white/[0.06] text-gray-500 hover:border-white/15 hover:bg-white/[0.04]"
+                                : "bg-white/[0.04] border-white/[0.1] text-gray-300 hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
                             }`}
                             style={isSelected ? {
                               backgroundColor: `rgba(${opt.rgb},0.1)`,
@@ -692,14 +692,14 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                               color: `rgb(${opt.rgb})`,
                             } : {}}
                           >
-                            <Icon className="w-4 h-4 mx-auto mb-0.5" />
-                            <div className="text-[7px] font-bold uppercase tracking-wider leading-tight">{opt.label}</div>
+                            <Icon className="w-5 h-5 mx-auto mb-1" />
+                            <div className="text-[8px] font-bold uppercase tracking-wider leading-tight">{opt.label}</div>
                           </button>
                         );
                       })}
                     </div>
                     {/* Format description */}
-                    <div className="mt-1.5 text-[0.625rem] text-gray-500 text-center italic">
+                    <div className="mt-1.5 text-[0.625rem] text-cyan-400/60 text-center italic">
                       {selectedFormat.desc}
                     </div>
                   </div>

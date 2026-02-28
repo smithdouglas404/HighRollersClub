@@ -5,6 +5,9 @@ import {
   ChevronRight, ChevronLeft, Zap, Shield, Crown, Star, Flame,
   Users, Coins, Clock, Bot, Trophy, Bomb, Swords, UserPlus,
   Gamepad2, Settings2, Wallet, AlertTriangle, ArrowRightLeft,
+  Lock, Eye, EyeOff, Repeat, Gauge, Layers, RotateCcw,
+  Timer, Rabbit, CreditCard, Percent, Hash, SlidersHorizontal,
+  Shuffle, Coffee, Award, DollarSign, Info,
 } from "lucide-react";
 import { useWallet, type WalletType } from "@/lib/wallet-context";
 import { AVATAR_OPTIONS, type AvatarOption } from "../poker/AvatarSelect";
@@ -32,6 +35,30 @@ export interface GameSetupConfig {
   // Bomb Pot
   bombPotFrequency: number;
   bombPotAnte: number;
+  // Advanced — Table Rules
+  straddleEnabled: boolean;
+  bigBlindAnte: boolean;
+  runItTwice: boolean;
+  rabbitHunting: boolean;
+  showAllHands: boolean;
+  autoTopUp: boolean;
+  // Advanced — Speed & Timing
+  actionTimerSeconds: number;
+  speedMultiplier: number;
+  autoStartDelay: number;
+  // Advanced — Rake
+  rakePercent: number;
+  rakeCap: number;
+  // Advanced — Privacy
+  isPrivate: boolean;
+  tablePassword: string;
+  // Tournament extras
+  allowReEntry: boolean;
+  allowRebuy: boolean;
+  lateRegistrationMinutes: number;
+  breakIntervalMinutes: number;
+  breakDurationMinutes: number;
+  payoutStructure: string;
 }
 
 const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string; color: string; rgb: string; tooltip: string }[] = [
@@ -84,6 +111,33 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
   const [blindPreset, setBlindPreset] = useState("standard");
   const [bombPotFrequency, setBombPotFrequency] = useState(5);
   const [bombPotAnte, setBombPotAnte] = useState(0);
+  // Advanced — Table Rules
+  const [straddleEnabled, setStraddleEnabled] = useState(false);
+  const [bigBlindAnte, setBigBlindAnte] = useState(false);
+  const [runItTwice, setRunItTwice] = useState(false);
+  const [rabbitHunting, setRabbitHunting] = useState(false);
+  const [showAllHands, setShowAllHands] = useState(true);
+  const [autoTopUp, setAutoTopUp] = useState(false);
+  // Advanced — Speed & Timing
+  const [actionTimerSeconds, setActionTimerSeconds] = useState(15);
+  const [speedMultiplier, setSpeedMultiplier] = useState(1.0);
+  const [autoStartDelay, setAutoStartDelay] = useState(5);
+  // Advanced — Rake
+  const [rakePercent, setRakePercent] = useState(5);
+  const [rakeCap, setRakeCap] = useState(0);
+  // Advanced — Privacy
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [tablePassword, setTablePassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  // Tournament extras
+  const [allowReEntry, setAllowReEntry] = useState(false);
+  const [allowRebuy, setAllowRebuy] = useState(false);
+  const [lateRegistrationMinutes, setLateRegistrationMinutes] = useState(15);
+  const [breakIntervalMinutes, setBreakIntervalMinutes] = useState(60);
+  const [breakDurationMinutes, setBreakDurationMinutes] = useState(5);
+  const [payoutStructure, setPayoutStructure] = useState("standard");
+  // UI
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Wallet balance integration (multiplayer only)
   const walletData = mode === "multiplayer" ? useWallet() : null;
@@ -122,6 +176,25 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
     blindPreset,
     bombPotFrequency: gameFormat === "bomb_pot" ? bombPotFrequency : 0,
     bombPotAnte: gameFormat === "bomb_pot" ? (bombPotAnte || bigBlind) : 0,
+    straddleEnabled,
+    bigBlindAnte,
+    runItTwice,
+    rabbitHunting,
+    showAllHands,
+    autoTopUp,
+    actionTimerSeconds,
+    speedMultiplier,
+    autoStartDelay,
+    rakePercent: mode === "offline" ? 0 : rakePercent,
+    rakeCap: mode === "offline" ? 0 : rakeCap,
+    isPrivate,
+    tablePassword: isPrivate ? tablePassword : "",
+    allowReEntry,
+    allowRebuy,
+    lateRegistrationMinutes,
+    breakIntervalMinutes,
+    breakDurationMinutes,
+    payoutStructure,
   });
 
   const handleStart = () => {
@@ -140,6 +213,43 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
 
   const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,212,255,0.15)] transition-colors";
   const labelClass = "text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-1.5";
+
+  const Toggle = ({ value, onChange, label, icon: Icon, desc }: { value: boolean; onChange: (v: boolean) => void; label: string; icon: any; desc?: string }) => (
+    <label className="flex items-center gap-3 cursor-pointer group py-1.5">
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        className={`w-9 h-5 rounded-full transition-colors ${value ? 'bg-cyan-500' : 'bg-white/10'} relative shrink-0`}
+        data-testid={`toggle-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      >
+        <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${value ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+      </button>
+      <div className="flex-1 min-w-0">
+        <span className="text-xs text-gray-300 flex items-center gap-1.5 group-hover:text-white transition-colors">
+          <Icon className="w-3 h-3 text-gray-500 shrink-0" /> {label}
+        </span>
+        {desc && <div className="text-[0.5625rem] text-gray-600 mt-0.5 leading-relaxed">{desc}</div>}
+      </div>
+    </label>
+  );
+
+  const colorMap: Record<string, { icon: string; text: string }> = {
+    cyan: { icon: "text-cyan-400/60", text: "text-cyan-400/80" },
+    amber: { icon: "text-amber-400/60", text: "text-amber-400/80" },
+    purple: { icon: "text-purple-400/60", text: "text-purple-400/80" },
+    emerald: { icon: "text-emerald-400/60", text: "text-emerald-400/80" },
+  };
+
+  const SectionHeader = ({ label, icon: Icon, color = "cyan" }: { label: string; icon: any; color?: string }) => {
+    const colors = colorMap[color] || colorMap.cyan;
+    return (
+      <div className="flex items-center gap-2 pt-1 pb-0.5">
+        <Icon className={`w-3.5 h-3.5 ${colors.icon}`} />
+        <span className={`text-[0.625rem] font-bold uppercase tracking-widest ${colors.text}`}>{label}</span>
+        <div className="flex-1 h-px bg-white/[0.04]" />
+      </div>
+    );
+  };
 
   // ─── Progress Bar ─────────────────────────────────────────────────
   const ProgressBar = () => (
@@ -571,8 +681,8 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                   {/* Divider */}
                   <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
-                  {/* Players + Time */}
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Players */}
+                  <div className="grid grid-cols-1 gap-3">
                     <div>
                       <label className={`${labelClass} flex items-center gap-1`}>
                         <Users className="w-3 h-3" /> Max Players
@@ -582,23 +692,10 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                         onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
                         disabled={gameFormat === "heads_up"}
                         className={`${inputClass} disabled:opacity-50`}
+                        data-testid="select-max-players"
                       >
                         {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                           <option key={n} value={n} className="bg-gray-900">{n} Players</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className={`${labelClass} flex items-center gap-1`}>
-                        <Clock className="w-3 h-3" /> Time Bank
-                      </label>
-                      <select
-                        value={timeBankSeconds}
-                        onChange={(e) => setTimeBankSeconds(parseInt(e.target.value))}
-                        className={inputClass}
-                      >
-                        {[10, 15, 20, 30, 45, 60, 90, 120].map((n) => (
-                          <option key={n} value={n} className="bg-gray-900">{n}s</option>
                         ))}
                       </select>
                     </div>
@@ -659,27 +756,91 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className={`p-3 rounded-lg border ${gameFormat === "tournament" ? "border-emerald-500/15 bg-emerald-500/5" : "border-cyan-500/15 bg-cyan-500/5"}`}>
-                          <div className={`text-[0.625rem] font-bold uppercase tracking-wider ${gameFormat === "tournament" ? "text-emerald-400" : "text-cyan-400"} mb-3`}>
+                        <div className={`p-4 rounded-xl border space-y-4 ${gameFormat === "tournament" ? "border-emerald-500/15 bg-emerald-500/5" : "border-cyan-500/15 bg-cyan-500/5"}`}>
+                          <div className={`text-[0.625rem] font-bold uppercase tracking-wider ${gameFormat === "tournament" ? "text-emerald-400" : "text-cyan-400"}`}>
                             {gameFormat === "tournament" ? "Tournament Settings" : "SNG Settings"}
                           </div>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
-                              <label className={labelClass}>Buy-In</label>
-                              <input type="number" value={buyInAmount} onChange={(e) => setBuyInAmount(parseInt(e.target.value) || 100)} min={100} className={inputClass} />
+                              <label className={`${labelClass} flex items-center gap-1`}>
+                                <CreditCard className="w-3 h-3" /> Buy-In
+                              </label>
+                              <input type="number" value={buyInAmount} onChange={(e) => setBuyInAmount(parseInt(e.target.value) || 100)} min={100} className={inputClass} data-testid="input-buyin" />
                             </div>
                             <div>
-                              <label className={labelClass}>Starting Chips</label>
-                              <input type="number" value={startingChips} onChange={(e) => setStartingChips(parseInt(e.target.value) || 1500)} min={100} className={inputClass} />
+                              <label className={`${labelClass} flex items-center gap-1`}>
+                                <Coins className="w-3 h-3" /> Starting Chips
+                              </label>
+                              <input type="number" value={startingChips} onChange={(e) => setStartingChips(parseInt(e.target.value) || 1500)} min={100} className={inputClass} data-testid="input-starting-chips" />
                             </div>
                             <div>
-                              <label className={labelClass}>Blind Speed</label>
-                              <select value={blindPreset} onChange={(e) => setBlindPreset(e.target.value)} className={inputClass}>
-                                <option value="standard" className="bg-gray-900">Standard (5min)</option>
+                              <label className={`${labelClass} flex items-center gap-1`}>
+                                <Gauge className="w-3 h-3" /> Blind Speed
+                              </label>
+                              <select value={blindPreset} onChange={(e) => setBlindPreset(e.target.value)} className={inputClass} data-testid="select-blind-speed">
+                                <option value="hyper" className="bg-gray-900">Hyper Turbo (2min)</option>
                                 <option value="turbo" className="bg-gray-900">Turbo (3min)</option>
+                                <option value="standard" className="bg-gray-900">Standard (5min)</option>
                                 <option value="mtt" className="bg-gray-900">Slow (10min)</option>
+                                <option value="deep" className="bg-gray-900">Deep Stack (15min)</option>
                               </select>
                             </div>
+                          </div>
+
+                          <div className="h-px bg-white/[0.06]" />
+
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-0">
+                            <Toggle value={allowReEntry} onChange={setAllowReEntry} icon={RotateCcw} label="Re-Entry" desc="Eliminated players can re-enter" />
+                            <Toggle value={allowRebuy} onChange={setAllowRebuy} icon={Repeat} label="Rebuy" desc="Players can rebuy before elimination" />
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className={`${labelClass} flex items-center gap-1`}>
+                                <Clock className="w-3 h-3" /> Late Registration
+                              </label>
+                              <select value={lateRegistrationMinutes} onChange={(e) => setLateRegistrationMinutes(parseInt(e.target.value))} className={inputClass} data-testid="select-late-reg">
+                                {[0, 5, 10, 15, 20, 30, 45, 60].map(n => (
+                                  <option key={n} value={n} className="bg-gray-900">{n === 0 ? "None" : `${n} min`}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className={`${labelClass} flex items-center gap-1`}>
+                                <Coffee className="w-3 h-3" /> Break Every
+                              </label>
+                              <select value={breakIntervalMinutes} onChange={(e) => setBreakIntervalMinutes(parseInt(e.target.value))} className={inputClass} data-testid="select-break-interval">
+                                {[0, 30, 45, 60, 90, 120].map(n => (
+                                  <option key={n} value={n} className="bg-gray-900">{n === 0 ? "No Breaks" : `${n} min`}</option>
+                                ))}
+                              </select>
+                            </div>
+                            {breakIntervalMinutes > 0 && (
+                              <div>
+                                <label className={`${labelClass} flex items-center gap-1`}>
+                                  <Clock className="w-3 h-3" /> Break Length
+                                </label>
+                                <select value={breakDurationMinutes} onChange={(e) => setBreakDurationMinutes(parseInt(e.target.value))} className={inputClass} data-testid="select-break-duration">
+                                  {[3, 5, 8, 10, 15].map(n => (
+                                    <option key={n} value={n} className="bg-gray-900">{n} min</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className={`${labelClass} flex items-center gap-1`}>
+                              <Award className="w-3 h-3" /> Payout Structure
+                            </label>
+                            <select value={payoutStructure} onChange={(e) => setPayoutStructure(e.target.value)} className={inputClass} data-testid="select-payout">
+                              <option value="standard" className="bg-gray-900">Standard — Top 15% paid</option>
+                              <option value="top-heavy" className="bg-gray-900">Top Heavy — Winner takes more</option>
+                              <option value="flat" className="bg-gray-900">Flat — Even distribution</option>
+                              <option value="winner-take-all" className="bg-gray-900">Winner Take All</option>
+                              <option value="top3" className="bg-gray-900">Top 3 Only</option>
+                              <option value="satellite" className="bg-gray-900">Satellite — Seats awarded</option>
+                            </select>
                           </div>
                         </div>
                       </motion.div>
@@ -773,35 +934,146 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                   {/* Divider */}
                   <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
-                  {/* Toggles */}
-                  <div className="flex items-center gap-5 flex-wrap">
-                    {mode === "multiplayer" && (
-                      <label className="flex items-center gap-2.5 cursor-pointer group">
-                        <button
-                          type="button"
-                          onClick={() => setAllowBots(!allowBots)}
-                          className={`w-9 h-5 rounded-full transition-colors ${allowBots ? 'bg-cyan-500' : 'bg-white/10'} relative`}
-                        >
-                          <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${allowBots ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-                        </button>
-                        <span className="text-xs text-gray-400 flex items-center gap-1 group-hover:text-gray-300 transition-colors">
-                          <Bot className="w-3 h-3" /> Allow Bots
-                        </span>
-                      </label>
+                  {/* ─── Table Rules ─── */}
+                  <SectionHeader label="Table Rules" icon={Layers} />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-0">
+                    <Toggle value={straddleEnabled} onChange={setStraddleEnabled} icon={DollarSign} label="Straddle" desc="UTG can post 2x BB blind pre-flop" />
+                    <Toggle value={bigBlindAnte} onChange={setBigBlindAnte} icon={Coins} label="Big Blind Ante" desc="Only BB posts the ante each hand" />
+                    <Toggle value={runItTwice} onChange={setRunItTwice} icon={Repeat} label="Run It Twice" desc="Deal remaining board twice when all-in" />
+                    <Toggle value={rabbitHunting} onChange={setRabbitHunting} icon={Rabbit} label="Rabbit Hunting" desc="Peek at undealt cards after fold" />
+                    <Toggle value={showAllHands} onChange={setShowAllHands} icon={Eye} label="Show All Hands" desc="Reveal all cards at showdown" />
+                    {gameFormat !== "sng" && gameFormat !== "tournament" && (
+                      <Toggle value={autoTopUp} onChange={setAutoTopUp} icon={RotateCcw} label="Auto Top-Up" desc="Auto-rebuy to max buy-in when short" />
                     )}
-                    {mode === "multiplayer" && allowBots && (
-                      <label className="flex items-center gap-2.5 cursor-pointer group">
-                        <button
-                          type="button"
-                          onClick={() => setReplaceBots(!replaceBots)}
-                          className={`w-9 h-5 rounded-full transition-colors ${replaceBots ? 'bg-cyan-500' : 'bg-white/10'} relative`}
-                        >
-                          <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${replaceBots ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-                        </button>
-                        <span className="text-xs text-gray-400 flex items-center gap-1 group-hover:text-gray-300 transition-colors">
-                          <UserPlus className="w-3 h-3" /> Replace Bots
-                        </span>
+                  </div>
+
+                  {/* ─── Speed & Timing ─── */}
+                  <SectionHeader label="Speed & Timing" icon={Timer} />
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`} title="Seconds each player has to make a decision before the timer starts">
+                        <Timer className="w-3 h-3" /> Action Timer
                       </label>
+                      <select value={actionTimerSeconds} onChange={(e) => setActionTimerSeconds(parseInt(e.target.value))} className={inputClass} data-testid="select-action-timer">
+                        {[5, 8, 10, 12, 15, 20, 25, 30, 45, 60].map(n => (
+                          <option key={n} value={n} className="bg-gray-900">{n}s</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`} title="Extra seconds stored for tough decisions">
+                        <Clock className="w-3 h-3" /> Time Bank
+                      </label>
+                      <select
+                        value={timeBankSeconds}
+                        onChange={(e) => setTimeBankSeconds(parseInt(e.target.value))}
+                        className={inputClass}
+                        data-testid="select-time-bank"
+                      >
+                        {[10, 15, 20, 30, 45, 60, 90, 120, 180].map((n) => (
+                          <option key={n} value={n} className="bg-gray-900">{n}s</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`} title="How fast the game runs: animations, dealing speed">
+                        <Gauge className="w-3 h-3" /> Game Speed
+                      </label>
+                      <select value={speedMultiplier} onChange={(e) => setSpeedMultiplier(parseFloat(e.target.value))} className={inputClass} data-testid="select-speed">
+                        <option value={0.5} className="bg-gray-900">Turbo (2x)</option>
+                        <option value={0.75} className="bg-gray-900">Fast (1.5x)</option>
+                        <option value={1.0} className="bg-gray-900">Normal</option>
+                        <option value={1.5} className="bg-gray-900">Relaxed (0.75x)</option>
+                        <option value={2.0} className="bg-gray-900">Slow (0.5x)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={`${labelClass} flex items-center gap-1`} title="Seconds to wait before auto-starting a new hand">
+                        <Shuffle className="w-3 h-3" /> Auto-Start Delay
+                      </label>
+                      <select value={autoStartDelay} onChange={(e) => setAutoStartDelay(parseInt(e.target.value))} className={inputClass} data-testid="select-auto-start">
+                        {[0, 3, 5, 8, 10, 15].map(n => (
+                          <option key={n} value={n} className="bg-gray-900">{n === 0 ? "Instant" : `${n}s`}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* ─── Rake (multiplayer only) ─── */}
+                  {mode === "multiplayer" && (
+                    <>
+                      <SectionHeader label="Rake" icon={Percent} color="amber" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={`${labelClass} flex items-center gap-1`} title="Percentage of pot taken as rake each hand">
+                            <Percent className="w-3 h-3" /> Rake %
+                          </label>
+                          <select value={rakePercent} onChange={(e) => setRakePercent(parseFloat(e.target.value))} className={inputClass} data-testid="select-rake">
+                            {[0, 1, 2, 2.5, 3, 4, 5, 7, 10].map(n => (
+                              <option key={n} value={n} className="bg-gray-900">{n === 0 ? "No Rake" : `${n}%`}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={`${labelClass} flex items-center gap-1`} title="Maximum rake taken per hand (0 = no cap)">
+                            <CreditCard className="w-3 h-3" /> Rake Cap
+                          </label>
+                          <input type="number" value={rakeCap} onChange={(e) => setRakeCap(parseInt(e.target.value) || 0)} min={0} placeholder="No cap" className={inputClass} data-testid="input-rake-cap" />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* ─── Privacy (multiplayer only) ─── */}
+                  {mode === "multiplayer" && (
+                    <>
+                      <SectionHeader label="Privacy" icon={Lock} color="purple" />
+                      <Toggle value={isPrivate} onChange={setIsPrivate} icon={Lock} label="Private Table" desc="Only players with the password can join" />
+                      <AnimatePresence>
+                        {isPrivate && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="relative">
+                              <label className={labelClass}>Table Password</label>
+                              <div className="relative">
+                                <input
+                                  type={showPassword ? "text" : "password"}
+                                  value={tablePassword}
+                                  onChange={(e) => setTablePassword(e.target.value)}
+                                  placeholder="Enter password..."
+                                  className={`${inputClass} pr-10`}
+                                  maxLength={30}
+                                  data-testid="input-table-password"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                                  data-testid="button-toggle-password"
+                                >
+                                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  )}
+
+                  {/* ─── Bots ─── */}
+                  <SectionHeader label="Bots & AI" icon={Bot} />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-0">
+                    <Toggle value={allowBots} onChange={setAllowBots} icon={Bot} label="Allow Bots" desc="Fill empty seats with AI players" />
+                    {allowBots && (
+                      <Toggle value={replaceBots} onChange={setReplaceBots} icon={UserPlus} label="Replace Bots" desc="Swap bots out when humans join" />
                     )}
                   </div>
                 </motion.div>

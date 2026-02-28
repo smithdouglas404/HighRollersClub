@@ -245,6 +245,147 @@ function useWinnerParticles(isWinner: boolean) {
   return canvasRef;
 }
 
+// ─── Player Chip Stack Visualization ──────────────────────────────────────────
+interface StackChip {
+  color: string;
+  border: string;
+  stripe: string;
+  inner: string;
+}
+
+const CHIP_DENOMS: { threshold: number; chip: StackChip }[] = [
+  { threshold: 1000, chip: { color: "#ffd700", border: "#b8860b", stripe: "#ffffff", inner: "#f59e0b" } },
+  { threshold: 500,  chip: { color: "#111827", border: "#374151", stripe: "#f8fafc", inner: "#1f2937" } },
+  { threshold: 100,  chip: { color: "#dc2626", border: "#991b1b", stripe: "#fecaca", inner: "#b91c1c" } },
+  { threshold: 25,   chip: { color: "#16a34a", border: "#166534", stripe: "#bbf7d0", inner: "#15803d" } },
+  { threshold: 5,    chip: { color: "#2563eb", border: "#1e40af", stripe: "#bfdbfe", inner: "#1d4ed8" } },
+  { threshold: 1,    chip: { color: "#f5f5f4", border: "#a8a29e", stripe: "#d6d3d1", inner: "#e7e5e4" } },
+];
+
+function getPlayerChipStacks(chips: number): { chip: StackChip; count: number }[] {
+  const stacks: { chip: StackChip; count: number }[] = [];
+  let remaining = chips;
+  for (const { threshold, chip } of CHIP_DENOMS) {
+    if (remaining >= threshold) {
+      const count = Math.min(8, Math.floor(remaining / threshold));
+      stacks.push({ chip, count });
+      remaining -= count * threshold;
+    }
+    if (stacks.length >= 3) break;
+  }
+  if (stacks.length === 0 && chips > 0) {
+    stacks.push({ chip: CHIP_DENOMS[CHIP_DENOMS.length - 1].chip, count: 1 });
+  }
+  return stacks;
+}
+
+function MiniChip({ chip, yOffset }: { chip: StackChip; yOffset: number }) {
+  return (
+    <svg
+      width="22" height="22" viewBox="0 0 22 22" fill="none"
+      style={{
+        position: "absolute",
+        bottom: yOffset,
+        left: 0,
+        filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.5))",
+      }}
+    >
+      <circle cx="11" cy="11" r="10" fill={chip.color} stroke={chip.border} strokeWidth="1" />
+      {[0, 60, 120, 180, 240, 300].map(angle => {
+        const rad = (angle * Math.PI) / 180;
+        const x1 = 11 + Math.cos(rad) * 8;
+        const y1 = 11 + Math.sin(rad) * 8;
+        const x2 = 11 + Math.cos(rad) * 10;
+        const y2 = 11 + Math.sin(rad) * 10;
+        return (
+          <line key={angle} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={chip.stripe} strokeWidth="2" strokeLinecap="round" opacity="0.5"
+          />
+        );
+      })}
+      <circle cx="11" cy="11" r="6" fill="none" stroke={chip.stripe} strokeWidth="0.6" opacity="0.25" />
+      <circle cx="11" cy="11" r="3" fill={chip.inner} opacity="0.3" />
+      <ellipse cx="9" cy="7" rx="4" ry="3" fill="white" opacity="0.08" />
+    </svg>
+  );
+}
+
+function getBetChipDenom(amount: number): StackChip {
+  if (amount >= 500) return CHIP_DENOMS[0].chip; // gold
+  if (amount >= 100) return CHIP_DENOMS[1].chip; // black
+  if (amount >= 25)  return CHIP_DENOMS[2].chip; // red
+  if (amount >= 5)   return CHIP_DENOMS[3].chip; // green
+  return CHIP_DENOMS[4].chip; // blue
+}
+
+function BetChipStack({ amount }: { amount: number }) {
+  const chipCount = Math.min(6, Math.max(1, Math.ceil(amount / 50)));
+  const chip = getBetChipDenom(amount);
+  return (
+    <div
+      className="relative"
+      style={{
+        width: 24,
+        height: 24 + chipCount * 3,
+        transform: "rotateX(50deg)",
+        transformOrigin: "bottom center",
+      }}
+    >
+      {Array.from({ length: chipCount }).map((_, i) => (
+        <svg
+          key={i}
+          width="24" height="24" viewBox="0 0 22 22" fill="none"
+          style={{
+            position: "absolute",
+            bottom: i * 3,
+            left: 0,
+            filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.5))",
+          }}
+        >
+          <circle cx="11" cy="11" r="10" fill={chip.color} stroke={chip.border} strokeWidth="1" />
+          {[0, 60, 120, 180, 240, 300].map(angle => {
+            const rad = (angle * Math.PI) / 180;
+            return (
+              <line key={angle}
+                x1={11 + Math.cos(rad) * 8} y1={11 + Math.sin(rad) * 8}
+                x2={11 + Math.cos(rad) * 10} y2={11 + Math.sin(rad) * 10}
+                stroke={chip.stripe} strokeWidth="2" strokeLinecap="round" opacity="0.5"
+              />
+            );
+          })}
+          <circle cx="11" cy="11" r="6" fill="none" stroke={chip.stripe} strokeWidth="0.6" opacity="0.25" />
+          <circle cx="11" cy="11" r="3" fill={chip.inner} opacity="0.3" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+function PlayerChipStack({ chips, side }: { chips: number; side: "left" | "right" }) {
+  const stacks = getPlayerChipStacks(chips);
+  if (stacks.length === 0) return null;
+  return (
+    <div
+      className="flex pointer-events-none"
+      style={{
+        justifyContent: side === "left" ? "flex-end" : "flex-start",
+        gap: 2,
+        transform: "rotateX(45deg)",
+        transformOrigin: "bottom center",
+        marginTop: -4,
+      }}
+    >
+      {stacks.map((stack, si) => (
+        <div key={si} className="relative" style={{ width: 22, height: 22 + stack.count * 3 }}>
+          {Array.from({ length: stack.count }).map((_, ci) => (
+            <MiniChip key={ci} chip={stack.chip} yOffset={ci * 3} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Seat glow color palette — restrained: cyan for hero, muted teal/gray tones for opponents
 const SEAT_COLORS = [
   "#00d4ff", // cyan (hero)
@@ -469,6 +610,9 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   // Compute bet chip offset — push the bet badge toward the table center
   const betOffsetX = (50 - position.x) * 0.4; // positive = toward center
   const betOffsetY = (50 - position.y) * 0.35;
+
+  // Chip stack side — place chips on the side closest to the table edge (away from center)
+  const chipStackSide: "left" | "right" = position.x < 50 ? "left" : "right";
 
   // Build hex-to-rgba helper for glowColor
   const hexToRgba = (hex: string, alpha: number) => {
@@ -704,7 +848,13 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               </span>
             </div>
           </div>
+
         </div>
+
+        {/* ── Visual chip stacks — represent player's stack size ── */}
+        {player.chips > 0 && !isFolded && (
+          <PlayerChipStack chips={player.chips} side={chipStackSide} />
+        )}
 
         {/* ── Opponent HUD stats ── */}
         {hudStats && hudStats.handsPlayed > 0 && (
@@ -743,30 +893,29 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           </div>
         )}
 
-        {/* ── Current bet chip badge (offset toward table center) ── */}
+        {/* ── Current bet chips + label (offset toward table center) ── */}
         <AnimatePresence>
           {player.currentBet > 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.7 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.7 }}
-              className="absolute z-40 flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-sm"
+              className="absolute z-40 flex flex-col items-center gap-0.5"
               style={{
                 left: `calc(50% + ${betOffsetX}px)`,
                 top: `calc(50% + ${betOffsetY}px)`,
                 transform: "translate(-50%, -50%)",
-                background: "rgba(0,0,0,0.65)",
-                border: "1px solid rgba(255,215,0,0.3)",
-                boxShadow: "0 0 8px rgba(255,215,0,0.15)",
               }}
             >
-              {/* Chip icon */}
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="10" r="9" fill="#ffd700" stroke="#b8860b" strokeWidth="1.5" />
-                <circle cx="10" cy="10" r="5.5" fill="none" stroke="#b8860b" strokeWidth="0.8" />
-                <circle cx="10" cy="10" r="2.5" fill="#b8860b" opacity="0.3" />
-              </svg>
-              <span className="text-[0.8125rem] font-mono font-bold" style={{ color: "#ffd700" }}>
+              <BetChipStack amount={player.currentBet} />
+              <span
+                className="text-[0.75rem] font-mono font-black px-1.5 py-px rounded-md"
+                style={{
+                  color: "#ffd700",
+                  textShadow: "0 0 8px rgba(255,215,0,0.4)",
+                  background: "rgba(0,0,0,0.55)",
+                }}
+              >
                 {formatChips(player.currentBet)}
               </span>
             </motion.div>

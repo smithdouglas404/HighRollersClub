@@ -68,7 +68,8 @@
       "Bash(pkill -f \"tsx server/index.ts\" 2>/dev/null; sleep 2 && echo \"killed\")",
       "Bash(curl -s -c /tmp/cookies2.txt -X POST http://localhost:5000/api/auth/guest 2>&1 | python3 -m json.tool)",
       "Bash(pgrep -a node 2>/dev/null || echo \"no node processes\")",
-      "Bash(kill -9 19859 19870 2>/dev/null; sleep 2 && pgrep -a node)"
+      "Bash(kill -9 19859 19870 2>/dev/null; sleep 2 && pgrep -a node)",
+      "Bash(NODE_ENV=development npx tsx server/index.ts)"
     ]
   }
 }

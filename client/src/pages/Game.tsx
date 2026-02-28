@@ -39,7 +39,7 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, Link2 } from "lucide-react";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
 import { TournamentResults } from "@/components/game/TournamentResults";
@@ -199,7 +199,7 @@ function GameTable({
   addChips, maxBuyIn, minBuyIn, walletBalance,
   buyTime, acceptInsurance, declineInsurance, voteRunIt,
   sitOut, sitIn, postBlinds, waitForBB,
-  rebuyHero, defaultBuyIn,
+  rebuyHero, defaultBuyIn, inviteCode,
 }: {
   players: Player[];
   gameState: any;
@@ -241,6 +241,7 @@ function GameTable({
   sitIn?: () => void;
   postBlinds?: () => void;
   waitForBB?: () => void;
+  inviteCode?: string;
   // Practice mode rebuy
   rebuyHero?: (amount: number) => void;
   defaultBuyIn?: number;
@@ -484,6 +485,21 @@ function GameTable({
               {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
               {connected ? "LIVE" : "OFF"}
             </div>
+          )}
+
+          {isMultiplayer && inviteCode && (
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/invite/${inviteCode}`;
+                navigator.clipboard.writeText(url).catch(() => {});
+                const el = document.getElementById("invite-copied");
+                if (el) { el.textContent = "Copied!"; setTimeout(() => { el.textContent = "INVITE"; }, 1500); }
+              }}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-colors"
+              title="Copy invite link to clipboard"
+            >
+              <Link2 className="w-3 h-3" /> <span id="invite-copied">INVITE</span>
+            </button>
           )}
 
           {waiting && addBots && (
@@ -1426,7 +1442,10 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
   const handleJoin = () => {
     const amount = isSNG ? (tableInfo?.buyInAmount || buyIn) : buyIn;
     const password = sessionStorage.getItem(`table-password-${tableId}`) || undefined;
-    joinTable(amount, selectedSeat, password);
+    // Check for invite code in URL query params (from /invite/:code redirect)
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteCode = urlParams.get("invite") || undefined;
+    joinTable(amount, selectedSeat, password, inviteCode);
     setJoined(true);
     soundEngine.init();
   };
@@ -1618,6 +1637,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         sitIn={sitIn}
         postBlinds={postBlinds}
         waitForBB={waitForBB}
+        inviteCode={tableInfo?.inviteCode}
       />
       {/* Join/Leave Notifications */}
       <div className="fixed top-16 right-4 z-[60] flex flex-col gap-2 pointer-events-none">

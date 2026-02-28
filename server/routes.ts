@@ -83,6 +83,15 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // Get single table
+  // Resolve invite code to table ID
+  app.get("/api/tables/invite/:code", async (req, res, next) => {
+    try {
+      const table = await storage.getTableByInviteCode(req.params.code);
+      if (!table) return res.status(404).json({ message: "Invalid invite code" });
+      res.json({ tableId: table.id, name: table.name, inviteCode: table.inviteCode });
+    } catch (err) { next(err); }
+  });
+
   app.get("/api/tables/:id", async (req, res, next) => {
     try {
       const table = await storage.getTable(req.params.id);

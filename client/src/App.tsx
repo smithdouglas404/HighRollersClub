@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -96,12 +97,32 @@ function LeagueDetailPage({ params }: { params: { id: string } }) {
   return <AuthGate><LeagueDetail seasonId={params.id} /></AuthGate>;
 }
 
+function InviteRedirect({ params }: { params: { code: string } }) {
+  const [, setLocation] = useLocation();
+  const [error, setError] = useState("");
+  useEffect(() => {
+    fetch(`/api/tables/invite/${params.code}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.tableId) {
+          setLocation(`/game/${data.tableId}?invite=${params.code}`);
+        } else {
+          setError(data.message || "Invalid invite link");
+        }
+      })
+      .catch(() => setError("Failed to resolve invite link"));
+  }, [params.code, setLocation]);
+  if (error) return <div className="flex items-center justify-center min-h-screen text-red-400">{error}</div>;
+  return <div className="flex items-center justify-center min-h-screen text-gray-400">Joining table...</div>;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/game">{() => <Game />}</Route>
       <Route path="/game/:tableId">{(params) => <GameWithTable params={params} />}</Route>
+      <Route path="/invite/:code">{(params) => <InviteRedirect params={params} />}</Route>
       <Route path="/hands/:handId">{(params) => <HandReplayPage params={params} />}</Route>
       <Route path="/lobby" component={ProtectedLobby} />
       <Route path="/members" component={ProtectedMembers} />

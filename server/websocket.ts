@@ -18,7 +18,7 @@ export interface WsClient {
 
 // Message types: Client → Server
 export type ClientMessage =
-  | { type: "join_table"; tableId: string; seatIndex?: number; buyIn: number; password?: string }
+  | { type: "join_table"; tableId: string; seatIndex?: number; buyIn: number; password?: string; inviteCode?: string }
   | { type: "leave_table" }
   | { type: "player_action"; action: "fold" | "check" | "call" | "raise"; amount?: number; actionNumber?: number }
   | { type: "sit_out" }
@@ -285,10 +285,11 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendToUser(client.userId, { type: "error", message: "System is temporarily locked for maintenance" });
         return;
       }
-      // Validate password for private tables
+      // Validate password for private tables (invite code bypasses password)
       const tableInfo = await storage.getTable(msg.tableId);
       if (tableInfo?.isPrivate && tableInfo.password) {
-        if (!msg.password || msg.password !== tableInfo.password) {
+        const hasValidInvite = msg.inviteCode && tableInfo.inviteCode === msg.inviteCode;
+        if (!hasValidInvite && (!msg.password || msg.password !== tableInfo.password)) {
           sendToUser(client.userId, { type: "error", message: "Incorrect table password" });
           return;
         }

@@ -504,7 +504,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
   // Join table
   const joinTable = useCallback(
-    (buyIn: number, seatIndex?: number, password?: string) => {
+    (buyIn: number, seatIndex?: number, password?: string, inviteCode?: string) => {
       if (joinedRef.current) return;
       joinedRef.current = true;
       lastBuyInRef.current = buyIn;
@@ -515,6 +515,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         seatIndex,
       };
       if (password) msg.password = password;
+      if (inviteCode) msg.inviteCode = inviteCode;
       wsClient.send(msg);
     },
     []

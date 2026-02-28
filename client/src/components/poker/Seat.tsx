@@ -705,7 +705,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               background: "rgba(0,0,0,0.70)",
               border: "1px solid rgba(255,255,255,0.06)",
               borderTop: "none",
-              fontSize: perspectiveScale < 0.7 ? "11px" : "10px",
+              fontSize: perspectiveScale < 0.7 ? "0.6875rem" : "0.625rem",
               transform: perspectiveScale < 0.7 ? `scale(${1 / perspectiveScale * 0.8})` : undefined,
               transformOrigin: "top center",
             }}

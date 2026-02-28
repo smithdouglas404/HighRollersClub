@@ -93,13 +93,13 @@ export function AvatarStatusRing({ tier = "common", winStreak = 0, vpipPercent, 
             borderRadius: "8px",
             background: "rgba(255,100,0,0.25)",
             border: "1px solid rgba(255,100,0,0.4)",
-            fontSize: "9px",
+            fontSize: "0.5625rem",
             fontWeight: 700,
             color: "#ff6b35",
             whiteSpace: "nowrap",
           }}
         >
-          <span style={{ fontSize: "10px" }}>{"\u{1F525}"}</span>
+          <span style={{ fontSize: "0.625rem" }}>{"\u{1F525}"}</span>
           {winStreak}
         </div>
       )}
@@ -120,13 +120,13 @@ export function AvatarStatusRing({ tier = "common", winStreak = 0, vpipPercent, 
             borderRadius: "6px",
             background: "rgba(0,0,0,0.7)",
             border: "1px solid rgba(255,255,255,0.1)",
-            fontSize: "8px",
+            fontSize: "0.5rem",
             fontWeight: 700,
             color: "#a0a0a0",
             whiteSpace: "nowrap",
           }}
         >
-          <span style={{ fontSize: "9px" }}>{vpipInfo.icon}</span>
+          <span style={{ fontSize: "0.5625rem" }}>{vpipInfo.icon}</span>
           {vpipInfo.label}
         </div>
       )}

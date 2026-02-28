@@ -110,6 +110,9 @@
   * {
     @apply border-border;
   }
+  html {
+    font-size: clamp(15px, 0.3125vw + 13px, 22px);
+  }
   body {
     @apply font-sans antialiased bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
@@ -317,10 +320,6 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   width: var(--sidebar-w, 208px);
 }
 
-.text-responsive-xs { font-size: calc(11px * var(--font-scale, 1)); }
-.text-responsive-sm { font-size: calc(12px * var(--font-scale, 1)); }
-.text-responsive-base { font-size: calc(12px * var(--font-scale, 1)); }
-.text-responsive-lg { font-size: calc(14px * var(--font-scale, 1)); }
 
 @media (max-width: 1399px) {
   .sidebar-responsive { display: none; }

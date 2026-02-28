@@ -45,7 +45,10 @@
       "WebFetch(domain:elevenlabs.io)",
       "Bash(sleep 2 && curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5000)",
       "Bash(timeout 30 node /tmp/test-tables.mjs 2>&1)",
-      "Bash(npx tsc --noEmit --skipLibCheck 2>&1 | head -30ojoejoe)"
+      "Bash(npx tsc --noEmit --skipLibCheck 2>&1 | head -30ojoejoe)",
+      "Bash(git commit -m \"$\\(cat <<'EOF'\nAdd MTT tournament engine, admin dashboard, security hardening, and engine fixes\n\n- MTT manager with multi-table seating, table balancing, and large-field payouts\n- Admin dashboard page with route and auth gate\n- Helmet CSP headers for security hardening\n- Big Blind Ante \\(BBA\\) and dead blind / missed-BB tracking in engine\n- Fix postBlind to use += for correct blind stacking\n- Chat messages, collusion alerts, and player notes schemas + storage\n- Error boundary wrapping app and game component\n- Atomic chip persistence in WebSocket with rollback on failure\n- Club leaderboard and club tournaments components\n- Comprehensive test suite \\(95/104 passing\\)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(echo $DATABASE_URL | head -c 20)",
+      "Bash(git add server/game/mtt-manager.ts server/storage.ts server/routes.ts)"
     ]
   }
 }

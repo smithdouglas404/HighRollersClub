@@ -279,6 +279,20 @@ export function GameSetup({ mode, onStartOffline, onCreateTable }: GameSetupProp
           </div>
 
           <div className="relative z-10 w-full max-w-4xl px-6 space-y-4 overflow-y-auto" style={{ maxHeight: "96vh" }}>
+            {/* Exit button */}
+            <div className="flex justify-start">
+              <Link href="/lobby">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 hover:text-white border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Back to Lobby
+                </motion.button>
+              </Link>
+            </div>
+
             {/* Header */}
             <motion.div
               initial={{ y: -20, opacity: 0 }}

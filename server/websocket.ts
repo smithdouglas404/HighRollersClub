@@ -65,7 +65,12 @@ export type ServerMessage =
   | { type: "tournament_status"; status: string; prizePool: number }
   | { type: "format_info"; gameFormat: string; currentBlindLevel: number; nextLevelIn: number; playersRemaining: number; isBombPot: boolean }
   | { type: "rtc_signal"; fromUserId: string; signal: any }
-  | { type: "rtc_toggle"; userId: string; video: boolean; audio: boolean };
+  | { type: "rtc_toggle"; userId: string; video: boolean; audio: boolean }
+  | { type: "chat_history"; messages: { userId: string; displayName: string; message: string; timestamp: string }[] }
+  | { type: "info"; message: string }
+  | { type: "chips_added"; walletBalance: number; chipsAdded: number; newTableChips: number }
+  | { type: "hand_countdown"; seconds: number }
+  | { type: "player_moved"; playerId: string; displayName: string; toTableId: string; reason: string };
 
 // Global map of connected clients
 const clients = new Map<string, WsClient>();
@@ -617,6 +622,11 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         video: msg.video,
         audio: msg.audio,
       }, client.userId);
+      break;
+    }
+
+    default: {
+      sendToUser(client.userId, { type: "error", message: `Unknown message type: ${(msg as any).type}` });
       break;
     }
   }

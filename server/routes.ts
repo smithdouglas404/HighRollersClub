@@ -1301,7 +1301,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       await storage.createHandAnalysis({
         userId: req.user!.id,
-        handId: req.body.handId || null,
+        handId: typeof req.body.handId === "string" ? req.body.handId.slice(0, 100) : null,
         holeCards,
         communityCards: communityCards || null,
         pot: pot || 0,
@@ -2221,7 +2221,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     try {
       const { getPaymentService } = await import("./payments/payment-service");
       const svc = getPaymentService();
-      await svc.rejectWithdrawal(req.params.id, req.user!.id, req.body.note);
+      const note = typeof req.body.note === "string" ? req.body.note.slice(0, 500) : "";
+      await svc.rejectWithdrawal(req.params.id, req.user!.id, note);
       res.json({ success: true });
     } catch (err: any) {
       res.status(400).json({ message: err.message });

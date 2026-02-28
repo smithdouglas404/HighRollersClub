@@ -1,0 +1,54 @@
+ Fluid Typography System — CSS clamp() Root Font-Size                                                          
+                                                        
+ Context
+
+ The user is on a 49" ultrawide monitor. All text and UI elements appear tiny and hard to read because font
+ sizes are hardcoded in rem (which resolves against the browser's default 16px root). Since every Tailwind
+ class in the codebase already uses rem units (608+ instances like text-[0.625rem], text-sm, px-4, etc.), we
+ can scale the entire UI by setting a single fluid root font-size with clamp(). No breakpoints needed —
+ everything scales smoothly based on viewport width.
+
+ Approach
+
+ Set html { font-size: clamp(15px, 0.3125vw + 13px, 22px); } so that:
+ - At 1280px viewport → 17px root (laptop — slightly larger than default 16px)
+ - At 1920px viewport → 19px root (standard desktop)
+ - At 2560px viewport → 21px root (1440p / ultrawide)
+ - At 3840px+ viewport → 22px root (4K / 49" ultrawide, capped)
+
+ Since all Tailwind classes use rem, this one line scales all text, padding, margins, and border-radius
+ proportionally.
+
+ Files to Modify
+
+ 1. client/src/index.css (line ~113)
+
+ - Add font-size: clamp(15px, 0.3125vw + 13px, 22px); to the body rule inside @layer base
+ - Remove the unused .text-responsive-* classes (lines 320-323) that used the never-set --font-scale variable
+
+ 2. client/src/components/poker/AvatarStatusRing.tsx (lines 96, 102, 123, 129)
+
+ Convert 4 hardcoded px fontSize values to rem so they scale with root:
+ - fontSize: "9px" → fontSize: "0.5625rem" (line 96)
+ - fontSize: "10px" → fontSize: "0.625rem" (line 102)
+ - fontSize: "8px" → fontSize: "0.5rem" (line 123)
+ - fontSize: "9px" → fontSize: "0.5625rem" (line 129)
+
+ 3. client/src/components/poker/Seat.tsx (line 708)
+
+ Convert 1 hardcoded px fontSize to rem:
+ - fontSize: perspectiveScale < 0.7 ? "11px" : "10px" → fontSize: perspectiveScale < 0.7 ? "0.6875rem" :
+ "0.625rem"
+
+ What This Does NOT Touch
+
+ - No Tailwind class changes (they already use rem and will scale automatically)
+ - No breakpoints (fluid scaling only)
+ - No JavaScript changes beyond the 5 px→rem conversions above
+
+ Verification
+
+ 1. Run npm run dev and open the app
+ 2. Resize browser window from narrow (~1280px) to very wide (~3840px+)
+ 3. Confirm text, buttons, inputs, spacing all scale smoothly
+ 4. Check the poker table — avatar status rings and seat labels should scale too

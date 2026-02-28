@@ -2,7 +2,8 @@ import { GameEngine, type HandSummary, type GameFormat } from "./engine";
 import { CollusionDetector } from "./collusion-detector";
 import { BotPlayer, getRandomPersonality, getBotDisplayName } from "./bot-player";
 import { storage } from "../storage";
-import { sendGameStateToTable, broadcastToTable, clearClientTable } from "../websocket";
+import { sendGameStateToTable, broadcastToTable, clearClientTable, sendToUser } from "../websocket";
+import { hasSubscribers, onHandComplete as commentaryOnHandComplete, onBlindIncrease as commentaryOnBlindIncrease, onPlayerEliminated as commentaryOnPlayerEliminated, cleanupTable as commentaryCleanupTable } from "./commentary-engine";
 import type { ShuffleProof } from "./crypto-shuffle";
 import { blockchainConfig } from "../blockchain/config";
 import { VRFClient } from "../blockchain/vrf-client";
@@ -104,6 +105,7 @@ class TableManager {
       straddleEnabled: tableRow.straddleEnabled || false,
       bigBlindAnte: (tableRow as any).bigBlindAnte || false,
       speedMultiplier,
+      showAllHands: tableRow.showAllHands !== false,
     });
 
     // Pass VRF client if available
@@ -341,6 +343,11 @@ class TableManager {
         }
       }
 
+      // Fire AI commentary (async, non-blocking)
+      if (hasSubscribers(tableId)) {
+        commentaryOnHandComplete(tableId, summary, engine, sendToUser).catch(() => {});
+      }
+
       // Notify bots of hand result for personality chat
       const winnerIdSet = new Set(winnerIds);
       if (instance) {
@@ -387,6 +394,11 @@ class TableManager {
         bb: level.bb,
         ante: level.ante,
       } as any);
+
+      // Fire AI commentary for blind increase
+      if (hasSubscribers(tableId)) {
+        commentaryOnBlindIncrease(tableId, level, engine, sendToUser).catch(() => {});
+      }
     };
 
     // Player eliminated callback (SNG/tournament)
@@ -405,6 +417,11 @@ class TableManager {
           // Credit prize to user balance
           if (info.prizeAmount > 0 && !playerId.startsWith("bot-")) {
             this.creditPrize(playerId, info.prizeAmount, tableId).catch(() => {});
+          }
+
+          // Fire AI commentary for elimination
+          if (hasSubscribers(tableId)) {
+            commentaryOnPlayerEliminated(tableId, playerId, info.displayName, info.finishPlace, info.prizeAmount, engine, sendToUser).catch(() => {});
           }
 
           // Remove eliminated player from engine
@@ -1015,28 +1032,40 @@ class TableManager {
     if (!instance) return;
     const player = instance.engine.getPlayer(userId);
     if (player) {
-      player.awaitingReady = false; // clear "awaiting ready" on any sit-in/sit-out action
       if (sitOut) {
+        player.awaitingReady = false;
         player.isSittingOut = true;
         player.voluntarySitOut = true;
         player.status = "sitting-out";
       } else {
-        // Sitting back in
+        // Sitting back in — clear "awaiting ready"
+        player.awaitingReady = false;
         player.voluntarySitOut = false;
-        // Cash game: if player missed blinds, default to waiting for BB
-        // Player can then choose to post immediately via post_blinds message
-        const isTournament = instance.config.gameFormat === "sng" || instance.config.gameFormat === "tournament";
-        if (!isTournament && (player.missedBigBlind || player.missedSmallBlind)) {
-          player.isSittingOut = false;
-          player.waitingForBB = true;
-          player.status = "waiting";
+
+        // Check if a hand is currently in progress
+        const phase = instance.engine.state.phase;
+        const handInProgress = phase !== "waiting" && phase !== "showdown";
+
+        if (handInProgress) {
+          // Hand in progress — keep sitting out, mark for next hand
+          player.sitInNextHand = true;
+          // Don't change isSittingOut or status — player stays out until next deal
         } else {
-          player.isSittingOut = false;
-          if (player.status === "sitting-out") {
+          // No hand in progress — sit in immediately
+          player.sitInNextHand = false;
+          const isTournament = instance.config.gameFormat === "sng" || instance.config.gameFormat === "tournament";
+          if (!isTournament && (player.missedBigBlind || player.missedSmallBlind)) {
+            player.isSittingOut = false;
+            player.waitingForBB = true;
             player.status = "waiting";
+          } else {
+            player.isSittingOut = false;
+            if (player.status === "sitting-out") {
+              player.status = "waiting";
+            }
           }
+          this.maybeStartCountdown(tableId, instance);
         }
-        this.maybeStartCountdown(tableId, instance);
       }
     }
   }

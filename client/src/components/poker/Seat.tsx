@@ -664,12 +664,12 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             boxShadow: `0 0 16px ${hexToRgba(glowColor, 0.15)}, 0 2px 8px rgba(0,0,0,0.5)`,
           }}
         >
-          <div className="px-3 py-1.5 flex flex-col items-center gap-0.5">
+          <div className="px-4 py-2 flex flex-col items-center gap-0.5">
             {/* Player name — larger, more readable */}
             <div className="flex items-center gap-1">
               <span
                 className={cn(
-                  "text-xs uppercase font-extrabold tracking-wide leading-tight truncate max-w-[100px]",
+                  "text-[0.8rem] uppercase font-extrabold tracking-wide leading-tight truncate max-w-[120px]",
                   isTurn ? "text-white" : "text-gray-300"
                 )}
                 style={{
@@ -681,19 +681,28 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               {!isHero && <PlayerNoteIcon playerId={player.id} />}
             </div>
 
-            {/* Chip count — larger, gold, mono — animated counter */}
-            <span
-              className="text-[0.875rem] font-mono font-black leading-tight relative"
-              style={{
-                color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
-                textShadow: chipsAnimating
-                  ? chipsDelta < 0 ? "0 0 12px rgba(239,68,68,0.5)" : "0 0 12px rgba(34,197,94,0.5)"
-                  : "0 0 10px rgba(255,215,0,0.35)",
-                transition: "color 0.3s ease, text-shadow 0.3s ease",
-              }}
-            >
-              {formatChips(animatedChips)}
-            </span>
+            {/* Chip count — big, bold, gold, mono — animated counter */}
+            <div className="flex items-center gap-1.5">
+              {/* Chip icon */}
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
+                <circle cx="10" cy="10" r="9" fill="#ffd700" stroke="#b8860b" strokeWidth="1.5" />
+                <circle cx="10" cy="10" r="5.5" fill="none" stroke="#b8860b" strokeWidth="0.8" />
+                <circle cx="10" cy="10" r="2.5" fill="#b8860b" opacity="0.3" />
+              </svg>
+              <span
+                className="text-[1.125rem] font-mono font-black leading-tight relative"
+                style={{
+                  color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
+                  textShadow: chipsAnimating
+                    ? chipsDelta < 0 ? "0 0 14px rgba(239,68,68,0.6)" : "0 0 14px rgba(34,197,94,0.6)"
+                    : "0 0 12px rgba(255,215,0,0.4)",
+                  transition: "color 0.3s ease, text-shadow 0.3s ease",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {formatChips(animatedChips)}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -752,12 +761,12 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               }}
             >
               {/* Chip icon */}
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" fill="#ffd700" stroke="#b8860b" strokeWidth="1.5" />
-                <circle cx="8" cy="8" r="4" fill="none" stroke="#b8860b" strokeWidth="0.8" />
-                <text x="8" y="10.5" textAnchor="middle" fontSize="6" fill="#8B6914" fontWeight="bold">$</text>
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="9" fill="#ffd700" stroke="#b8860b" strokeWidth="1.5" />
+                <circle cx="10" cy="10" r="5.5" fill="none" stroke="#b8860b" strokeWidth="0.8" />
+                <circle cx="10" cy="10" r="2.5" fill="#b8860b" opacity="0.3" />
               </svg>
-              <span className="text-[0.625rem] font-mono font-bold" style={{ color: "#ffd700" }}>
+              <span className="text-[0.8125rem] font-mono font-bold" style={{ color: "#ffd700" }}>
                 {formatChips(player.currentBet)}
               </span>
             </motion.div>

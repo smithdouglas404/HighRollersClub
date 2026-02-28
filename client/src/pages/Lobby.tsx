@@ -152,6 +152,49 @@ function TableCard({ table, onClick }: { table: TableInfo; onClick: () => void }
   );
 }
 
+const LOBBY_BANNERS = [
+  "/attached_assets/generated_images/banners/banner_welcome.webp",
+  "/attached_assets/generated_images/banners/banner_tournament.webp",
+  "/attached_assets/generated_images/banners/banner_seasonal.webp",
+];
+
+function LobbyBannerCarousel() {
+  const [current, setCurrent] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setCurrent(prev => (prev + 1) % LOBBY_BANNERS.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="relative w-full h-[80px] mb-4 rounded-xl overflow-hidden">
+      <AnimatePresence mode="wait">
+        <motion.img
+          key={current}
+          src={LOBBY_BANNERS[current]}
+          alt="lobby banner"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6 }}
+          className="absolute inset-0 w-full h-full object-cover rounded-xl"
+          draggable={false}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+      </AnimatePresence>
+      <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/40 rounded-xl" />
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+        {LOBBY_BANNERS.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrent(i)}
+            className={`w-1.5 h-1.5 rounded-full transition-all ${i === current ? 'bg-cyan-400 w-4' : 'bg-white/30'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Lobby() {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
@@ -262,6 +305,9 @@ export default function Lobby() {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#111b2a]/85 to-[#111b2a]" />
         </div>
+        {/* Banner Carousel */}
+        <LobbyBannerCarousel />
+
         {/* Actions row */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
@@ -554,9 +600,12 @@ export default function Lobby() {
             className="flex justify-center py-12"
           >
             <div className="glass rounded-2xl border border-white/5 px-12 py-10 text-center max-w-md">
-              <div className="w-16 h-16 rounded-full bg-cyan-500/5 flex items-center justify-center mx-auto mb-4 border border-cyan-500/10 shadow-[0_0_20px_rgba(0,212,255,0.08)]">
-                <Users className="w-8 h-8 text-cyan-500/40" />
-              </div>
+              <img
+                src="/attached_assets/generated_images/empty/empty_no_tables.webp"
+                alt=""
+                className="w-40 h-28 object-cover rounded-xl mx-auto mb-4 opacity-60"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
               <p className="text-sm text-gray-300 mb-1 font-medium">
                 {activeFormat === "all" ? "No tables yet" : `No ${activeFormat.replace("_", " ")} tables`}
               </p>

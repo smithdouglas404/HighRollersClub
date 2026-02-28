@@ -26,7 +26,7 @@ export interface ScreenInfo {
   /** Base font scale multiplier (1 = default) */
   fontScale: number;
   /** Card size category for the Card component */
-  cardSize: "sm" | "md" | "lg" | "xl" | "2xl";
+  cardSize: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
   /** Table max height as vh */
   tableMaxHeight: string;
   /** Whether the screen is ultra-wide (21:9 or wider) */
@@ -66,12 +66,12 @@ function computeScreenInfo(w: number, h: number, dpr: number): ScreenInfo {
   else if (tier === "large") fontScale = 1.1;
   else fontScale = 1.2;
 
-  // Card size — hero hole cards scale with screen
-  let cardSize: "sm" | "md" | "lg" | "xl" | "2xl";
-  if (tier === "small") cardSize = "md";
-  else if (tier === "medium") cardSize = "lg";
-  else if (tier === "large") cardSize = "xl";
-  else cardSize = "2xl";
+  // Card size — hero hole cards scale with screen (bumped up for visibility)
+  let cardSize: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
+  if (tier === "small") cardSize = "lg";
+  else if (tier === "medium") cardSize = "xl";
+  else if (tier === "large") cardSize = "2xl";
+  else cardSize = "3xl";
 
   // Table max height — give more room on tall screens, but cap to avoid overflow
   let tableMaxHeight: string;

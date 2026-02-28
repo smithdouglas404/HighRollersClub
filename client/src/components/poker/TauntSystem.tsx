@@ -87,12 +87,51 @@ export interface TauntBubbleData {
 let tauntListeners: ((bubble: TauntBubbleData) => void)[] = [];
 let tauntCounter = 0;
 
-// Play taunt audio from /sounds/taunts/<id>.mp3
+// Voice preference for taunt audio. Default = "default" (confident voice).
+// Can be set to an avatar ID for avatar-specific voice.
+let currentTauntVoice = "default";
+
+export function setTauntVoice(voice: string) {
+  currentTauntVoice = voice || "default";
+}
+
+export function getTauntVoice(): string {
+  return currentTauntVoice;
+}
+
+// Available taunt voices for the voice picker UI
+export const TAUNT_VOICE_OPTIONS: { id: string; label: string; description: string }[] = [
+  { id: "default", label: "Confident", description: "Deep, energetic, cocky — the default" },
+  { id: "neon-viper", label: "Husky Trickster", description: "Raspy and sly" },
+  { id: "chrome-siren", label: "Playful Siren", description: "Bright and teasing" },
+  { id: "gold-phantom", label: "Captivating Phantom", description: "Warm and dramatic" },
+  { id: "shadow-king", label: "Deep Shadow", description: "Dark and resonant" },
+  { id: "red-wolf", label: "Fierce Wolf", description: "Intense and fierce" },
+  { id: "ice-queen", label: "Ice Queen", description: "Cool and confident" },
+  { id: "tech-monk", label: "Wise Monk", description: "Calm and measured" },
+  { id: "cyber-punk", label: "Punk Energy", description: "Wild and electric" },
+  { id: "steel-ghost", label: "Steel Broadcaster", description: "Steady and authoritative" },
+  { id: "neon-fox", label: "Charming Fox", description: "Smooth and charming" },
+  { id: "dark-ace", label: "Smooth Ace", description: "Cool and trustworthy" },
+  { id: "bolt-runner", label: "Laid-Back Runner", description: "Casual and relaxed" },
+];
+
+// Play taunt audio from /sounds/taunts/{voice}/{id}.mp3
+// Falls back to /sounds/taunts/{id}.mp3 for backward compat
 function playTauntAudio(tauntId: string) {
   try {
-    const audio = new Audio(`/sounds/taunts/${tauntId}.mp3`);
+    const voice = currentTauntVoice;
+    const primary = `/sounds/taunts/${voice}/${tauntId}.mp3`;
+    const fallback = `/sounds/taunts/${tauntId}.mp3`;
+
+    const audio = new Audio(primary);
     audio.volume = 0.7;
-    audio.play().catch(() => {});
+    audio.play().catch(() => {
+      // If avatar voice file doesn't exist, fall back to root
+      const fb = new Audio(fallback);
+      fb.volume = 0.7;
+      fb.play().catch(() => {});
+    });
   } catch {}
 }
 

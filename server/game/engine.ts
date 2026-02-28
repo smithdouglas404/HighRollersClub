@@ -26,6 +26,7 @@ export interface SeatPlayer {
   missedBigBlind: boolean; // true = must post live BB on return (cash games)
   missedSmallBlind: boolean; // true = must post dead SB on return (cash games)
   waitingForBB: boolean; // true = player chose to wait for BB instead of posting missed blinds
+  sitInNextHand: boolean; // true = clicked "I'm Ready" mid-hand, will join next deal
   totalBetThisHand: number;
   timeBank: number; // remaining time bank seconds
   consecutiveTimeouts: number; // WSOP rule: auto-sit-out after 2 consecutive timeouts
@@ -104,6 +105,7 @@ export interface GameEngineOpts {
   straddleEnabled?: boolean;
   bigBlindAnte?: boolean; // BBA: only BB posts ante
   speedMultiplier?: number; // 1.0 = normal, 0.5 = fast, 0.25 = turbo
+  showAllHands?: boolean; // true = reveal all cards at showdown, false = winner only
 }
 
 // ─── Game Engine ─────────────────────────────────────────────────────────────
@@ -145,6 +147,7 @@ export class GameEngine {
   private bigBlindAnte: boolean;
   public speedMultiplier: number;
   public lastHandRake: number = 0; // rake taken from last hand (for persistence)
+  public showAllHands: boolean;
 
   // VPIP/PFR tracking for pre-flop voluntary actions
   public vpipPlayers: Set<string> = new Set();
@@ -178,6 +181,7 @@ export class GameEngine {
     this.straddleEnabled = opts.straddleEnabled || false;
     this.bigBlindAnte = opts.bigBlindAnte || false;
     this.speedMultiplier = opts.speedMultiplier || 1.0;
+    this.showAllHands = opts.showAllHands !== false; // default true
 
     this.state = {
       phase: "waiting",
@@ -259,6 +263,7 @@ export class GameEngine {
       missedBigBlind: false,
       missedSmallBlind: false,
       waitingForBB: false,
+      sitInNextHand: false,
       totalBetThisHand: 0,
       timeBank: 30, // 30 seconds of time bank per player
       consecutiveTimeouts: 0,
@@ -457,8 +462,18 @@ export class GameEngine {
     this.vpipPlayers.clear();
     this.pfrPlayers.clear();
 
+    // ── Activate players who clicked "I'm Ready" during the previous hand ──
+    for (const p of this.state.players) {
+      if (p.sitInNextHand) {
+        p.sitInNextHand = false;
+        p.isSittingOut = false;
+        p.awaitingReady = false;
+        if (p.status === "sitting-out") p.status = "waiting";
+      }
+    }
+
     // ── Missed blind tracking ──
-    const eligible = this.state.players.filter(p => !p.isSittingOut && p.chips > 0 && !p.waitingForBB);
+    const eligible = this.state.players.filter(p => !p.isSittingOut && !p.awaitingReady && p.chips > 0 && !p.waitingForBB);
     const isTournament = this.gameFormat === "sng" || this.gameFormat === "tournament";
 
     if (!isBombPot) {
@@ -1695,10 +1710,14 @@ export class GameEngine {
         waitingForBB: p.waitingForBB || false,
         missedBlinds: (p.missedBigBlind || p.missedSmallBlind) ? true : false,
         timeBank: p.timeBank,
-        // Only show own cards, or all cards at showdown
+        // Only show own cards, or all/winner cards at showdown
         cards: p.id === playerId
           ? p.cards
-          : (state.phase === "showdown" && p.status !== "folded" ? p.cards : (p.cards ? [{ hidden: true }, { hidden: true }] : null)),
+          : (state.phase === "showdown" && p.status !== "folded"
+            ? (this.showAllHands
+              ? p.cards
+              : (state.showdownResults?.some(r => r.playerId === p.id && r.isWinner) ? p.cards : (p.cards ? [{ hidden: true }, { hidden: true }] : null)))
+            : (p.cards ? [{ hidden: true }, { hidden: true }] : null)),
         isDealer: p.seatIndex === state.dealerSeat,
         isSmallBlind: p.seatIndex === state.smallBlindSeat,
         isBigBlind: p.seatIndex === state.bigBlindSeat,

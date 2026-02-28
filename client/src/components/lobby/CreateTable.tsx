@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, Users, Coins, Clock, Lock, Bot, Zap, Trophy, Bomb, Swords, UserPlus } from "lucide-react";
+import { X, Users, Coins, Clock, Lock, Bot, Zap, Trophy, Bomb, Swords, UserPlus, Eye } from "lucide-react";
 
 type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
 
@@ -42,6 +42,8 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
   const [gameSpeed, setGameSpeed] = useState<"normal" | "fast" | "turbo">("normal");
   // Away timeout
   const [awayTimeoutMinutes, setAwayTimeoutMinutes] = useState(5);
+  // Showdown reveal
+  const [showAllHands, setShowAllHands] = useState(true);
   // Schedule
   const [scheduledStart, setScheduledStart] = useState("");
   const [scheduledEnd, setScheduledEnd] = useState("");
@@ -67,6 +69,7 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
       gameFormat,
       gameSpeed,
       awayTimeoutMinutes,
+      showAllHands,
     };
 
     if (gameFormat === "sng" || gameFormat === "tournament") {
@@ -435,6 +438,18 @@ export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTa
                 </span>
               </div>
             )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAllHands(!showAllHands)}
+                className={`w-9 h-5 rounded-full transition-colors ${showAllHands ? 'bg-cyan-500' : 'bg-white/10'} relative`}
+              >
+                <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${showAllHands ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+              </button>
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <Eye className="w-3 h-3" /> Show All Hands
+              </span>
+            </div>
           </div>
 
           {/* One-time schedule (optional) */}

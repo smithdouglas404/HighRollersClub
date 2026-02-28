@@ -26,32 +26,78 @@ interface ImageTableProps {
   dealPhase?: string;
 }
 
-// Pot chip denomination breakdown for 3D chip stacks
-function getPotChipStacks(pot: number): { color: string; border: string; count: number }[] {
-  const stacks: { color: string; border: string; count: number }[] = [];
+// Premium chip denomination config
+interface ChipDenom {
+  color: string;       // Main chip color
+  border: string;      // Edge color
+  stripe: string;      // Edge stripe color (casino chip stripes)
+  inner: string;       // Inner circle color
+  count: number;
+}
+
+function getPotChipStacks(pot: number): ChipDenom[] {
+  const stacks: ChipDenom[] = [];
   let remaining = pot;
 
   if (remaining >= 500) {
-    const count = Math.min(6, Math.floor(remaining / 500));
-    stacks.push({ color: "#ffd700", border: "#b8860b", count });
+    const count = Math.min(7, Math.floor(remaining / 500));
+    stacks.push({ color: "#ffd700", border: "#b8860b", stripe: "#ffffff", inner: "#f59e0b", count });
     remaining -= count * 500;
   }
   if (remaining >= 100) {
-    const count = Math.min(6, Math.floor(remaining / 100));
-    stacks.push({ color: "#1a1a2e", border: "#555577", count });
+    const count = Math.min(7, Math.floor(remaining / 100));
+    stacks.push({ color: "#111827", border: "#374151", stripe: "#f8fafc", inner: "#1f2937", count });
     remaining -= count * 100;
   }
   if (remaining >= 50) {
-    const count = Math.min(6, Math.floor(remaining / 50));
-    stacks.push({ color: "#e74c3c", border: "#c0392b", count });
+    const count = Math.min(7, Math.floor(remaining / 50));
+    stacks.push({ color: "#dc2626", border: "#991b1b", stripe: "#fecaca", inner: "#b91c1c", count });
     remaining -= count * 50;
   }
   if (remaining > 0) {
-    const count = Math.min(6, Math.max(1, Math.floor(remaining / 10)));
-    stacks.push({ color: "#2ecc71", border: "#27ae60", count });
+    const count = Math.min(7, Math.max(1, Math.floor(remaining / 10)));
+    stacks.push({ color: "#16a34a", border: "#166534", stripe: "#bbf7d0", inner: "#15803d", count });
   }
 
-  return stacks.slice(0, 3); // Max 3 stacks
+  return stacks.slice(0, 3);
+}
+
+// Premium casino chip SVG with edge stripes
+function PotChip({ chip, index }: { chip: ChipDenom; index: number }) {
+  return (
+    <svg
+      width="32" height="32" viewBox="0 0 32 32" fill="none"
+      style={{
+        marginBottom: index > 0 ? -29 : 0,
+        transform: "rotateX(55deg)",
+        filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5))",
+      }}
+    >
+      {/* Main chip body */}
+      <circle cx="16" cy="16" r="15" fill={chip.color} stroke={chip.border} strokeWidth="1.5" />
+      {/* Edge stripes (8 evenly spaced) */}
+      {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => {
+        const rad = (angle * Math.PI) / 180;
+        const x1 = 16 + Math.cos(rad) * 12;
+        const y1 = 16 + Math.sin(rad) * 12;
+        const x2 = 16 + Math.cos(rad) * 15;
+        const y2 = 16 + Math.sin(rad) * 15;
+        return (
+          <line key={angle} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={chip.stripe} strokeWidth="2.5" strokeLinecap="round" opacity="0.6"
+          />
+        );
+      })}
+      {/* Inner decorative ring */}
+      <circle cx="16" cy="16" r="9" fill="none" stroke={chip.stripe} strokeWidth="0.8" opacity="0.3" />
+      {/* Inner circle */}
+      <circle cx="16" cy="16" r="6.5" fill={chip.inner} opacity="0.4" />
+      {/* Center dot */}
+      <circle cx="16" cy="16" r="2" fill={chip.stripe} opacity="0.25" />
+      {/* Top highlight */}
+      <ellipse cx="13" cy="10" rx="6" ry="4" fill="white" opacity="0.1" />
+    </svg>
+  );
 }
 
 export function ImageTable({
@@ -230,19 +276,7 @@ export function ImageTable({
                   {getPotChipStacks(animatedPot).map((stack, si) => (
                     <div key={si} className="flex flex-col-reverse items-center">
                       {Array.from({ length: stack.count }).map((_, ci) => (
-                        <div
-                          key={ci}
-                          className="rounded-full"
-                          style={{
-                            width: 28,
-                            height: 28,
-                            background: stack.color,
-                            border: `2px solid ${stack.border}`,
-                            marginBottom: ci > 0 ? -26 : 0,
-                            transform: "rotateX(55deg)",
-                            boxShadow: `inset 0 0 0 4px rgba(255,255,255,0.15), 0 1px 3px rgba(0,0,0,0.5)`,
-                          }}
-                        />
+                        <PotChip key={ci} chip={stack} index={ci} />
                       ))}
                     </div>
                   ))}

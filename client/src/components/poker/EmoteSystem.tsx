@@ -8,17 +8,18 @@ export interface Emote {
   emoji: string;
   label: string;
   color: string;
+  imageUrl?: string;
 }
 
 export const EMOTES: Emote[] = [
-  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#00d4ff" },
-  { id: "nice", emoji: "\ud83d\udc4f", label: "Nice Hand", color: "#ffd700" },
-  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#00d4ff" },
-  { id: "allin", emoji: "\ud83d\ude80", label: "All In!", color: "#ff3366" },
-  { id: "gl", emoji: "\ud83c\udf40", label: "Good Luck", color: "#22c55e" },
-  { id: "think", emoji: "\ud83e\udde0", label: "Hmm...", color: "#b44dff" },
-  { id: "wow", emoji: "\ud83d\ude32", label: "Wow!", color: "#f59e0b" },
-  { id: "cry", emoji: "\ud83d\ude2d", label: "Bad Beat", color: "#6b7280" },
+  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#00d4ff", imageUrl: "/attached_assets/generated_images/emotes/emote_gg.webp" },
+  { id: "nice", emoji: "\ud83d\udc4f", label: "Nice Hand", color: "#ffd700", imageUrl: "/attached_assets/generated_images/emotes/emote_nice.webp" },
+  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#00d4ff", imageUrl: "/attached_assets/generated_images/emotes/emote_bluff.webp" },
+  { id: "allin", emoji: "\ud83d\ude80", label: "All In!", color: "#ff3366", imageUrl: "/attached_assets/generated_images/emotes/emote_allin.webp" },
+  { id: "gl", emoji: "\ud83c\udf40", label: "Good Luck", color: "#22c55e", imageUrl: "/attached_assets/generated_images/emotes/emote_gl.webp" },
+  { id: "think", emoji: "\ud83e\udde0", label: "Hmm...", color: "#b44dff", imageUrl: "/attached_assets/generated_images/emotes/emote_think.webp" },
+  { id: "wow", emoji: "\ud83d\ude32", label: "Wow!", color: "#f59e0b", imageUrl: "/attached_assets/generated_images/emotes/emote_wow.webp" },
+  { id: "cry", emoji: "\ud83d\ude2d", label: "Bad Beat", color: "#6b7280", imageUrl: "/attached_assets/generated_images/emotes/emote_cry.webp" },
 ];
 
 const EMOTE_MAP = new Map(EMOTES.map(e => [e.id, e]));
@@ -79,7 +80,10 @@ export function EmoteBubble({ playerId }: { playerId: string }) {
               boxShadow: `0 0 15px ${b.emote.color}20`,
             }}
           >
-            <span className="text-base">{b.emote.emoji}</span>
+            {b.emote.imageUrl
+              ? <img src={b.emote.imageUrl} alt={b.emote.label} className="w-5 h-5 rounded-sm object-cover" />
+              : <span className="text-base">{b.emote.emoji}</span>
+            }
             <span className="text-[0.625rem] font-bold" style={{ color: b.emote.color }}>{b.emote.label}</span>
           </div>
         </motion.div>
@@ -152,7 +156,10 @@ export function EmotePicker({ heroId, isMultiplayer }: { heroId: string; isMulti
                 className="flex flex-col items-center gap-0.5 rounded-lg p-2 hover:bg-white/5 transition-colors"
                 title={emote.label}
               >
-                <span className="text-xl">{emote.emoji}</span>
+                {emote.imageUrl
+                  ? <img src={emote.imageUrl} alt={emote.label} className="w-6 h-6 rounded-sm object-cover" />
+                  : <span className="text-xl">{emote.emoji}</span>
+                }
                 <span className="text-[0.5rem] text-gray-500 font-bold">{emote.label}</span>
               </motion.button>
             ))}

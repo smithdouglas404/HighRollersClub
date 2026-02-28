@@ -65,10 +65,10 @@ function Confetti({ active }: { active: boolean }) {
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed - 2,
         size: Math.random() * 3 + 1,
-        color: colors[Math.floor(Math.random() * 3)], // Gold palette
+        color: colors[Math.floor(Math.random() * 3)],
         rotation: 0,
         rotSpeed: 0,
-        life: -20 - Math.random() * 30, // Delayed start
+        life: -20 - Math.random() * 30,
         maxLife: Math.random() * 60 + 40,
         type: "spark",
       });
@@ -113,7 +113,6 @@ function Confetti({ active }: { active: boolean }) {
           ctx!.globalAlpha = alpha * (0.5 + 0.5 * Math.sin(p.life * 0.3));
           ctx!.fillStyle = p.color;
           ctx!.beginPath();
-          // Star shape
           const spikes = 4;
           for (let s = 0; s < spikes * 2; s++) {
             const r = s % 2 === 0 ? p.size * 2 : p.size * 0.5;
@@ -128,7 +127,6 @@ function Confetti({ active }: { active: boolean }) {
           p.y += p.vy;
           p.vy += 0.02;
         } else {
-          // Confetti
           p.x += p.vx;
           p.y += p.vy;
           p.vy += 0.18;
@@ -159,12 +157,13 @@ function Confetti({ active }: { active: boolean }) {
 
 export function ShowdownOverlay({ visible, results, players, pot }: ShowdownOverlayProps) {
   const winners = results.filter(r => r.isWinner);
+  const losers = results.filter(r => !r.isWinner);
   const winnerIds = winners.map(w => w.playerId);
   const sound = useSoundEngine();
   const soundPlayedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Play showdown sequence: phase reveal → fanfare → chip slide (pot awarded) → win celebration
+  // Play showdown sequence: phase reveal → fanfare → chip slide → win celebration
   useEffect(() => {
     if (visible && !soundPlayedRef.current) {
       soundPlayedRef.current = true;
@@ -172,7 +171,7 @@ export function ShowdownOverlay({ visible, results, players, pot }: ShowdownOver
       timerRef.current = setTimeout(() => {
         sound.playShowdownFanfare();
         timerRef.current = setTimeout(() => {
-          sound.playChipSlide(); // Pot pushed to winner
+          sound.playChipSlide();
           timerRef.current = setTimeout(() => {
             sound.playWinCelebration();
           }, 400);
@@ -195,194 +194,219 @@ export function ShowdownOverlay({ visible, results, players, pot }: ShowdownOver
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-auto"
         >
           {/* Backdrop with dramatic vignette */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
-            className="absolute inset-0 backdrop-blur-sm"
+            className="absolute inset-0 backdrop-blur-md"
             style={{
-              background: "radial-gradient(ellipse at center, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.95) 100%)",
+              background: "radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.88) 60%, rgba(0,0,0,0.96) 100%)",
             }}
           />
 
           {/* Spotlight beam effect */}
           <motion.div
             initial={{ opacity: 0, scale: 0.3 }}
-            animate={{ opacity: 0.15, scale: 1 }}
+            animate={{ opacity: 0.2, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             className="absolute pointer-events-none"
             style={{
-              width: "600px",
-              height: "600px",
+              width: "800px",
+              height: "800px",
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%)",
-              background: "radial-gradient(circle, rgba(255,215,0,0.3) 0%, rgba(255,215,0,0.05) 40%, transparent 70%)",
+              background: "radial-gradient(circle, rgba(255,215,0,0.25) 0%, rgba(255,215,0,0.06) 35%, transparent 65%)",
             }}
           />
 
           {/* Confetti */}
           <Confetti active={visible} />
 
-          {/* Content */}
+          {/* Main content container */}
           <motion.div
             initial={{ scale: 0.7, y: 40 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.7, y: 40 }}
             transition={{ type: "spring", stiffness: 180, damping: 18 }}
-            className="relative z-50 w-full max-w-2xl px-6"
+            className="relative z-50 w-full max-w-4xl px-6 py-4"
           >
-            {/* Winner announcement */}
+            {/* ── "SHOWDOWN" header ── */}
             <motion.div
               initial={{ y: -30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 20 }}
-              className="text-center mb-6"
+              transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 20 }}
+              className="text-center mb-4"
             >
-              {/* Crown icon for dramatic effect */}
-              <motion.div
-                initial={{ scale: 0, rotate: -20 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.4, type: "spring", stiffness: 300, damping: 15 }}
-                className="flex justify-center mb-2"
-              >
-                <Crown className="w-10 h-10 text-yellow-400 drop-shadow-[0_0_20px_rgba(255,215,0,0.6)]" />
-              </motion.div>
-
-              <div className="inline-flex items-center gap-2 mb-3">
-                <Sparkles className="w-5 h-5 text-yellow-400" />
+              <div className="inline-flex items-center gap-3">
+                <Sparkles className="w-6 h-6 text-yellow-400" />
                 <motion.span
                   initial={{ letterSpacing: "0.1em" }}
-                  animate={{ letterSpacing: "0.5em" }}
+                  animate={{ letterSpacing: "0.6em" }}
                   transition={{ delay: 0.3, duration: 0.8 }}
-                  className="font-display text-xs text-yellow-500/70 uppercase"
+                  className="font-display text-sm text-yellow-500/70 uppercase tracking-widest"
                 >
                   Showdown
                 </motion.span>
-                <Sparkles className="w-5 h-5 text-yellow-400" />
+                <Sparkles className="w-6 h-6 text-yellow-400" />
               </div>
+            </motion.div>
 
-              {/* Winner name(s) with dramatic scale-in */}
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.35, type: "spring", stiffness: 200, damping: 15 }}
-                className="flex items-center justify-center gap-3 mb-3"
-              >
-                <Trophy className="w-9 h-9 text-yellow-400 drop-shadow-[0_0_15px_rgba(255,215,0,0.6)]" />
-                <h2
-                  className="text-4xl font-black tracking-tight"
-                  style={{
-                    background: "linear-gradient(135deg, #ffd700, #f5e6a3, #d4a843)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    filter: "drop-shadow(0 0 20px rgba(255,215,0,0.4))",
-                  }}
-                >
-                  {winners.map(w => players.find(p => p.id === w.playerId)?.name).join(" & ")}
-                </h2>
-                <Trophy className="w-9 h-9 text-yellow-400 drop-shadow-[0_0_15px_rgba(255,215,0,0.6)]" />
-              </motion.div>
+            {/* ── WINNER section — large and prominent ── */}
+            {winners.map((winner, wi) => {
+              const player = players.find(p => p.id === winner.playerId);
+              if (!player || !player.cards) return null;
 
-              {/* Winning hand with glow */}
-              <motion.div
-                initial={{ scale: 0, rotateX: 90 }}
-                animate={{ scale: 1, rotateX: 0 }}
-                transition={{ delay: 0.5, type: "spring", stiffness: 250, damping: 18 }}
-                className="inline-block glass rounded-xl px-6 py-2.5 neon-border-gold"
-                style={{
-                  boxShadow: "0 0 30px rgba(255,215,0,0.2), 0 0 60px rgba(255,215,0,0.08)",
-                }}
-              >
-                <span className="text-xl font-bold neon-text-gold">{winners[0]?.hand.description}</span>
-              </motion.div>
-
-              {/* Pot won with counter animation effect */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.7, type: "spring" }}
-                className="mt-3"
-              >
-                <span className="text-gray-500 text-sm">Wins </span>
-                <motion.span
-                  initial={{ scale: 1.5, opacity: 0 }}
+              return (
+                <motion.div
+                  key={winner.playerId}
+                  initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
-                  className="font-bold font-mono text-xl"
-                  style={{ color: "#ffd700", textShadow: "0 0 20px rgba(255,215,0,0.4)" }}
+                  transition={{ delay: 0.25 + wi * 0.15, type: "spring", stiffness: 200, damping: 16 }}
+                  className="text-center mb-6"
                 >
-                  ${pot.toLocaleString()}
-                </motion.span>
-              </motion.div>
-            </motion.div>
-
-            {/* All player hands — staggered card reveal */}
-            <motion.div
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="grid grid-cols-3 gap-3"
-            >
-              {results.map((result, i) => {
-                const player = players.find(p => p.id === result.playerId);
-                if (!player || !player.cards) return null;
-                const isWinner = winnerIds.includes(result.playerId);
-
-                return (
+                  {/* Crown */}
                   <motion.div
-                    key={result.playerId}
-                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ delay: 0.7 + i * 0.12, type: "spring", stiffness: 200, damping: 20 }}
-                    className={`glass rounded-xl p-3 transition-all ${
-                      isWinner ? "neon-border-gold" : "opacity-50"
-                    }`}
-                    style={isWinner ? {
-                      boxShadow: "0 0 25px rgba(255,215,0,0.2), 0 0 50px rgba(255,215,0,0.06)",
-                      background: "rgba(255,215,0,0.03)",
-                    } : undefined}
+                    initial={{ scale: 0, rotate: -20 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ delay: 0.35, type: "spring", stiffness: 300, damping: 15 }}
+                    className="flex justify-center mb-3"
                   >
-                    {/* Player info row */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-8 h-8 rounded-full overflow-hidden border ${isWinner ? "border-yellow-500/50" : "border-white/10"}`}>
-                        {player.avatar ? (
-                          <img src={player.avatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white/60">
-                            {player.name.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[0.6875rem] font-bold text-white truncate">{player.name}</div>
-                        <div className={`text-[0.5625rem] font-mono ${isWinner ? "neon-text-gold" : "text-gray-500"}`}>
-                          {result.hand.description}
-                        </div>
-                      </div>
-                      {isWinner && (
-                        <motion.div
-                          initial={{ rotate: -30, scale: 0 }}
-                          animate={{ rotate: 0, scale: 1 }}
-                          transition={{ delay: 0.9 + i * 0.1, type: "spring" }}
-                        >
-                          <Trophy className="w-5 h-5 text-yellow-400 shrink-0 drop-shadow-[0_0_8px_rgba(255,215,0,0.5)]" />
-                        </motion.div>
-                      )}
-                    </div>
-
-                    {/* Cards with staggered flip reveal */}
-                    <div className="flex gap-1.5 justify-center">
-                      <Card card={{ ...player.cards[0], hidden: false }} size="md" delay={0.8 + i * 0.12} />
-                      <Card card={{ ...player.cards[1], hidden: false }} size="md" delay={0.95 + i * 0.12} />
-                    </div>
+                    <Crown className="w-14 h-14 text-yellow-400 drop-shadow-[0_0_30px_rgba(255,215,0,0.7)]" />
                   </motion.div>
-                );
-              })}
-            </motion.div>
+
+                  {/* Winner name */}
+                  <div className="flex items-center justify-center gap-4 mb-4">
+                    <Trophy className="w-10 h-10 text-yellow-400 drop-shadow-[0_0_20px_rgba(255,215,0,0.6)]" />
+                    <h2
+                      className="text-5xl font-black tracking-tight"
+                      style={{
+                        background: "linear-gradient(135deg, #ffd700, #f5e6a3, #d4a843)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        filter: "drop-shadow(0 0 24px rgba(255,215,0,0.5))",
+                      }}
+                    >
+                      {player.name}
+                    </h2>
+                    <Trophy className="w-10 h-10 text-yellow-400 drop-shadow-[0_0_20px_rgba(255,215,0,0.6)]" />
+                  </div>
+
+                  {/* Winner's cards — LARGE */}
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.45, type: "spring" }}
+                    className="flex gap-4 justify-center mb-5"
+                  >
+                    <Card card={{ ...player.cards[0], hidden: false }} size="3xl" delay={0.5} />
+                    <Card card={{ ...player.cards[1], hidden: false }} size="3xl" delay={0.65} />
+                  </motion.div>
+
+                  {/* Winning hand name — BIG and glowing */}
+                  <motion.div
+                    initial={{ scale: 0, rotateX: 90 }}
+                    animate={{ scale: 1, rotateX: 0 }}
+                    transition={{ delay: 0.55, type: "spring", stiffness: 250, damping: 18 }}
+                    className="inline-block glass rounded-2xl px-10 py-4 neon-border-gold mb-4"
+                    style={{
+                      boxShadow: "0 0 40px rgba(255,215,0,0.25), 0 0 80px rgba(255,215,0,0.1)",
+                    }}
+                  >
+                    <span
+                      className="text-3xl font-black tracking-wide"
+                      style={{
+                        background: "linear-gradient(135deg, #ffd700, #fff8dc, #d4a843)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        filter: "drop-shadow(0 0 12px rgba(255,215,0,0.5))",
+                      }}
+                    >
+                      {winner.hand.description}
+                    </span>
+                  </motion.div>
+
+                  {/* Pot won — LARGE */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.7, type: "spring" }}
+                    className="mt-2"
+                  >
+                    <span className="text-gray-400 text-lg mr-2">Wins</span>
+                    <motion.span
+                      initial={{ scale: 1.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
+                      className="font-black font-mono text-4xl"
+                      style={{
+                        color: "#ffd700",
+                        textShadow: "0 0 30px rgba(255,215,0,0.5), 0 0 60px rgba(255,215,0,0.2)",
+                      }}
+                    >
+                      ${pot.toLocaleString()}
+                    </motion.span>
+                  </motion.div>
+                </motion.div>
+              );
+            })}
+
+            {/* ── Other players' hands (losers) — smaller row below ── */}
+            {losers.length > 0 && (
+              <motion.div
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.85 }}
+                className="mt-2"
+              >
+                <div className="text-center text-xs text-gray-500 uppercase tracking-widest mb-3">
+                  Other Hands
+                </div>
+                <div className="flex flex-wrap justify-center gap-4">
+                  {losers.map((result, i) => {
+                    const player = players.find(p => p.id === result.playerId);
+                    if (!player || !player.cards) return null;
+
+                    // Cards may be hidden (showAllHands=false on table config)
+                    const cardsHidden = player.cards.every(c => c.hidden);
+
+                    return (
+                      <motion.div
+                        key={result.playerId}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 0.6, y: 0 }}
+                        transition={{ delay: 0.95 + i * 0.1 }}
+                        className="glass rounded-xl p-3 text-center"
+                        style={{ minWidth: "140px" }}
+                      >
+                        <div className="text-sm font-bold text-white/70 mb-1 truncate">
+                          {player.name}
+                        </div>
+                        <div className="flex gap-1.5 justify-center mb-1.5">
+                          {cardsHidden ? (
+                            <>
+                              <Card faceDown size="lg" delay={1.0 + i * 0.1} />
+                              <Card faceDown size="lg" delay={1.1 + i * 0.1} />
+                            </>
+                          ) : (
+                            <>
+                              <Card card={{ ...player.cards[0], hidden: false }} size="lg" delay={1.0 + i * 0.1} />
+                              <Card card={{ ...player.cards[1], hidden: false }} size="lg" delay={1.1 + i * 0.1} />
+                            </>
+                          )}
+                        </div>
+                        <div className="text-xs font-mono text-gray-400">
+                          {cardsHidden ? "Mucked" : result.hand.description}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         </motion.div>
       )}

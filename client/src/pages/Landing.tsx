@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Users, Trophy, Zap, Play, ChevronRight, Eye, Gamepad2, Crown, Swords } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
@@ -47,8 +47,16 @@ const FEATURES = [
   },
 ];
 
+const SPLASH_IMAGES = [
+  casinoBg,
+  "/attached_assets/generated_images/splash/splash_poker_cinematic.webp",
+  "/attached_assets/generated_images/splash/splash_tournament.webp",
+  "/attached_assets/generated_images/splash/splash_high_stakes.webp",
+];
+
 export default function Landing() {
   const [onlineCount, setOnlineCount] = useState(0);
+  const [splashIdx, setSplashIdx] = useState(0);
 
   useEffect(() => {
     async function fetchStats() {
@@ -65,11 +73,27 @@ export default function Landing() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const timer = setInterval(() => setSplashIdx(prev => (prev + 1) % SPLASH_IMAGES.length), 6000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-white font-sans relative overflow-hidden" data-testid="landing-page">
 
       <div className="absolute inset-0 z-0">
-        <img src={casinoBg} alt="" className="w-full h-full object-cover opacity-20" />
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={splashIdx}
+            src={SPLASH_IMAGES[splashIdx]}
+            alt=""
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.2 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2 }}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </AnimatePresence>
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e1a]/60 via-[#0a0e1a]/80 to-[#0a0e1a]" />
       </div>
 

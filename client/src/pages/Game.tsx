@@ -11,7 +11,7 @@ import { AVATAR_OPTIONS, type AvatarOption } from "../components/poker/AvatarSel
 import { GameSetup, type GameSetupConfig } from "../components/game/GameSetup";
 import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
 import { EmotePicker } from "../components/poker/EmoteSystem";
-import { TauntPicker } from "../components/poker/TauntSystem";
+import { TauntPicker, setTauntVoice } from "../components/poker/TauntSystem";
 import { ChatPanel } from "../components/poker/ChatPanel";
 import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
 import { VideoControlBar, VideoThumbnail } from "../components/poker/VideoOverlay";
@@ -36,14 +36,17 @@ import { useMultiplayerGame } from "@/lib/multiplayer-engine";
 import { useAuth } from "@/lib/auth-context";
 import { SoundProvider, useSoundEngine } from "@/lib/sound-context";
 import { soundEngine } from "@/lib/sound-engine";
-import { GameUIProvider, useGameUI, FELT_PRESETS } from "@/lib/game-ui-context";
+import { GameUIProvider, useGameUI, FELT_PRESETS, CARD_BACK_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, Link2 } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, Link2, Palette } from "lucide-react";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
 import { TournamentResults } from "@/components/game/TournamentResults";
 import { BombPotIndicator } from "@/components/game/BombPotIndicator";
+import { CommentarySubtitles, CommentaryControls } from "@/components/poker/CommentaryOverlay";
+import { commentaryPlayer } from "@/lib/commentary-engine";
+import { wsClient } from "@/lib/ws-client";
 
 import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.webp";
 import avatar1 from "@assets/generated_images/avatars/avatar_red_wolf.webp";
@@ -51,6 +54,31 @@ import avatar2 from "@assets/generated_images/avatars/avatar_steel_ghost.webp";
 import avatar3 from "@assets/generated_images/avatars/avatar_dark_ace.webp";
 import avatar4 from "@assets/generated_images/avatars/avatar_neon_fox.webp";
 import avatar5 from "@assets/generated_images/avatars/avatar_cyber_punk.webp";
+
+// Extended avatar pool for bot variety
+const EXTRA_AVATAR_URLS = [
+  "/attached_assets/generated_images/avatars/avatar_cyber_samurai.webp",
+  "/attached_assets/generated_images/avatars/avatar_neon_medic.webp",
+  "/attached_assets/generated_images/avatars/avatar_dj_chrome.webp",
+  "/attached_assets/generated_images/avatars/avatar_ghost_sniper.webp",
+  "/attached_assets/generated_images/avatars/avatar_oracle_seer.webp",
+  "/attached_assets/generated_images/avatars/avatar_merchant_boss.webp",
+  "/attached_assets/generated_images/avatars/avatar_street_racer.webp",
+  "/attached_assets/generated_images/avatars/avatar_void_witch.webp",
+  "/attached_assets/generated_images/avatars/avatar_mech_pilot.webp",
+  "/attached_assets/generated_images/avatars/avatar_data_thief.webp",
+  "/attached_assets/generated_images/avatars/avatar_punk_duchess.webp",
+  "/attached_assets/generated_images/avatars/avatar_iron_bull.webp",
+];
+
+// Rank frame overlays
+export const RANK_FRAMES: Record<string, string> = {
+  bronze: "/attached_assets/generated_images/frames/frame_bronze.webp",
+  silver: "/attached_assets/generated_images/frames/frame_silver.webp",
+  gold: "/attached_assets/generated_images/frames/frame_gold.webp",
+  platinum: "/attached_assets/generated_images/frames/frame_platinum.webp",
+  diamond: "/attached_assets/generated_images/frames/frame_diamond.webp",
+};
 
 const HERO_ID = "player-1";
 
@@ -96,10 +124,12 @@ function buildPlayersFromConfig(heroAvatar: AvatarOption, heroName: string, conf
       id: HERO_ID,
       name: heroName,
       chips: heroChips,
-      isActive: true,
+      isActive: false,
       isDealer: false,
       currentBet: 0,
-      status: "waiting",
+      status: "sitting-out" as const,
+      isSittingOut: true,
+      awaitingReady: true,
       timeLeft: 100,
       avatar: heroAvatar.image || undefined,
     },
@@ -254,11 +284,14 @@ function GameTable({
   const [bgmUrl, setBgmUrl] = useState(() => soundEngine.bgmUrl);
   const [bgmPlaying, setBgmPlaying] = useState(() => soundEngine.bgmPlaying);
   const [bgmVolume, setBgmVolume] = useState(() => soundEngine.bgmVolume);
+  const [commentaryEnabled, setCommentaryEnabled] = useState(false);
+  const [commentaryOmniscient, setCommentaryOmniscient] = useState(false);
   const sound = useSoundEngine();
   const winStreaks = useRef<Map<string, number>>(new Map());
   const isMobile = useIsMobile();
   const screen = useScreenInfo();
-  const { compactMode, toggleCompactMode, feltPreset, setFeltColor } = useGameUI();
+  const { compactMode, toggleCompactMode, feltPreset, setFeltColor, cardBack, setCardBack, cardBackPreset } = useGameUI();
+  const [showThemePanel, setShowThemePanel] = useState(false);
   const speedMultiplier = (gameState as any).speedMultiplier || 1.0;
   const dealing = useDealingSequence(players, gameState, heroId, compactMode, speedMultiplier);
   const { opponentStats, hudEnabled, setHudEnabled } = useOpponentStats(gameState, players, heroId);
@@ -277,6 +310,7 @@ function GameTable({
     return () => {
       unmountedRef.current = true;
       soundEngine.stopBgm();
+      commentaryPlayer.stop();
     };
   }, []);
 
@@ -315,14 +349,14 @@ function GameTable({
     const prev = prevPhaseRef.current;
     prevPhaseRef.current = gameState.phase;
 
-    if (gameState.phase === "waiting" || gameState.phase === "showdown") {
-      // Resume BGM if a track is selected and it's not already playing
+    if (gameState.phase === "waiting") {
+      // Resume BGM only during waiting phase (between hands)
       if (soundEngine.bgmUrl && !soundEngine.bgmPlaying) {
         soundEngine.playBgm();
         setBgmPlaying(true);
       }
-    } else if (prev === "waiting" || prev === "showdown") {
-      // Hand started — stop BGM
+    } else if (prev === "waiting") {
+      // Hand started — stop BGM (also stays off during showdown so SFX are clean)
       if (soundEngine.bgmPlaying) {
         soundEngine.stopBgm();
         setBgmPlaying(false);
@@ -457,7 +491,7 @@ function GameTable({
               : <>{players.length}-MAX</>
             }
           </span>
-          <span className="text-[0.625rem] text-cyan-500/80 font-mono">Round: {phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
+          <span className="text-sm font-bold text-cyan-400 font-mono tracking-wider" style={{ textShadow: "0 0 8px rgba(0,212,255,0.4)" }}>{phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
           <span className="text-[0.625rem] text-gray-500 font-mono">
             {(gameState as any).handNumber
               ? <>Hand #{(gameState as any).handNumber}</>
@@ -467,9 +501,9 @@ function GameTable({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="px-3 py-1 rounded-lg bg-black/40 border border-amber-500/20">
-            <span className="text-[0.625rem] text-gray-400 mr-1">POT:</span>
-            <span className="text-sm font-bold font-mono" style={{ color: "#ffd700" }}>${topBarPot.toLocaleString()}</span>
+          <div className="px-4 py-1.5 rounded-lg bg-black/50 border border-amber-500/30" style={{ boxShadow: "0 0 12px rgba(255,215,0,0.15)" }}>
+            <span className="text-xs font-bold text-gray-300 mr-1.5 uppercase tracking-wider">POT</span>
+            <span className="text-lg font-black font-mono" style={{ color: "#ffd700", textShadow: "0 0 10px rgba(255,215,0,0.5)" }}>${topBarPot.toLocaleString()}</span>
           </div>
 
           {showdown?.results?.some((r: any) => r.isWinner && r.playerId === heroId) && (
@@ -543,6 +577,23 @@ function GameTable({
           <button onClick={handleMuteToggle} className="p-1.5 hover:bg-white/5 rounded transition-colors" title={isMuted ? "Unmute" : "Mute"}>
             {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-gray-500" />}
           </button>
+
+          {/* AI Commentary controls */}
+          {isMultiplayer && (
+            <CommentaryControls
+              enabled={commentaryEnabled}
+              omniscientMode={commentaryOmniscient}
+              onToggle={(enabled) => {
+                setCommentaryEnabled(enabled);
+                commentaryPlayer.enabled = enabled;
+                wsClient.send({ type: "commentary_toggle", enabled } as any);
+              }}
+              onOmniscientToggle={(enabled) => {
+                setCommentaryOmniscient(enabled);
+                wsClient.send({ type: "commentary_omniscient", enabled } as any);
+              }}
+            />
+          )}
 
           {/* BGM controls */}
           <div className="relative">
@@ -652,6 +703,64 @@ function GameTable({
             )}
           </div>
 
+          {/* Theme picker */}
+          <div className="relative">
+            <button
+              onClick={() => setShowThemePanel(!showThemePanel)}
+              className={`p-1.5 rounded transition-colors ${showThemePanel ? "bg-purple-500/15" : "hover:bg-white/5"}`}
+              title="Table Theme"
+            >
+              <Palette className={`w-3.5 h-3.5 ${showThemePanel ? "text-purple-400" : "text-gray-500"}`} />
+            </button>
+            {showThemePanel && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-lg p-3 space-y-3" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(168,85,247,0.15)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-purple-400">Table Theme</span>
+                  <button onClick={() => setShowThemePanel(false)} className="p-0.5 hover:bg-white/10 rounded"><X className="w-3 h-3 text-gray-500" /></button>
+                </div>
+                {/* Felt picker */}
+                <div>
+                  <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">Felt Color</span>
+                  <div className="grid grid-cols-5 gap-1.5 mt-1.5">
+                    {FELT_PRESETS.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setFeltColor(p.id)}
+                        className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                          feltPreset.id === p.id ? "border-purple-400 scale-110" : "border-white/10 hover:border-white/30"
+                        }`}
+                        style={{ background: p.imageUrl ? `url(${p.imageUrl}) center/cover` : p.swatch }}
+                        title={p.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {/* Card back picker */}
+                <div>
+                  <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">Card Back</span>
+                  <div className="grid grid-cols-5 gap-1.5 mt-1.5">
+                    {CARD_BACK_PRESETS.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setCardBack(p.id)}
+                        className={`w-8 h-11 rounded border-2 transition-all overflow-hidden ${
+                          cardBackPreset.id === p.id ? "border-purple-400 scale-110" : "border-white/10 hover:border-white/30"
+                        }`}
+                        title={p.label}
+                      >
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt={p.label} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full" style={{ background: "linear-gradient(145deg, #1a0e3e, #0d0820)" }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button onClick={() => setShowProvablyFair(!showProvablyFair)} className="p-1.5 hover:bg-white/5 rounded transition-colors">
             <ShieldCheck className={`w-3.5 h-3.5 ${verificationStatus === "verified" ? "text-green-400" : "text-gray-500"}`} />
           </button>
@@ -663,51 +772,94 @@ function GameTable({
       {/* ═══ 3-COLUMN BODY ═══ */}
       <div className="flex-1 relative z-10 flex overflow-hidden">
 
-        {/* ── LEFT SIDEBAR: Hand History ── */}
+        {/* ── LEFT SIDEBAR: Live Leaderboard ── */}
         {screen.showSidebars && (
         <div className="sidebar-responsive shrink-0 bg-black/40 backdrop-blur-sm border-r border-white/5 flex flex-col overflow-hidden">
           <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between">
             <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+              Leaderboard
+            </span>
+            <span className="text-[0.5625rem] text-gray-600 font-mono">
               Hand #{(gameState as any).handNumber || "—"}
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3 text-[0.625rem] scrollbar-thin">
-            {["pre-flop", "flop", "turn", "river", "showdown"].map((street) => {
-              const actions = (gameState as any).actionLog?.filter((a: any) => a.street === street) || [];
-              const isCurrentStreet = gameState.phase === street;
-              if (actions.length === 0 && !isCurrentStreet) return null;
-              return (
-                <div key={street}>
-                  <div className="font-bold uppercase tracking-wider text-cyan-400 mb-1">
-                    <span className="mr-1">&bull;</span>{street.replace("-", "-").toUpperCase()}
-                  </div>
-                  {actions.length > 0 ? actions.map((a: any, i: number) => (
-                    <div key={i} className="text-gray-400 leading-relaxed pl-2">
-                      <span className="text-white font-medium">{a.playerName || "Player"}</span>{" "}
-                      <span className={a.action === "fold" ? "text-red-400" : a.action === "raise" ? "text-cyan-400" : "text-green-400"}>
-                        {a.action?.toUpperCase()}
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            {(() => {
+              // Sort players by chip stack descending
+              const sorted = [...players].sort((a, b) => b.chips - a.chips);
+              const maxStack = sorted[0]?.chips || 1;
+              return sorted.map((p, rank) => {
+                const isMe = p.id === heroId;
+                const buyIn = isMe ? (startingChipsRef.current || p.chips) : p.chips; // Only hero has accurate P/L
+                const pnl = isMe ? p.chips - (startingChipsRef.current || 0) : 0;
+                const barWidth = Math.max(4, (p.chips / maxStack) * 100);
+                const isFolded = p.status === "folded";
+                return (
+                  <div
+                    key={p.id}
+                    className={`px-3 py-1.5 border-b border-white/[0.04] transition-colors ${isMe ? "bg-cyan-500/[0.07]" : "hover:bg-white/[0.02]"}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {/* Rank badge */}
+                      <span className={`w-5 text-center font-black text-[0.6875rem] ${
+                        rank === 0 ? "text-amber-400" : rank === 1 ? "text-gray-300" : rank === 2 ? "text-amber-600" : "text-gray-600"
+                      }`}>
+                        {rank + 1}
                       </span>
-                      {a.amount > 0 && <span className="ml-1" style={{ color: "#ffd700" }}>${a.amount}</span>}
+                      {/* Avatar mini */}
+                      {p.avatar ? (
+                        <img src={p.avatar} className="w-6 h-6 rounded-md object-cover border border-white/10" alt="" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-md bg-gray-700 border border-white/10 flex items-center justify-center text-[0.5rem] font-bold text-white/50">
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      {/* Name + status */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className={`text-[0.6875rem] font-bold truncate ${
+                            isMe ? "text-cyan-300" : isFolded ? "text-gray-600" : "text-gray-200"
+                          }`}>
+                            {isMe ? "You" : p.name}
+                          </span>
+                          {p.isDealer && (
+                            <span className="text-[0.5rem] font-black px-1 rounded gold-gradient text-black">D</span>
+                          )}
+                          {isFolded && (
+                            <span className="text-[0.5rem] text-red-500/60 font-bold">FOLD</span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Stack */}
+                      <div className="text-right shrink-0">
+                        <div className="text-[0.75rem] font-mono font-black" style={{ color: "#ffd700" }}>
+                          ${p.chips.toLocaleString()}
+                        </div>
+                        {isMe && (
+                          <div className={`text-[0.5625rem] font-mono font-bold ${pnl > 0 ? "text-emerald-400" : pnl < 0 ? "text-red-400" : "text-gray-600"}`}>
+                            {pnl > 0 ? "+" : ""}{pnl !== 0 ? `$${pnl.toLocaleString()}` : "EVEN"}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )) : (
-                    <div className="text-gray-600 pl-2 italic">...</div>
-                  )}
-                </div>
-              );
-            })}
-            {showdown?.results && (
-              <div>
-                <div className="font-bold uppercase tracking-wider text-cyan-400 mb-1">
-                  <span className="mr-1">&bull;</span>SHOWDOWN
-                </div>
-                {showdown.results.filter((r: any) => r.isWinner).map((r: any, i: number) => (
-                  <div key={i} className="text-green-400 pl-2 font-bold">
-                    {r.playerId === heroId ? "YOU" : players.find(p => p.id === r.playerId)?.name || "Player"} WIN!
-                    <div className="text-gray-400 font-normal text-[0.5625rem]">({r.handName})</div>
+                    {/* Stack bar */}
+                    <div className="mt-1 h-[3px] rounded-full bg-white/[0.04] overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${barWidth}%`,
+                          background: rank === 0
+                            ? "linear-gradient(90deg, #ffd700, #f59e0b)"
+                            : isMe
+                            ? "linear-gradient(90deg, #00d4ff, #0891b2)"
+                            : "linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.08))",
+                        }}
+                      />
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              });
+            })()}
           </div>
         </div>
         )}
@@ -1091,6 +1243,9 @@ function GameTable({
         )}
       </div>
 
+      {/* ═══ AI Commentary Subtitles ═══ */}
+      <CommentarySubtitles enabled={commentaryEnabled} />
+
       {/* ═══ FLOATING OVERLAYS (keep existing) ═══ */}
       <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
       <TauntPicker heroId={heroId} isMultiplayer={isMultiplayer} />
@@ -1241,32 +1396,51 @@ function GameTable({
                 </p>
               </div>
 
-              <div className="mb-4">
-                <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
-                  Amount (max {maxBuyIn.toLocaleString()} per request)
-                </label>
-                <input
-                  type="range"
-                  min={minBuyIn || 1}
-                  max={Math.min(maxBuyIn, walletBalance || maxBuyIn)}
-                  value={addChipsAmount}
-                  onChange={(e) => setAddChipsAmount(parseInt(e.target.value))}
-                  className="w-full mb-2"
-                />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>{minBuyIn || 1}</span>
-                  <span className="text-lg font-bold text-emerald-400 font-mono">{addChipsAmount.toLocaleString()}</span>
-                  <span>{Math.min(maxBuyIn, walletBalance || maxBuyIn).toLocaleString()}</span>
-                </div>
-              </div>
+              {(() => {
+                const currentStack = hero?.chips || 0;
+                const maxCanAdd = Math.max(0, maxBuyIn - currentStack);
+                const sliderMax = Math.min(maxCanAdd, walletBalance || maxCanAdd);
+                const clampedAmount = Math.min(addChipsAmount, sliderMax);
+                return (
+                  <>
+                    <div className="mb-4">
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
+                        Top up to max {maxBuyIn.toLocaleString()} (can add up to {maxCanAdd.toLocaleString()})
+                      </label>
+                      {sliderMax <= 0 ? (
+                        <p className="text-center text-[0.625rem] text-amber-400 py-2">
+                          {currentStack >= maxBuyIn ? "Already at max buy-in" : "No chips available to add"}
+                        </p>
+                      ) : (
+                        <>
+                          <input
+                            type="range"
+                            min={1}
+                            max={sliderMax}
+                            value={clampedAmount}
+                            onChange={(e) => setAddChipsAmount(parseInt(e.target.value))}
+                            className="w-full mb-2"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>1</span>
+                            <span className="text-lg font-bold text-emerald-400 font-mono">{clampedAmount.toLocaleString()}</span>
+                            <span>{sliderMax.toLocaleString()}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
 
-              {hero && (
-                <p className="text-center text-[0.625rem] text-gray-500 mb-4">
-                  Current stack: <span className="text-cyan-400 font-mono">{hero.chips.toLocaleString()}</span>
-                  {" → "}
-                  <span className="text-emerald-400 font-mono">{(hero.chips + addChipsAmount).toLocaleString()}</span>
-                </p>
-              )}
+                    {hero && sliderMax > 0 && (
+                      <p className="text-center text-[0.625rem] text-gray-500 mb-4">
+                        Current stack: <span className="text-cyan-400 font-mono">{currentStack.toLocaleString()}</span>
+                        {" → "}
+                        <span className="text-emerald-400 font-mono">{(currentStack + clampedAmount).toLocaleString()}</span>
+                        <span className="text-gray-600"> / {maxBuyIn.toLocaleString()} max</span>
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
 
               {(walletBalance || 0) <= 0 && (
                 <p className="text-center text-[0.625rem] text-red-400 mb-3">Insufficient wallet balance</p>
@@ -1417,6 +1591,11 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   // Use live wallet balance from WebSocket when available, fall back to auth context
   const effectiveWalletBalance = liveWalletBalance ?? user?.chipBalance ?? 0;
+
+  // Set taunt voice from user profile preference
+  useEffect(() => {
+    if (user?.tauntVoice) setTauntVoice(user.tauntVoice);
+  }, [user?.tauntVoice]);
 
   // Fetch table info
   useEffect(() => {
@@ -1677,7 +1856,7 @@ const BOT_CHAT_LINES = [
 ];
 
 function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Player[]; engineConfig?: GameEngineConfig }) {
-  const { players, gameState, handlePlayerAction, showdown, rebuyHero } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
+  const { players, gameState, handlePlayerAction, showdown, rebuyHero, sitIn } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
   const [, navigate] = useLocation();
   const defaultBuyIn = initialPlayers.find(p => p.id === HERO_ID)?.chips || 1000;
   const [chatMessages, setChatMessages] = useState<{ playerName: string; message: string }[]>([]);
@@ -1717,6 +1896,7 @@ function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Pl
       sendChat={sendChat}
       rebuyHero={(amount) => rebuyHero(amount)}
       defaultBuyIn={defaultBuyIn}
+      sitIn={sitIn}
     />
   );
 }

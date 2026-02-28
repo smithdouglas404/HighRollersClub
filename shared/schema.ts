@@ -10,6 +10,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   displayName: text("display_name"),
   avatarId: text("avatar_id"),
+  tauntVoice: text("taunt_voice").default("default"), // "default" | avatar id for avatar-specific voice
   chipBalance: integer("chip_balance").notNull().default(10000),
   role: text("role").notNull().default("guest"), // guest | member | admin
   provider: text("provider").notNull().default("local"), // local | google | discord
@@ -144,6 +145,7 @@ export const tables = pgTable("tables", {
   straddleEnabled: boolean("straddle_enabled").notNull().default(false),
   bigBlindAnte: boolean("big_blind_ante").notNull().default(false),
   gameSpeed: text("game_speed").notNull().default("normal"), // normal | fast | turbo
+  showAllHands: boolean("show_all_hands").notNull().default(true), // reveal all cards at showdown (false = winner only)
   // Table management
   awayTimeoutMinutes: integer("away_timeout_minutes").notNull().default(5), // 1-60 min
   inviteCode: varchar("invite_code", { length: 8 }).unique(),
@@ -189,6 +191,7 @@ export const insertTableSchema = z.object({
   rakeCap: z.number().int().min(0).default(0),
   straddleEnabled: z.boolean().default(false),
   gameSpeed: z.enum(["normal", "fast", "turbo"]).default("normal"),
+  showAllHands: z.boolean().default(true),
   awayTimeoutMinutes: z.number().int().min(1).max(60).default(5),
   scheduledStartTime: z.string().datetime().optional(),
   scheduledEndTime: z.string().datetime().optional(),

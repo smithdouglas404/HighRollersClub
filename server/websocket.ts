@@ -7,6 +7,7 @@ import { tableManager } from "./game/table-manager";
 import { storage } from "./storage";
 import { isIpBlocked } from "./middleware/geofence";
 import { isSystemLocked } from "./routes";
+import { subscribeCommentary, unsubscribeCommentary, setOmniscientMode, getCommentaryState } from "./game/commentary-engine";
 
 // Client connection with metadata
 export interface WsClient {
@@ -37,7 +38,9 @@ export type ClientMessage =
   | { type: "post_blinds" }
   | { type: "wait_for_bb" }
   | { type: "rtc_signal"; targetUserId: string; signal: any }
-  | { type: "rtc_toggle"; video: boolean; audio: boolean };
+  | { type: "rtc_toggle"; video: boolean; audio: boolean }
+  | { type: "commentary_toggle"; enabled: boolean }
+  | { type: "commentary_omniscient"; enabled: boolean };
 
 // Message types: Server → Client
 export type ServerMessage =
@@ -72,7 +75,9 @@ export type ServerMessage =
   | { type: "info"; message: string }
   | { type: "chips_added"; walletBalance: number; chipsAdded: number; newTableChips: number }
   | { type: "hand_countdown"; seconds: number }
-  | { type: "player_moved"; playerId: string; displayName: string; toTableId: string; reason: string };
+  | { type: "player_moved"; playerId: string; displayName: string; toTableId: string; reason: string }
+  | { type: "commentary"; segment: any }
+  | { type: "commentary_status"; enabled: boolean; omniscientMode: boolean };
 
 // Global map of connected clients
 const clients = new Map<string, WsClient>();
@@ -640,6 +645,33 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         video: msg.video,
         audio: msg.audio,
       }, client.userId);
+      break;
+    }
+
+    case "commentary_toggle": {
+      if (!client.tableId) return;
+      if (msg.enabled) {
+        subscribeCommentary(client.tableId, client.userId, false);
+      } else {
+        unsubscribeCommentary(client.tableId, client.userId);
+      }
+      const cState = getCommentaryState(client.tableId);
+      sendToUser(client.userId, {
+        type: "commentary_status",
+        enabled: msg.enabled,
+        omniscientMode: cState?.subscribers.get(client.userId)?.omniscient ?? false,
+      });
+      break;
+    }
+
+    case "commentary_omniscient": {
+      if (!client.tableId) return;
+      setOmniscientMode(client.tableId, client.userId, msg.enabled);
+      sendToUser(client.userId, {
+        type: "commentary_status",
+        enabled: true,
+        omniscientMode: msg.enabled,
+      });
       break;
     }
 

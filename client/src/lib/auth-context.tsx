@@ -5,6 +5,7 @@ export interface AuthUser {
   username: string;
   displayName: string | null;
   avatarId: string | null;
+  tauntVoice: string | null;
   chipBalance: number;
   role: string;
   provider: string;

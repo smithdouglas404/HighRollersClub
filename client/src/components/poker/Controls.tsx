@@ -383,13 +383,13 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
             </div>
 
             {/* Pot / info badge (right side) */}
-            <div className="shrink-0 flex flex-col items-end gap-0.5">
-              <div className="flex items-center gap-1.5 text-[0.625rem] text-gray-500">
-                <span className="uppercase tracking-wider font-bold">
+            <div className="shrink-0 flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2 px-3 py-1 rounded-lg" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <span className="text-xs font-black uppercase tracking-wider text-cyan-400" style={{ textShadow: "0 0 6px rgba(0,212,255,0.3)" }}>
                   {isPreFlop ? "Pre-Flop" : "Post-Flop"}
                 </span>
                 <span className="text-gray-600">|</span>
-                <span>Pot <span className="font-mono font-bold" style={{ color: "rgba(255,215,0,0.8)" }}>${pot.toLocaleString()}</span></span>
+                <span className="text-xs font-bold text-gray-300">Pot <span className="font-mono font-black text-sm" style={{ color: "#ffd700", textShadow: "0 0 8px rgba(255,215,0,0.4)" }}>${pot.toLocaleString()}</span></span>
               </div>
               {/* Pre-action toggles (inline when not hero's turn) */}
               {!isHeroTurn && heroStatus !== "folded" && heroStatus !== "all-in" && (
@@ -433,19 +433,23 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
               >
                 <div className="flex items-center gap-2 pt-2 pb-1 px-1">
                   {/* Context-aware presets */}
-                  <div className="flex gap-1">
+                  <div className="flex gap-1.5">
                     {presets.map((p) => (
                       <button
                         key={p.label}
                         onClick={() => handlePreset(p.value)}
                         title={p.tooltip}
                         className={`
-                          px-2 py-1 rounded text-[0.625rem] font-bold uppercase tracking-wider transition-all
+                          px-3 py-1.5 rounded-lg text-sm font-black uppercase tracking-wider transition-all
                           ${betAmount === p.value
-                            ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/40"
-                            : "bg-white/[0.05] text-gray-500 border border-white/10 hover:bg-white/[0.08] hover:text-gray-300"
+                            ? "bg-cyan-500/30 text-cyan-300 border-2 border-cyan-400/60"
+                            : "bg-white/[0.08] text-gray-300 border-2 border-white/20 hover:bg-white/[0.12] hover:text-white hover:border-white/30"
                           }
                         `}
+                        style={{
+                          boxShadow: betAmount === p.value ? "0 0 10px rgba(0,212,255,0.25)" : undefined,
+                          textShadow: betAmount === p.value ? "0 0 6px rgba(0,212,255,0.4)" : undefined,
+                        }}
                       >
                         {p.label}
                       </button>
@@ -455,12 +459,15 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                       onClick={() => handlePreset(maxBet)}
                       title="Shove your entire stack"
                       className={`
-                        px-2 py-1 rounded text-[0.625rem] font-bold uppercase tracking-wider transition-all
+                        px-3 py-1.5 rounded-lg text-sm font-black uppercase tracking-wider transition-all
                         ${betAmount === maxBet
-                          ? "bg-cyan-500/30 text-cyan-300 border border-cyan-400/50"
-                          : "bg-white/[0.05] text-gray-500 border border-white/10 hover:bg-white/[0.08] hover:text-gray-300"
+                          ? "bg-amber-500/30 text-amber-300 border-2 border-amber-400/60"
+                          : "bg-white/[0.08] text-gray-300 border-2 border-white/20 hover:bg-white/[0.12] hover:text-white hover:border-white/30"
                         }
                       `}
+                      style={{
+                        boxShadow: betAmount === maxBet ? "0 0 10px rgba(245,158,11,0.25)" : undefined,
+                      }}
                     >
                       ALL IN
                     </button>

@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { TAUNT_VOICE_OPTIONS, setTauntVoice } from "@/components/poker/TauntSystem";
 import {
   User, Coins, Trophy, TrendingUp, Gamepad2,
-  Zap, BookOpen, Wallet, Users, Loader2
+  Zap, BookOpen, Wallet, Users, Loader2, Mic, Volume2, Check
 } from "lucide-react";
 import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
@@ -166,6 +167,56 @@ export default function Profile() {
           )}
         </motion.div>
 
+        {/* Achievement Badges */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="glass rounded-xl p-6 border border-white/5 mb-6"
+        >
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-amber-500/70" />
+            Achievements
+          </h3>
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+            {[
+              { name: "First Win", img: "/attached_assets/generated_images/badges/badge_first_win.webp", unlocked: (stats?.potsWon ?? 0) >= 1, glow: "#ffd700" },
+              { name: "Royal Flush", img: "/attached_assets/generated_images/badges/badge_royal_flush.webp", unlocked: false, glow: "#dc2626" },
+              { name: "High Roller", img: "/attached_assets/generated_images/badges/badge_high_roller.webp", unlocked: (stats?.totalWinnings ?? 0) >= 10000, glow: "#00d4ff" },
+              { name: "Bluff Master", img: "/attached_assets/generated_images/badges/badge_bluff_master.webp", unlocked: false, glow: "#a855f7" },
+              { name: "Iron Player", img: "/attached_assets/generated_images/badges/badge_iron_player.webp", unlocked: (stats?.handsPlayed ?? 0) >= 100, glow: "#6b7280" },
+              { name: "On Fire", img: "/attached_assets/generated_images/badges/badge_streak_fire.webp", unlocked: (stats?.bestWinStreak ?? 0) >= 5, glow: "#f59e0b" },
+              { name: "Champion", img: "/attached_assets/generated_images/badges/badge_tournament_champ.webp", unlocked: false, glow: "#ffd700" },
+              { name: "Legend", img: "/attached_assets/generated_images/badges/badge_club_legend.webp", unlocked: false, glow: "#a855f7" },
+            ].map((badge) => (
+              <div
+                key={badge.name}
+                className="flex flex-col items-center gap-1.5 group"
+                title={badge.name}
+              >
+                <div
+                  className={`relative w-12 h-12 rounded-lg overflow-hidden border transition-all ${
+                    badge.unlocked
+                      ? "border-white/20 opacity-100"
+                      : "border-white/5 opacity-30 grayscale"
+                  }`}
+                  style={badge.unlocked ? { boxShadow: `0 0 12px ${badge.glow}30` } : {}}
+                >
+                  <img src={badge.img} alt={badge.name} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+                <span className={`text-[0.5rem] font-bold text-center leading-tight ${
+                  badge.unlocked ? "text-gray-300" : "text-gray-600"
+                }`}>
+                  {badge.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Taunt Voice */}
+        <TauntVoicePicker currentVoice={user?.tauntVoice || "default"} />
+
         {/* Quick Links */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -220,5 +271,96 @@ export default function Profile() {
         </motion.div>
       </div>
     </DashboardLayout>
+  );
+}
+
+// ─── Taunt Voice Picker ──────────────────────────────────────────────────────
+
+function TauntVoicePicker({ currentVoice }: { currentVoice: string }) {
+  const { refreshUser } = useAuth();
+  const [selected, setSelected] = useState(currentVoice);
+  const [saving, setSaving] = useState(false);
+  const [previewPlaying, setPreviewPlaying] = useState<string | null>(null);
+
+  const save = useCallback(async (voiceId: string) => {
+    setSelected(voiceId);
+    setTauntVoice(voiceId);
+    setSaving(true);
+    try {
+      await fetch("/api/profile/avatar", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tauntVoice: voiceId }),
+      });
+      await refreshUser();
+    } catch {}
+    setSaving(false);
+  }, [refreshUser]);
+
+  const preview = useCallback((voiceId: string) => {
+    setPreviewPlaying(voiceId);
+    const path = voiceId === "default"
+      ? `/sounds/taunts/${voiceId}/ship-it.mp3`
+      : `/sounds/taunts/${voiceId}/ship-it.mp3`;
+    const audio = new Audio(path);
+    audio.volume = 0.7;
+    audio.onended = () => setPreviewPlaying(null);
+    audio.onerror = () => {
+      // Fallback to root if voice folder doesn't exist yet
+      const fb = new Audio(`/sounds/taunts/ship-it.mp3`);
+      fb.volume = 0.7;
+      fb.onended = () => setPreviewPlaying(null);
+      fb.play().catch(() => setPreviewPlaying(null));
+    };
+    audio.play().catch(() => setPreviewPlaying(null));
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.17 }}
+      className="glass rounded-xl p-6 border border-white/5 mb-6"
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
+        <Mic className="w-4 h-4 text-purple-500/70" />
+        Taunt Voice
+      </h3>
+      <p className="text-[0.625rem] text-gray-500 mb-4">
+        Choose the voice your taunts play in. Default is a confident, energetic voice. Or pick one that matches your avatar.
+      </p>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+        {TAUNT_VOICE_OPTIONS.map((voice) => {
+          const isSelected = selected === voice.id;
+          return (
+            <button
+              key={voice.id}
+              onClick={() => save(voice.id)}
+              disabled={saving}
+              className={`relative text-left p-3 rounded-lg border transition-all ${
+                isSelected
+                  ? "bg-purple-500/15 border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.15)]"
+                  : "bg-white/[0.03] border-white/5 hover:border-white/15 hover:bg-white/[0.05]"
+              }`}
+            >
+              {isSelected && (
+                <div className="absolute top-1.5 right-1.5">
+                  <Check className="w-3 h-3 text-purple-400" />
+                </div>
+              )}
+              <div className="text-xs font-bold text-white mb-0.5">{voice.label}</div>
+              <div className="text-[0.5rem] text-gray-500 leading-tight mb-2">{voice.description}</div>
+              <button
+                onClick={(e) => { e.stopPropagation(); preview(voice.id); }}
+                className="flex items-center gap-1 text-[0.5625rem] text-cyan-400 hover:text-cyan-300 transition-colors"
+              >
+                <Volume2 className="w-2.5 h-2.5" />
+                {previewPlaying === voice.id ? "Playing..." : "Preview"}
+              </button>
+            </button>
+          );
+        })}
+      </div>
+    </motion.div>
   );
 }

@@ -77,10 +77,19 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     const currentPlayers = playersRef.current;
     const currentDealerId = gameStateRef.current.dealerId;
 
-    // Only deal in players with chips > 0
-    const updatedPlayers: Player[] = currentPlayers.map(p => {
-      if (p.chips <= 0) {
-        return { ...p, isActive: false, status: 'folded' as const, cards: undefined, currentBet: 0 };
+    // Activate players who clicked "I'm Ready" during the previous hand
+    const readiedPlayers = currentPlayers.map(p => {
+      if ((p as any).sitInNextHand) {
+        return { ...p, isSittingOut: false, awaitingReady: false, sitInNextHand: undefined, status: 'waiting' as const };
+      }
+      return p;
+    });
+    playersRef.current = readiedPlayers;
+
+    // Only deal in players with chips > 0 who aren't sitting out or awaiting ready
+    const updatedPlayers: Player[] = readiedPlayers.map(p => {
+      if (p.chips <= 0 || p.isSittingOut || p.awaitingReady) {
+        return { ...p, isActive: false, status: (p.isSittingOut || p.awaitingReady) ? 'sitting-out' as const : 'folded' as const, cards: undefined, currentBet: 0 };
       }
       return {
         ...p,
@@ -526,6 +535,31 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     setTimeout(() => startGame(), 500);
   }, [heroId, startGame]);
 
+  // Sit in — mark hero as ready for the NEXT hand (not the current one)
+  const sitIn = useCallback(() => {
+    const currentPhase = gameStateRef.current.phase;
+    const handInProgress = currentPhase !== 'waiting' && currentPhase !== 'pre-flop';
+
+    setPlayers(prev => {
+      const updated = prev.map(p => {
+        if (p.id !== heroId) return p;
+        if (handInProgress) {
+          // Hand is in progress — mark ready but keep sitting out until next hand
+          return { ...p, awaitingReady: false, isSittingOut: true, status: 'sitting-out' as const, sitInNextHand: true };
+        }
+        // No hand in progress — sit in immediately
+        return { ...p, isSittingOut: false, awaitingReady: false, status: 'waiting' as const };
+      });
+      playersRef.current = updated;
+      return updated;
+    });
+
+    // Only start a new hand if no hand is currently in progress
+    if (!handInProgress) {
+      setTimeout(() => startGame(), 600);
+    }
+  }, [heroId, startGame]);
+
   return {
     players,
     gameState,
@@ -533,5 +567,6 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     showdown,
     dismissShowdown: () => setShowdown(null),
     rebuyHero,
+    sitIn,
   };
 }

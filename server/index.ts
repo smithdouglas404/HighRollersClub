@@ -7,10 +7,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { seedData } from "./seed";
 import { csrfProtection } from "./middleware/csrf";
-import { hasDatabase } from "./db";
-
-try { execSync("fuser -k -9 5000/tcp 2>/dev/null", { timeout: 3000 }); } catch {}
-await new Promise(r => setTimeout(r, 2000));
+import { hasDatabase, getPool } from "./db";
 
 // Auto-push database schema if DATABASE_URL is set
 if (hasDatabase()) {
@@ -21,6 +18,26 @@ if (hasDatabase()) {
   } catch (err: any) {
     console.error("[db] Schema push failed:", err.stderr?.toString() || err.message);
     log("WARNING: Database schema push failed — some features may not work.");
+  }
+
+  // Ensure the session table exists before the app starts accepting requests.
+  // connect-pg-simple has createTableIfMissing but it can race with early requests.
+  try {
+    const pool = getPool();
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL,
+        CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+      ) WITH (OIDS=FALSE);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+    `);
+    log("Session table verified.");
+  } catch (err: any) {
+    console.error("[db] Session table creation failed:", err.message);
   }
 } else {
   log("WARNING: No DATABASE_URL set — using in-memory storage. All data will be lost on restart!");
@@ -121,6 +138,20 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      log(`Port ${port} is busy — killing stale process and retrying...`);
+      try { execSync(`fuser -k -9 ${port}/tcp 2>/dev/null`, { timeout: 3000 }); } catch {}
+      setTimeout(() => {
+        server.listen({ port, host: "0.0.0.0", reusePort: true });
+      }, 2000);
+    } else {
+      console.error("[server] Fatal error:", err);
+      process.exit(1);
+    }
+  });
+
   server.listen({
     port,
     host: "0.0.0.0",
@@ -128,4 +159,28 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Graceful shutdown — close connections cleanly so the port is freed immediately
+  function gracefulShutdown(signal: string) {
+    log(`${signal} received — shutting down gracefully...`);
+    server.close(() => {
+      log("HTTP server closed.");
+      if (hasDatabase()) {
+        getPool().end().then(() => {
+          log("Database pool closed.");
+          process.exit(0);
+        }).catch(() => process.exit(0));
+      } else {
+        process.exit(0);
+      }
+    });
+    // Force exit after 5 seconds if graceful shutdown stalls
+    setTimeout(() => {
+      console.error("[server] Graceful shutdown timed out — forcing exit.");
+      process.exit(1);
+    }, 5000);
+  }
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 })();

@@ -48,7 +48,25 @@
       "Bash(npx tsc --noEmit --skipLibCheck 2>&1 | head -30ojoejoe)",
       "Bash(git commit -m \"$\\(cat <<'EOF'\nAdd MTT tournament engine, admin dashboard, security hardening, and engine fixes\n\n- MTT manager with multi-table seating, table balancing, and large-field payouts\n- Admin dashboard page with route and auth gate\n- Helmet CSP headers for security hardening\n- Big Blind Ante \\(BBA\\) and dead blind / missed-BB tracking in engine\n- Fix postBlind to use += for correct blind stacking\n- Chat messages, collusion alerts, and player notes schemas + storage\n- Error boundary wrapping app and game component\n- Atomic chip persistence in WebSocket with rollback on failure\n- Club leaderboard and club tournaments components\n- Comprehensive test suite \\(95/104 passing\\)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(echo $DATABASE_URL | head -c 20)",
-      "Bash(git add server/game/mtt-manager.ts server/storage.ts server/routes.ts)"
+      "Bash(git add server/game/mtt-manager.ts server/storage.ts server/routes.ts)",
+      "WebFetch(domain:www.webfuse.com)",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | head -60)",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | head -20)",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | head -10)",
+      "Bash(grep -r \"pokerTableTopDown\\\\|pokerFelt\\\\|casino.*bg\\\\|cyberpunk\" /home/runner/workspace/client/src --include=\"*.tsx\" --include=\"*.ts\" 2>/dev/null | head -20)",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(npx tsc --noEmit --pretty 2>&1 | grep -v \"server/storage.ts\" | head -30)",
+      "Bash(GOOGLE_API_KEY=AIzaSyC-UlvBMHtaPN1Zm15kSSBs52rVfNTimZk node scripts/generate-cards-nano-banana.mjs 2>&1 | head -40)",
+      "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models?key=AIzaSyC-UlvBMHtaPN1Zm15kSSBs52rVfNTimZk\" | node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); j.models?.forEach\\(m => { if\\(m.supportedGenerationMethods?.includes\\('generateContent'\\)\\) console.log\\(m.name, '-', m.displayName\\); }\\)\" 2>&1 | grep -i \"image\\\\|flash\\\\|pro\\\\|nano\\\\|banana\" | head -20)",
+      "Bash(node scripts/generate-ui-art.mjs 2>&1)",
+      "Bash(find /home/runner/workspace -maxdepth 3 -name \".env*\" -o -name \"drizzle.config*\" 2>/dev/null | grep -v node_modules | grep -v \".cache\"ust a floating message)",
+      "Bash(ss -tlnp | grep 5000)",
+      "Bash(kill -9 127 138 2>/dev/null; sleep 2 && echo \"killed\")",
+      "Bash(npm run dev 2>&1)",
+      "Bash(curl -s http://localhost:5000/api/tables 2>&1)",
+      "Bash(curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt http://localhost:5000/api/tables 2>&1)",
+      "Bash(pkill -f \"tsx server/index.ts\" 2>/dev/null; sleep 2 && echo \"killed\")",
+      "Bash(curl -s -c /tmp/cookies2.txt -X POST http://localhost:5000/api/auth/guest 2>&1 | python3 -m json.tool)"
     ]
   }
 }

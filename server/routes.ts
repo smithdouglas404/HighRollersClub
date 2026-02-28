@@ -679,12 +679,13 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // ─── Profile Routes ──────────────────────────────────────────────────────
   app.put("/api/profile/avatar", requireAuth, async (req, res, next) => {
     try {
-      const { avatarId, displayName } = req.body;
+      const { avatarId, displayName, tauntVoice } = req.body;
       const updates: Record<string, any> = {};
       if (avatarId && typeof avatarId === "string") updates.avatarId = avatarId;
       if (displayName && typeof displayName === "string") updates.displayName = displayName.trim().slice(0, 50);
+      if (tauntVoice && typeof tauntVoice === "string") updates.tauntVoice = tauntVoice.slice(0, 30);
       if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ message: "avatarId or displayName required" });
+        return res.status(400).json({ message: "avatarId, displayName, or tauntVoice required" });
       }
       await storage.updateUser(req.user!.id, updates);
       const user = await storage.getUser(req.user!.id);
@@ -1116,6 +1117,20 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) {
       next(err);
     }
+  });
+
+  // ─── Commentary Audio ─────────────────────────────────────────────────
+  app.get("/api/commentary-audio/:segmentId/:lineIndex", requireAuth, (req, res) => {
+    const { getAudioBuffer } = require("./game/tts-engine");
+    const { segmentId, lineIndex } = req.params;
+    const entry = getAudioBuffer(segmentId, parseInt(lineIndex));
+    if (!entry) {
+      res.status(404).json({ error: "Audio not found or expired" });
+      return;
+    }
+    res.set("Content-Type", "audio/mpeg");
+    res.set("Cache-Control", "private, max-age=60");
+    res.send(entry.buffer);
   });
 
   // ─── Leaderboard ─────────────────────────────────────────────────────

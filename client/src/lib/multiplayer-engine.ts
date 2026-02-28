@@ -4,6 +4,7 @@ import { AVATAR_OPTIONS } from "../components/poker/AvatarSelect";
 import type { Player, GameState, CardType } from "./poker-types";
 import type { PlayerResult } from "./hand-evaluator";
 import type { ShowdownData } from "./game-engine";
+import { commentaryPlayer } from "./commentary-engine";
 
 // Convert server state to client-compatible format
 function serverToClientPlayers(serverPlayers: any[], turnDeadline?: number, turnTimerDuration?: number): Player[] {
@@ -429,6 +430,15 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       wsClient.on("chips_added", (msg: any) => {
         if (msg.newWalletBalance !== undefined) {
           setWalletBalance(msg.newWalletBalance);
+        }
+      })
+    );
+
+    // AI Commentary — enqueue segments for audio playback
+    unsubs.push(
+      wsClient.on("commentary", (msg: any) => {
+        if (msg.segment) {
+          commentaryPlayer.enqueue(msg.segment);
         }
       })
     );

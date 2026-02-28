@@ -28,6 +28,7 @@ export interface SeatPlayer {
   waitingForBB: boolean; // true = player chose to wait for BB instead of posting missed blinds
   totalBetThisHand: number;
   timeBank: number; // remaining time bank seconds
+  consecutiveTimeouts: number; // WSOP rule: auto-sit-out after 2 consecutive timeouts
 }
 
 export interface InsuranceOffer {
@@ -260,6 +261,7 @@ export class GameEngine {
       waitingForBB: false,
       totalBetThisHand: 0,
       timeBank: 30, // 30 seconds of time bank per player
+      consecutiveTimeouts: 0,
     };
     this.state.players.push(player);
     this.state.players.sort((a, b) => a.seatIndex - b.seatIndex);
@@ -795,6 +797,9 @@ export class GameEngine {
 
     this.clearTimers();
 
+    // Reset consecutive timeout counter when player acts normally
+    player.consecutiveTimeouts = 0;
+
     switch (action) {
       case "fold":
         player.status = "folded";
@@ -1153,8 +1158,11 @@ export class GameEngine {
         this.handleAction(player.id, "check");
       }
       if (!player.isBot) {
-        player.isSittingOut = true;
-        player.status = "sitting-out";
+        player.consecutiveTimeouts++;
+        if (player.consecutiveTimeouts >= 2) {
+          player.isSittingOut = true;
+          player.status = "sitting-out";
+        }
       }
     }, Math.max(remaining, 1000));
 
@@ -1514,10 +1522,13 @@ export class GameEngine {
       } else {
         this.handleAction(player.id, "check");
       }
-      // Mark player as sitting out after timeout
+      // WSOP rule: track consecutive timeouts, auto-sit-out after 2
       if (!player.isBot) {
-        player.isSittingOut = true;
-        player.status = "sitting-out";
+        player.consecutiveTimeouts++;
+        if (player.consecutiveTimeouts >= 2) {
+          player.isSittingOut = true;
+          player.status = "sitting-out";
+        }
       }
     }, totalTimeout);
 

@@ -467,8 +467,9 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
 
     case "chat": {
       if (!client.tableId) return;
-      const chatMsg = msg.message?.slice(0, 200);
-      if (!chatMsg) return;
+      const rawMsg = msg.message?.slice(0, 200);
+      if (!rawMsg) return;
+      const chatMsg = rawMsg.replace(/[<>&"']/g, (c: string) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c] || c));
       // Persist chat message
       storage.saveChatMessage(client.tableId, client.userId, client.displayName, chatMsg).catch(() => {});
       broadcastToTable(client.tableId, {

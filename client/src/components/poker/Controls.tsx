@@ -159,7 +159,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     if (isPending) return;
     setIsPending(true);
     sound.playCall();
-    sound.playChipClink(); // Hero's chips going in
+    sound.playChipSlide();
     onAction("call");
   }, [sound, onAction, isPending]);
 
@@ -167,7 +167,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     if (isPending) return;
     setIsPending(true);
     sound.playRaise();
-    sound.playChipClink(); // Hero's chips going in
+    sound.playChipSlide();
     onAction("raise", betAmount);
   }, [sound, onAction, betAmount, isPending]);
 
@@ -175,7 +175,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     if (isPending) return;
     setIsPending(true);
     sound.playRaise();
-    sound.playChipClink(); // Hero shoves all chips
+    sound.playChipSlide();
     onAction("raise", maxBet);
   }, [sound, onAction, maxBet, isPending]);
 

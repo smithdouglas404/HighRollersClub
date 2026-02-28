@@ -35,7 +35,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // ─── Online Users ──────────────────────────────────────────────────────
-  app.get("/api/online-users", (_req, res) => {
+  app.get("/api/online-users", requireAuth, (_req, res) => {
     const clients = getClients();
     const onlineIds = Array.from(clients.keys());
     res.json(onlineIds);
@@ -1515,8 +1515,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "Insufficient chips" });
       }
 
+      // Deduct buy-in FIRST to prevent race condition (balance can't go negative with atomic op)
+      await storage.ensureWallets(user.id);
+      const { success: deducted, newBalance: balAfterBuyIn } = await storage.atomicDeductFromWallet(user.id, "tournament", tourney.buyIn);
+      if (!deducted) {
+        return res.status(400).json({ message: "Insufficient chips in tournament wallet" });
+      }
+
       // Atomic registration: try to insert with unique constraint + count check
-      // If the user is already registered or tournament is full, the DB will reject it
       const reg = await storage.registerForTournamentAtomic(
         tourney.id,
         req.user!.id,
@@ -1524,19 +1530,13 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       );
 
       if (!reg) {
-        // Re-check to give specific error message
+        // Registration failed — refund the buy-in
+        await storage.atomicAddToWallet(user.id, "tournament", tourney.buyIn);
         const regs = await storage.getTournamentRegistrations(tourney.id);
         if (regs.some(r => r.userId === req.user!.id)) {
           return res.status(400).json({ message: "Already registered" });
         }
         return res.status(400).json({ message: "Tournament full" });
-      }
-
-      // Deduct buy-in from tournament wallet
-      await storage.ensureWallets(user.id);
-      const { success: deducted, newBalance: balAfterBuyIn } = await storage.atomicDeductFromWallet(user.id, "tournament", tourney.buyIn);
-      if (!deducted) {
-        return res.status(400).json({ message: "Insufficient chips in tournament wallet" });
       }
       await storage.createTransaction({
         userId: user.id,

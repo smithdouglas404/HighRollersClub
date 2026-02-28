@@ -123,16 +123,17 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hands, setHands] = useState<HandRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchHands = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const res = await fetch(`/api/tables/${tableId}/hands?limit=20`);
-      if (res.ok) {
-        setHands(await res.json());
-      }
-    } catch {
-      // ignore
+      if (!res.ok) throw new Error("Failed to load hand history");
+      setHands(await res.json());
+    } catch (err: any) {
+      setFetchError(err.message || "Failed to load hand history");
     } finally {
       setLoading(false);
     }
@@ -200,6 +201,14 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="spinner spinner-md" />
+                </div>
+              ) : fetchError ? (
+                <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                  <History className="w-8 h-8 text-red-500/50 mb-2" />
+                  <p className="text-[0.625rem] text-red-400">{fetchError}</p>
+                  <button onClick={fetchHands} className="mt-2 text-[0.625rem] text-cyan-400 hover:text-cyan-300 transition-colors">
+                    Retry
+                  </button>
                 </div>
               ) : hands.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">

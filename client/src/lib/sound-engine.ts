@@ -180,7 +180,7 @@ class SoundEngine {
   }
 
   playChipClinkAt(seatX: number, seatScale: number) {
-    this.playSoundAt('chip-clink', seatX, seatScale);
+    this.playSoundAt('chip-slide', seatX, seatScale);
   }
 
   playFoldAt(seatX: number, seatScale: number) {
@@ -209,7 +209,7 @@ class SoundEngine {
 
   playCardDeal() { this.playSound('card-deal'); }
   playCardFlip() { this.playSound('card-flip'); }
-  playChipClink() { this.playSound('chip-clink'); }
+  playChipClink() { this.playSound('chip-slide'); }
   playChipSlide() { this.playSound('chip-slide'); }
   playFold() { this.playSound('fold'); }
   playCheck() { this.playSound('check'); }

@@ -19,8 +19,8 @@ const Slider = React.forwardRef<
       className="relative h-3 w-full grow overflow-hidden rounded-full"
       style={{
         background: "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(10,15,25,0.6) 100%)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4)",
+        border: "1px solid rgba(0,212,255,0.2)",
+        boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4), 0 0 6px rgba(0,212,255,0.08)",
       }}
     >
       <SliderPrimitive.Range

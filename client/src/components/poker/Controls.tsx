@@ -279,7 +279,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                           className="relative overflow-hidden rounded-lg text-[0.65rem] font-black uppercase tracking-wider transition-all"
                           style={{
                             padding: "0.35rem 0.65rem",
-                            color: isActive ? "#b5f5ff" : "#9ca3af",
+                            color: isActive ? "#b5f5ff" : "#d1d5db",
                             background: isActive
                               ? "linear-gradient(180deg, rgba(0,212,255,0.25) 0%, rgba(0,120,180,0.2) 100%)"
                               : "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
@@ -305,7 +305,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                       className="relative overflow-hidden rounded-lg text-[0.65rem] font-black uppercase tracking-wider transition-all"
                       style={{
                         padding: "0.35rem 0.65rem",
-                        color: betAmount === maxBet ? "#fde68a" : "#9ca3af",
+                        color: betAmount === maxBet ? "#fde68a" : "#d1d5db",
                         background: betAmount === maxBet
                           ? "linear-gradient(180deg, rgba(245,158,11,0.3) 0%, rgba(180,83,9,0.2) 100%)"
                           : "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
@@ -325,10 +325,10 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.85 }}
                     onClick={stepDown}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-cyan-300 transition-all shrink-0"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-cyan-300/80 hover:text-cyan-200 transition-all shrink-0"
                     style={{
-                      background: "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 100%)",
+                      border: "1px solid rgba(0,212,255,0.2)",
                       boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
                     }}
                     data-testid="bet-minus"
@@ -348,8 +348,8 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                       data-testid="bet-slider"
                     />
                     <div className="flex justify-between mt-0.5 px-0.5">
-                      <span className="text-[0.625rem] font-mono text-gray-600 font-bold">${minBet.toLocaleString()}</span>
-                      <span className="text-[0.625rem] font-mono text-gray-600 font-bold">${maxBet.toLocaleString()}</span>
+                      <span className="text-[0.625rem] font-mono text-cyan-400/70 font-bold">${minBet.toLocaleString()}</span>
+                      <span className="text-[0.625rem] font-mono text-cyan-400/70 font-bold">${maxBet.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -358,10 +358,10 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.85 }}
                     onClick={stepUp}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-cyan-300 transition-all shrink-0"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-cyan-300/80 hover:text-cyan-200 transition-all shrink-0"
                     style={{
-                      background: "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 100%)",
+                      border: "1px solid rgba(0,212,255,0.2)",
                       boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
                     }}
                     data-testid="bet-plus"

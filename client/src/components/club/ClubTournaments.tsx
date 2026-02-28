@@ -55,6 +55,26 @@ export function ClubTournaments() {
     }
   };
 
+  const [starting, setStarting] = useState<string | null>(null);
+
+  const handleStart = async (tournamentId: string) => {
+    if (starting) return;
+    setStarting(tournamentId);
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/start`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.message || "Failed to start tournament");
+      } else {
+        navigate(`/game/${data.tables?.[0]?.tableId ?? ""}`);
+      }
+    } catch {
+      alert("Failed to start tournament");
+    } finally {
+      setStarting(null);
+    }
+  };
+
   if (!club) return null;
 
   return (
@@ -239,14 +259,32 @@ export function ClubTournaments() {
                   />
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleRegister(t.id)}
-                  className="w-full mt-3 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-colors"
-                >
-                  Register
-                </motion.button>
+                <div className="flex gap-2 mt-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleRegister(t.id)}
+                    className="flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-colors"
+                  >
+                    Register
+                  </motion.button>
+                  {isAdminOrOwner && t.registeredCount >= 2 && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleStart(t.id)}
+                      disabled={starting === t.id}
+                      className="flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-1"
+                      style={{
+                        background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
+                        boxShadow: "0 0 15px rgba(0,212,255,0.2)",
+                      }}
+                    >
+                      {starting === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trophy className="w-3 h-3" />}
+                      Start
+                    </motion.button>
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>

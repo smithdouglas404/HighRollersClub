@@ -306,6 +306,21 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       }
       client.tableId = msg.tableId;
       sendGameStateToTable(msg.tableId);
+
+      // Send recent chat history to the joining player
+      storage.getRecentChatMessages(msg.tableId, 30).then(messages => {
+        if (messages.length > 0) {
+          sendToUser(client.userId, {
+            type: "chat_history",
+            messages: messages.map(m => ({
+              userId: m.userId,
+              displayName: m.username,
+              message: m.message,
+              timestamp: m.createdAt.toISOString(),
+            })),
+          } as any);
+        }
+      }).catch(() => {});
       break;
     }
 
@@ -449,6 +464,8 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       if (!client.tableId) return;
       const chatMsg = msg.message?.slice(0, 200);
       if (!chatMsg) return;
+      // Persist chat message
+      storage.saveChatMessage(client.tableId, client.userId, client.displayName, chatMsg).catch(() => {});
       broadcastToTable(client.tableId, {
         type: "chat",
         userId: client.userId,

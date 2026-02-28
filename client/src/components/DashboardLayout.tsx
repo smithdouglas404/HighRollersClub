@@ -24,7 +24,7 @@ interface NavItem {
   match?: string[];
 }
 
-const NAV_ITEMS: NavItem[] = [
+const BASE_NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/lobby" },
   { icon: Users, label: "Members", href: "/members", match: ["/members"] },
   { icon: Trophy, label: "Games & Tournaments", href: "/lobby", match: ["/lobby", "/game"] },
@@ -35,6 +35,8 @@ const NAV_ITEMS: NavItem[] = [
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
   { icon: Medal, label: "Leaderboard", href: "/leaderboard", match: ["/leaderboard"] },
 ];
+
+const ADMIN_NAV_ITEM: NavItem = { icon: Shield, label: "Admin", href: "/admin", match: ["/admin"] };
 
 function ClubSwitcher() {
   const { allClubs, club, switchClub } = useClub();
@@ -116,6 +118,10 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const navItems = user?.role === "admin"
+    ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM]
+    : BASE_NAV_ITEMS;
+
   // Close sidebar on navigation
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
@@ -155,7 +161,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
 
       {/* Nav Items */}
       <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive =
             location === item.href ||
             item.match?.some((m) => location.startsWith(m));

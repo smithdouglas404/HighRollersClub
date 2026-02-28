@@ -12,8 +12,132 @@ import { TimerRing } from "./TimerRing";
 import { VideoThumbnail } from "./VideoOverlay";
 import { useTimerCountdown } from "@/hooks/useTimerCountdown";
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
+import { StickyNote } from "lucide-react";
 import type { AvatarOption } from "./AvatarSelect";
 import type { OpponentHudStats } from "@/lib/useOpponentStats";
+
+// ─── Player Note Popover ────────────────────────────────────────────────────
+const NOTE_COLORS = ["gray", "red", "yellow", "green", "blue", "purple"] as const;
+
+function PlayerNoteIcon({ playerId }: { playerId: string }) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [color, setColor] = useState<string>("gray");
+  const [hasNote, setHasNote] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  // Load note on mount
+  useEffect(() => {
+    fetch(`/api/player-notes/${playerId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setNote(data.note);
+          setColor(data.color || "gray");
+          setHasNote(true);
+        }
+      })
+      .catch(() => {});
+  }, [playerId]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (popRef.current && !popRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const handleSave = async () => {
+    if (!note.trim()) {
+      // Delete note
+      await fetch(`/api/player-notes/${playerId}`, { method: "DELETE" }).catch(() => {});
+      setHasNote(false);
+      setOpen(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/player-notes/${playerId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: note.trim(), color }),
+      });
+      if (res.ok) {
+        setHasNote(true);
+        setOpen(false);
+      }
+    } catch {}
+    setSaving(false);
+  };
+
+  const noteColor = color === "red" ? "#ef4444" : color === "yellow" ? "#eab308" : color === "green" ? "#22c55e"
+    : color === "blue" ? "#3b82f6" : color === "purple" ? "#a855f7" : "#9ca3af";
+
+  return (
+    <div className="relative" ref={popRef}>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        className="p-0.5 rounded hover:bg-white/10 transition-colors"
+        title="Player note"
+      >
+        <StickyNote className="w-3 h-3" style={{ color: hasNote ? noteColor : "rgba(255,255,255,0.25)" }} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -4 }}
+            className="absolute z-50 bottom-full mb-1 left-1/2 -translate-x-1/2 w-48 rounded-lg p-2 space-y-1.5"
+            style={{
+              background: "rgba(8,12,24,0.95)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
+              backdropFilter: "blur(12px)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="Add note..."
+              maxLength={500}
+              rows={2}
+              className="w-full text-[0.625rem] text-white placeholder-gray-600 rounded px-2 py-1 resize-none outline-none"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+              autoFocus
+            />
+            <div className="flex items-center gap-1">
+              {NOTE_COLORS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  className={`w-4 h-4 rounded-full border-2 transition-all ${color === c ? "border-white scale-110" : "border-transparent"}`}
+                  style={{
+                    background: c === "red" ? "#ef4444" : c === "yellow" ? "#eab308" : c === "green" ? "#22c55e"
+                      : c === "blue" ? "#3b82f6" : c === "purple" ? "#a855f7" : "#6b7280",
+                  }}
+                />
+              ))}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="ml-auto px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors disabled:opacity-50"
+              >
+                {saving ? "..." : "Save"}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 
 // ─── Winner Particle Burst System ────────────────────────────────────────────
@@ -542,17 +666,20 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         >
           <div className="px-3 py-1.5 flex flex-col items-center gap-0.5">
             {/* Player name — larger, more readable */}
-            <span
-              className={cn(
-                "text-xs uppercase font-extrabold tracking-wide leading-tight truncate max-w-[100px]",
-                isTurn ? "text-white" : "text-gray-300"
-              )}
-              style={{
-                textShadow: isTurn ? `0 0 8px ${hexToRgba(glowColor, 0.4)}` : undefined,
-              }}
-            >
-              {player.name}
-            </span>
+            <div className="flex items-center gap-1">
+              <span
+                className={cn(
+                  "text-xs uppercase font-extrabold tracking-wide leading-tight truncate max-w-[100px]",
+                  isTurn ? "text-white" : "text-gray-300"
+                )}
+                style={{
+                  textShadow: isTurn ? `0 0 8px ${hexToRgba(glowColor, 0.4)}` : undefined,
+                }}
+              >
+                {player.name}
+              </span>
+              {!isHero && <PlayerNoteIcon playerId={player.id} />}
+            </div>
 
             {/* Chip count — larger, gold, mono — animated counter */}
             <span

@@ -106,6 +106,19 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
       }
     });
 
+    const unsubHistory = wsClient.on("chat_history", (msg: any) => {
+      if (msg.messages?.length > 0) {
+        const historyMsgs: ChatMessage[] = msg.messages.map((m: any) => ({
+          id: `hist-${m.timestamp}-${Math.random().toString(36).slice(2, 6)}`,
+          userId: m.userId,
+          displayName: m.displayName,
+          message: m.message,
+          timestamp: new Date(m.timestamp).getTime(),
+        }));
+        setMessages(prev => [...historyMsgs, ...prev].slice(-100));
+      }
+    });
+
     return () => {
       unsubChat();
       unsubJoin();
@@ -113,6 +126,7 @@ export function ChatPanel({ isMultiplayer, sendChat }: ChatPanelProps) {
       unsubShowdown();
       unsubBlind();
       unsubTaunt();
+      unsubHistory();
     };
   }, [isMultiplayer, pushMessage]);
 

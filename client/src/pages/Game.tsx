@@ -1065,7 +1065,6 @@ function GameTable({
                         avatarTier={avatarOpt?.tier}
                         winStreak={winStreaks.current.get(player.id) || 0}
                         showVideo={isMultiplayer && !player.isBot}
-                        showLocalWebcam={player.id === heroId}
                         dealCardCount={dealing.visiblePlayerCards.get(player.id)}
                         turnDeadline={gameState.turnDeadline}
                         turnTimerDuration={gameState.turnTimerDuration}

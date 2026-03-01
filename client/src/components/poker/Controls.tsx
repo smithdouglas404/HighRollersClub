@@ -212,8 +212,6 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
   const timerColor = timerPct > 50 ? "#00d4ff" : timerPct > 25 ? "#f59e0b" : "#ef4444";
   const timerUrgent = timerPct <= 25;
 
-  const phaseLabel = phase === "pre-flop" ? "Pre-Flop" : phase === "flop" ? "Flop" : phase === "turn" ? "Turn" : phase === "river" ? "River" : phase || "—";
-
   return (
     <motion.div
       initial={compactMode ? { y: 0, opacity: 1 } : { y: 60, opacity: 0 }}
@@ -449,6 +447,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 `}
                 style={{
                   padding: "0.7rem 1.25rem",
+                  minHeight: "3.25rem",
                   color: "#fff",
                   background: foldConfirm
                     ? "linear-gradient(180deg, #ef4444 0%, #dc2626 40%, #b91c1c 100%)"
@@ -468,9 +467,11 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                   />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent h-1/2" />
-                <span className="relative flex items-center justify-center gap-2">
-                  <span className="text-[0.8rem] font-black tracking-[0.15em]">{foldConfirm ? "CONFIRM" : "FOLD"}</span>
-                  <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">F</kbd>
+                <span className="relative flex flex-col items-center justify-center gap-0.5">
+                  <span className="flex items-center gap-2">
+                    <span className="text-[0.8rem] font-black tracking-[0.15em]">{foldConfirm ? "CONFIRM" : "FOLD"}</span>
+                    <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">F</kbd>
+                  </span>
                 </span>
               </motion.button>
 
@@ -489,6 +490,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 `}
                 style={{
                   padding: "0.7rem 1.25rem",
+                  minHeight: "3.25rem",
                   color: "#fff",
                   background: "linear-gradient(180deg, #16a34a 0%, #15803d 30%, #166534 70%, #14532d 100%)",
                   border: "1px solid rgba(34,197,94,0.3)",
@@ -531,6 +533,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 `}
                 style={{
                   padding: "0.7rem 1.25rem",
+                  minHeight: "3.25rem",
                   color: "#fff",
                   background: isAllIn
                     ? "linear-gradient(180deg, #f59e0b 0%, #d97706 30%, #b45309 60%, #92400e 100%)"
@@ -597,40 +600,8 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
               )}
             </div>
 
-            {/* Pot + Phase + Auto toggles (right side) */}
+            {/* Auto toggles (right side) */}
             <div className="shrink-0 flex flex-col items-end gap-2">
-              <div
-                className="flex items-center gap-3 px-4 py-2 rounded-xl"
-                style={{
-                  background: "linear-gradient(135deg, rgba(15,10,3,0.8) 0%, rgba(5,3,1,0.6) 100%)",
-                  border: "1px solid rgba(255,215,0,0.15)",
-                  boxShadow: "0 0 20px rgba(0,0,0,0.4), 0 0 8px rgba(255,215,0,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
-                }}
-              >
-                <span
-                  className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-cyan-400"
-                  style={{ textShadow: "0 0 10px rgba(0,212,255,0.4)" }}
-                  data-testid="text-phase"
-                >
-                  {phaseLabel}
-                </span>
-                <div className="w-px h-6 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
-                <div className="flex flex-col items-center">
-                  <span className="text-[0.5625rem] font-black text-amber-600/70 uppercase tracking-[0.2em] leading-none">POT</span>
-                  <span
-                    className="font-mono font-black text-lg leading-none mt-0.5"
-                    style={{
-                      color: "#ffd700",
-                      textShadow: "0 0 16px rgba(255,215,0,0.5), 0 0 4px rgba(255,215,0,0.2)",
-                    }}
-                    data-testid="text-pot"
-                  >
-                    ${pot.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Auto toggles */}
               {!isHeroTurn && heroStatus !== "folded" && heroStatus !== "all-in" && (
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-1.5 cursor-pointer select-none group">

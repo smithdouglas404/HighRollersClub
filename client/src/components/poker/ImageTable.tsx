@@ -323,6 +323,11 @@ export function ImageTable({
                 }}
               >
                 <div className="flex items-center gap-2">
+                  {dealPhase && dealPhase !== "waiting" && dealPhase !== "showdown" && (
+                    <span className="text-[0.5625rem] font-black uppercase tracking-[0.15em] text-cyan-400" style={{ textShadow: "0 0 8px rgba(0,212,255,0.3)" }}>
+                      {dealPhase === "pre-flop" ? "PRE-FLOP" : dealPhase.toUpperCase()}
+                    </span>
+                  )}
                   <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-amber-500/70">POT</span>
                   <span className="text-xl font-mono font-black" style={{ color: "#ffd700", textShadow: "0 0 16px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2)" }}>
                     ${animatedPot.toLocaleString()}

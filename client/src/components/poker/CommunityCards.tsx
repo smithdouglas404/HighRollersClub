@@ -7,9 +7,10 @@ import { useState, useEffect, useRef } from "react";
 interface CommunityCardsProps {
   cards: CardType[];
   pot: number;
+  phase?: string;
 }
 
-export function CommunityCards({ cards, pot }: CommunityCardsProps) {
+export function CommunityCards({ cards, pot, phase }: CommunityCardsProps) {
   const sound = useSoundEngine();
   const prevCardCount = useRef(0);
   const [burnCards, setBurnCards] = useState<number[]>([]);
@@ -57,11 +58,15 @@ export function CommunityCards({ cards, pot }: CommunityCardsProps) {
             <div className="absolute bottom-[6px] left-0 w-5 h-5 rounded-full" style={{ background: "linear-gradient(135deg, #2ecc71, #27ae60)", boxShadow: "0 1px 2px rgba(0,0,0,0.3)" }} />
           </div>
           <div className="flex items-baseline gap-1.5">
+            {phase && (
+              <span className="text-[0.5625rem] uppercase tracking-[0.15em] text-amber-400/80 font-black">
+                {phase === "pre-flop" ? "PRE-FLOP" : phase === "flop" ? "FLOP" : phase === "turn" ? "TURN" : phase === "river" ? "RIVER" : ""}
+              </span>
+            )}
             <span className="text-[0.625rem] uppercase tracking-[0.15em] text-cyan-500/80 font-bold">POT</span>
             <span className="text-base font-mono font-black text-cyan-300" style={{ textShadow: "0 0 8px rgba(0,212,255,0.4)" }}>
               {pot.toLocaleString()}
             </span>
-            <span className="text-[0.5625rem] text-cyan-600/60 uppercase tracking-wider font-medium">chips</span>
           </div>
           {/* Decorative arrow */}
           <div className="text-cyan-500/40 text-xs ml-0.5">&#x2794;</div>

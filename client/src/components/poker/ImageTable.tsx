@@ -322,11 +322,19 @@ export function ImageTable({
                   backdropFilter: "blur(12px)",
                 }}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-amber-500/70">POT</span>
-                  <span className="text-xl font-mono font-black" style={{ color: "#ffd700", textShadow: "0 0 16px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2)" }}>
-                    ${animatedPot.toLocaleString()}
+                <div className="flex flex-col items-center gap-0.5">
+                  <span
+                    className="text-[0.625rem] font-black uppercase tracking-[0.15em] text-cyan-400"
+                    style={{ textShadow: "0 0 10px rgba(0,212,255,0.4)" }}
+                  >
+                    {dealPhase === "pre-flop" ? "Pre-Flop" : dealPhase === "flop" ? "Flop" : dealPhase === "turn" ? "Turn" : dealPhase === "river" ? "River" : ""}
                   </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-amber-500/70">POT</span>
+                    <span className="text-xl font-mono font-black" style={{ color: "#ffd700", textShadow: "0 0 16px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2)" }}>
+                      ${animatedPot.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
                 {/* Floating delta indicator */}
                 <AnimatePresence>

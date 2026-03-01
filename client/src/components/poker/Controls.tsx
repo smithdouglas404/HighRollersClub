@@ -212,8 +212,6 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
   const timerColor = timerPct > 50 ? "#00d4ff" : timerPct > 25 ? "#f59e0b" : "#ef4444";
   const timerUrgent = timerPct <= 25;
 
-  const phaseLabel = phase === "pre-flop" ? "Pre-Flop" : phase === "flop" ? "Flop" : phase === "turn" ? "Turn" : phase === "river" ? "River" : phase || "—";
-
   return (
     <motion.div
       initial={compactMode ? { y: 0, opacity: 1 } : { y: 60, opacity: 0 }}
@@ -252,7 +250,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
       >
         <div className="max-w-5xl mx-auto flex flex-col gap-2">
 
-          {/* === ROW 1: Bet Sizing (presets + slider + amount) === */}
+          {/* === ROW 1: Bet Slider === */}
           <AnimatePresence>
             {(showRaiseSlider || isHeroTurn) && (
               <motion.div
@@ -263,62 +261,6 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 className="overflow-hidden"
               >
                 <div className={`flex items-center gap-2 transition-opacity duration-200 ${!isHeroTurn ? "opacity-25 pointer-events-none" : ""}`}>
-
-                  {/* Preset chips */}
-                  <div className="flex gap-1.5 shrink-0">
-                    {presets.map((p) => {
-                      const isActive = betAmount === p.value;
-                      return (
-                        <motion.button
-                          key={p.label}
-                          whileHover={{ scale: 1.06, y: -1 }}
-                          whileTap={{ scale: 0.93 }}
-                          onClick={() => handlePreset(p.value)}
-                          title={p.tooltip}
-                          data-testid={`preset-${p.label.toLowerCase()}`}
-                          className="relative overflow-hidden rounded-lg text-[0.75rem] font-black uppercase tracking-wide transition-all"
-                          style={{
-                            padding: "0.4rem 0.75rem",
-                            color: isActive ? "#b5f5ff" : "#e5e7eb",
-                            background: isActive
-                              ? "linear-gradient(180deg, rgba(0,212,255,0.25) 0%, rgba(0,120,180,0.2) 100%)"
-                              : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
-                            border: isActive ? "1.5px solid rgba(0,212,255,0.5)" : "1px solid rgba(255,255,255,0.15)",
-                            boxShadow: isActive
-                              ? "0 0 16px rgba(0,212,255,0.25), inset 0 1px 0 rgba(0,212,255,0.15)"
-                              : "0 2px 4px rgba(0,0,0,0.3)",
-                          }}
-                        >
-                          {isActive && <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent" />}
-                          <span className="relative">{p.label}</span>
-                        </motion.button>
-                      );
-                    })}
-
-                    {/* ALL-IN preset */}
-                    <motion.button
-                      whileHover={{ scale: 1.06, y: -1 }}
-                      whileTap={{ scale: 0.93 }}
-                      onClick={() => handlePreset(maxBet)}
-                      title="Shove your entire stack"
-                      data-testid="preset-allin"
-                      className="relative overflow-hidden rounded-lg text-[0.75rem] font-black uppercase tracking-wide transition-all"
-                      style={{
-                        padding: "0.4rem 0.75rem",
-                        color: betAmount === maxBet ? "#fde68a" : "#e5e7eb",
-                        background: betAmount === maxBet
-                          ? "linear-gradient(180deg, rgba(245,158,11,0.3) 0%, rgba(180,83,9,0.2) 100%)"
-                          : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
-                        border: betAmount === maxBet ? "1.5px solid rgba(245,158,11,0.5)" : "1px solid rgba(255,255,255,0.15)",
-                        boxShadow: betAmount === maxBet
-                          ? "0 0 16px rgba(245,158,11,0.25), inset 0 1px 0 rgba(245,158,11,0.15)"
-                          : "0 2px 4px rgba(0,0,0,0.3)",
-                      }}
-                    >
-                      {betAmount === maxBet && <div className="absolute inset-0 bg-gradient-to-b from-white/[0.06] to-transparent" />}
-                      <span className="relative">ALL IN</span>
-                    </motion.button>
-                  </div>
 
                   {/* Stepper - */}
                   <motion.button
@@ -420,8 +362,8 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
             )}
           </AnimatePresence>
 
-          {/* === ROW 2: Hero cards + Action Buttons + Pot/Phase === */}
-          <div className="flex items-center gap-3">
+          {/* === ROW 2: Hero cards + Presets + Action Buttons === */}
+          <div className="flex items-center gap-4">
 
             {/* Hero cards + hand badge */}
             {heroCardsSlot && (
@@ -431,203 +373,231 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className={`flex items-center gap-3 flex-1 justify-center transition-all duration-200 ${!isHeroTurn ? "opacity-35 grayscale pointer-events-none" : ""}`}>
+            {/* Center column: Presets + Action buttons + Auto toggles */}
+            <div className="flex flex-col items-center gap-1.5 flex-1">
 
-              {/* FOLD */}
-              <motion.button
-                whileHover={buttonsDisabled ? {} : { scale: 1.05, y: -2 }}
-                whileTap={buttonsDisabled ? {} : { scale: 0.93 }}
-                onClick={handleFold}
-                disabled={buttonsDisabled}
-                title="Fold (F)"
-                data-testid="button-fold"
-                className={`
-                  relative overflow-hidden rounded-xl min-w-[100px]
-                  font-bold uppercase tracking-wider transition-all
-                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
-                `}
-                style={{
-                  padding: "0.7rem 1.25rem",
-                  color: "#fff",
-                  background: foldConfirm
-                    ? "linear-gradient(180deg, #ef4444 0%, #dc2626 40%, #b91c1c 100%)"
-                    : "linear-gradient(180deg, #dc2626 0%, #c62828 30%, #991b1b 70%, #7f1d1d 100%)",
-                  border: foldConfirm ? "2px solid rgba(248,113,113,0.7)" : "1px solid rgba(239,68,68,0.25)",
-                  boxShadow: foldConfirm
-                    ? "0 0 32px rgba(239,68,68,0.5), 0 6px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)"
-                    : "0 6px 20px rgba(0,0,0,0.5), 0 0 14px rgba(239,68,68,0.15), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
-                }}
-              >
-                {foldConfirm && (
-                  <motion.div
-                    className="absolute inset-0"
-                    style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 60%)" }}
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 0.8, repeat: Infinity }}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent h-1/2" />
-                <span className="relative flex items-center justify-center gap-2">
-                  <span className="text-[0.8rem] font-black tracking-[0.15em]">{foldConfirm ? "CONFIRM" : "FOLD"}</span>
-                  <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">F</kbd>
-                </span>
-              </motion.button>
+              {/* Preset chips (above action buttons) */}
+              {(showRaiseSlider || isHeroTurn) && (
+                <div className={`flex gap-1.5 transition-opacity duration-200 ${!isHeroTurn ? "opacity-25 pointer-events-none" : ""}`}>
+                  {presets.map((p) => {
+                    const isActive = betAmount === p.value;
+                    return (
+                      <motion.button
+                        key={p.label}
+                        whileHover={{ scale: 1.06, y: -1 }}
+                        whileTap={{ scale: 0.93 }}
+                        onClick={() => handlePreset(p.value)}
+                        title={p.tooltip}
+                        data-testid={`preset-${p.label.toLowerCase()}`}
+                        className="relative overflow-hidden rounded-lg text-[0.75rem] font-black uppercase tracking-wide transition-all"
+                        style={{
+                          padding: "0.4rem 0.75rem",
+                          color: isActive ? "#b5f5ff" : "#e5e7eb",
+                          background: isActive
+                            ? "linear-gradient(180deg, rgba(0,212,255,0.25) 0%, rgba(0,120,180,0.2) 100%)"
+                            : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
+                          border: isActive ? "1.5px solid rgba(0,212,255,0.5)" : "1px solid rgba(255,255,255,0.15)",
+                          boxShadow: isActive
+                            ? "0 0 16px rgba(0,212,255,0.25), inset 0 1px 0 rgba(0,212,255,0.15)"
+                            : "0 2px 4px rgba(0,0,0,0.3)",
+                        }}
+                      >
+                        {isActive && <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent" />}
+                        <span className="relative">{p.label}</span>
+                      </motion.button>
+                    );
+                  })}
 
-              {/* CHECK / CALL */}
-              <motion.button
-                whileHover={buttonsDisabled ? {} : { scale: 1.05, y: -2 }}
-                whileTap={buttonsDisabled ? {} : { scale: 0.93 }}
-                onClick={needsToCall ? handleCall : handleCheck}
-                disabled={buttonsDisabled}
-                title={needsToCall ? `Call $${callAmount} (C)` : "Check (C)"}
-                data-testid="button-call"
-                className={`
-                  relative overflow-hidden rounded-xl min-w-[100px]
-                  font-bold uppercase tracking-wider transition-all
-                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
-                `}
-                style={{
-                  padding: "0.7rem 1.25rem",
-                  color: "#fff",
-                  background: "linear-gradient(180deg, #16a34a 0%, #15803d 30%, #166534 70%, #14532d 100%)",
-                  border: "1px solid rgba(34,197,94,0.3)",
-                  boxShadow: "0 6px 20px rgba(0,0,0,0.5), 0 0 16px rgba(34,197,94,0.2), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
-                }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent h-1/2" />
-                <span className="relative flex flex-col items-center justify-center gap-0.5">
-                  <span className="flex items-center gap-2">
-                    <span className="text-[0.8rem] font-black tracking-[0.15em]">{needsToCall ? "CALL" : "CHECK"}</span>
-                    <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">C</kbd>
-                  </span>
-                  {needsToCall && (
-                    <span
-                      className="font-mono text-sm font-black text-emerald-200 mt-0.5"
-                      style={{ textShadow: "0 0 8px rgba(34,197,94,0.4)" }}
-                    >
-                      ${callAmount.toLocaleString()}
-                    </span>
-                  )}
-                </span>
-              </motion.button>
-
-              {/* RAISE / ALL-IN */}
-              <motion.button
-                whileHover={buttonsDisabled ? {} : { scale: 1.05, y: -2 }}
-                whileTap={buttonsDisabled ? {} : { scale: 0.93 }}
-                onClick={() => {
-                  if (buttonsDisabled) return;
-                  if (isAllIn) handleAllIn();
-                  else handleRaise();
-                }}
-                disabled={buttonsDisabled}
-                title={`Raise to $${betAmount.toLocaleString()} (R)`}
-                data-testid="button-raise"
-                className={`
-                  relative overflow-hidden rounded-xl min-w-[100px]
-                  font-bold uppercase tracking-wider transition-all
-                  ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
-                `}
-                style={{
-                  padding: "0.7rem 1.25rem",
-                  color: "#fff",
-                  background: isAllIn
-                    ? "linear-gradient(180deg, #f59e0b 0%, #d97706 30%, #b45309 60%, #92400e 100%)"
-                    : "linear-gradient(180deg, #eab308 0%, #ca8a04 30%, #a16207 70%, #854d0e 100%)",
-                  border: isAllIn
-                    ? "2px solid rgba(251,191,36,0.5)"
-                    : "1px solid rgba(234,179,8,0.3)",
-                  boxShadow: isAllIn
-                    ? "0 0 36px rgba(245,158,11,0.4), 0 6px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.15)"
-                    : "0 6px 20px rgba(0,0,0,0.5), 0 0 14px rgba(234,179,8,0.2), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
-                }}
-              >
-                {isAllIn && (
-                  <motion.div
-                    className="absolute inset-0"
+                  {/* ALL-IN preset */}
+                  <motion.button
+                    whileHover={{ scale: 1.06, y: -1 }}
+                    whileTap={{ scale: 0.93 }}
+                    onClick={() => handlePreset(maxBet)}
+                    title="Shove your entire stack"
+                    data-testid="preset-allin"
+                    className="relative overflow-hidden rounded-lg text-[0.75rem] font-black uppercase tracking-wide transition-all"
                     style={{
-                      background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)",
+                      padding: "0.4rem 0.75rem",
+                      color: betAmount === maxBet ? "#fde68a" : "#e5e7eb",
+                      background: betAmount === maxBet
+                        ? "linear-gradient(180deg, rgba(245,158,11,0.3) 0%, rgba(180,83,9,0.2) 100%)"
+                        : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
+                      border: betAmount === maxBet ? "1.5px solid rgba(245,158,11,0.5)" : "1px solid rgba(255,255,255,0.15)",
+                      boxShadow: betAmount === maxBet
+                        ? "0 0 16px rgba(245,158,11,0.25), inset 0 1px 0 rgba(245,158,11,0.15)"
+                        : "0 2px 4px rgba(0,0,0,0.3)",
                     }}
-                    animate={{ x: ["-100%", "100%"] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent h-1/2" />
-                <span className="relative flex flex-col items-center justify-center gap-0.5">
-                  <span className="flex items-center gap-2">
-                    <span className="text-[0.8rem] font-black tracking-[0.15em]">
-                      {isAllIn ? "ALL-IN" : "RAISE"}
-                    </span>
-                    <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">R</kbd>
-                  </span>
-                  {showRaiseSlider && (
-                    <span
-                      className="font-mono text-sm font-black mt-0.5"
-                      style={{
-                        color: isAllIn ? "#fde68a" : "#fef3c7",
-                        textShadow: isAllIn ? "0 0 10px rgba(245,158,11,0.5)" : "0 0 6px rgba(234,179,8,0.3)",
-                      }}
-                    >
-                      ${betAmount.toLocaleString()}
-                    </span>
-                  )}
-                </span>
-              </motion.button>
+                  >
+                    {betAmount === maxBet && <div className="absolute inset-0 bg-gradient-to-b from-white/[0.06] to-transparent" />}
+                    <span className="relative">ALL IN</span>
+                  </motion.button>
+                </div>
+              )}
 
-              {/* Buy Time */}
-              {onBuyTime && isHeroTurn && heroTimeLeft !== undefined && heroTimeLeft < 30 && (
+              {/* Action buttons */}
+              <div className={`flex items-center gap-3 transition-all duration-200 ${!isHeroTurn ? "opacity-35 grayscale pointer-events-none" : ""}`}>
+
+                {/* FOLD */}
                 <motion.button
-                  whileHover={{ scale: 1.08, y: -2 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={onBuyTime}
-                  data-testid="button-buytime"
-                  className={`relative overflow-hidden rounded-xl font-bold text-sm uppercase tracking-wider text-white ${timerUrgent ? "animate-pulse" : ""}`}
+                  whileHover={buttonsDisabled ? {} : { scale: 1.05, y: -2 }}
+                  whileTap={buttonsDisabled ? {} : { scale: 0.93 }}
+                  onClick={handleFold}
+                  disabled={buttonsDisabled}
+                  title="Fold (F)"
+                  data-testid="button-fold"
+                  className={`
+                    relative overflow-hidden rounded-xl min-w-[100px] min-h-[3.25rem]
+                    font-bold uppercase tracking-wider transition-all
+                    ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                  `}
                   style={{
-                    padding: "0.7rem 1rem",
-                    background: "linear-gradient(180deg, #b45309 0%, #92400e 50%, #78350f 100%)",
-                    border: "1px solid rgba(245,158,11,0.3)",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 0 12px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    padding: "0.7rem 1.25rem",
+                    color: "#fff",
+                    background: foldConfirm
+                      ? "linear-gradient(180deg, #ef4444 0%, #dc2626 40%, #b91c1c 100%)"
+                      : "linear-gradient(180deg, #dc2626 0%, #c62828 30%, #991b1b 70%, #7f1d1d 100%)",
+                    border: foldConfirm ? "2px solid rgba(248,113,113,0.7)" : "1px solid rgba(239,68,68,0.25)",
+                    boxShadow: foldConfirm
+                      ? "0 0 32px rgba(239,68,68,0.5), 0 6px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)"
+                      : "0 6px 20px rgba(0,0,0,0.5), 0 0 14px rgba(239,68,68,0.15), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
                   }}
                 >
+                  {foldConfirm && (
+                    <motion.div
+                      className="absolute inset-0"
+                      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 60%)" }}
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 0.8, repeat: Infinity }}
+                    />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent h-1/2" />
-                  <span className="relative">+10s</span>
-                  {bigBlind && <span className="font-mono text-[0.5625rem] opacity-40 ml-1 relative">(${bigBlind})</span>}
-                </motion.button>
-              )}
-            </div>
-
-            {/* Pot + Phase + Auto toggles (right side) */}
-            <div className="shrink-0 flex flex-col items-end gap-2">
-              <div
-                className="flex items-center gap-3 px-4 py-2 rounded-xl"
-                style={{
-                  background: "linear-gradient(135deg, rgba(15,10,3,0.8) 0%, rgba(5,3,1,0.6) 100%)",
-                  border: "1px solid rgba(255,215,0,0.15)",
-                  boxShadow: "0 0 20px rgba(0,0,0,0.4), 0 0 8px rgba(255,215,0,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
-                }}
-              >
-                <span
-                  className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-cyan-400"
-                  style={{ textShadow: "0 0 10px rgba(0,212,255,0.4)" }}
-                  data-testid="text-phase"
-                >
-                  {phaseLabel}
-                </span>
-                <div className="w-px h-6 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
-                <div className="flex flex-col items-center">
-                  <span className="text-[0.5625rem] font-black text-amber-600/70 uppercase tracking-[0.2em] leading-none">POT</span>
-                  <span
-                    className="font-mono font-black text-lg leading-none mt-0.5"
-                    style={{
-                      color: "#ffd700",
-                      textShadow: "0 0 16px rgba(255,215,0,0.5), 0 0 4px rgba(255,215,0,0.2)",
-                    }}
-                    data-testid="text-pot"
-                  >
-                    ${pot.toLocaleString()}
+                  <span className="relative flex items-center justify-center gap-2">
+                    <span className="text-[0.8rem] font-black tracking-[0.15em]">{foldConfirm ? "CONFIRM" : "FOLD"}</span>
+                    <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">F</kbd>
                   </span>
-                </div>
+                </motion.button>
+
+                {/* CHECK / CALL */}
+                <motion.button
+                  whileHover={buttonsDisabled ? {} : { scale: 1.05, y: -2 }}
+                  whileTap={buttonsDisabled ? {} : { scale: 0.93 }}
+                  onClick={needsToCall ? handleCall : handleCheck}
+                  disabled={buttonsDisabled}
+                  title={needsToCall ? `Call $${callAmount} (C)` : "Check (C)"}
+                  data-testid="button-call"
+                  className={`
+                    relative overflow-hidden rounded-xl min-w-[100px] min-h-[3.25rem]
+                    font-bold uppercase tracking-wider transition-all
+                    ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                  `}
+                  style={{
+                    padding: "0.7rem 1.25rem",
+                    color: "#fff",
+                    background: "linear-gradient(180deg, #16a34a 0%, #15803d 30%, #166534 70%, #14532d 100%)",
+                    border: "1px solid rgba(34,197,94,0.3)",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.5), 0 0 16px rgba(34,197,94,0.2), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent h-1/2" />
+                  <span className="relative flex flex-col items-center justify-center gap-0.5">
+                    <span className="flex items-center gap-2">
+                      <span className="text-[0.8rem] font-black tracking-[0.15em]">{needsToCall ? "CALL" : "CHECK"}</span>
+                      <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">C</kbd>
+                    </span>
+                    {needsToCall && (
+                      <span
+                        className="font-mono text-sm font-black text-emerald-200 mt-0.5"
+                        style={{ textShadow: "0 0 8px rgba(34,197,94,0.4)" }}
+                      >
+                        ${callAmount.toLocaleString()}
+                      </span>
+                    )}
+                  </span>
+                </motion.button>
+
+                {/* RAISE / ALL-IN */}
+                <motion.button
+                  whileHover={buttonsDisabled ? {} : { scale: 1.05, y: -2 }}
+                  whileTap={buttonsDisabled ? {} : { scale: 0.93 }}
+                  onClick={() => {
+                    if (buttonsDisabled) return;
+                    if (isAllIn) handleAllIn();
+                    else handleRaise();
+                  }}
+                  disabled={buttonsDisabled}
+                  title={`Raise to $${betAmount.toLocaleString()} (R)`}
+                  data-testid="button-raise"
+                  className={`
+                    relative overflow-hidden rounded-xl min-w-[100px] min-h-[3.25rem]
+                    font-bold uppercase tracking-wider transition-all
+                    ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                  `}
+                  style={{
+                    padding: "0.7rem 1.25rem",
+                    color: "#fff",
+                    background: isAllIn
+                      ? "linear-gradient(180deg, #f59e0b 0%, #d97706 30%, #b45309 60%, #92400e 100%)"
+                      : "linear-gradient(180deg, #eab308 0%, #ca8a04 30%, #a16207 70%, #854d0e 100%)",
+                    border: isAllIn
+                      ? "2px solid rgba(251,191,36,0.5)"
+                      : "1px solid rgba(234,179,8,0.3)",
+                    boxShadow: isAllIn
+                      ? "0 0 36px rgba(245,158,11,0.4), 0 6px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.15)"
+                      : "0 6px 20px rgba(0,0,0,0.5), 0 0 14px rgba(234,179,8,0.2), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {isAllIn && (
+                    <motion.div
+                      className="absolute inset-0"
+                      style={{
+                        background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)",
+                      }}
+                      animate={{ x: ["-100%", "100%"] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent h-1/2" />
+                  <span className="relative flex flex-col items-center justify-center gap-0.5">
+                    <span className="flex items-center gap-2">
+                      <span className="text-[0.8rem] font-black tracking-[0.15em]">
+                        {isAllIn ? "ALL-IN" : "RAISE"}
+                      </span>
+                      <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">R</kbd>
+                    </span>
+                    {showRaiseSlider && (
+                      <span
+                        className="font-mono text-sm font-black mt-0.5"
+                        style={{
+                          color: isAllIn ? "#fde68a" : "#fef3c7",
+                          textShadow: isAllIn ? "0 0 10px rgba(245,158,11,0.5)" : "0 0 6px rgba(234,179,8,0.3)",
+                        }}
+                      >
+                        ${betAmount.toLocaleString()}
+                      </span>
+                    )}
+                  </span>
+                </motion.button>
+
+                {/* Buy Time */}
+                {onBuyTime && isHeroTurn && heroTimeLeft !== undefined && heroTimeLeft < 30 && (
+                  <motion.button
+                    whileHover={{ scale: 1.08, y: -2 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={onBuyTime}
+                    data-testid="button-buytime"
+                    className={`relative overflow-hidden rounded-xl min-h-[3.25rem] font-bold text-sm uppercase tracking-wider text-white ${timerUrgent ? "animate-pulse" : ""}`}
+                    style={{
+                      padding: "0.7rem 1rem",
+                      background: "linear-gradient(180deg, #b45309 0%, #92400e 50%, #78350f 100%)",
+                      border: "1px solid rgba(245,158,11,0.3)",
+                      boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 0 12px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent h-1/2" />
+                    <span className="relative">+10s</span>
+                    {bigBlind && <span className="font-mono text-[0.5625rem] opacity-40 ml-1 relative">(${bigBlind})</span>}
+                  </motion.button>
+                )}
               </div>
 
               {/* Auto toggles */}

@@ -1013,7 +1013,7 @@ function GameTable({
 
               <div
                 ref={tableRef}
-                className="relative w-full"
+                className="relative w-full poker-table-container"
                 style={{ aspectRatio: "16 / 9", maxHeight: screen.tableMaxHeight, maxWidth: screen.isUltrawide ? "min(90%, 180vh)" : "min(95%, 140vh)" }}
               >
                 <ImageTable

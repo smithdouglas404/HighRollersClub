@@ -313,43 +313,24 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 
 /* === RESPONSIVE SCREEN SYSTEM === */
 
+/* Table container for container-query-based scaling */
+.poker-table-container {
+  container-type: size;
+  container-name: poker-table;
+}
+
+/* Avatar sizes scale with the table container so everything grows/shrinks together */
 .avatar-size {
-  width: var(--avatar-size, 100px);
-  height: var(--avatar-size, 100px);
+  width: clamp(48px, 14cqmin, 120px);
+  height: clamp(48px, 14cqmin, 120px);
 }
 
 .sidebar-responsive {
   width: var(--sidebar-w, 208px);
 }
 
-
 @media (max-width: 1399px) {
   .sidebar-responsive { display: none; }
-  .avatar-size {
-    width: clamp(64px, 7vw, 88px);
-    height: clamp(64px, 7vw, 88px);
-  }
-}
-
-@media (min-width: 1024px) and (max-width: 1599px) {
-  .avatar-size {
-    width: clamp(80px, 7vw, 110px);
-    height: clamp(80px, 7vw, 110px);
-  }
-}
-
-@media (min-width: 1600px) and (max-width: 2559px) {
-  .avatar-size {
-    width: clamp(100px, 6vw, 140px);
-    height: clamp(100px, 6vw, 140px);
-  }
-}
-
-@media (min-width: 2560px) {
-  .avatar-size {
-    width: clamp(120px, 5vw, 180px);
-    height: clamp(120px, 5vw, 180px);
-  }
 }
 
 /* Timer urgency pulse animations */
@@ -369,8 +350,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .nameplate-responsive {
-  min-width: calc(var(--avatar-size, 100px) * 1.25);
-  max-width: calc(var(--avatar-size, 100px) * 2.1);
+  min-width: clamp(60px, 17.5cqmin, 150px);
+  max-width: clamp(100px, 29.4cqmin, 252px);
 }
 
 /* ── Glass Panel (dark glass for nameplates & panels) ── */

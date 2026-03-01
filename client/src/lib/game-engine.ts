@@ -293,20 +293,13 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       safety++;
     }
 
-    // Check if everyone is all-in or only one can act — skip straight to showdown
+    // Check if everyone is all-in or only one can act — deal streets one at a time with delay
     const canAct = currentPlayers.filter(p => p.status !== 'folded' && p.isActive && p.chips > 0);
     if (canAct.length <= 1) {
-      // Run out all community cards and go to showdown
-      const currentDeck2 = [...deck];
-      const allCommunity = [...gs.communityCards];
-      while (allCommunity.length < 5 && currentDeck2.length > 0) {
-        allCommunity.push(currentDeck2.pop()!);
-      }
-      setDeck(currentDeck2);
-      setGameState(prev => ({ ...prev, communityCards: allCommunity, phase: nextPhaseName, minBet: 0 }));
+      setDeck(currentDeck);
+      setGameState(prev => ({ ...prev, communityCards: newCommunityCards, phase: nextPhaseName, minBet: 0 }));
       setPlayers(prev => prev.map(p => ({ ...p, currentBet: 0 })));
-      // Continue advancing phases until showdown
-      setTimeout(nextPhase, 800);
+      setTimeout(nextPhase, 2000);
       return;
     }
 

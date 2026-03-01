@@ -1296,12 +1296,33 @@ export class GameEngine {
       return;
     }
 
-    // Deal remaining community cards
-    while (this.state.communityCards.length < 5) {
-      this.deck.pop(); // burn
+    // Deal one street at a time with 2-second delay between each
+    if (this.state.communityCards.length >= 5) {
+      this.goToShowdown();
+      return;
+    }
+
+    if (this.state.communityCards.length === 0) {
+      this.state.phase = "flop";
+      this.deck.pop();
+      this.state.communityCards.push(this.deck.pop()!, this.deck.pop()!, this.deck.pop()!);
+    } else if (this.state.communityCards.length === 3) {
+      this.state.phase = "turn";
+      this.deck.pop();
+      this.state.communityCards.push(this.deck.pop()!);
+    } else if (this.state.communityCards.length === 4) {
+      this.state.phase = "river";
+      this.deck.pop();
       this.state.communityCards.push(this.deck.pop()!);
     }
-    this.goToShowdown();
+
+    this.emitState();
+
+    if (this.state.communityCards.length < 5) {
+      setTimeout(() => this.runOutBoard(), 2000);
+    } else {
+      setTimeout(() => this.goToShowdown(), 2000);
+    }
   }
 
   private goToShowdown() {

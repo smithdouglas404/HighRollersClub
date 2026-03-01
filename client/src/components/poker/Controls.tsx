@@ -265,28 +265,28 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                 <div className={`flex items-center gap-2 transition-opacity duration-200 ${!isHeroTurn ? "opacity-25 pointer-events-none" : ""}`}>
 
                   {/* Preset chips */}
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex gap-1.5 shrink-0">
                     {presets.map((p) => {
                       const isActive = betAmount === p.value;
                       return (
                         <motion.button
                           key={p.label}
-                          whileHover={{ scale: 1.08, y: -1 }}
-                          whileTap={{ scale: 0.92 }}
+                          whileHover={{ scale: 1.06, y: -1 }}
+                          whileTap={{ scale: 0.93 }}
                           onClick={() => handlePreset(p.value)}
                           title={p.tooltip}
                           data-testid={`preset-${p.label.toLowerCase()}`}
-                          className="relative overflow-hidden rounded-lg text-[0.65rem] font-black uppercase tracking-wider transition-all"
+                          className="relative overflow-hidden rounded-lg text-[0.75rem] font-black uppercase tracking-wide transition-all"
                           style={{
-                            padding: "0.35rem 0.65rem",
-                            color: isActive ? "#b5f5ff" : "#d1d5db",
+                            padding: "0.4rem 0.75rem",
+                            color: isActive ? "#b5f5ff" : "#e5e7eb",
                             background: isActive
                               ? "linear-gradient(180deg, rgba(0,212,255,0.25) 0%, rgba(0,120,180,0.2) 100%)"
-                              : "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
-                            border: isActive ? "1.5px solid rgba(0,212,255,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                              : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
+                            border: isActive ? "1.5px solid rgba(0,212,255,0.5)" : "1px solid rgba(255,255,255,0.15)",
                             boxShadow: isActive
                               ? "0 0 16px rgba(0,212,255,0.25), inset 0 1px 0 rgba(0,212,255,0.15)"
-                              : "0 2px 4px rgba(0,0,0,0.2)",
+                              : "0 2px 4px rgba(0,0,0,0.3)",
                           }}
                         >
                           {isActive && <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent" />}
@@ -297,22 +297,22 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
                     {/* ALL-IN preset */}
                     <motion.button
-                      whileHover={{ scale: 1.08, y: -1 }}
-                      whileTap={{ scale: 0.92 }}
+                      whileHover={{ scale: 1.06, y: -1 }}
+                      whileTap={{ scale: 0.93 }}
                       onClick={() => handlePreset(maxBet)}
                       title="Shove your entire stack"
                       data-testid="preset-allin"
-                      className="relative overflow-hidden rounded-lg text-[0.65rem] font-black uppercase tracking-wider transition-all"
+                      className="relative overflow-hidden rounded-lg text-[0.75rem] font-black uppercase tracking-wide transition-all"
                       style={{
-                        padding: "0.35rem 0.65rem",
-                        color: betAmount === maxBet ? "#fde68a" : "#d1d5db",
+                        padding: "0.4rem 0.75rem",
+                        color: betAmount === maxBet ? "#fde68a" : "#e5e7eb",
                         background: betAmount === maxBet
                           ? "linear-gradient(180deg, rgba(245,158,11,0.3) 0%, rgba(180,83,9,0.2) 100%)"
-                          : "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
-                        border: betAmount === maxBet ? "1.5px solid rgba(245,158,11,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                          : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
+                        border: betAmount === maxBet ? "1.5px solid rgba(245,158,11,0.5)" : "1px solid rgba(255,255,255,0.15)",
                         boxShadow: betAmount === maxBet
                           ? "0 0 16px rgba(245,158,11,0.25), inset 0 1px 0 rgba(245,158,11,0.15)"
-                          : "0 2px 4px rgba(0,0,0,0.2)",
+                          : "0 2px 4px rgba(0,0,0,0.3)",
                       }}
                     >
                       {betAmount === maxBet && <div className="absolute inset-0 bg-gradient-to-b from-white/[0.06] to-transparent" />}
@@ -348,8 +348,8 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                       data-testid="bet-slider"
                     />
                     <div className="flex justify-between mt-0.5 px-0.5">
-                      <span className="text-[0.625rem] font-mono text-cyan-400/70 font-bold">${minBet.toLocaleString()}</span>
-                      <span className="text-[0.625rem] font-mono text-cyan-400/70 font-bold">${maxBet.toLocaleString()}</span>
+                      <span className="text-[0.65rem] font-mono text-cyan-300/80 font-bold">${minBet.toLocaleString()}</span>
+                      <span className="text-[0.65rem] font-mono text-cyan-300/80 font-bold">${maxBet.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -407,8 +407,8 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                         }}
                       >
                         <span
-                          className="text-sm font-mono font-black text-cyan-300"
-                          style={{ textShadow: "0 0 10px rgba(0,212,255,0.35)" }}
+                          className="text-base font-mono font-black text-cyan-200"
+                          style={{ textShadow: "0 0 10px rgba(0,212,255,0.4)" }}
                         >
                           ${betAmount.toLocaleString()}
                         </span>

@@ -18,12 +18,12 @@ interface CardProps {
 }
 
 const sizeConfig = {
-  sm:    { w: "w-[52px]",   h: "h-[72px]",   wPx: 52,  hPx: 72,   rankPx: 28,  suitPx: 22  },
-  md:    { w: "w-[72px]",   h: "h-[100px]",  wPx: 72,  hPx: 100,  rankPx: 38,  suitPx: 30  },
-  lg:    { w: "w-[84px]",   h: "h-[118px]",  wPx: 84,  hPx: 118,  rankPx: 46,  suitPx: 36  },
-  xl:    { w: "w-[95px]",   h: "h-[136px]",  wPx: 95,  hPx: 136,  rankPx: 54,  suitPx: 42  },
-  "2xl": { w: "w-[110px]",  h: "h-[156px]",  wPx: 110, hPx: 156,  rankPx: 62,  suitPx: 48  },
-  "3xl": { w: "w-[140px]",  h: "h-[200px]",  wPx: 140, hPx: 200,  rankPx: 80,  suitPx: 62  },
+  sm:    { w: "w-[52px]",   h: "h-[72px]",   wPx: 52,  hPx: 72,   rankPx: 20,  suitPx: 14  },
+  md:    { w: "w-[72px]",   h: "h-[100px]",  wPx: 72,  hPx: 100,  rankPx: 28,  suitPx: 20  },
+  lg:    { w: "w-[84px]",   h: "h-[118px]",  wPx: 84,  hPx: 118,  rankPx: 34,  suitPx: 24  },
+  xl:    { w: "w-[95px]",   h: "h-[136px]",  wPx: 95,  hPx: 136,  rankPx: 40,  suitPx: 28  },
+  "2xl": { w: "w-[110px]",  h: "h-[156px]",  wPx: 110, hPx: 156,  rankPx: 46,  suitPx: 32  },
+  "3xl": { w: "w-[140px]",  h: "h-[200px]",  wPx: 140, hPx: 200,  rankPx: 58,  suitPx: 42  },
 };
 
 const suitSymbol: Record<Suit, string> = {
@@ -35,52 +35,42 @@ const suitSymbol: Record<Suit, string> = {
 
 const isRedSuit = (suit: Suit) => suit === "hearts" || suit === "diamonds";
 
-/* ── Card face matching Poker Now: large rank with suit at its bottom-right ── */
+/* ── Card face: rank centered, suit below + slightly right ── */
 function CardFace({ card, size = "md" }: { card: CardType; size?: keyof typeof sizeConfig }) {
   const s = sizeConfig[size];
   const color = isRedSuit(card.suit) ? "#d40000" : "#1a1a1a";
-  const suitSize = Math.round(s.rankPx * 0.55);
+  const suitNudge = Math.round(s.suitPx * 0.12);
   return (
     <div
-      className="absolute inset-0 rounded-lg overflow-hidden bg-white"
+      className="absolute inset-0 rounded-lg overflow-hidden bg-white flex flex-col items-center justify-center"
       style={{
         border: "1px solid rgba(0,0,0,0.1)",
         boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
       }}
     >
-      <div
-        className="flex items-end justify-center"
+      <span
         style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
+          color,
+          fontSize: `${s.rankPx}px`,
+          fontWeight: 900,
+          lineHeight: 1,
+          fontFamily: "'Arial Black', 'Helvetica Neue', Arial, sans-serif",
+          letterSpacing: "-0.02em",
         }}
       >
-        <span
-          style={{
-            color,
-            fontSize: `${s.rankPx}px`,
-            fontWeight: 900,
-            lineHeight: 0.85,
-            fontFamily: "'Arial Black', 'Helvetica Neue', Arial, sans-serif",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          {card.rank}
-        </span>
-        <span
-          style={{
-            color,
-            fontSize: `${suitSize}px`,
-            lineHeight: 1,
-            marginLeft: `${Math.round(suitSize * 0.05)}px`,
-            marginBottom: `${Math.round(suitSize * 0.05)}px`,
-          }}
-        >
-          {suitSymbol[card.suit]}
-        </span>
-      </div>
+        {card.rank}
+      </span>
+      <span
+        style={{
+          color,
+          fontSize: `${s.suitPx}px`,
+          lineHeight: 1,
+          marginTop: `${Math.round(s.suitPx * 0.1)}px`,
+          marginLeft: `${suitNudge}px`,
+        }}
+      >
+        {suitSymbol[card.suit]}
+      </span>
     </div>
   );
 }

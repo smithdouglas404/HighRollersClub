@@ -319,44 +319,18 @@ function getBetChipDenom(amount: number): StackChip {
 }
 
 function BetChipStack({ amount }: { amount: number }) {
-  const chipCount = Math.min(6, Math.max(1, Math.ceil(amount / 50)));
-  const chip = getBetChipDenom(amount);
   return (
     <div
-      className="relative"
+      className="flex items-center justify-center rounded-full font-mono font-bold text-white text-[0.65rem]"
       style={{
-        width: 24,
-        height: 24 + chipCount * 3,
-        transform: "rotateX(50deg)",
-        transformOrigin: "bottom center",
+        width: 30,
+        height: 30,
+        background: "#eab308",
+        border: "2px solid #ca8a04",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.4)",
       }}
     >
-      {Array.from({ length: chipCount }).map((_, i) => (
-        <svg
-          key={i}
-          width="24" height="24" viewBox="0 0 22 22" fill="none"
-          style={{
-            position: "absolute",
-            bottom: i * 3,
-            left: 0,
-            filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.5))",
-          }}
-        >
-          <circle cx="11" cy="11" r="10" fill={chip.color} stroke={chip.border} strokeWidth="1" />
-          {[0, 60, 120, 180, 240, 300].map(angle => {
-            const rad = (angle * Math.PI) / 180;
-            return (
-              <line key={angle}
-                x1={11 + Math.cos(rad) * 8} y1={11 + Math.sin(rad) * 8}
-                x2={11 + Math.cos(rad) * 10} y2={11 + Math.sin(rad) * 10}
-                stroke={chip.stripe} strokeWidth="2" strokeLinecap="round" opacity="0.5"
-              />
-            );
-          })}
-          <circle cx="11" cy="11" r="6" fill="none" stroke={chip.stripe} strokeWidth="0.6" opacity="0.25" />
-          <circle cx="11" cy="11" r="3" fill={chip.inner} opacity="0.3" />
-        </svg>
-      ))}
+      {amount >= 1000 ? `${(amount / 1000).toFixed(1)}k` : amount}
     </div>
   );
 }
@@ -404,13 +378,13 @@ function getSeatColor(seatIndex: number, isHero: boolean): string {
   return SEAT_COLORS[seatIndex % SEAT_COLORS.length];
 }
 
-// Action badge styling map — standardized opacities: bg /30, border /50, glow 0.20
-const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: string; glow?: string }> = {
-  folded:  { bg: "bg-red-500/30",    text: "text-red-400",    border: "border-red-500/50",   glow: "rgba(239,68,68,0.20)" },
-  called:  { bg: "bg-green-500/30",  text: "text-green-400",  border: "border-green-500/50", glow: "rgba(34,197,94,0.20)" },
-  checked: { bg: "bg-gray-500/30",   text: "text-gray-300",   border: "border-gray-500/50",  glow: "rgba(156,163,175,0.20)" },
-  raised:  { bg: "bg-cyan-500/30",   text: "text-cyan-400",   border: "border-cyan-500/50",  glow: "rgba(0,212,255,0.20)" },
-  "all-in":{ bg: "bg-amber-500/30",  text: "text-amber-400",  border: "border-amber-500/50", glow: "rgba(245,158,11,0.20)" },
+// Action badge styling — simple text colors, no glows
+const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  folded:  { bg: "bg-black/40",  text: "text-red-400",    border: "border-red-500/30"   },
+  called:  { bg: "bg-black/40",  text: "text-green-400",  border: "border-green-500/30" },
+  checked: { bg: "bg-black/40",  text: "text-gray-400",   border: "border-gray-500/30"  },
+  raised:  { bg: "bg-black/40",  text: "text-cyan-400",   border: "border-cyan-500/30"  },
+  "all-in":{ bg: "bg-black/40",  text: "text-amber-400",  border: "border-amber-500/30" },
 };
 
 
@@ -671,16 +645,11 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               exit={{ opacity: 0, y: -6, scale: 0.7 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className={cn(
-                "mb-1.5 px-3 py-1 rounded-lg text-[0.6875rem] font-black uppercase tracking-wider z-30 border backdrop-blur-md",
+                "mb-1.5 px-2 py-0.5 rounded text-[0.65rem] font-bold uppercase tracking-wider z-30 border",
                 ACTION_BADGE_STYLES[player.status]?.bg || "bg-black/40",
                 ACTION_BADGE_STYLES[player.status]?.text || "text-gray-300",
                 ACTION_BADGE_STYLES[player.status]?.border || "border-white/10",
               )}
-              style={{
-                boxShadow: ACTION_BADGE_STYLES[player.status]?.glow
-                  ? `0 0 14px ${ACTION_BADGE_STYLES[player.status].glow}`
-                  : undefined,
-              }}
             >
               {statusLabel[player.status]}
               {/* Show bet amount next to CALL/RAISE */}
@@ -851,10 +820,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
 
         </div>
 
-        {/* ── Visual chip stacks — represent player's stack size ── */}
-        {player.chips > 0 && !isFolded && (
-          <PlayerChipStack chips={player.chips} side={chipStackSide} />
-        )}
+        {/* Player chip stacks removed — clean minimal style */}
 
         {/* ── Opponent HUD stats ── */}
         {hudStats && hudStats.handsPlayed > 0 && (
@@ -908,16 +874,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               }}
             >
               <BetChipStack amount={player.currentBet} />
-              <span
-                className="text-[0.75rem] font-mono font-black px-1.5 py-px rounded-md"
-                style={{
-                  color: "#ffd700",
-                  textShadow: "0 0 8px rgba(255,215,0,0.4)",
-                  background: "rgba(0,0,0,0.55)",
-                }}
-              >
-                {formatChips(player.currentBet)}
-              </span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -940,17 +896,16 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 height: 48,
                 marginLeft: i > 0 ? -10 : 0,
                 transform: `rotate(${i === 0 ? -8 : 8}deg)`,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(212,168,67,0.3)",
-                border: "1px solid rgba(212,168,67,0.4)",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "linear-gradient(135deg, #5a2020, #3a0e0e)",
               }}
             >
-              <div className="w-full h-full flex items-center justify-center"
-                style={{ background: "linear-gradient(145deg, #1a1040 0%, #0d0820 40%, #1a0a30 70%, #0a0618 100%)" }}
-              >
-                <div className="w-4 h-4 rounded-full border border-amber-700/30"
-                  style={{ background: "radial-gradient(circle, rgba(212,168,67,0.12) 0%, transparent 70%)" }}
-                />
-              </div>
+              <div className="w-full h-full opacity-10"
+                style={{
+                  backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.15) 3px, rgba(255,255,255,0.15) 4px), repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(255,255,255,0.15) 3px, rgba(255,255,255,0.15) 4px)",
+                }}
+              />
             </div>
           ))}
         </motion.div>

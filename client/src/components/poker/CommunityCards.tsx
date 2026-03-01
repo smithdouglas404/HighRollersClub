@@ -43,59 +43,22 @@ export function CommunityCards({ cards, pot }: CommunityCardsProps) {
         className="relative"
       >
         <div
-          className="rounded-full px-5 py-2 flex items-center gap-2.5"
+          className="rounded-full px-4 py-1.5 flex items-center gap-2"
           style={{
-            background: "linear-gradient(135deg, rgba(10,15,25,0.9) 0%, rgba(5,10,18,0.95) 100%)",
-            border: "1px solid rgba(0,212,255,0.2)",
-            boxShadow: "0 0 20px rgba(0,212,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04)",
+            background: "rgba(0,0,0,0.7)",
+            border: "1px solid rgba(255,255,255,0.12)",
           }}
         >
-          {/* Chip stack icon */}
-          <div className="relative w-5 h-5">
-            <div className="absolute bottom-0 left-0 w-5 h-5 rounded-full" style={{ background: "linear-gradient(135deg, #ffd700, #00d4ff)", boxShadow: "0 0 6px rgba(0,212,255,0.4)" }} />
-            <div className="absolute bottom-[3px] left-0 w-5 h-5 rounded-full" style={{ background: "linear-gradient(135deg, #e74c3c, #c0392b)", boxShadow: "0 1px 2px rgba(0,0,0,0.3)" }} />
-            <div className="absolute bottom-[6px] left-0 w-5 h-5 rounded-full" style={{ background: "linear-gradient(135deg, #2ecc71, #27ae60)", boxShadow: "0 1px 2px rgba(0,0,0,0.3)" }} />
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[0.625rem] uppercase tracking-[0.15em] text-cyan-500/80 font-bold">POT</span>
-            <span className="text-base font-mono font-black text-cyan-300" style={{ textShadow: "0 0 8px rgba(0,212,255,0.4)" }}>
-              {pot.toLocaleString()}
-            </span>
-            <span className="text-[0.5625rem] text-cyan-600/60 uppercase tracking-wider font-medium">chips</span>
-          </div>
-          {/* Decorative arrow */}
-          <div className="text-cyan-500/40 text-xs ml-0.5">&#x2794;</div>
+          <span className="text-[0.625rem] uppercase tracking-wider text-gray-400 font-bold">POT</span>
+          <span className="text-base font-mono font-black text-white">
+            {pot.toLocaleString()}
+          </span>
         </div>
       </motion.div>
 
       {/* Community cards container */}
       <div className="relative">
-        {/* Holographic backdrop */}
-        <div className="absolute -inset-3 rounded-2xl glass-light" />
-
         <div className="relative flex gap-2 p-2.5 rounded-xl">
-          {/* Burn card animation */}
-          <AnimatePresence>
-            {burnCards.map((id) => (
-              <motion.div
-                key={`burn-${id}`}
-                initial={{ opacity: 1, x: 0, scale: 1 }}
-                animate={{ opacity: 0, x: -60, scale: 0.8 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="absolute -left-2 top-2.5 z-30"
-              >
-                <div
-                  className="w-[52px] h-[74px] rounded-lg"
-                  style={{
-                    background: "linear-gradient(135deg, #1a1a2e, #16213e)",
-                    border: "1.5px solid rgba(0,212,255,0.4)",
-                    boxShadow: "0 0 12px rgba(255,165,0,0.3), 0 0 4px rgba(255,165,0,0.2)",
-                  }}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
 
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="relative">

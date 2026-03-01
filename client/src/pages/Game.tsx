@@ -604,36 +604,38 @@ function GameTable({
                       boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
                     }}
                   >
-                    {/* AI Commentary Toggle */}
-                    <button
-                      onClick={() => {
-                        const next = !commentaryEnabled;
-                        setCommentaryEnabled(next);
-                        commentaryPlayer.enabled = next;
-                        if (isMultiplayer) wsClient.send({ type: "commentary_toggle", enabled: next } as any);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
-                    >
-                      {commentaryEnabled
-                        ? <Mic className="w-4 h-4 text-purple-400" />
-                        : <MicOff className="w-4 h-4 text-gray-500" />
-                      }
-                      <div className="flex-1">
-                        <div className={`text-xs font-bold ${commentaryEnabled ? "text-purple-400" : "text-gray-300"}`}>AI Commentary</div>
-                        <div className="text-[0.6rem] text-gray-500">Live play-by-play broadcast</div>
-                      </div>
-                      <div className={`w-7 h-4 rounded-full relative transition-colors ${commentaryEnabled ? "bg-purple-500" : "bg-gray-600"}`}>
-                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${commentaryEnabled ? "left-[14px]" : "left-0.5"}`} />
-                      </div>
-                    </button>
+                    {/* AI Commentary Toggle — multiplayer only */}
+                    {isMultiplayer && (
+                      <button
+                        onClick={() => {
+                          const next = !commentaryEnabled;
+                          setCommentaryEnabled(next);
+                          commentaryPlayer.enabled = next;
+                          wsClient.send({ type: "commentary_toggle", enabled: next } as any);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
+                      >
+                        {commentaryEnabled
+                          ? <Mic className="w-4 h-4 text-purple-400" />
+                          : <MicOff className="w-4 h-4 text-gray-500" />
+                        }
+                        <div className="flex-1">
+                          <div className={`text-xs font-bold ${commentaryEnabled ? "text-purple-400" : "text-gray-300"}`}>AI Commentary</div>
+                          <div className="text-[0.6rem] text-gray-500">Live play-by-play broadcast</div>
+                        </div>
+                        <div className={`w-7 h-4 rounded-full relative transition-colors ${commentaryEnabled ? "bg-purple-500" : "bg-gray-600"}`}>
+                          <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${commentaryEnabled ? "left-[14px]" : "left-0.5"}`} />
+                        </div>
+                      </button>
+                    )}
 
-                    {/* Show Hole Cards (omniscient) — only when commentary enabled */}
-                    {commentaryEnabled && (
+                    {/* Show Hole Cards (omniscient) — only when commentary enabled in multiplayer */}
+                    {isMultiplayer && commentaryEnabled && (
                       <button
                         onClick={() => {
                           const next = !commentaryOmniscient;
                           setCommentaryOmniscient(next);
-                          if (isMultiplayer) wsClient.send({ type: "commentary_omniscient", enabled: next } as any);
+                          wsClient.send({ type: "commentary_omniscient", enabled: next } as any);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/8 transition-colors border-b border-white/5"
                       >
@@ -710,20 +712,22 @@ function GameTable({
             {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-gray-500" />}
           </button>
 
-          {/* AI Commentary controls — available in all game modes */}
-          <CommentaryControls
-            enabled={commentaryEnabled}
-            omniscientMode={commentaryOmniscient}
-            onToggle={(enabled) => {
-              setCommentaryEnabled(enabled);
-              commentaryPlayer.enabled = enabled;
-              if (isMultiplayer) wsClient.send({ type: "commentary_toggle", enabled } as any);
-            }}
-            onOmniscientToggle={(enabled) => {
-              setCommentaryOmniscient(enabled);
-              if (isMultiplayer) wsClient.send({ type: "commentary_omniscient", enabled } as any);
-            }}
-          />
+          {/* AI Commentary controls — multiplayer only */}
+          {isMultiplayer && (
+            <CommentaryControls
+              enabled={commentaryEnabled}
+              omniscientMode={commentaryOmniscient}
+              onToggle={(enabled) => {
+                setCommentaryEnabled(enabled);
+                commentaryPlayer.enabled = enabled;
+                wsClient.send({ type: "commentary_toggle", enabled } as any);
+              }}
+              onOmniscientToggle={(enabled) => {
+                setCommentaryOmniscient(enabled);
+                wsClient.send({ type: "commentary_omniscient", enabled } as any);
+              }}
+            />
+          )}
 
           {/* BGM controls */}
           <div className="relative">

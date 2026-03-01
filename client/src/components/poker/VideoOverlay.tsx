@@ -57,6 +57,63 @@ export function VideoThumbnail({ userId, isLocal = false }: VideoThumbnailProps)
   );
 }
 
+// ─── Local Webcam — simple getUserMedia feed, no Daily.co needed ────────────
+
+export function LocalWebcam() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [hasStream, setHasStream] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(stream => {
+        if (cancelled) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        setHasStream(true);
+      })
+      .catch(() => {
+        setHasStream(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
+  if (!hasStream) return null;
+
+  return (
+    <div
+      className="absolute inset-0 rounded-xl overflow-hidden z-[2]"
+      style={{
+        boxShadow: "0 0 12px rgba(0,212,255,0.3), inset 0 0 6px rgba(0,212,255,0.1)",
+        border: "2px solid rgba(0,212,255,0.5)",
+      }}
+    >
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="w-full h-full object-cover"
+        style={{ transform: "scaleX(-1)" }}
+      />
+      <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+    </div>
+  );
+}
+
 // ─── Video Grid — fixed bottom-left panel with all player feeds ─────────────
 
 import { ChevronDown, ChevronUp } from "lucide-react";

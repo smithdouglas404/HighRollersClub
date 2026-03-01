@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { triggerChipFlight } from "./ChipAnimation";
 import { AvatarStatusRing } from "./AvatarStatusRing";
 import { TimerRing } from "./TimerRing";
-import { VideoThumbnail } from "./VideoOverlay";
+import { VideoThumbnail, LocalWebcam } from "./VideoOverlay";
 import { useTimerCountdown } from "@/hooks/useTimerCountdown";
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
 import { StickyNote } from "lucide-react";
@@ -429,6 +429,8 @@ interface SeatProps {
   winStreak?: number;
   /** Whether to show video thumbnail for this player */
   showVideo?: boolean;
+  /** Whether to show local webcam for hero (works without Daily.co) */
+  showLocalWebcam?: boolean;
   /** Number of cards to visually show (0, 1, or 2) during dealing animation */
   dealCardCount?: number;
   /** Server turn deadline for timer (multiplayer) */
@@ -437,7 +439,7 @@ interface SeatProps {
   turnTimerDuration?: number;
 }
 
-export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false, hudStats, avatarTier, winStreak = 0, showVideo = false, dealCardCount, turnDeadline, turnTimerDuration = 30 }: SeatProps) {
+export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false, hudStats, avatarTier, winStreak = 0, showVideo = false, showLocalWebcam = false, dealCardCount, turnDeadline, turnTimerDuration = 30 }: SeatProps) {
   const { compactMode } = useGameUI();
   const winnerCanvasRef = useWinnerParticles(isWinner && !compactMode);
 
@@ -695,6 +697,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         <div ref={avatarRef} className="relative z-10 mb-0.5">
           {/* Video thumbnail overlay */}
           {showVideo && <VideoThumbnail userId={player.id} isLocal={isHero} size={48} />}
+          {showLocalWebcam && isHero && !showVideo && <LocalWebcam />}
           {/* Avatar Status Ring — tier/streak/classification */}
           {avatarTier && avatarTier !== "common" && (
             <AvatarStatusRing

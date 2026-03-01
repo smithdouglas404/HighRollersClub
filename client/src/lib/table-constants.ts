@@ -1,5 +1,5 @@
 export const TABLE_SEATS = [
-  { x: 50, y: 78, scale: 1.0 },  // 0: Hero (bottom center)
+  { x: 50, y: 85, scale: 1.0 },  // 0: Hero (bottom center)
   { x: 14, y: 72, scale: 1.0 },  // 1: bottom-left
   { x: 6,  y: 48, scale: 1.0 },  // 2: left
   { x: 14, y: 24, scale: 1.0 },  // 3: top-left

@@ -1008,7 +1008,7 @@ function GameTable({
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Table area */}
           <div className="flex-1 relative overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center" style={{ marginTop: "-1%" }}>
               <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 45%, #1a2744 0%, #131d30 40%, #0e1624 70%, #0a101c 100%)" }} />
 
               <div

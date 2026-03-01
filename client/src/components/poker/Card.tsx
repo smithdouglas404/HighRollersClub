@@ -17,91 +17,68 @@ interface CardProps {
   flipDelay?: number;
 }
 
+/* ── Suit glow colors for hero card shadows (standard: red suits / black suits) ── */
+const suitGlow: Record<Suit, string> = {
+  hearts:   "rgba(220,38,38,0.5)",
+  diamonds: "rgba(220,38,38,0.5)",
+  clubs:    "rgba(51,65,85,0.5)",
+  spades:   "rgba(51,65,85,0.5)",
+};
+
 const sizeConfig = {
-  sm:    { w: "w-[52px]",   h: "h-[72px]",   wPx: 52,  hPx: 72,   rankPx: 20,  suitPx: 14  },
-  md:    { w: "w-[72px]",   h: "h-[100px]",  wPx: 72,  hPx: 100,  rankPx: 28,  suitPx: 20  },
-  lg:    { w: "w-[84px]",   h: "h-[118px]",  wPx: 84,  hPx: 118,  rankPx: 34,  suitPx: 24  },
-  xl:    { w: "w-[95px]",   h: "h-[136px]",  wPx: 95,  hPx: 136,  rankPx: 40,  suitPx: 28  },
-  "2xl": { w: "w-[110px]",  h: "h-[156px]",  wPx: 110, hPx: 156,  rankPx: 46,  suitPx: 32  },
-  "3xl": { w: "w-[140px]",  h: "h-[200px]",  wPx: 140, hPx: 200,  rankPx: 58,  suitPx: 42  },
+  sm:    { w: "w-[52px]",   h: "h-[72px]",   wPx: 52,  hPx: 72  },
+  md:    { w: "w-[72px]",   h: "h-[100px]",  wPx: 72,  hPx: 100 },
+  lg:    { w: "w-[84px]",   h: "h-[118px]",  wPx: 84,  hPx: 118 },
+  xl:    { w: "w-[95px]",   h: "h-[136px]",  wPx: 95,  hPx: 136 },
+  "2xl": { w: "w-[110px]",  h: "h-[156px]",  wPx: 110, hPx: 156 },
+  "3xl": { w: "w-[140px]",  h: "h-[200px]",  wPx: 140, hPx: 200 },
 };
 
-const suitSymbol: Record<Suit, string> = {
-  hearts: "♥",
-  diamonds: "♦",
-  clubs: "♣",
-  spades: "♠",
-};
-
-const isRedSuit = (suit: Suit) => suit === "hearts" || suit === "diamonds";
-
-/* ── Card face: rank centered, suit below + slightly right ── */
-function CardFace({ card, size = "md" }: { card: CardType; size?: keyof typeof sizeConfig }) {
-  const s = sizeConfig[size];
-  const color = isRedSuit(card.suit) ? "#d40000" : "#1a1a1a";
-  const suitNudge = Math.round(s.suitPx * 0.12);
-  return (
-    <div
-      className="absolute inset-0 rounded-lg overflow-hidden bg-white flex flex-col items-center justify-center"
-      style={{
-        border: "1px solid rgba(0,0,0,0.1)",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-      }}
-    >
-      <span
-        style={{
-          color,
-          fontSize: `${s.rankPx}px`,
-          fontWeight: 900,
-          lineHeight: 1,
-          fontFamily: "'Arial Black', 'Helvetica Neue', Arial, sans-serif",
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {card.rank}
-      </span>
-      <span
-        style={{
-          color,
-          fontSize: `${s.suitPx}px`,
-          lineHeight: 1,
-          marginTop: `${Math.round(s.suitPx * 0.1)}px`,
-          marginLeft: `${suitNudge}px`,
-        }}
-      >
-        {suitSymbol[card.suit]}
-      </span>
-    </div>
-  );
+/* ── Card image URLs (Doug's SVG deck) ── */
+function getCardFaceUrl(rank: string, suit: string): string {
+  return `/cards/${rank}_${suit}.svg`;
 }
 
-/* ── Card back: dark maroon ── */
-function CardBack({ imageUrl }: { imageUrl?: string }) {
-  if (imageUrl) {
-    return (
-      <div className="absolute inset-0 rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
-        <img src={imageUrl} alt="card back" className="w-full h-full object-cover" draggable={false} />
-      </div>
-    );
-  }
+const CARD_BACK_URL = "/cards/card_back.webp";
+
+/* ── Card face: Nano Banana generated image ── */
+function CardFace({ card, isHero }: { card: CardType; isHero: boolean }) {
   return (
-    <div
-      className="absolute inset-0 rounded-lg overflow-hidden"
-      style={{
-        background: "linear-gradient(135deg, #5a2020, #3a0e0e)",
-        border: "1px solid rgba(255,255,255,0.1)",
-      }}
-    >
-      {/* Subtle cross-hatch pattern */}
-      <div className="absolute inset-0 opacity-10" style={{
-        backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.15) 4px, rgba(255,255,255,0.15) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(255,255,255,0.15) 4px, rgba(255,255,255,0.15) 5px)",
+    <div className="absolute inset-0 rounded-lg overflow-hidden" style={{
+      border: isHero ? "2px solid #00d4ff" : "1.5px solid #c9a84c",
+      boxShadow: isHero ? "inset 0 0 8px rgba(0,212,255,0.1)" : "inset 0 0 4px rgba(201,168,76,0.08)",
+    }}>
+      <img
+        src={getCardFaceUrl(card.rank, card.suit)}
+        alt={`${card.rank} of ${card.suit}`}
+        className="w-full h-full object-cover"
+        draggable={false}
+      />
+      {/* Light sheen overlay */}
+      <div className="absolute inset-0 rounded-lg pointer-events-none" style={{
+        background: "linear-gradient(155deg, rgba(255,255,255,0.18) 0%, transparent 25%, transparent 65%, rgba(255,255,255,0.05) 100%)",
       }} />
     </div>
   );
 }
 
+/* ── Card back: Nano Banana generated image ── */
+function CardBack({ imageUrl }: { imageUrl?: string }) {
+  const src = imageUrl || CARD_BACK_URL;
+  return (
+    <div className="absolute inset-0 rounded-lg p-[1.5px]"
+      style={{ background: "linear-gradient(135deg, #00d4ff 0%, #0077aa 25%, #00d4ff 50%, #0077aa 75%, #00d4ff 100%)" }}
+    >
+      <div className="w-full h-full rounded-[6px] overflow-hidden relative">
+        <img src={src} alt="card back" className="w-full h-full object-cover" draggable={false} />
+        <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-white/[0.06] to-transparent" style={{ height: "25%" }} />
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   MAIN CARD COMPONENT
+   MAIN CARD COMPONENT — Nano Banana images + animations
    ═══════════════════════════════════════════════════════════════════════════ */
 export function Card({
   card,
@@ -115,6 +92,7 @@ export function Card({
   flipDelay = 0,
 }: CardProps) {
   const s = sizeConfig[size];
+  const [holoActive, setHoloActive] = useState(false);
   const [hasFlipped, setHasFlipped] = useState(false);
   let compactMode = false;
   let cardBackImageUrl: string | undefined;
@@ -197,7 +175,7 @@ export function Card({
             className="absolute inset-0 rounded-lg"
             style={{ backfaceVisibility: "hidden", rotateY: 180, opacity: frontOpacity }}
           >
-            <CardFace card={card} size={size} />
+            <CardFace card={card} isHero={isHero} />
           </motion.div>
         </motion.div>
       </motion.div>
@@ -211,8 +189,9 @@ export function Card({
         {...dealAnimation}
         onAnimationComplete={() => onDealt?.()}
         className={cn(
-          "relative rounded-lg overflow-hidden select-none card-shadow",
+          "relative rounded-lg overflow-hidden select-none",
           s.w, s.h,
+          isHero ? "card-shadow-hero" : "card-shadow",
           className
         )}
       >
@@ -222,19 +201,52 @@ export function Card({
   }
 
   // ── Branch 3: Normal face-up card ──
+  const glow = suitGlow[card.suit];
+
   return (
     <motion.div
       initial={compactMode ? { rotateY: 0, scale: 1, opacity: 1 } : { rotateY: 180, scale: 0.6, opacity: 0 }}
       animate={{ rotateY: 0, scale: 1, opacity: 1 }}
       transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 180, damping: 16, delay }}
-      onAnimationComplete={() => onDealt?.()}
+      whileHover={isHero && !compactMode ? {
+        rotateY: -12,
+        rotateX: 8,
+        y: -14,
+        scale: 1.08,
+        transition: { duration: 0.25 },
+      } : undefined}
+      onAnimationComplete={() => {
+        if (isHero && !compactMode) setHoloActive(true);
+        onDealt?.();
+      }}
       className={cn(
-        "relative rounded-lg overflow-hidden select-none cursor-default card-shadow",
+        "relative rounded-lg overflow-hidden select-none cursor-default",
         s.w, s.h,
+        isHero ? "card-shadow-hero" : "card-shadow",
         className
       )}
+      style={{
+        boxShadow: isHero
+          ? `0 4px 12px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.3), 0 0 24px ${glow}`
+          : `0 2px 8px rgba(0,0,0,0.4), 0 6px 16px rgba(0,0,0,0.25)`,
+        transformOrigin: isHero ? "left center" : "center center",
+      }}
     >
-      <CardFace card={card} size={size} />
+      <CardFace card={card} isHero={isHero} />
+
+      {/* Holographic sweep on hero cards */}
+      {holoActive && (
+        <div
+          className="absolute inset-0 rounded-lg pointer-events-none"
+          style={{
+            background: "linear-gradient(105deg, rgba(255,0,0,0.12) 0%, rgba(255,154,0,0.12) 10%, rgba(208,222,33,0.12) 20%, rgba(79,220,74,0.12) 30%, rgba(63,218,216,0.12) 40%, rgba(47,201,226,0.12) 50%, rgba(28,127,238,0.12) 60%, rgba(95,21,242,0.12) 70%, rgba(186,12,248,0.12) 80%, rgba(251,7,217,0.12) 90%, rgba(255,0,0,0.12) 100%)",
+            backgroundSize: "200% 100%",
+            animation: "holoSweep 1.5s ease-out forwards",
+            mixBlendMode: "screen",
+          }}
+          onAnimationEnd={() => setHoloActive(false)}
+        />
+      )}
     </motion.div>
   );
 }

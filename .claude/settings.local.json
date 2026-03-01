@@ -75,8 +75,7 @@
       "Bash(npx tsc --noEmit --pretty 2>&1 | grep \"error TS\")",
       "Bash(npx drizzle-kit push 2>&1 | tail -20)",
       "Bash(grep -r \"showVideo\" /home/runner/workspace/client/src --include=\"*.tsx\" 2>/dev/null | head -20)",
-      "Bash(npx vite build --config /home/runner/workspace/vite.config.ts 2>&1 | tail -10)",
-      "Bash(ls client/tsconfig*.json 2>/dev/null; ls client/vite.config.* 2>/dev/null)"
+      "Bash(npx vite build --config /home/runner/workspace/vite.config.ts 2>&1 | tail -10)"
     ]
   }
 }

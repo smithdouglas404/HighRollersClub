@@ -162,6 +162,12 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes holoSweep {
+  0% { opacity: 0; background-position: -200% 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.3; }
+  100% { opacity: 0; background-position: 200% 0; }
+}
 
 @keyframes avatarShake {
   0%, 100% { transform: translateX(0); }
@@ -220,7 +226,20 @@
 /* scanlines removed — unnecessary visual noise */
 
 .card-shadow {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 8px rgba(0, 0, 0, 0.25),
+    0 10px 20px rgba(0, 0, 0, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.1) inset;
+}
+
+.card-shadow-hero {
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 8px 16px rgba(0, 0, 0, 0.35),
+    0 16px 32px rgba(0, 0, 0, 0.25),
+    0 0 30px rgba(0, 212, 255, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.15) inset;
 }
 
 .gold-gradient {

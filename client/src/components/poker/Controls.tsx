@@ -22,18 +22,9 @@ interface ControlsProps {
   handBadgeSlot?: ReactNode;
 }
 
-/* ── Flat button style helper ── */
-const flatBtn = (borderColor: string, textColor: string, dim = false) => ({
-  padding: "0.7rem 1.25rem",
-  color: textColor,
-  background: dim ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.6)",
-  border: `2px solid ${borderColor}`,
-  boxShadow: "none",
-});
-
 export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, phase, currentTurnSeat, isHeroTurn, onBuyTime, bigBlind, heroTimeLeft, heroStatus, heroCardsSlot, handBadgeSlot }: ControlsProps) {
   const [betAmount, setBetAmount] = useState(minBet);
-  const [showRaisePanel, setShowRaisePanel] = useState(false);
+  const [showRaiseSlider, setShowRaiseSlider] = useState(false);
   useEffect(() => {
     setBetAmount(prev => prev < minBet ? minBet : prev);
   }, [minBet]);
@@ -85,7 +76,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     setIsPending(false);
     setFoldConfirm(false);
     setShowCustomInput(false);
-    setShowRaisePanel(false);
+    setShowRaiseSlider(true);
     setBetAmount(minBet);
   }, [phase, currentTurnSeat, minBet]);
 
@@ -158,7 +149,6 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
   const handleRaise = useCallback(() => {
     if (isPending) return;
     setIsPending(true);
-    setShowRaisePanel(false);
     sound.playRaise();
     sound.playChipSlide();
     onAction("raise", betAmount);
@@ -167,7 +157,6 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
   const handleAllIn = useCallback(() => {
     if (isPending) return;
     setIsPending(true);
-    setShowRaisePanel(false);
     sound.playRaise();
     sound.playChipSlide();
     onAction("raise", maxBet);
@@ -190,24 +179,20 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
           else handleCheck();
           break;
         case "r":
-          if (showRaisePanel) {
-            if (isAllIn) handleAllIn();
-            else handleRaise();
-          } else {
-            setShowRaisePanel(true);
-          }
+          if (isAllIn) handleAllIn();
+          else handleRaise();
           break;
         case "a":
           handleAllIn();
           break;
         case "escape":
-          setShowRaisePanel(false);
+          setShowRaiseSlider(false);
           break;
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isPending, needsToCall, isAllIn, showRaisePanel, handleFoldKeyboard, handleCall, handleCheck, handleRaise, handleAllIn, isHeroTurn]);
+  }, [isPending, needsToCall, isAllIn, showRaiseSlider, handleFoldKeyboard, handleCall, handleCheck, handleRaise, handleAllIn]);
 
   useEffect(() => {
     return () => { if (foldTimerRef.current) clearTimeout(foldTimerRef.current); };
@@ -259,99 +244,78 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
         className="px-4 pb-3 pt-1.5"
         style={{
           background: "linear-gradient(180deg, rgba(8,14,24,0.97) 0%, rgba(4,8,16,0.99) 100%)",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid rgba(0,212,255,0.08)",
+          boxShadow: "0 -8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
         }}
       >
         <div className="max-w-5xl mx-auto flex flex-col gap-2">
 
-          {/* === Raise Panel (hidden until RAISE clicked) === */}
+          {/* === ROW 1: Bet Slider === */}
           <AnimatePresence>
-            {showRaisePanel && isHeroTurn && (
+            {(showRaiseSlider || isHeroTurn) && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.15 }}
+                transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="flex flex-col gap-2 py-1">
-                  {/* Presets */}
-                  <div className="flex items-center justify-center gap-2">
-                    {presets.map((p) => {
-                      const isActive = betAmount === p.value;
-                      return (
-                        <button
-                          key={p.label}
-                          onClick={() => handlePreset(p.value)}
-                          title={p.tooltip}
-                          data-testid={`preset-${p.label.toLowerCase()}`}
-                          className="rounded-lg text-[0.75rem] font-bold uppercase tracking-wide transition-all"
-                          style={{
-                            padding: "0.35rem 0.7rem",
-                            color: isActive ? "#22c55e" : "#888",
-                            background: "rgba(0,0,0,0.4)",
-                            border: isActive ? "1.5px solid #22c55e" : "1px solid rgba(255,255,255,0.12)",
-                          }}
-                        >
-                          {p.label}
-                        </button>
-                      );
-                    })}
-                    <button
-                      onClick={() => handlePreset(maxBet)}
-                      data-testid="preset-allin"
-                      className="rounded-lg text-[0.75rem] font-bold uppercase tracking-wide transition-all"
-                      style={{
-                        padding: "0.35rem 0.7rem",
-                        color: betAmount === maxBet ? "#f59e0b" : "#888",
-                        background: "rgba(0,0,0,0.4)",
-                        border: betAmount === maxBet ? "1.5px solid #f59e0b" : "1px solid rgba(255,255,255,0.12)",
-                      }}
-                    >
-                      ALL IN
-                    </button>
+                <div className={`flex items-center gap-2 transition-opacity duration-200 ${!isHeroTurn ? "opacity-25 pointer-events-none" : ""}`}>
+
+                  {/* Stepper - */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.85 }}
+                    onClick={stepDown}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-cyan-300/80 hover:text-cyan-200 transition-all shrink-0"
+                    style={{
+                      background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 100%)",
+                      border: "1px solid rgba(0,212,255,0.2)",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                    }}
+                    data-testid="bet-minus"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </motion.button>
+
+                  {/* Slider */}
+                  <div className="flex-1 relative px-1">
+                    <Slider
+                      value={[betAmount]}
+                      max={maxBet}
+                      min={minBet}
+                      step={sliderStep}
+                      onValueChange={(val) => { setBetAmount(val[0]); setShowCustomInput(false); }}
+                      className="flex-1"
+                      data-testid="bet-slider"
+                    />
+                    <div className="flex justify-between mt-0.5 px-0.5">
+                      <span className="text-[0.65rem] font-mono text-cyan-300/80 font-bold">${minBet.toLocaleString()}</span>
+                      <span className="text-[0.65rem] font-mono text-cyan-300/80 font-bold">${maxBet.toLocaleString()}</span>
+                    </div>
                   </div>
 
-                  {/* Slider row */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={stepDown}
-                      className="w-7 h-7 rounded flex items-center justify-center text-gray-400 hover:text-white transition-colors shrink-0"
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
-                      data-testid="bet-minus"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
+                  {/* Stepper + */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.85 }}
+                    onClick={stepUp}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-cyan-300/80 hover:text-cyan-200 transition-all shrink-0"
+                    style={{
+                      background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 100%)",
+                      border: "1px solid rgba(0,212,255,0.2)",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                    }}
+                    data-testid="bet-plus"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </motion.button>
 
-                    <div className="flex-1 px-1">
-                      <Slider
-                        value={[betAmount]}
-                        max={maxBet}
-                        min={minBet}
-                        step={sliderStep}
-                        onValueChange={(val) => { setBetAmount(val[0]); setShowCustomInput(false); }}
-                        className="flex-1"
-                        data-testid="bet-slider"
-                      />
-                      <div className="flex justify-between mt-0.5 px-0.5">
-                        <span className="text-[0.6rem] font-mono text-gray-500">${minBet.toLocaleString()}</span>
-                        <span className="text-[0.6rem] font-mono text-gray-500">${maxBet.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={stepUp}
-                      className="w-7 h-7 rounded flex items-center justify-center text-gray-400 hover:text-white transition-colors shrink-0"
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
-                      data-testid="bet-plus"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Bet amount / custom input */}
+                  {/* Bet amount display / custom input */}
+                  <div className="relative shrink-0">
                     {showCustomInput ? (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-sm font-mono text-white">$</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-lg font-mono text-cyan-400 font-black">$</span>
                         <input
                           ref={customInputRef}
                           type="number"
@@ -365,48 +329,40 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                           min={minBet}
                           max={maxBet}
                           data-testid="custom-bet-input"
-                          className="w-24 rounded px-2 py-1.5 text-sm font-mono font-bold text-white bg-white/5 border border-white/20 outline-none focus:border-white/40"
+                          className="w-28 rounded-xl px-3 py-2.5 text-base font-mono font-black text-cyan-300 bg-cyan-500/10 border-2 border-cyan-500/40 outline-none focus:border-cyan-400/70"
                           style={{ appearance: "textfield" }}
                         />
                       </div>
                     ) : (
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
                         onClick={() => setShowCustomInput(true)}
                         data-testid="bet-amount-display"
-                        className="rounded px-3 py-1.5 min-w-[80px] text-center cursor-text shrink-0"
+                        className="rounded-lg min-w-[90px] text-center cursor-text transition-all"
                         title="Click to type a custom amount"
                         style={{
-                          background: "rgba(255,255,255,0.05)",
-                          border: "1px solid rgba(255,255,255,0.15)",
+                          padding: "0.4rem 0.875rem",
+                          background: "linear-gradient(180deg, rgba(0,212,255,0.12) 0%, rgba(0,100,150,0.08) 100%)",
+                          border: "1.5px solid rgba(0,212,255,0.3)",
+                          boxShadow: "0 0 12px rgba(0,212,255,0.1), inset 0 1px 0 rgba(0,212,255,0.05)",
                         }}
                       >
-                        <span className="text-sm font-mono font-bold text-white">
+                        <span
+                          className="text-base font-mono font-black text-cyan-200"
+                          style={{ textShadow: "0 0 10px rgba(0,212,255,0.4)" }}
+                        >
                           ${betAmount.toLocaleString()}
                         </span>
-                      </button>
+                      </motion.button>
                     )}
-
-                    {/* Confirm raise */}
-                    <button
-                      onClick={() => { if (isAllIn) handleAllIn(); else handleRaise(); }}
-                      data-testid="confirm-raise"
-                      className="rounded-lg text-sm font-bold uppercase tracking-wide shrink-0 transition-all"
-                      style={{
-                        padding: "0.5rem 1rem",
-                        color: isAllIn ? "#f59e0b" : "#22c55e",
-                        background: "rgba(0,0,0,0.6)",
-                        border: `2px solid ${isAllIn ? "#f59e0b" : "#22c55e"}`,
-                      }}
-                    >
-                      {isAllIn ? `ALL IN $${maxBet.toLocaleString()}` : `RAISE $${betAmount.toLocaleString()}`}
-                    </button>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* === Main row: Hero cards + Action Buttons === */}
+          {/* === ROW 2: Hero cards + Presets + Action Buttons === */}
           <div className="flex items-center gap-4">
 
             {/* Hero cards + hand badge */}
@@ -417,103 +373,230 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
               </div>
             )}
 
-            {/* Action buttons (always visible) */}
+            {/* Center column: Presets + Action buttons + Auto toggles */}
             <div className="flex flex-col items-center gap-1.5 flex-1">
-              <div className={`flex items-center gap-3 transition-all duration-200 ${!isHeroTurn ? "opacity-35 pointer-events-none" : ""}`}>
 
-                {/* CALL / CHECK */}
-                <button
+              {/* Preset chips (above action buttons) */}
+              {(showRaiseSlider || isHeroTurn) && (
+                <div className={`flex gap-1.5 transition-opacity duration-200 ${!isHeroTurn ? "opacity-25 pointer-events-none" : ""}`}>
+                  {presets.map((p) => {
+                    const isActive = betAmount === p.value;
+                    return (
+                      <motion.button
+                        key={p.label}
+                        whileHover={{ scale: 1.06, y: -1 }}
+                        whileTap={{ scale: 0.93 }}
+                        onClick={() => handlePreset(p.value)}
+                        title={p.tooltip}
+                        data-testid={`preset-${p.label.toLowerCase()}`}
+                        className="relative overflow-hidden rounded-lg text-[0.75rem] font-black uppercase tracking-wide transition-all"
+                        style={{
+                          padding: "0.4rem 0.75rem",
+                          color: isActive ? "#b5f5ff" : "#e5e7eb",
+                          background: isActive
+                            ? "linear-gradient(180deg, rgba(0,212,255,0.25) 0%, rgba(0,120,180,0.2) 100%)"
+                            : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
+                          border: isActive ? "1.5px solid rgba(0,212,255,0.5)" : "1px solid rgba(255,255,255,0.15)",
+                          boxShadow: isActive
+                            ? "0 0 16px rgba(0,212,255,0.25), inset 0 1px 0 rgba(0,212,255,0.15)"
+                            : "0 2px 4px rgba(0,0,0,0.3)",
+                        }}
+                      >
+                        {isActive && <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent" />}
+                        <span className="relative">{p.label}</span>
+                      </motion.button>
+                    );
+                  })}
+
+                  {/* ALL-IN preset */}
+                  <motion.button
+                    whileHover={{ scale: 1.06, y: -1 }}
+                    whileTap={{ scale: 0.93 }}
+                    onClick={() => handlePreset(maxBet)}
+                    title="Shove your entire stack"
+                    data-testid="preset-allin"
+                    className="relative overflow-hidden rounded-lg text-[0.75rem] font-black uppercase tracking-wide transition-all"
+                    style={{
+                      padding: "0.4rem 0.75rem",
+                      color: betAmount === maxBet ? "#fde68a" : "#e5e7eb",
+                      background: betAmount === maxBet
+                        ? "linear-gradient(180deg, rgba(245,158,11,0.3) 0%, rgba(180,83,9,0.2) 100%)"
+                        : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
+                      border: betAmount === maxBet ? "1.5px solid rgba(245,158,11,0.5)" : "1px solid rgba(255,255,255,0.15)",
+                      boxShadow: betAmount === maxBet
+                        ? "0 0 16px rgba(245,158,11,0.25), inset 0 1px 0 rgba(245,158,11,0.15)"
+                        : "0 2px 4px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {betAmount === maxBet && <div className="absolute inset-0 bg-gradient-to-b from-white/[0.06] to-transparent" />}
+                    <span className="relative">ALL IN</span>
+                  </motion.button>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className={`flex items-center gap-3 transition-all duration-200 ${!isHeroTurn ? "opacity-35 grayscale pointer-events-none" : ""}`}>
+
+                {/* FOLD */}
+                <motion.button
+                  whileHover={buttonsDisabled ? {} : { scale: 1.05, y: -2 }}
+                  whileTap={buttonsDisabled ? {} : { scale: 0.93 }}
+                  onClick={handleFold}
+                  disabled={buttonsDisabled}
+                  title="Fold (F)"
+                  data-testid="button-fold"
+                  className={`
+                    relative overflow-hidden rounded-xl min-w-[100px] min-h-[3.25rem]
+                    font-bold uppercase tracking-wider transition-all
+                    ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                  `}
+                  style={{
+                    padding: "0.7rem 1.25rem",
+                    color: "#fff",
+                    background: foldConfirm
+                      ? "linear-gradient(180deg, #ef4444 0%, #dc2626 40%, #b91c1c 100%)"
+                      : "linear-gradient(180deg, #dc2626 0%, #c62828 30%, #991b1b 70%, #7f1d1d 100%)",
+                    border: foldConfirm ? "2px solid rgba(248,113,113,0.7)" : "1px solid rgba(239,68,68,0.25)",
+                    boxShadow: foldConfirm
+                      ? "0 0 32px rgba(239,68,68,0.5), 0 6px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)"
+                      : "0 6px 20px rgba(0,0,0,0.5), 0 0 14px rgba(239,68,68,0.15), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {foldConfirm && (
+                    <motion.div
+                      className="absolute inset-0"
+                      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 60%)" }}
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 0.8, repeat: Infinity }}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent h-1/2" />
+                  <span className="relative flex items-center justify-center gap-2">
+                    <span className="text-[0.8rem] font-black tracking-[0.15em]">{foldConfirm ? "CONFIRM" : "FOLD"}</span>
+                    <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">F</kbd>
+                  </span>
+                </motion.button>
+
+                {/* CHECK / CALL */}
+                <motion.button
+                  whileHover={buttonsDisabled ? {} : { scale: 1.05, y: -2 }}
+                  whileTap={buttonsDisabled ? {} : { scale: 0.93 }}
                   onClick={needsToCall ? handleCall : handleCheck}
                   disabled={buttonsDisabled}
                   title={needsToCall ? `Call $${callAmount} (C)` : "Check (C)"}
                   data-testid="button-call"
-                  className={`relative rounded-lg min-w-[140px] min-h-[3rem] font-bold uppercase tracking-wider transition-all ${buttonsDisabled ? "opacity-50 pointer-events-none" : "hover:brightness-110"}`}
-                  style={needsToCall
-                    ? flatBtn("#22c55e", "#22c55e")
-                    : flatBtn("#555", "#888", true)
-                  }
-                >
-                  <span className="absolute top-1 right-2 text-[0.6rem] font-mono opacity-40">C</span>
-                  <span className="flex flex-col items-center">
-                    <span className="text-[0.85rem] font-black tracking-[0.12em]">
-                      {needsToCall ? `CALL ${callAmount}` : "CHECK"}
-                    </span>
-                  </span>
-                </button>
-
-                {/* RAISE */}
-                <button
-                  onClick={() => {
-                    if (buttonsDisabled) return;
-                    if (showRaisePanel) {
-                      if (isAllIn) handleAllIn();
-                      else handleRaise();
-                    } else {
-                      setShowRaisePanel(true);
-                    }
-                  }}
-                  disabled={buttonsDisabled}
-                  title="Raise (R)"
-                  data-testid="button-raise"
-                  className={`relative rounded-lg min-w-[140px] min-h-[3rem] font-bold uppercase tracking-wider transition-all ${buttonsDisabled ? "opacity-50 pointer-events-none" : "hover:brightness-110"}`}
-                  style={flatBtn("#22c55e", "#22c55e")}
-                >
-                  <span className="absolute top-1 right-2 text-[0.6rem] font-mono opacity-40">R</span>
-                  <span className="text-[0.85rem] font-black tracking-[0.12em]">RAISE</span>
-                </button>
-
-                {/* CHECK (shown only when not needing to call, as separate option) */}
-                {needsToCall && (
-                  <button
-                    onClick={handleCheck}
-                    disabled={buttonsDisabled || needsToCall}
-                    data-testid="button-check"
-                    className={`relative rounded-lg min-w-[140px] min-h-[3rem] font-bold uppercase tracking-wider transition-all opacity-30 pointer-events-none`}
-                    style={flatBtn("#555", "#555", true)}
-                  >
-                    <span className="absolute top-1 right-2 text-[0.6rem] font-mono opacity-40">K</span>
-                    <span className="text-[0.85rem] font-black tracking-[0.12em]">CHECK</span>
-                  </button>
-                )}
-
-                {/* FOLD */}
-                <button
-                  onClick={() => {
-                    if (buttonsDisabled) return;
-                    if (foldConfirm) handleFold();
-                    else {
-                      setFoldConfirm(true);
-                      if (foldTimerRef.current) clearTimeout(foldTimerRef.current);
-                      foldTimerRef.current = setTimeout(() => setFoldConfirm(false), 2000);
-                    }
-                  }}
-                  disabled={buttonsDisabled}
-                  title="Fold (F)"
-                  data-testid="button-fold"
-                  className={`relative rounded-lg min-w-[140px] min-h-[3rem] font-bold uppercase tracking-wider transition-all ${buttonsDisabled ? "opacity-50 pointer-events-none" : "hover:brightness-110"}`}
+                  className={`
+                    relative overflow-hidden rounded-xl min-w-[100px] min-h-[3.25rem]
+                    font-bold uppercase tracking-wider transition-all
+                    ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                  `}
                   style={{
-                    ...flatBtn("#ef4444", "#ef4444"),
-                    borderColor: foldConfirm ? "#f87171" : "#ef4444",
-                    background: foldConfirm ? "rgba(239,68,68,0.15)" : "rgba(0,0,0,0.6)",
+                    padding: "0.7rem 1.25rem",
+                    color: "#fff",
+                    background: "linear-gradient(180deg, #16a34a 0%, #15803d 30%, #166534 70%, #14532d 100%)",
+                    border: "1px solid rgba(34,197,94,0.3)",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.5), 0 0 16px rgba(34,197,94,0.2), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
                   }}
                 >
-                  <span className="absolute top-1 right-2 text-[0.6rem] font-mono opacity-40">F</span>
-                  <span className="text-[0.85rem] font-black tracking-[0.12em]">
-                    {foldConfirm ? "CONFIRM" : "FOLD"}
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent h-1/2" />
+                  <span className="relative flex flex-col items-center justify-center gap-0.5">
+                    <span className="flex items-center gap-2">
+                      <span className="text-[0.8rem] font-black tracking-[0.15em]">{needsToCall ? "CALL" : "CHECK"}</span>
+                      <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">C</kbd>
+                    </span>
+                    {needsToCall && (
+                      <span
+                        className="font-mono text-sm font-black text-emerald-200 mt-0.5"
+                        style={{ textShadow: "0 0 8px rgba(34,197,94,0.4)" }}
+                      >
+                        ${callAmount.toLocaleString()}
+                      </span>
+                    )}
                   </span>
-                </button>
+                </motion.button>
+
+                {/* RAISE / ALL-IN */}
+                <motion.button
+                  whileHover={buttonsDisabled ? {} : { scale: 1.05, y: -2 }}
+                  whileTap={buttonsDisabled ? {} : { scale: 0.93 }}
+                  onClick={() => {
+                    if (buttonsDisabled) return;
+                    if (isAllIn) handleAllIn();
+                    else handleRaise();
+                  }}
+                  disabled={buttonsDisabled}
+                  title={`Raise to $${betAmount.toLocaleString()} (R)`}
+                  data-testid="button-raise"
+                  className={`
+                    relative overflow-hidden rounded-xl min-w-[100px] min-h-[3.25rem]
+                    font-bold uppercase tracking-wider transition-all
+                    ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                  `}
+                  style={{
+                    padding: "0.7rem 1.25rem",
+                    color: "#fff",
+                    background: isAllIn
+                      ? "linear-gradient(180deg, #f59e0b 0%, #d97706 30%, #b45309 60%, #92400e 100%)"
+                      : "linear-gradient(180deg, #eab308 0%, #ca8a04 30%, #a16207 70%, #854d0e 100%)",
+                    border: isAllIn
+                      ? "2px solid rgba(251,191,36,0.5)"
+                      : "1px solid rgba(234,179,8,0.3)",
+                    boxShadow: isAllIn
+                      ? "0 0 36px rgba(245,158,11,0.4), 0 6px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.15)"
+                      : "0 6px 20px rgba(0,0,0,0.5), 0 0 14px rgba(234,179,8,0.2), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {isAllIn && (
+                    <motion.div
+                      className="absolute inset-0"
+                      style={{
+                        background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)",
+                      }}
+                      animate={{ x: ["-100%", "100%"] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent h-1/2" />
+                  <span className="relative flex flex-col items-center justify-center gap-0.5">
+                    <span className="flex items-center gap-2">
+                      <span className="text-[0.8rem] font-black tracking-[0.15em]">
+                        {isAllIn ? "ALL-IN" : "RAISE"}
+                      </span>
+                      <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">R</kbd>
+                    </span>
+                    {showRaiseSlider && (
+                      <span
+                        className="font-mono text-sm font-black mt-0.5"
+                        style={{
+                          color: isAllIn ? "#fde68a" : "#fef3c7",
+                          textShadow: isAllIn ? "0 0 10px rgba(245,158,11,0.5)" : "0 0 6px rgba(234,179,8,0.3)",
+                        }}
+                      >
+                        ${betAmount.toLocaleString()}
+                      </span>
+                    )}
+                  </span>
+                </motion.button>
 
                 {/* Buy Time */}
                 {onBuyTime && isHeroTurn && heroTimeLeft !== undefined && heroTimeLeft < 30 && (
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.08, y: -2 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={onBuyTime}
                     data-testid="button-buytime"
-                    className={`relative rounded-lg min-h-[3rem] font-bold text-sm uppercase tracking-wider transition-all ${timerUrgent ? "animate-pulse" : ""}`}
-                    style={flatBtn("#f59e0b", "#f59e0b")}
+                    className={`relative overflow-hidden rounded-xl min-h-[3.25rem] font-bold text-sm uppercase tracking-wider text-white ${timerUrgent ? "animate-pulse" : ""}`}
+                    style={{
+                      padding: "0.7rem 1rem",
+                      background: "linear-gradient(180deg, #b45309 0%, #92400e 50%, #78350f 100%)",
+                      border: "1px solid rgba(245,158,11,0.3)",
+                      boxShadow: "0 4px 16px rgba(0,0,0,0.4), 0 0 12px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    }}
                   >
-                    <span>+10s</span>
-                    {bigBlind && <span className="font-mono text-[0.55rem] opacity-40 ml-1">(${bigBlind})</span>}
-                  </button>
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent h-1/2" />
+                    <span className="relative">+10s</span>
+                    {bigBlind && <span className="font-mono text-[0.5625rem] opacity-40 ml-1 relative">(${bigBlind})</span>}
+                  </motion.button>
                 )}
               </div>
 

@@ -12,7 +12,8 @@ import { GameSetup, type GameSetupConfig } from "../components/game/GameSetup";
 import { ShowdownOverlay } from "../components/poker/ShowdownOverlay";
 import { EmotePicker } from "../components/poker/EmoteSystem";
 import { TauntPicker, setTauntVoice } from "../components/poker/TauntSystem";
-import { GameLogPanel } from "../components/poker/GameLogPanel";
+import { ChatPanel } from "../components/poker/ChatPanel";
+import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
 import { VideoControlBar, VideoThumbnail } from "../components/poker/VideoOverlay";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { HandBadge } from "../components/poker/HandBadge";
@@ -1386,7 +1387,6 @@ function GameTable({
       <CommentarySubtitles enabled={commentaryEnabled} />
 
       {/* ═══ FLOATING OVERLAYS ═══ */}
-      <GameLogPanel tableId={tableId} isMultiplayer={isMultiplayer} sendChat={sendChat} />
       <EmotePicker heroId={heroId} isMultiplayer={isMultiplayer} />
       <TauntPicker heroId={heroId} isMultiplayer={isMultiplayer} />
 

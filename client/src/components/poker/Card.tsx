@@ -35,40 +35,52 @@ const suitSymbol: Record<Suit, string> = {
 
 const isRedSuit = (suit: Suit) => suit === "hearts" || suit === "diamonds";
 
-/* ── Card face matching Poker Now: huge rank + huge suit centered on white ── */
+/* ── Card face matching Poker Now: large rank with suit at its bottom-right ── */
 function CardFace({ card, size = "md" }: { card: CardType; size?: keyof typeof sizeConfig }) {
   const s = sizeConfig[size];
   const color = isRedSuit(card.suit) ? "#d40000" : "#1a1a1a";
+  const suitSize = Math.round(s.rankPx * 0.55);
   return (
     <div
-      className="absolute inset-0 rounded-lg overflow-hidden flex flex-col items-center justify-center bg-white"
+      className="absolute inset-0 rounded-lg overflow-hidden bg-white"
       style={{
         border: "1px solid rgba(0,0,0,0.1)",
         boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
       }}
     >
-      <span
+      <div
+        className="flex items-end justify-center"
         style={{
-          color,
-          fontSize: `${s.rankPx}px`,
-          fontWeight: 900,
-          lineHeight: 1,
-          fontFamily: "'Arial Black', 'Helvetica Neue', Arial, sans-serif",
-          letterSpacing: "-0.02em",
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
         }}
       >
-        {card.rank}
-      </span>
-      <span
-        style={{
-          color,
-          fontSize: `${s.suitPx}px`,
-          lineHeight: 1,
-          marginTop: `${Math.round(s.suitPx * 0.08)}px`,
-        }}
-      >
-        {suitSymbol[card.suit]}
-      </span>
+        <span
+          style={{
+            color,
+            fontSize: `${s.rankPx}px`,
+            fontWeight: 900,
+            lineHeight: 0.85,
+            fontFamily: "'Arial Black', 'Helvetica Neue', Arial, sans-serif",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {card.rank}
+        </span>
+        <span
+          style={{
+            color,
+            fontSize: `${suitSize}px`,
+            lineHeight: 1,
+            marginLeft: `${Math.round(suitSize * 0.05)}px`,
+            marginBottom: `${Math.round(suitSize * 0.05)}px`,
+          }}
+        >
+          {suitSymbol[card.suit]}
+        </span>
+      </div>
     </div>
   );
 }

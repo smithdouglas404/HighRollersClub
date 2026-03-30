@@ -2587,6 +2587,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
     return (
       <div className="min-h-screen bg-background text-white flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0">
+          <img src="/splash/splash_poker_cinematic.webp" alt="" className="absolute inset-0 w-full h-full object-cover opacity-25" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.4)_0%,rgba(20,31,40,0.88)_70%)]" />
         </div>
 

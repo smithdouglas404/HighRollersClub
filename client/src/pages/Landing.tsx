@@ -82,19 +82,26 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-white font-sans relative overflow-hidden" data-testid="landing-page">
 
       <div className="absolute inset-0 z-0">
+        {/* Static cyberpunk casino background */}
+        <img
+          src={casinoBg}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+        />
+        {/* Cycling splash overlay */}
         <AnimatePresence mode="wait">
           <motion.img
             key={splashIdx}
             src={SPLASH_IMAGES[splashIdx]}
             alt=""
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.2 }}
+            animate={{ opacity: 0.15 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.2 }}
             className="absolute inset-0 w-full h-full object-cover"
           />
         </AnimatePresence>
-        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/75 to-background" />
       </div>
 
       <div className="absolute inset-0 z-[1] pointer-events-none overflow-hidden">

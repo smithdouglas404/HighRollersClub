@@ -1,0 +1,44 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "N5Vpu_EQmLVAHO_tL6Qvg"
+uri = "file://attached_assets/generated_images/preview/poker_table_scene.png"
+type = "image"
+title = "poker table scene"
+
+[[generated]]
+id = "X-DGNBQB8D_2MrsM0a4zI"
+uri = "file://attached_assets/generated_images/preview/lobby_background.png"
+type = "image"
+title = "lobby background"
+
+[[generated]]
+id = "PPW6Akhhji8I2KOiL4Pmf"
+uri = "file://attached_assets/generated_images/preview/private_table_card.png"
+type = "image"
+title = "private table card"
+
+[[generated]]
+id = "OCj4NPny3K7KlulG8vZRC"
+uri = "file://attached_assets/generated_images/preview/tournament_card.png"
+type = "image"
+title = "tournament card"
+
+[[generated]]
+id = "GdoOuTxenBPYidrEBlckA"
+uri = "file://attached_assets/generated_images/preview/club_dashboard_bg.png"
+type = "image"
+title = "club dashboard background"
+
+[[generated]]
+id = "WsU5pzN3QBXlF_m-Y-_eh"
+uri = "file://attached_assets/generated_images/preview/club_setup_bg.png"
+type = "image"
+title = "club setup background"
+
+[[generated]]
+id = "OieRr9SWgBHCOHxz1B1bX"
+uri = "file://attached_assets/generated_images/preview/avatar_sample_fullbody.png"
+type = "image"
+title = "fullbody avatar sample"

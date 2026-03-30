@@ -450,6 +450,7 @@ export default function HandReplay({ handId }: { handId: string }) {
           </div>
         ) : !hand ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
+            <img src="/empty/empty_no_history.webp" alt="" className="w-48 h-32 object-cover rounded-xl opacity-60 mb-4" />
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
               <FileText className="w-7 h-7 text-primary/40" />
             </div>
@@ -458,6 +459,7 @@ export default function HandReplay({ handId }: { handId: string }) {
           </div>
         ) : !hand.summary ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
+            <img src="/empty/empty_no_history.webp" alt="" className="w-48 h-32 object-cover rounded-xl opacity-60 mb-4" />
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
               <Eye className="w-7 h-7 text-primary/40" />
             </div>

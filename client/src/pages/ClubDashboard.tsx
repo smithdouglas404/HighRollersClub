@@ -710,6 +710,7 @@ export default function ClubDashboard() {
 
                       {clubActivity.length === 0 ? (
                         <div className="py-10 px-4 text-center">
+                          <img src="/empty/empty_no_clubs.webp" alt="" className="w-48 h-32 object-cover rounded-xl opacity-60 mb-4 mx-auto" />
                           <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-primary/[0.08] border border-primary/15">
                             <Activity className="w-6 h-6 text-gray-600" />
                           </div>

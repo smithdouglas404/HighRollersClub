@@ -172,7 +172,8 @@
       "Bash(ls tsconfig* client/tsconfig*)",
       "Bash(sort -t: -k1,1 -k2,2n)",
       "Bash(bash)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(ls /home/runner/workspace/client/public/cyberpunk*)"
     ]
   }
 }

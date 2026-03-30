@@ -325,6 +325,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   height: clamp(48px, 14cqmin, 120px);
 }
 
+.portrait-card {
+  width: clamp(64px, 13cqmin, 110px);
+  height: clamp(88px, 18cqmin, 150px);
+}
+
 .sidebar-responsive {
   width: var(--sidebar-w, 208px);
 }

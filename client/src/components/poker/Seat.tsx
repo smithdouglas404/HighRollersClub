@@ -691,11 +691,9 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           )}
         </AnimatePresence>
 
-        {/* ── Avatar portrait with CSS neon ring (square, ~100px, matching reference) ── */}
-        <div ref={avatarRef} className="relative z-10 mb-0.5">
-          {/* Video thumbnail overlay */}
+        {/* ── Portrait-style player card ── */}
+        <div ref={avatarRef} className="relative z-10">
           {showVideo && <VideoThumbnail userId={player.id} isLocal={isHero} size={48} />}
-          {/* Avatar Status Ring — tier/streak/classification */}
           {avatarTier && avatarTier !== "common" && (
             <AvatarStatusRing
               tier={avatarTier}
@@ -705,19 +703,98 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               isActive={isTurn}
             />
           )}
-          {/* CSS neon glow ring — always visible, intensified on turn */}
+
           <div
-            className="absolute -inset-[6px] z-0 rounded-xl pointer-events-none"
+            className="relative rounded-xl overflow-hidden portrait-card"
             style={{
               border: `2px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
               boxShadow: isTurn
-                ? `0 0 16px ${hexToRgba(glowColor, 0.7)}, 0 0 32px ${hexToRgba(glowColor, 0.4)}, inset 0 0 10px ${hexToRgba(glowColor, 0.25)}`
-                : `0 0 8px ${hexToRgba(glowColor, 0.35)}`,
+                ? `0 0 20px ${hexToRgba(glowColor, 0.7)}, 0 0 40px ${hexToRgba(glowColor, 0.3)}, inset 0 0 12px ${hexToRgba(glowColor, 0.2)}`
+                : `0 0 10px ${hexToRgba(glowColor, 0.35)}, 0 4px 16px rgba(0,0,0,0.5)`,
               transition: "all 0.3s ease",
+              ...parallaxStyle,
+              ...reactionStyle,
             }}
-          />
+          >
+            <div
+              className="absolute top-0 left-0 right-0 h-[3px] z-20"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
+                boxShadow: `0 0 8px ${hexToRgba(glowColor, 0.6)}`,
+              }}
+            />
 
-          {/* Circular countdown timer ring around avatar */}
+            {player.avatar ? (
+              <img
+                src={player.avatar}
+                alt={player.name}
+                className="w-full h-full object-cover relative z-[1]"
+              />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center text-2xl font-bold text-white/70 relative z-[1]"
+                style={{
+                  background: isHero
+                    ? "linear-gradient(135deg, #0e7490, #164e63)"
+                    : "linear-gradient(135deg, #78716c, #44403c)",
+                }}
+              >
+                {player.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+
+            <div
+              className="absolute inset-0 z-[2] pointer-events-none"
+              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 35%, transparent 60%)" }}
+            />
+
+            <div className="absolute bottom-0 left-0 right-0 z-[3] px-2 pb-1.5 pt-1">
+              <div className="flex items-center justify-center gap-1">
+                <span
+                  className={cn(
+                    "text-[0.7rem] uppercase font-extrabold tracking-wide leading-tight truncate max-w-[100px]",
+                    isTurn ? "text-white" : "text-gray-200"
+                  )}
+                  style={{
+                    textShadow: `0 1px 4px rgba(0,0,0,0.8)${isTurn ? `, 0 0 8px ${hexToRgba(glowColor, 0.5)}` : ""}`,
+                  }}
+                >
+                  {player.name}
+                </span>
+                {!isHero && <PlayerNoteIcon playerId={player.id} />}
+              </div>
+
+              <div className="flex items-center justify-center gap-1 mt-0.5">
+                <svg width="12" height="12" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
+                  <circle cx="10" cy="10" r="9" fill="#ffd700" stroke="#b8860b" strokeWidth="1.5" />
+                  <circle cx="10" cy="10" r="5.5" fill="none" stroke="#b8860b" strokeWidth="0.8" />
+                  <circle cx="10" cy="10" r="2.5" fill="#b8860b" opacity="0.3" />
+                </svg>
+                <span
+                  className="text-[0.875rem] font-mono font-black leading-tight"
+                  style={{
+                    color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
+                    textShadow: chipsAnimating
+                      ? chipsDelta < 0 ? "0 0 10px rgba(239,68,68,0.6)" : "0 0 10px rgba(34,197,94,0.6)"
+                      : "0 0 8px rgba(255,215,0,0.4), 0 1px 3px rgba(0,0,0,0.8)",
+                    transition: "color 0.3s ease, text-shadow 0.3s ease",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {formatChips(animatedChips)}
+                </span>
+              </div>
+            </div>
+
+            <div
+              className="absolute bottom-0 left-0 right-0 h-[2px] z-[4]"
+              style={{
+                background: "linear-gradient(90deg, transparent 5%, #d4a843 20%, #ffd700 50%, #d4a843 80%, transparent 95%)",
+                boxShadow: "0 0 6px rgba(212,168,67,0.4)",
+              }}
+            />
+          </div>
+
           {isTurn && (
             <TimerRing
               percent={timer.percent}
@@ -730,37 +807,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             />
           )}
 
-          {/* The avatar image / fallback */}
-          {player.avatar ? (
-            <img
-              src={player.avatar}
-              alt={player.name}
-              className={`rounded-xl object-cover relative z-[1] avatar-size`}
-              style={{
-                border: `2px solid ${glowColor}`,
-                boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
-                ...parallaxStyle,
-                ...reactionStyle,
-              }}
-            />
-          ) : (
-            <div
-              className={`rounded-xl flex items-center justify-center text-2xl font-bold text-white/70 relative z-[1] avatar-size`}
-              style={{
-                border: `2px solid ${glowColor}`,
-                boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.4)}, inset 0 0 6px ${hexToRgba(glowColor, 0.1)}`,
-                background: isHero
-                  ? "linear-gradient(135deg, #0e7490, #164e63)"
-                  : "linear-gradient(135deg, #78716c, #44403c)",
-                ...parallaxStyle,
-                ...reactionStyle,
-              }}
-            >
-              {player.name.charAt(0).toUpperCase()}
-            </div>
-          )}
-
-          {/* Dealer badge — gold "D" circle, positioned top-right of avatar */}
           {player.isDealer && (
             <motion.div
               initial={{ scale: 0 }}
@@ -771,7 +817,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             </motion.div>
           )}
 
-          {/* AWAY badge — shown when player is sitting out */}
           {(player.isSittingOut || player.status === "sitting-out") && (
             <motion.div
               initial={{ scale: 0 }}
@@ -783,7 +828,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             </motion.div>
           )}
 
-          {/* Seat index badge — small number in bottom-left */}
           <div
             className="absolute -left-1 -bottom-1 z-30 w-5 h-5 rounded-md flex items-center justify-center text-[0.5625rem] font-bold"
             style={{
@@ -796,70 +840,13 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           </div>
         </div>
 
-        {/* ── Nameplate panel (dark glass, below avatar) ── */}
-        <div
-          className="relative z-10 flex flex-col items-center nameplate-responsive rounded-lg overflow-hidden backdrop-blur-md"
-          style={{
-            background: "linear-gradient(180deg, rgba(10,14,28,0.88) 0%, rgba(6,10,20,0.92) 100%)",
-            border: `1px solid rgba(255,255,255,0.08)`,
-            borderTopColor: glowColor,
-            borderTopWidth: "3px",
-            borderTopStyle: "solid",
-            boxShadow: `0 0 20px ${hexToRgba(glowColor, 0.12)}, 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`,
-          }}
-        >
-          <div className="px-4 py-2 flex flex-col items-center gap-0.5">
-            {/* Player name — larger, more readable */}
-            <div className="flex items-center gap-1">
-              <span
-                className={cn(
-                  "text-[0.8rem] uppercase font-extrabold tracking-wide leading-tight truncate max-w-[120px]",
-                  isTurn ? "text-white" : "text-gray-300"
-                )}
-                style={{
-                  textShadow: isTurn ? `0 0 8px ${hexToRgba(glowColor, 0.4)}` : undefined,
-                }}
-              >
-                {player.name}
-              </span>
-              {!isHero && <PlayerNoteIcon playerId={player.id} />}
-            </div>
-
-            {/* Chip count — big, bold, gold, mono — animated counter */}
-            <div className="flex items-center gap-1.5">
-              {/* Chip icon */}
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
-                <circle cx="10" cy="10" r="9" fill="#ffd700" stroke="#b8860b" strokeWidth="1.5" />
-                <circle cx="10" cy="10" r="5.5" fill="none" stroke="#b8860b" strokeWidth="0.8" />
-                <circle cx="10" cy="10" r="2.5" fill="#b8860b" opacity="0.3" />
-              </svg>
-              <span
-                className="text-[1.125rem] font-mono font-black leading-tight relative"
-                style={{
-                  color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
-                  textShadow: chipsAnimating
-                    ? chipsDelta < 0 ? "0 0 14px rgba(239,68,68,0.6)" : "0 0 14px rgba(34,197,94,0.6)"
-                    : "0 0 12px rgba(255,215,0,0.4)",
-                  transition: "color 0.3s ease, text-shadow 0.3s ease",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {formatChips(animatedChips)}
-              </span>
-            </div>
-          </div>
-
-        </div>
-
-        {/* ── Visual chip stacks — represent player's stack size ── */}
         {player.chips > 0 && !isFolded && (
           <PlayerChipStack chips={player.chips} side={chipStackSide} />
         )}
 
-        {/* ── Opponent HUD stats ── */}
         {hudStats && hudStats.handsPlayed > 0 && (
           <div
-            className="relative z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-b-md"
+            className="relative z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-b-md -mt-0.5"
             style={{
               background: "rgba(0,0,0,0.70)",
               border: "1px solid rgba(255,255,255,0.06)",

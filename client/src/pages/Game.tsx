@@ -680,8 +680,7 @@ function GameTable({
                       )
                     )}
 
-                    {/* Leave Table — multiplayer only */}
-                    {leaveTable && (
+                    {leaveTable ? (
                       <button
                         onClick={() => { setShowPlayerMenu(false); leaveTable(); }}
                         className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-500/10 transition-colors"
@@ -690,6 +689,17 @@ function GameTable({
                         <div>
                           <div className="text-xs font-bold text-red-400">Leave Table</div>
                           <div className="text-[0.6rem] text-gray-500">Cash out and leave your seat</div>
+                        </div>
+                      </button>
+                    ) : onBack && (
+                      <button
+                        onClick={() => { setShowPlayerMenu(false); onBack(); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-500/10 transition-colors"
+                      >
+                        <DoorOpen className="w-4 h-4 text-red-400" />
+                        <div>
+                          <div className="text-xs font-bold text-red-400">Leave Table</div>
+                          <div className="text-[0.6rem] text-gray-500">Return to lobby</div>
                         </div>
                       </button>
                     )}

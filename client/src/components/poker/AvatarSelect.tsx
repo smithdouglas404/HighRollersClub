@@ -4,7 +4,6 @@ import { ChevronRight, Zap, Shield, Crown, Star, Trophy, Flame } from "lucide-re
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
 
-// ─── 12 DALL-E 3 Avatars ─────────────────────────────────────────────────────
 import avNeonViper from "@assets/generated_images/avatars/avatar_neon_viper.webp";
 import avChromeSiren from "@assets/generated_images/avatars/avatar_chrome_siren.webp";
 import avGoldPhantom from "@assets/generated_images/avatars/avatar_gold_phantom.webp";
@@ -17,6 +16,18 @@ import avSteelGhost from "@assets/generated_images/avatars/avatar_steel_ghost.we
 import avNeonFox from "@assets/generated_images/avatars/avatar_neon_fox.webp";
 import avDarkAce from "@assets/generated_images/avatars/avatar_dark_ace.webp";
 import avBoltRunner from "@assets/generated_images/avatars/avatar_bolt_runner.webp";
+import avVoidWitch from "@assets/generated_images/avatars/avatar_void_witch.webp";
+import avOracleSeer from "@assets/generated_images/avatars/avatar_oracle_seer.webp";
+import avPunkDuchess from "@assets/generated_images/avatars/avatar_punk_duchess.webp";
+import avStreetRacer from "@assets/generated_images/avatars/avatar_street_racer.webp";
+import avCyberSamurai from "@assets/generated_images/avatars/avatar_cyber_samurai.webp";
+import avMechPilot from "@assets/generated_images/avatars/avatar_mech_pilot.webp";
+import avGhostSniper from "@assets/generated_images/avatars/avatar_ghost_sniper.webp";
+import avDjChrome from "@assets/generated_images/avatars/avatar_dj_chrome.webp";
+import avIronBull from "@assets/generated_images/avatars/avatar_iron_bull.webp";
+import avDataThief from "@assets/generated_images/avatars/avatar_data_thief.webp";
+import avNeonMedic from "@assets/generated_images/avatars/avatar_neon_medic.webp";
+import avMerchantBoss from "@assets/generated_images/avatars/avatar_merchant_boss.webp";
 
 export interface AvatarOption {
   id: string;
@@ -28,21 +39,30 @@ export interface AvatarOption {
 }
 
 export const AVATAR_OPTIONS: AvatarOption[] = [
-  // Legendary (4)
-  { id: "neon-viper",    name: "Neon Viper",    image: avNeonViper,    tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
-  { id: "chrome-siren",  name: "Chrome Siren",  image: avChromeSiren,  tier: "legendary", borderColor: "#b44dff", glowColor: "rgba(180,77,255,0.3)" },
-  { id: "gold-phantom",  name: "Gold Phantom",  image: avGoldPhantom,  tier: "legendary", borderColor: "#ffd700", glowColor: "rgba(255,215,0,0.3)" },
-  { id: "shadow-king",   name: "Shadow King",   image: avShadowKing,   tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
-  // Epic (4)
-  { id: "red-wolf",      name: "Red Wolf",      image: avRedWolf,      tier: "epic", borderColor: "#ff3366", glowColor: "rgba(255,51,102,0.3)" },
-  { id: "ice-queen",     name: "Ice Queen",     image: avIceQueen,     tier: "epic", borderColor: "#67e8f9", glowColor: "rgba(103,232,249,0.3)" },
-  { id: "tech-monk",     name: "Tech Monk",     image: avTechMonk,     tier: "epic", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
-  { id: "cyber-punk",    name: "Cyber Punk",    image: avCyberPunk,    tier: "epic", borderColor: "#ff69b4", glowColor: "rgba(255,105,180,0.3)" },
-  // Rare (4)
-  { id: "steel-ghost",   name: "Steel Ghost",   image: avSteelGhost,   tier: "rare", borderColor: "#8ecae6", glowColor: "rgba(142,202,230,0.25)" },
-  { id: "neon-fox",      name: "Neon Fox",      image: avNeonFox,      tier: "rare", borderColor: "#ff8c00", glowColor: "rgba(255,140,0,0.25)" },
-  { id: "dark-ace",      name: "Dark Ace",      image: avDarkAce,      tier: "rare", borderColor: "#6366f1", glowColor: "rgba(99,102,241,0.25)" },
-  { id: "bolt-runner",   name: "Bolt Runner",   image: avBoltRunner,   tier: "rare", borderColor: "#facc15", glowColor: "rgba(250,204,21,0.25)" },
+  { id: "neon-viper",      name: "Neon Viper",      image: avNeonViper,      tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
+  { id: "chrome-siren",    name: "Chrome Siren",    image: avChromeSiren,    tier: "legendary", borderColor: "#b44dff", glowColor: "rgba(180,77,255,0.3)" },
+  { id: "gold-phantom",    name: "Gold Phantom",    image: avGoldPhantom,    tier: "legendary", borderColor: "#ffd700", glowColor: "rgba(255,215,0,0.3)" },
+  { id: "shadow-king",     name: "Shadow King",     image: avShadowKing,     tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
+  { id: "void-witch",      name: "Void Witch",      image: avVoidWitch,      tier: "legendary", borderColor: "#a855f7", glowColor: "rgba(168,85,247,0.3)" },
+  { id: "cyber-samurai",   name: "Cyber Samurai",   image: avCyberSamurai,   tier: "legendary", borderColor: "#ef4444", glowColor: "rgba(239,68,68,0.3)" },
+  { id: "red-wolf",        name: "Red Wolf",        image: avRedWolf,        tier: "epic", borderColor: "#ff3366", glowColor: "rgba(255,51,102,0.3)" },
+  { id: "ice-queen",       name: "Ice Queen",       image: avIceQueen,       tier: "epic", borderColor: "#67e8f9", glowColor: "rgba(103,232,249,0.3)" },
+  { id: "tech-monk",       name: "Tech Monk",       image: avTechMonk,       tier: "epic", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
+  { id: "cyber-punk",      name: "Cyber Punk",      image: avCyberPunk,      tier: "epic", borderColor: "#ff69b4", glowColor: "rgba(255,105,180,0.3)" },
+  { id: "oracle-seer",     name: "Oracle Seer",     image: avOracleSeer,     tier: "epic", borderColor: "#34d399", glowColor: "rgba(52,211,153,0.3)" },
+  { id: "punk-duchess",    name: "Punk Duchess",    image: avPunkDuchess,    tier: "epic", borderColor: "#f472b6", glowColor: "rgba(244,114,182,0.3)" },
+  { id: "mech-pilot",      name: "Mech Pilot",      image: avMechPilot,      tier: "epic", borderColor: "#fb923c", glowColor: "rgba(251,146,60,0.3)" },
+  { id: "ghost-sniper",    name: "Ghost Sniper",    image: avGhostSniper,    tier: "epic", borderColor: "#94a3b8", glowColor: "rgba(148,163,184,0.3)" },
+  { id: "steel-ghost",     name: "Steel Ghost",     image: avSteelGhost,     tier: "rare", borderColor: "#8ecae6", glowColor: "rgba(142,202,230,0.25)" },
+  { id: "neon-fox",        name: "Neon Fox",        image: avNeonFox,        tier: "rare", borderColor: "#ff8c00", glowColor: "rgba(255,140,0,0.25)" },
+  { id: "dark-ace",        name: "Dark Ace",        image: avDarkAce,        tier: "rare", borderColor: "#6366f1", glowColor: "rgba(99,102,241,0.25)" },
+  { id: "bolt-runner",     name: "Bolt Runner",     image: avBoltRunner,     tier: "rare", borderColor: "#facc15", glowColor: "rgba(250,204,21,0.25)" },
+  { id: "street-racer",    name: "Street Racer",    image: avStreetRacer,    tier: "rare", borderColor: "#22d3ee", glowColor: "rgba(34,211,238,0.25)" },
+  { id: "dj-chrome",       name: "DJ Chrome",       image: avDjChrome,       tier: "rare", borderColor: "#c084fc", glowColor: "rgba(192,132,252,0.25)" },
+  { id: "iron-bull",       name: "Iron Bull",       image: avIronBull,       tier: "rare", borderColor: "#b45309", glowColor: "rgba(180,83,9,0.25)" },
+  { id: "data-thief",      name: "Data Thief",      image: avDataThief,      tier: "rare", borderColor: "#10b981", glowColor: "rgba(16,185,129,0.25)" },
+  { id: "neon-medic",      name: "Neon Medic",      image: avNeonMedic,      tier: "rare", borderColor: "#14b8a6", glowColor: "rgba(20,184,166,0.25)" },
+  { id: "merchant-boss",   name: "Merchant Boss",   image: avMerchantBoss,   tier: "rare", borderColor: "#d97706", glowColor: "rgba(217,119,6,0.25)" },
 ];
 
 const TIER_CONFIG: Record<string, { bg: string; text: string; label: string; icon: any }> = {

@@ -60,7 +60,11 @@ Preferred communication style: Simple, everyday language.
 
 7. **In-game admin panel:** Table creators and global admins can access a settings panel (gear icon in top bar) during gameplay to adjust blinds, table rules (straddle, run-it-twice, rabbit hunting, etc.), speed/timing, rake, and bot settings. Changes apply at the start of the next hand. Access is gated by `tables.createdById === user.id || user.role === "admin"`. Offline mode always has admin access. Component: `client/src/components/game/InGameAdminPanel.tsx`.
 
-8. **GameSetup advanced settings:** The pre-game setup screen (`GameSetup.tsx`) includes expandable sections for table rules, speed/timing, rake, privacy (password-protected tables), bot control, and tournament-specific settings (re-entry, rebuy, late registration, breaks, payout structures).
+8. **GameSetup wizard:** The pre-game setup screen (`GameSetup.tsx`) is a 6-step wizard: Avatar → Game Type → Stakes → Table Rules → Speed & Extras → Review. Each step has its own screen with animated transitions and a progress indicator. The Review step shows a full summary before launching. Practice Mode quick-start button available on the Review step.
+
+11. **Portrait-style player seats:** Seat.tsx renders players as tall portrait cards (`.portrait-card` CSS class using container queries) with the avatar image filling the card, name/chips overlaid at the bottom with gradient fade, and a gold accent rail at the bottom edge. Cards render below the portrait. The neon glow ring wraps the entire portrait card.
+
+12. **Expanded avatar collection:** 24 cyberpunk character avatars (6 legendary, 8 epic, 10 rare) defined in `AvatarSelect.tsx`. All images are webp files in `attached_assets/generated_images/avatars/`. The avatar grid in GameSetup shows 8 columns on large screens.
 
 9. **AI Commentary System:** Two-voice poker broadcast using ElevenLabs TTS + Anthropic Claude. Play-by-play ("Adam"/LON) and analyst ("Josh"/NORMAN) commentate showdowns, big pots, all-ins, blind increases, player eliminations, and player tendencies. Server: `server/game/commentary-engine.ts` + `server/game/tts-engine.ts`. Client: `client/src/components/poker/CommentaryOverlay.tsx` (subtitles + controls panel). Currently multiplayer-only toggle in top bar (mic icon). Requires `ELEVENLABS_API_KEY` and `ANTHROPIC_API_KEY` secrets.
 

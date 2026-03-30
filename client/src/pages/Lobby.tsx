@@ -102,6 +102,16 @@ function TableCard({ table, onClick, featured, currentUserId, onDelete }: { tabl
         isFull && "opacity-60"
       )}
     >
+      {/* Subtle felt texture background */}
+      <div
+        className="absolute inset-0 opacity-[0.07] pointer-events-none"
+        style={{
+          backgroundImage: `url(${featured ? '/felts/felt_emerald_luxury.webp' : '/felts/felt_carbon_fiber.webp'})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+
       {featured && (
         <div className="absolute -top-2.5 left-4 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 text-black flex items-center gap-1 shadow-lg">
           <Flame className="w-2.5 h-2.5" />
@@ -416,24 +426,29 @@ export default function Lobby() {
   return (
     <DashboardLayout title="Games & Tournaments">
       <div className="px-6 md:px-8 pb-8 relative">
-        {/* Hero Section — Stitch style */}
+        {/* Hero Banner with welcome image */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="mb-6 relative pt-2"
+          className="relative rounded-xl overflow-hidden mb-6"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4 backdrop-blur-md border border-primary/20">
-            <Flame className="w-3.5 h-3.5 text-destructive animate-pulse" />
-            <span>High Stakes. Zero Limits.</span>
+          <img src="/banners/banner_welcome.webp" alt="" className="w-full h-40 sm:h-52 object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-surface-lowest via-surface-lowest/80 to-transparent flex items-center px-6 sm:px-10">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-3 backdrop-blur-md border border-primary/20">
+                <Flame className="w-3.5 h-3.5 text-destructive animate-pulse" />
+                <span>High Stakes. Zero Limits.</span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-white mb-2 leading-none tracking-tighter">
+                SELECT YOUR <br />
+                <span className="text-transparent bg-clip-text gradient-primary neon-text-glow">GAME MODE</span>
+              </h1>
+              <p className="text-muted-foreground text-sm sm:text-base max-w-lg font-body">
+                Choose your variant. Find your table. Enter the vault.
+              </p>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-3 leading-none tracking-tighter">
-            SELECT YOUR <br />
-            <span className="text-transparent bg-clip-text gradient-primary neon-text-glow">GAME MODE</span>
-          </h1>
-          <p className="text-muted-foreground text-base max-w-lg font-body">
-            Choose your variant. Find your table. Enter the vault.
-          </p>
         </motion.div>
 
         {/* Banner Carousel */}
@@ -448,6 +463,7 @@ export default function Lobby() {
               description: "Create a private table with invite code",
               onClick: () => { setDefaultPrivate(true); setShowCreateTable(true); },
               accent: "primary",
+              bgImage: "/splash/splash_high_stakes.webp",
             },
             {
               icon: Users,
@@ -455,6 +471,7 @@ export default function Lobby() {
               description: "Join open tables",
               onClick: () => tablesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
               accent: "secondary",
+              bgImage: "/splash/splash_poker_cinematic.webp",
             },
             {
               icon: Trophy,
@@ -462,6 +479,7 @@ export default function Lobby() {
               description: "Compete in scheduled events",
               onClick: () => navigate("/tournaments"),
               accent: "tertiary",
+              bgImage: "/banners/banner_tournament.webp",
             },
           ].map((mode, i) => {
             const Icon = mode.icon;
@@ -484,8 +502,10 @@ export default function Lobby() {
                   "hover:border-primary/30 hover:shadow-[0_0_25px_rgba(129,236,255,0.15)]"
                 )}
               >
-                {/* Subtle gradient overlay on hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                {/* Background splash image */}
+                <img src={mode.bgImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity duration-500 pointer-events-none" />
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-surface-highest/90 via-surface-highest/70 to-surface-highest/50 pointer-events-none" />
 
                 <div className="relative flex items-start gap-4">
                   <div className={cn(

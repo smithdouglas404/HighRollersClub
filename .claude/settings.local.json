@@ -171,7 +171,8 @@
       "Bash(npx tsc:*)",
       "Bash(ls tsconfig* client/tsconfig*)",
       "Bash(sort -t: -k1,1 -k2,2n)",
-      "Bash(bash)"
+      "Bash(bash)",
+      "Bash(cp:*)"
     ]
   }
 }

@@ -518,16 +518,26 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
-                setGameFormat("cash");
-                setMaxPlayers(4);
-                setSmallBlind(1);
-                setBigBlind(2);
-                setAnte(0);
-                setTimeBankSeconds(60);
-                setMinBuyIn(100);
-                setMaxBuyIn(500);
-                setAllowBots(true);
-                handleStart();
+                if (mode === "offline" && onStartOffline) {
+                  setIsReady(true);
+                  const practiceConfig: GameSetupConfig = {
+                    ...buildConfig(),
+                    gameFormat: "cash",
+                    maxPlayers: 4,
+                    smallBlind: 1,
+                    bigBlind: 2,
+                    ante: 0,
+                    timeBankSeconds: 60,
+                    minBuyIn: 100,
+                    maxBuyIn: 500,
+                    allowBots: true,
+                    rakePercent: 0,
+                    rakeCap: 0,
+                  };
+                  setTimeout(() => onStartOffline(selectedAvatar, playerName.trim() || "Player", practiceConfig), 800);
+                } else {
+                  handleStart();
+                }
               }}
               className="w-full rounded-xl px-5 py-4 text-left flex items-center gap-4 transition-all"
               style={{

@@ -499,56 +499,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
               </div>
             </motion.div>
 
-            <motion.button
-              initial={{ y: 10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.35 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (mode === "offline" && onStartOffline) {
-                  setIsReady(true);
-                  const practiceConfig: GameSetupConfig = {
-                    ...buildConfig(),
-                    gameFormat: "cash",
-                    maxPlayers: 4,
-                    smallBlind: 1,
-                    bigBlind: 2,
-                    ante: 0,
-                    timeBankSeconds: 60,
-                    minBuyIn: 100,
-                    maxBuyIn: 500,
-                    allowBots: true,
-                    rakePercent: 0,
-                    rakeCap: 0,
-                  };
-                  setTimeout(() => onStartOffline(selectedAvatar, playerName.trim() || "Player", practiceConfig), 800);
-                } else {
-                  handleStart();
-                }
-              }}
-              className="w-full max-w-lg mx-auto rounded-xl px-5 py-3.5 text-left flex items-center gap-4 transition-all"
-              style={{
-                background: "linear-gradient(135deg, rgba(52,211,153,0.08), rgba(0,212,255,0.05))",
-                border: "1px solid rgba(52,211,153,0.2)",
-                boxShadow: "0 0 20px rgba(52,211,153,0.08)",
-              }}
-              data-testid="button-practice-mode"
-            >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.25)" }}
-              >
-                <Gamepad2 className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="flex-1">
-                <div className="text-xs font-bold text-emerald-300">Practice Mode</div>
-                <div className="text-[0.5625rem] text-gray-400 mt-0.5">Micro stakes, 4 players — skip setup</div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-emerald-500/50" />
-            </motion.button>
-
-            <NavButtons nextDisabled={!canProceedFromAvatar} nextLabel="Customize" />
+            <NavButtons nextDisabled={!canProceedFromAvatar} />
           </>
         );
 

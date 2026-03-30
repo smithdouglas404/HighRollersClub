@@ -255,6 +255,53 @@ These pages show nothing when data is empty - they need "No X yet" messaging:
 
 ---
 
+## PART 2.5: Enhancement Roadmap (Visual & Gameplay Polish)
+
+### Table Experience
+| # | Feature | Priority | Status |
+|---|---------|----------|--------|
+| VE1 | Card dealing/flip animations — cinematic slide across felt with arc | High | NOT DONE |
+| VE2 | Chip movement animations when pots push to winners | High | NOT DONE |
+| VE3 | Dynamic felt texture and table edge design (use generated felts) | Medium | PARTIAL — felts exist in assets |
+| VE4 | Winner celebration effects — particles, glow burst on big pots | Medium | PARTIAL — gold glow exists |
+
+### Player Interactions
+| # | Feature | Priority | Status |
+|---|---------|----------|--------|
+| PI1 | Emote animations that pop up above player portraits (not just text) | Medium | PARTIAL — EmoteSystem exists |
+| PI2 | Player card peeking animation for hole cards | Medium | PARTIAL — CardSqueeze exists |
+| PI3 | Pulsing urgency timer effect as time runs low | Low | PARTIAL — TimerRing has pulse |
+
+### Sound & Atmosphere
+| # | Feature | Priority | Status |
+|---|---------|----------|--------|
+| SA1 | Layered sound effects for all-in, showdown reveal | Medium | PARTIAL — sound engine exists |
+| SA2 | Commentary personality triggers | Low | PARTIAL — commentary engine exists |
+
+### Visual Polish
+| # | Feature | Priority | Status |
+|---|---------|----------|--------|
+| VP1 | Loading transitions between screens (not abrupt) | High | NOT DONE |
+| VP2 | Lobby and dashboard premium visual treatment | High | PARTIAL |
+| VP3 | Consistent neon glow / cyberpunk styling across ALL pages | Medium | PARTIAL |
+
+### Gameplay Features
+| # | Feature | Priority | Status |
+|---|---------|----------|--------|
+| GF1 | Hand history replay viewer | Low | DONE — HandReplay.tsx exists |
+| GF2 | Player stats and graphs on profile page | Low | DONE — Profile has stats |
+| GF3 | Tournament bracket visualization | Medium | NOT DONE |
+| GF4 | Table themes — different felt colors, card backs | Medium | NOT DONE — assets exist |
+
+### Production Readiness
+| # | Feature | Priority | Status |
+|---|---------|----------|--------|
+| PR1 | Crypto payment integration with NOWPayments | High | DONE — wired in Wallet |
+| PR2 | Daily.co video chat at the table | Medium | DONE — VideoOverlay exists |
+| PR3 | Club leaderboards and seasons | Low | DONE — ClubLeaderboard + Leagues |
+
+---
+
 ## PART 3: Priority Ranking
 
 ### Tier 1 - Critical Wiring (Broken Features)

@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
 import {
   Mail, Send, UserPlus, Check, X, Loader2,
-  Clock, CheckCircle, XCircle, AlertTriangle, Users, Inbox,
+  Clock, CheckCircle, XCircle, AlertTriangle, Users, Inbox, RefreshCw, ShieldCheck,
 } from "lucide-react";
 
 export default function ClubInvitations() {
@@ -16,9 +16,11 @@ export default function ClubInvitations() {
 
   // Invite form
   const [inviteUsername, setInviteUsername] = useState("");
+  const [inviteRole, setInviteRole] = useState<"member" | "moderator" | "admin">("member");
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState("");
   const [sendError, setSendError] = useState("");
+  const [resending, setResending] = useState<Record<string, boolean>>({});
 
   // Action loading
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
@@ -54,6 +56,22 @@ export default function ClubInvitations() {
       // toast handled by context
     } finally {
       setActionLoading((prev) => ({ ...prev, [invId]: false }));
+    }
+  };
+
+  const handleResend = async (username: string, invId: string) => {
+    if (!club || resending[invId]) return;
+    setResending((prev) => ({ ...prev, [invId]: true }));
+    try {
+      const ok = await sendInvite(username);
+      if (ok) {
+        setSendSuccess(`Invitation resent to ${username}`);
+        setTimeout(() => setSendSuccess(""), 3000);
+      }
+    } catch {
+      // silently handled
+    } finally {
+      setResending((prev) => ({ ...prev, [invId]: false }));
     }
   };
 
@@ -156,6 +174,23 @@ export default function ClubInvitations() {
                     )}
                     Send
                   </motion.button>
+                </div>
+
+                {/* Role selection */}
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="w-4 h-4 text-gray-500 shrink-0" />
+                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 shrink-0">
+                    Invite as
+                  </label>
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as "member" | "moderator" | "admin")}
+                    className="flex-1 px-3 py-1.5 rounded-lg text-xs text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
+                  >
+                    <option value="member" className="bg-surface-lowest">Member</option>
+                    <option value="moderator" className="bg-surface-lowest">Moderator</option>
+                    <option value="admin" className="bg-surface-lowest">Admin</option>
+                  </select>
                 </div>
 
                 <AnimatePresence>
@@ -323,13 +358,38 @@ export default function ClubInvitations() {
                           <div className="text-xs font-semibold text-white truncate">
                             {inv.displayName}
                           </div>
-                          <div className="text-[0.5625rem] text-gray-500">@{inv.username}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[0.5625rem] text-gray-500">@{inv.username}</span>
+                            {(inv as any).role && (
+                              <span className="text-[0.5rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary">
+                                {(inv as any).role}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {statusIcon(inv.status)}
-                          <span className={`text-[0.5625rem] font-bold uppercase tracking-wider ${statusColor(inv.status)}`}>
-                            {inv.status}
-                          </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            {statusIcon(inv.status)}
+                            <span className={`text-[0.5625rem] font-bold uppercase tracking-wider ${statusColor(inv.status)}`}>
+                              {inv.status}
+                            </span>
+                          </div>
+                          {inv.status === "pending" && (
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleResend(inv.username, inv.id)}
+                              disabled={resending[inv.id]}
+                              className="px-2.5 py-1 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors disabled:opacity-50 bg-white/[0.04] border border-white/[0.08] text-gray-400 hover:text-white hover:border-primary/30"
+                            >
+                              {resending[inv.id] ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <RefreshCw className="w-3 h-3" />
+                              )}
+                              Resend
+                            </motion.button>
+                          )}
                         </div>
                       </motion.div>
                     ))}

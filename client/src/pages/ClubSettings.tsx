@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Settings, Save, Trash2, Shield, Globe, Lock,
   Users, Crown, Loader2, AlertTriangle, CheckCircle, X,
+  Languages, DollarSign, ShieldCheck, Palette,
 } from "lucide-react";
 
 export default function ClubSettings() {
@@ -29,6 +30,31 @@ export default function ClubSettings() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+
+  // S11: Timezone & Language
+  const [timezone, setTimezone] = useState("UTC");
+  const [language, setLanguage] = useState("en");
+
+  // S12: Financial Defaults
+  const [rakePercent, setRakePercent] = useState(2.5);
+  const [maxBuyIn, setMaxBuyIn] = useState(1000);
+  const [defaultCreditLimit, setDefaultCreditLimit] = useState(500);
+
+  // S13: Security
+  const [require2FA, setRequire2FA] = useState(false);
+  const [adminApproval, setAdminApproval] = useState(false);
+  const [antiCollusion, setAntiCollusion] = useState(true);
+
+  // S14: Branding
+  const [themeColor, setThemeColor] = useState("cyan");
+  const THEME_COLORS = [
+    { id: "cyan", label: "Cyan", color: "#00d4ff" },
+    { id: "gold", label: "Gold", color: "#f59e0b" },
+    { id: "purple", label: "Purple", color: "#a855f7" },
+    { id: "green", label: "Green", color: "#22c55e" },
+    { id: "red", label: "Red", color: "#ef4444" },
+    { id: "blue", label: "Blue", color: "#3b82f6" },
+  ];
 
   // Sync form when club data arrives
   useEffect(() => {
@@ -230,6 +256,297 @@ export default function ClubSettings() {
                   )}
                   Save Changes
                 </motion.button>
+              </div>
+            </motion.div>
+
+            {/* S11: Timezone & Language */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]">
+                <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
+                  <Languages className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                    Timezone & Language
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">Regional preferences for your club</p>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-5">
+                <div className="space-y-1.5">
+                  <label htmlFor="settings-timezone" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                    Timezone
+                  </label>
+                  <select
+                    id="settings-timezone"
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
+                  >
+                    <option value="UTC" className="bg-surface-lowest">UTC (Coordinated Universal Time)</option>
+                    <option value="America/New_York" className="bg-surface-lowest">EST (Eastern Standard Time)</option>
+                    <option value="America/Chicago" className="bg-surface-lowest">CST (Central Standard Time)</option>
+                    <option value="America/Denver" className="bg-surface-lowest">MST (Mountain Standard Time)</option>
+                    <option value="America/Los_Angeles" className="bg-surface-lowest">PST (Pacific Standard Time)</option>
+                    <option value="Europe/London" className="bg-surface-lowest">GMT (Greenwich Mean Time)</option>
+                    <option value="Europe/Berlin" className="bg-surface-lowest">CET (Central European Time)</option>
+                    <option value="Asia/Tokyo" className="bg-surface-lowest">JST (Japan Standard Time)</option>
+                    <option value="Asia/Shanghai" className="bg-surface-lowest">CST (China Standard Time)</option>
+                    <option value="America/Sao_Paulo" className="bg-surface-lowest">BRT (Brasilia Time)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="settings-language" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                    Language
+                  </label>
+                  <select
+                    id="settings-language"
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
+                  >
+                    <option value="en" className="bg-surface-lowest">English</option>
+                    <option value="es" className="bg-surface-lowest">Spanish</option>
+                    <option value="pt" className="bg-surface-lowest">Portuguese</option>
+                    <option value="zh" className="bg-surface-lowest">Chinese</option>
+                  </select>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* S12: Financial Defaults */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]">
+                <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                    Financial Defaults
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">Default financial settings for tables</p>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-5">
+                <div className="space-y-1.5">
+                  <label htmlFor="settings-rake" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                    Rake Percentage
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      id="settings-rake"
+                      type="range"
+                      min={0}
+                      max={10}
+                      step={0.5}
+                      value={rakePercent}
+                      onChange={(e) => setRakePercent(parseFloat(e.target.value))}
+                      className="flex-1 accent-[hsl(var(--primary))]"
+                    />
+                    <span className="text-sm font-semibold text-white w-14 text-right">{rakePercent}%</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="settings-max-buyin" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                    Max Buy-In Cap
+                  </label>
+                  <input
+                    id="settings-max-buyin"
+                    type="number"
+                    min={0}
+                    value={maxBuyIn}
+                    onChange={(e) => setMaxBuyIn(Number(e.target.value))}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-surface-highest/50 border border-white/[0.06]"
+                    placeholder="1000"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="settings-credit-limit" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                    Default Credit Limit
+                  </label>
+                  <input
+                    id="settings-credit-limit"
+                    type="number"
+                    min={0}
+                    value={defaultCreditLimit}
+                    onChange={(e) => setDefaultCreditLimit(Number(e.target.value))}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-surface-highest/50 border border-white/[0.06]"
+                    placeholder="500"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* S13: Security */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]">
+                <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                    Security
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">Club-wide security policies</p>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {/* 2FA toggle */}
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-4 h-4 text-primary" />
+                    <div>
+                      <div className="text-xs font-semibold text-white">Require 2FA</div>
+                      <div className="text-[0.5625rem] text-gray-500">Require two-factor authentication for all members</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setRequire2FA(!require2FA)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${require2FA ? "bg-primary" : "bg-white/10"}`}
+                  >
+                    <motion.div
+                      layout
+                      className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md"
+                      style={{ left: require2FA ? "calc(100% - 22px)" : "2px" }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                  </button>
+                </div>
+
+                {/* Admin approval toggle */}
+                <div className="flex items-center justify-between py-2 border-t border-t-white/[0.04]">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-4 h-4 text-primary" />
+                    <div>
+                      <div className="text-xs font-semibold text-white">Admin Approval</div>
+                      <div className="text-[0.5625rem] text-gray-500">Require admin approval for new members</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setAdminApproval(!adminApproval)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${adminApproval ? "bg-primary" : "bg-white/10"}`}
+                  >
+                    <motion.div
+                      layout
+                      className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md"
+                      style={{ left: adminApproval ? "calc(100% - 22px)" : "2px" }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                  </button>
+                </div>
+
+                {/* Anti-collusion toggle */}
+                <div className="flex items-center justify-between py-2 border-t border-t-white/[0.04]">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="w-4 h-4 text-primary" />
+                    <div>
+                      <div className="text-xs font-semibold text-white">Anti-Collusion Detection</div>
+                      <div className="text-[0.5625rem] text-gray-500">Automatically detect suspicious play patterns</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setAntiCollusion(!antiCollusion)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${antiCollusion ? "bg-primary" : "bg-white/10"}`}
+                  >
+                    <motion.div
+                      layout
+                      className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md"
+                      style={{ left: antiCollusion ? "calc(100% - 22px)" : "2px" }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* S14: Branding */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12 }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]">
+                <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
+                  <Palette className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                    Branding
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">Customize your club's visual identity</p>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                    Theme Color
+                  </label>
+                  <div className="flex items-center gap-3">
+                    {THEME_COLORS.map((tc) => {
+                      const isSelected = themeColor === tc.id;
+                      return (
+                        <button
+                          key={tc.id}
+                          onClick={() => setThemeColor(tc.id)}
+                          className="relative group flex flex-col items-center gap-1.5"
+                          title={tc.label}
+                        >
+                          <div
+                            className="w-9 h-9 rounded-full transition-all"
+                            style={{
+                              background: tc.color,
+                              boxShadow: isSelected ? `0 0 16px ${tc.color}60` : "none",
+                              border: isSelected ? "3px solid white" : "3px solid transparent",
+                              transform: isSelected ? "scale(1.15)" : "scale(1)",
+                            }}
+                          />
+                          <span className={`text-[0.5rem] font-bold uppercase tracking-wider ${isSelected ? "text-white" : "text-gray-600"}`}>
+                            {tc.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div
+                  className="rounded-lg p-3 flex items-center gap-3"
+                  style={{
+                    background: `${THEME_COLORS.find(c => c.id === themeColor)?.color ?? '#00d4ff'}10`,
+                    border: `1px solid ${THEME_COLORS.find(c => c.id === themeColor)?.color ?? '#00d4ff'}30`,
+                  }}
+                >
+                  <div
+                    className="w-4 h-4 rounded-full shrink-0"
+                    style={{ background: THEME_COLORS.find(c => c.id === themeColor)?.color ?? '#00d4ff' }}
+                  />
+                  <span className="text-[0.625rem] text-gray-400">
+                    Preview: Club elements will use the <strong className="text-white">{THEME_COLORS.find(c => c.id === themeColor)?.label}</strong> theme
+                  </span>
+                </div>
               </div>
             </motion.div>
 

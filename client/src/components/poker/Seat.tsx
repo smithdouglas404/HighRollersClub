@@ -435,9 +435,11 @@ interface SeatProps {
   turnDeadline?: number;
   /** Server turn timer duration in seconds */
   turnTimerDuration?: number;
+  /** Callback when player name/avatar is clicked */
+  onPlayerClick?: (player: Player) => void;
 }
 
-export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false, hudStats, avatarTier, winStreak = 0, showVideo = false, dealCardCount, turnDeadline, turnTimerDuration = 30 }: SeatProps) {
+export function Seat({ player, position, isHero = false, isWinner = false, seatIndex = 0, perspectiveScale = 1, hideCards = false, hudStats, avatarTier, winStreak = 0, showVideo = false, dealCardCount, turnDeadline, turnTimerDuration = 30, onPlayerClick }: SeatProps) {
   const { compactMode } = useGameUI();
   const winnerCanvasRef = useWinnerParticles(isWinner && !compactMode);
 
@@ -799,10 +801,17 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 <span
                   className={cn(
                     "text-[0.6875rem] uppercase font-extrabold tracking-wide leading-tight truncate flex-1",
-                    isTurn ? "text-white" : "text-white/80"
+                    isTurn ? "text-white" : "text-white/80",
+                    onPlayerClick && "pointer-events-auto cursor-pointer hover:text-cyan-300 transition-colors"
                   )}
                   style={{
                     textShadow: isTurn ? `0 0 8px ${hexToRgba(glowColor, 0.5)}` : undefined,
+                  }}
+                  onClick={(e) => {
+                    if (onPlayerClick) {
+                      e.stopPropagation();
+                      onPlayerClick(player);
+                    }
                   }}
                 >
                   {player.name}

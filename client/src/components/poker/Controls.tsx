@@ -237,15 +237,16 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
       )}
 
       {/* Gradient fade from table */}
-      <div className="h-3 bg-gradient-to-t from-[#080e18] to-transparent pointer-events-none" />
+      <div className="h-3 bg-gradient-to-t from-[rgba(15,15,20,0.4)] to-transparent pointer-events-none" />
 
-      {/* Main controls container */}
+      {/* Main controls container — glass-morphic */}
       <div
-        className="px-4 pb-3 pt-1.5"
+        className="px-4 pb-3 pt-1.5 border-t border-white/[0.06]"
         style={{
-          background: "linear-gradient(180deg, rgba(8,14,24,0.97) 0%, rgba(4,8,16,0.99) 100%)",
-          borderTop: "1px solid rgba(0,212,255,0.08)",
-          boxShadow: "0 -8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
+          background: "rgba(15, 15, 20, 0.60)",
+          backdropFilter: "blur(40px)",
+          WebkitBackdropFilter: "blur(40px)",
+          boxShadow: "0 -4px 30px rgba(0,0,0,0.3)",
         }}
       >
         <div className="max-w-5xl mx-auto flex flex-col gap-2">

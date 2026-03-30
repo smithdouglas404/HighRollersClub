@@ -8,7 +8,7 @@ import {
   Trophy, Clock, Coins, Users, Lock, Plus, Trash2,
   Loader2, ChevronRight, ChevronLeft, Calendar, Settings,
   DollarSign, Scale, Timer, Layers, Sparkles, Shield,
-  Coffee, Zap, Eye,
+  Coffee, Zap, Eye, CheckCircle,
 } from "lucide-react";
 
 /* ─── Types ───────────────────────────────────────────────────────────────── */
@@ -93,6 +93,7 @@ export default function TournamentCreate() {
   const [activeTab, setActiveTab] = useState<TabKey>("general");
   const [tabDirection, setTabDirection] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState(false);
 
   /* ── General tab state ── */
   const [name, setName] = useState("");
@@ -217,7 +218,8 @@ export default function TournamentCreate() {
       }
 
       toast({ title: "Tournament created", description: `"${name.trim()}" has been published successfully.` });
-      navigate("/tournaments");
+      setCreateSuccess(true);
+      setTimeout(() => navigate("/tournaments"), 1000);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -812,15 +814,15 @@ export default function TournamentCreate() {
           </div>
           <div className="space-y-2 text-[0.625rem] text-gray-400">
             <div className="flex items-center gap-2">
-              <Eye className="w-3 h-3 text-amber-500/50" />
+              <Eye className="w-3 h-3 text-amber-400/70" />
               <span>Auto-away: <strong className="text-white">{autoAway ? "Enabled" : "Disabled"}</strong></span>
             </div>
             <div className="flex items-center gap-2">
-              <Timer className="w-3 h-3 text-amber-500/50" />
+              <Timer className="w-3 h-3 text-amber-400/70" />
               <span>Time bank: <strong className="text-white">{timeBank}s</strong> per player</span>
             </div>
             <div className="flex items-center gap-2">
-              <Users className="w-3 h-3 text-amber-500/50" />
+              <Users className="w-3 h-3 text-amber-400/70" />
               <span>Max field: <strong className="text-white">{maxPlayers}</strong> players</span>
             </div>
           </div>
@@ -852,8 +854,8 @@ export default function TournamentCreate() {
         className="rounded-xl overflow-hidden"
         style={{
           background: "linear-gradient(180deg, rgba(10,10,6,0.95) 0%, rgba(22,27,34,0.80) 100%)",
-          border: "1px solid rgba(212,175,55,0.15)",
-          boxShadow: "0 0 30px rgba(212,175,55,0.06)",
+          border: "1px solid rgba(201,168,76,0.20)",
+          boxShadow: "0 0 30px rgba(212,175,55,0.08)",
         }}
       >
         {/* Header */}
@@ -901,24 +903,55 @@ export default function TournamentCreate() {
 
           {/* Key Metrics */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[0.625rem] text-gray-500">Est. Prize Pool</span>
-              <span className="text-sm font-bold text-amber-400">{estPrizePool.toLocaleString()}</span>
+            <div
+              className="flex items-center justify-between p-2.5 rounded-lg"
+              style={{
+                background: "linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(154,123,44,0.04) 100%)",
+                border: "1px solid rgba(201,168,76,0.15)",
+              }}
+            >
+              <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
+                <Coins className="w-3 h-3 text-amber-400" />
+                Est. Prize Pool
+              </span>
+              <span
+                className="text-sm font-bold"
+                style={{
+                  background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
+                {estPrizePool.toLocaleString()}
+              </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[0.625rem] text-gray-500">Total Buy-in</span>
-              <span className="text-sm font-bold text-white">{totalBuyIn.toLocaleString()}</span>
+              <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
+                <DollarSign className="w-3 h-3 text-amber-400/70" />
+                Total Buy-in
+              </span>
+              <span className="text-sm font-bold text-amber-300">{totalBuyIn.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[0.625rem] text-gray-500">Starting Chips</span>
+              <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
+                <Layers className="w-3 h-3 text-amber-400/70" />
+                Starting Chips
+              </span>
               <span className="text-sm font-mono text-gray-300">{startingStack.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[0.625rem] text-gray-500">Blind Levels</span>
+              <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
+                <Timer className="w-3 h-3 text-amber-400/70" />
+                Blind Levels
+              </span>
               <span className="text-sm font-mono text-gray-300">{blindInterval} min</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[0.625rem] text-gray-500">Max Players</span>
+              <span className="text-[0.625rem] text-gray-500 flex items-center gap-1.5">
+                <Users className="w-3 h-3 text-amber-400/70" />
+                Max Players
+              </span>
               <span className="text-sm font-mono text-gray-300">{maxPlayers}</span>
             </div>
           </div>
@@ -927,9 +960,9 @@ export default function TournamentCreate() {
           <div className="h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent" />
 
           {/* Status */}
-          <div className="flex items-center gap-2">
-            <Lock className="w-3 h-3 text-amber-500/60" />
-            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-500/60">Draft</span>
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg" style={{ border: "1px solid rgba(201,168,76,0.12)" }}>
+            <Lock className="w-3 h-3 text-[#c9a84c]/70" />
+            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-[#c9a84c]/70">Draft</span>
           </div>
         </div>
 
@@ -1046,7 +1079,7 @@ export default function TournamentCreate() {
                       isActive
                         ? "bg-yellow-500/15 border-yellow-500/25 text-yellow-300"
                         : isCompleted
-                          ? "text-amber-500/70 hover:text-amber-400"
+                          ? "text-amber-400 hover:text-amber-400"
                           : "text-gray-500 hover:text-gray-300"
                     }`}
                     style={
@@ -1064,7 +1097,7 @@ export default function TournamentCreate() {
                         isActive
                           ? "bg-yellow-500/25 text-yellow-300"
                           : isCompleted
-                            ? "bg-amber-500/15 text-amber-500/70"
+                            ? "bg-amber-500/15 text-amber-400"
                             : "bg-white/5 text-gray-600"
                       }`}
                     >
@@ -1196,6 +1229,25 @@ export default function TournamentCreate() {
           </div>
         </div>
       </div>
+
+      {/* Success overlay */}
+      <AnimatePresence>
+        {createSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center mb-3">
+                <CheckCircle className="w-8 h-8 text-amber-400" />
+              </div>
+              <p className="text-lg font-bold text-amber-400">Tournament Created Successfully!</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

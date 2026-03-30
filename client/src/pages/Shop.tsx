@@ -45,16 +45,16 @@ interface InventoryEntry {
 
 const RARITY_COLORS: Record<string, string> = {
   mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
-  legendary: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+  legendary: "text-primary bg-cyan-500/10 border-cyan-500/20",
   epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+  rare: "text-primary bg-cyan-500/10 border-cyan-500/20",
   uncommon: "text-green-400 bg-green-500/10 border-green-500/20",
   common: "text-gray-400 bg-gray-500/10 border-gray-500/20",
   // Also support capitalized keys for backward compatibility
   Mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
-  Legendary: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+  Legendary: "text-primary bg-cyan-500/10 border-cyan-500/20",
   Epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  Rare: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+  Rare: "text-primary bg-cyan-500/10 border-cyan-500/20",
 };
 
 const RARITY_GRADIENTS: Record<string, string> = {
@@ -209,6 +209,156 @@ function SuccessToast({ message }: { message: string }) {
         <Check className="w-4 h-4 text-green-400" />
       </div>
       <span className="text-sm font-bold text-green-400">{message}</span>
+    </motion.div>
+  );
+}
+
+function PurchaseSuccessOverlay({
+  item,
+  onViewInventory,
+  onContinue,
+}: {
+  item: ShopItem;
+  onViewInventory: () => void;
+  onContinue: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md"
+      onClick={onContinue}
+    >
+      {/* Gold sparkle particles */}
+      {Array.from({ length: 20 }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{
+            opacity: 0,
+            scale: 0,
+            x: 0,
+            y: 0,
+          }}
+          animate={{
+            opacity: [0, 1, 1, 0],
+            scale: [0, 1, 1, 0.5],
+            x: (Math.random() - 0.5) * 400,
+            y: (Math.random() - 0.5) * 400,
+          }}
+          transition={{
+            duration: 2,
+            delay: Math.random() * 0.5,
+            ease: "easeOut",
+          }}
+          className="absolute pointer-events-none"
+          style={{
+            left: "50%",
+            top: "45%",
+            width: `${4 + Math.random() * 6}px`,
+            height: `${4 + Math.random() * 6}px`,
+            borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+            background: `linear-gradient(135deg, #f3e2ad, #d4af37)`,
+            boxShadow: "0 0 6px rgba(212,175,55,0.6)",
+            transform: `rotate(${Math.random() * 360}deg)`,
+          }}
+        />
+      ))}
+
+      <motion.div
+        initial={{ scale: 0.7, opacity: 0, y: 30 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative glass rounded-2xl border overflow-hidden w-full max-w-sm mx-4 text-center"
+        style={{
+          borderColor: "rgba(201,168,76,0.3)",
+          boxShadow: "0 0 40px rgba(212,175,55,0.15), 0 0 80px rgba(212,175,55,0.05)",
+        }}
+      >
+        {/* Glow bar at top */}
+        <div
+          className="h-1"
+          style={{
+            background: "linear-gradient(90deg, transparent, #d4af37, #f3e2ad, #d4af37, transparent)",
+          }}
+        />
+
+        <div className="p-6 space-y-4">
+          {/* Animated check icon */}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", delay: 0.2, damping: 12, stiffness: 200 }}
+            className="w-16 h-16 rounded-full mx-auto flex items-center justify-center"
+            style={{
+              background: "linear-gradient(135deg, rgba(212,175,55,0.2), rgba(243,226,173,0.1))",
+              border: "2px solid rgba(212,175,55,0.4)",
+              boxShadow: "0 0 20px rgba(212,175,55,0.2)",
+            }}
+          >
+            <Check className="w-8 h-8 text-[#d4af37]" />
+          </motion.div>
+
+          {/* Heading */}
+          <motion.h2
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-xl font-black uppercase tracking-wider"
+            style={{
+              background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 50%, #f3e2ad 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            Purchase Successful!
+          </motion.h2>
+
+          {/* Item name */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className="text-[0.625rem] text-gray-500 uppercase tracking-wider mb-0.5">You acquired</div>
+            <div className="text-base font-bold text-white">{item.name}</div>
+            <div className={`inline-block px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider border mt-1.5 ${getRarityColor(item.rarity)}`}>
+              {item.rarity}
+            </div>
+          </motion.div>
+
+          {/* Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="flex gap-3 pt-2"
+          >
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onViewInventory}
+              className="flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
+              style={{
+                background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)",
+              }}
+            >
+              View Inventory
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onContinue}
+              className="flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 border border-white/10 hover:border-white/20 hover:text-white transition-all"
+            >
+              Continue Shopping
+            </motion.button>
+          </motion.div>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -378,6 +528,7 @@ export default function Shop() {
   const [purchasing, setPurchasing] = useState(false);
   const [equipping, setEquipping] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState<{ item: ShopItem } | null>(null);
 
   // Wishlist state (localStorage-backed)
   const [wishlist, setWishlist] = useState<Set<string>>(() => {
@@ -460,8 +611,10 @@ export default function Shop() {
         body: JSON.stringify({ itemId: selectedItem.id }),
       });
       if (res.ok) {
-        showToast(`Successfully purchased ${selectedItem.name}!`);
+        const purchasedItem = selectedItem;
         setSelectedItem(null);
+        setPurchaseSuccess({ item: purchasedItem });
+        setTimeout(() => setPurchaseSuccess(null), 3000);
         await Promise.all([refreshBalance(), refreshUser(), fetchInventory(), refreshTransactions()]);
       } else {
         const err = await res.json().catch(() => ({ message: "Purchase failed" }));
@@ -1024,6 +1177,20 @@ export default function Shop() {
       {/* Success Toast */}
       <AnimatePresence>
         {toast && <SuccessToast message={toast} />}
+      </AnimatePresence>
+
+      {/* Purchase Success Overlay */}
+      <AnimatePresence>
+        {purchaseSuccess && (
+          <PurchaseSuccessOverlay
+            item={purchaseSuccess.item}
+            onViewInventory={() => {
+              setPurchaseSuccess(null);
+              setActiveTab("Inventory");
+            }}
+            onContinue={() => setPurchaseSuccess(null)}
+          />
+        )}
       </AnimatePresence>
     </DashboardLayout>
   );

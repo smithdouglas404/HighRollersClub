@@ -44,7 +44,7 @@ export type ClientMessage =
   | { type: "admin_resume_game"; tableId: string }
   | { type: "admin_approve_player"; tableId: string; playerId: string }
   | { type: "admin_decline_player"; tableId: string; playerId: string }
-  | { type: "admin_update_table"; tableId: string; settings: { walletLimit?: number; smallBlind?: number; bigBlind?: number; ante?: number } };
+  | { type: "admin_update_table"; tableId: string; settings: { walletLimit?: number; smallBlind?: number; bigBlind?: number; ante?: number; rakePercent?: number; maxValuePerHand?: number; turnTimerDuration?: number; autoStartNextHand?: boolean } };
 
 // Message types: Server → Client
 export type ServerMessage =
@@ -782,6 +782,10 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         smallBlind: settings.smallBlind,
         bigBlind: settings.bigBlind,
         ante: settings.ante,
+        rakePercent: settings.rakePercent,
+        maxValuePerHand: settings.maxValuePerHand,
+        turnTimerDuration: settings.turnTimerDuration,
+        autoStartNextHand: settings.autoStartNextHand,
       });
       if (!updated) {
         sendToUser(client.userId, { type: "error", message: "Table not found" });

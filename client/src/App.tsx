@@ -24,12 +24,19 @@ import HandReplay from "@/pages/HandReplay";
 import BrowseClubs from "@/pages/BrowseClubs";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
+import Security from "@/pages/Security";
 import AdminDashboard from "@/pages/AdminDashboard";
 import Tournaments from "@/pages/Tournaments";
 import TournamentCreate from "@/pages/TournamentCreate";
 import TournamentDetail from "@/pages/TournamentDetail";
 import TableSetup from "@/pages/TableSetup";
 import ClubCreate from "@/pages/ClubCreate";
+import PremiumUpgrade from "@/pages/PremiumUpgrade";
+import AnnouncementManager from "@/pages/AnnouncementManager";
+import SponsorshipReports from "@/pages/SponsorshipReports";
+import AccountRecovery from "@/pages/AccountRecovery";
+import AvatarWardrobe from "@/pages/AvatarWardrobe";
+import DyeShop from "@/pages/DyeShop";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -82,6 +89,10 @@ function ProtectedProfile() {
   return <AuthGate><Profile /></AuthGate>;
 }
 
+function ProtectedSecurity() {
+  return <AuthGate><Security /></AuthGate>;
+}
+
 function ProtectedAdmin() {
   return <AuthGate><AdminDashboard /></AuthGate>;
 }
@@ -100,6 +111,26 @@ function ProtectedTableSetup() {
 
 function ProtectedClubCreate() {
   return <AuthGate><ClubCreate /></AuthGate>;
+}
+
+function ProtectedPremium() {
+  return <AuthGate><PremiumUpgrade /></AuthGate>;
+}
+
+function ProtectedAnnouncementManager() {
+  return <AuthGate><AnnouncementManager /></AuthGate>;
+}
+
+function ProtectedSponsorshipReports() {
+  return <AuthGate><SponsorshipReports /></AuthGate>;
+}
+
+function ProtectedWardrobe() {
+  return <AuthGate><AvatarWardrobe /></AuthGate>;
+}
+
+function ProtectedDyeShop() {
+  return <AuthGate><DyeShop /></AuthGate>;
 }
 
 function GameWithTable({ params }: { params: { tableId: string } }) {
@@ -163,12 +194,19 @@ function Router() {
       <Route path="/clubs/browse" component={ProtectedBrowseClubs} />
       <Route path="/leaderboard" component={ProtectedLeaderboard} />
       <Route path="/profile" component={ProtectedProfile} />
+      <Route path="/security" component={ProtectedSecurity} />
       <Route path="/tournaments" component={ProtectedTournaments} />
       <Route path="/tournaments/new" component={ProtectedTournamentCreate} />
       <Route path="/tournaments/:id">{(params) => <TournamentDetailPage params={params} />}</Route>
       <Route path="/table/new" component={ProtectedTableSetup} />
       <Route path="/clubs/create" component={ProtectedClubCreate} />
+      <Route path="/premium" component={ProtectedPremium} />
+      <Route path="/admin/announcements" component={ProtectedAnnouncementManager} />
       <Route path="/admin" component={ProtectedAdmin} />
+      <Route path="/sponsorship" component={ProtectedSponsorshipReports} />
+      <Route path="/recovery" component={AccountRecovery} />
+      <Route path="/wardrobe" component={ProtectedWardrobe} />
+      <Route path="/dye-shop" component={ProtectedDyeShop} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -6,7 +6,7 @@ import { useClub } from "@/lib/club-context";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users, Globe, Lock, Zap, Check, ArrowLeft, ArrowRight,
-  Upload, Shield, Crown,
+  Upload, Shield, Crown, CheckCircle, Eye,
 } from "lucide-react";
 
 /* ── Logo options ──────────────────────────────────────────────────────────── */
@@ -18,6 +18,15 @@ const LOGO_OPTIONS = [
   { id: "dragons", label: "Dragons", url: "/attached_assets/generated_images/clubs/club_dragons.webp" },
   { id: "wolves", label: "Wolves", url: "/attached_assets/generated_images/clubs/club_wolves.webp" },
   { id: "aces", label: "Aces", url: "/attached_assets/generated_images/clubs/club_aces.webp" },
+];
+
+const THEME_COLORS = [
+  { id: "cyan", label: "Cyan", hex: "#81ecff" },
+  { id: "gold", label: "Gold", hex: "#d4af37" },
+  { id: "purple", label: "Purple", hex: "#a78bfa" },
+  { id: "green", label: "Green", hex: "#3fff8b" },
+  { id: "red", label: "Red", hex: "#ff7076" },
+  { id: "blue", label: "Blue", hex: "#3b82f6" },
 ];
 
 const MAX_MEMBER_OPTIONS = [10, 25, 50, 100, 200, 500];
@@ -64,18 +73,21 @@ export default function ClubCreate() {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState(false);
 
   // Step 1 — Club Identity
   const [clubName, setClubName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
+  const [themeColor, setThemeColor] = useState("cyan");
 
   // Step 2 — Configuration
   const [maxMembers, setMaxMembers] = useState(50);
   const [chipBuyIn, setChipBuyIn] = useState(1000);
+  const [creditLimit, setCreditLimit] = useState(10000);
 
   // Step 3 — Privacy & Access
-  const [isPublic, setIsPublic] = useState(true);
+  const [visibility, setVisibility] = useState<"public" | "semi-private" | "private">("public");
   const [requireApproval, setRequireApproval] = useState(false);
 
   /* ── Navigation helpers ──────────────────────────────────────────────────── */
@@ -111,9 +123,10 @@ export default function ClubCreate() {
         body: JSON.stringify({
           name: clubName.trim(),
           description: description.trim() || undefined,
-          isPublic,
+          isPublic: visibility !== "private",
           maxMembers,
           chipBuyIn,
+          creditLimit,
           logo: selectedLogo,
         }),
       });
@@ -138,7 +151,8 @@ export default function ClubCreate() {
       toast({ title: "Club created!", description: `"${newClub.name}" is ready to go.` });
       await reload();
       switchClub(newClub.id);
-      navigate("/club");
+      setCreateSuccess(true);
+      setTimeout(() => navigate("/club"), 1000);
     } catch (err: any) {
       toast({
         title: "Failed to create club",
@@ -188,11 +202,11 @@ export default function ClubCreate() {
                 className="w-9 h-9 rounded-full flex items-center justify-center border-2 shrink-0"
               >
                 {isCompleted ? (
-                  <Check className="w-4 h-4 text-cyan-400" />
+                  <Check className="w-4 h-4 text-primary" />
                 ) : (
                   <span
                     className={`text-xs font-bold ${
-                      isCurrent ? "text-cyan-400" : "text-gray-500"
+                      isCurrent ? "text-primary" : "text-gray-500"
                     }`}
                   >
                     {i + 1}
@@ -202,7 +216,7 @@ export default function ClubCreate() {
               <span
                 className={`text-[0.5625rem] font-medium tracking-wide hidden sm:block ${
                   isCurrent
-                    ? "text-cyan-400"
+                    ? "text-primary"
                     : isCompleted
                       ? "text-cyan-500/70"
                       : "text-gray-600"
@@ -231,7 +245,7 @@ export default function ClubCreate() {
         }}
       >
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 group-hover:bg-white/[0.02] transition-colors">
-          <Upload className="w-8 h-8 text-gray-500 group-hover:text-cyan-400 transition-colors" />
+          <Upload className="w-8 h-8 text-gray-500 group-hover:text-primary transition-colors" />
           <span className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
             Upload Cover Image (1920x480 recommended)
           </span>
@@ -308,7 +322,7 @@ export default function ClubCreate() {
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-cyan-500 flex items-center justify-center z-10"
+                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center z-10"
                     style={{ boxShadow: "0 0 8px rgba(0,212,255,0.5)" }}
                   >
                     <Check className="w-3 h-3 text-black" />
@@ -327,7 +341,7 @@ export default function ClubCreate() {
                 </div>
                 <span
                   className={`text-[0.625rem] font-semibold ${
-                    isSelected ? "text-cyan-400" : "text-gray-400"
+                    isSelected ? "text-primary" : "text-gray-400"
                   }`}
                 >
                   {logo.label}
@@ -353,11 +367,55 @@ export default function ClubCreate() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-[0.625rem] text-cyan-400 font-semibold">
+            <span className="text-[0.625rem] text-primary font-semibold">
               {LOGO_OPTIONS.find((l) => l.id === selectedLogo)?.label} selected
             </span>
           </motion.div>
         )}
+      </div>
+
+      {/* Club Theme Color */}
+      <div className="space-y-2">
+        <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+          Club Theme Color
+        </label>
+        <div className="flex items-center gap-3">
+          {THEME_COLORS.map((color) => {
+            const isSelected = themeColor === color.id;
+            return (
+              <motion.button
+                key={color.id}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setThemeColor(color.id)}
+                className="relative w-9 h-9 rounded-full cursor-pointer transition-all"
+                style={{
+                  background: color.hex,
+                  boxShadow: isSelected
+                    ? `0 0 16px ${color.hex}80, 0 0 4px ${color.hex}60`
+                    : "none",
+                  border: isSelected
+                    ? `2px solid ${color.hex}`
+                    : "2px solid transparent",
+                }}
+                title={color.label}
+              >
+                {isSelected && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <Check className="w-4 h-4 text-black drop-shadow-sm" />
+                  </motion.div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+        <p className="text-[0.5625rem] text-gray-600">
+          Accent color used throughout your club pages
+        </p>
       </div>
     </div>
   );
@@ -420,6 +478,25 @@ export default function ClubCreate() {
         />
       </div>
 
+      {/* Default Player Credit Limit */}
+      <div className="space-y-1.5">
+        <label htmlFor="club-credit-limit" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+          <Shield className="w-3.5 h-3.5" />
+          Default Player Credit Limit
+        </label>
+        <input
+          id="club-credit-limit"
+          type="number"
+          value={creditLimit}
+          onChange={(e) => setCreditLimit(Math.max(0, parseInt(e.target.value) || 0))}
+          min={0}
+          placeholder="10000"
+          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+          style={inputStyle}
+        />
+        <p className="text-[0.5625rem] text-gray-500">Max chips a player can owe before being restricted</p>
+      </div>
+
       {/* Summary info card */}
       <div
         className="rounded-xl p-4"
@@ -429,17 +506,17 @@ export default function ClubCreate() {
         }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <Shield className="w-4 h-4 text-cyan-400" />
+          <Shield className="w-4 h-4 text-primary" />
           <span className="text-xs font-bold text-white uppercase tracking-wider">
             Configuration Summary
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col">
             <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">
               Capacity
             </span>
-            <span className="text-sm font-bold text-cyan-400 mt-0.5">
+            <span className="text-sm font-bold text-primary mt-0.5">
               {maxMembers} members
             </span>
           </div>
@@ -447,8 +524,16 @@ export default function ClubCreate() {
             <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">
               Buy-in
             </span>
-            <span className="text-sm font-bold text-cyan-400 mt-0.5">
+            <span className="text-sm font-bold text-primary mt-0.5">
               {chipBuyIn.toLocaleString()} chips
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">
+              Credit Limit
+            </span>
+            <span className="text-sm font-bold text-primary mt-0.5">
+              {creditLimit.toLocaleString()} chips
             </span>
           </div>
         </div>
@@ -460,131 +545,81 @@ export default function ClubCreate() {
 
   const renderStep3 = () => (
     <div className="space-y-6">
-      {/* Public / Private radio cards */}
+      {/* Visibility radio cards */}
       <div className="space-y-2">
         <label id="club-visibility-label" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
           Club Visibility
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Public */}
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setIsPublic(true)}
-            className="relative rounded-xl p-5 text-left transition-all cursor-pointer"
-            style={{
-              background: isPublic
-                ? "rgba(0,212,255,0.08)"
-                : "rgba(255,255,255,0.03)",
-              border: isPublic
-                ? "2px solid rgba(0,212,255,0.4)"
-                : "2px solid rgba(255,255,255,0.08)",
-              boxShadow: isPublic
-                ? "0 0 25px rgba(0,212,255,0.08)"
-                : "none",
-            }}
-          >
-            {isPublic && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute top-3 right-3 w-5 h-5 rounded-full bg-cyan-500 flex items-center justify-center"
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {([
+            { id: "public" as const, icon: Globe, label: "Public", description: "Anyone can discover and join" },
+            { id: "semi-private" as const, icon: Eye, label: "Semi-Private", description: "Visible in browse, requires approval to join" },
+            { id: "private" as const, icon: Lock, label: "Private", description: "Invite only, hidden from search" },
+          ] as const).map((opt) => {
+            const isSelected = visibility === opt.id;
+            const Icon = opt.icon;
+            return (
+              <motion.button
+                key={opt.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setVisibility(opt.id)}
+                className="relative rounded-xl p-5 text-left transition-all cursor-pointer"
+                style={{
+                  background: isSelected
+                    ? "rgba(0,212,255,0.08)"
+                    : "rgba(255,255,255,0.03)",
+                  border: isSelected
+                    ? "2px solid rgba(0,212,255,0.4)"
+                    : "2px solid rgba(255,255,255,0.08)",
+                  boxShadow: isSelected
+                    ? "0 0 25px rgba(0,212,255,0.08)"
+                    : "none",
+                }}
               >
-                <Check className="w-3 h-3 text-black" />
-              </motion.div>
-            )}
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-              style={{
-                background: isPublic
-                  ? "rgba(0,212,255,0.15)"
-                  : "rgba(255,255,255,0.06)",
-                border: `1px solid ${
-                  isPublic ? "rgba(0,212,255,0.3)" : "rgba(255,255,255,0.1)"
-                }`,
-              }}
-            >
-              <Globe
-                className={`w-5 h-5 ${
-                  isPublic ? "text-cyan-400" : "text-gray-500"
-                }`}
-              />
-            </div>
-            <div
-              className={`text-sm font-bold mb-1 ${
-                isPublic ? "text-white" : "text-gray-400"
-              }`}
-            >
-              Public
-            </div>
-            <div
-              className={`text-[0.625rem] leading-relaxed ${
-                isPublic ? "text-gray-300" : "text-gray-600"
-              }`}
-            >
-              Anyone can discover and join
-            </div>
-          </motion.button>
-
-          {/* Private */}
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setIsPublic(false)}
-            className="relative rounded-xl p-5 text-left transition-all cursor-pointer"
-            style={{
-              background: !isPublic
-                ? "rgba(0,212,255,0.08)"
-                : "rgba(255,255,255,0.03)",
-              border: !isPublic
-                ? "2px solid rgba(0,212,255,0.4)"
-                : "2px solid rgba(255,255,255,0.08)",
-              boxShadow: !isPublic
-                ? "0 0 25px rgba(0,212,255,0.08)"
-                : "none",
-            }}
-          >
-            {!isPublic && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute top-3 right-3 w-5 h-5 rounded-full bg-cyan-500 flex items-center justify-center"
-              >
-                <Check className="w-3 h-3 text-black" />
-              </motion.div>
-            )}
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-              style={{
-                background: !isPublic
-                  ? "rgba(0,212,255,0.15)"
-                  : "rgba(255,255,255,0.06)",
-                border: `1px solid ${
-                  !isPublic ? "rgba(0,212,255,0.3)" : "rgba(255,255,255,0.1)"
-                }`,
-              }}
-            >
-              <Lock
-                className={`w-5 h-5 ${
-                  !isPublic ? "text-cyan-400" : "text-gray-500"
-                }`}
-              />
-            </div>
-            <div
-              className={`text-sm font-bold mb-1 ${
-                !isPublic ? "text-white" : "text-gray-400"
-              }`}
-            >
-              Private
-            </div>
-            <div
-              className={`text-[0.625rem] leading-relaxed ${
-                !isPublic ? "text-gray-300" : "text-gray-600"
-              }`}
-            >
-              Invite only, hidden from search
-            </div>
-          </motion.button>
+                {isSelected && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
+                  >
+                    <Check className="w-3 h-3 text-black" />
+                  </motion.div>
+                )}
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                  style={{
+                    background: isSelected
+                      ? "rgba(0,212,255,0.15)"
+                      : "rgba(255,255,255,0.06)",
+                    border: `1px solid ${
+                      isSelected ? "rgba(0,212,255,0.3)" : "rgba(255,255,255,0.1)"
+                    }`,
+                  }}
+                >
+                  <Icon
+                    className={`w-5 h-5 ${
+                      isSelected ? "text-primary" : "text-gray-500"
+                    }`}
+                  />
+                </div>
+                <div
+                  className={`text-sm font-bold mb-1 ${
+                    isSelected ? "text-white" : "text-gray-400"
+                  }`}
+                >
+                  {opt.label}
+                </div>
+                <div
+                  className={`text-[0.625rem] leading-relaxed ${
+                    isSelected ? "text-gray-300" : "text-gray-600"
+                  }`}
+                >
+                  {opt.description}
+                </div>
+              </motion.button>
+            );
+          })}
         </div>
       </div>
 
@@ -682,7 +717,7 @@ export default function ClubCreate() {
           className="px-5 py-3 flex items-center gap-2"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <Shield className="w-4 h-4 text-cyan-400" />
+          <Shield className="w-4 h-4 text-primary" />
           <span className="text-xs font-bold text-white uppercase tracking-wider">
             Club Summary
           </span>
@@ -691,7 +726,9 @@ export default function ClubCreate() {
           {[
             { label: "Max Members", value: `${maxMembers}` },
             { label: "Standard Buy-in", value: `${chipBuyIn.toLocaleString()} chips` },
-            { label: "Privacy", value: isPublic ? "Public" : "Private" },
+            { label: "Credit Limit", value: `${creditLimit.toLocaleString()} chips` },
+            { label: "Theme Color", value: THEME_COLORS.find((c) => c.id === themeColor)?.label ?? "Cyan" },
+            { label: "Privacy", value: visibility === "public" ? "Public" : visibility === "semi-private" ? "Semi-Private" : "Private" },
             { label: "Approval Required", value: requireApproval ? "Yes" : "No" },
           ].map((row) => (
             <div key={row.label} className="flex items-center justify-between px-5 py-3">
@@ -754,7 +791,7 @@ export default function ClubCreate() {
               style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
             >
               <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                <Crown className="w-5 h-5 text-cyan-400" />
+                <Crown className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white tracking-wider uppercase">
@@ -853,6 +890,25 @@ export default function ClubCreate() {
           </div>
         </div>
       </div>
+
+      {/* Success overlay */}
+      <AnimatePresence>
+        {createSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-secondary/20 border border-secondary/30 flex items-center justify-center mb-3">
+                <CheckCircle className="w-8 h-8 text-secondary" />
+              </div>
+              <p className="text-lg font-bold text-secondary">Club Created Successfully!</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

@@ -12,7 +12,8 @@ import {
   ChevronDown, ChevronUp, ShieldCheck,
   UserX, Check, X, Send, Search,
   AlertCircle, Filter, Bell, CalendarDays,
-  TrendingUp, TrendingDown, Trophy, Wifi
+  TrendingUp, TrendingDown, Trophy, Wifi,
+  MoreVertical, ShieldPlus, ShieldMinus
 } from "lucide-react";
 
 function RoleLabel({ role }: { role: string }) {
@@ -69,7 +70,7 @@ const PODIUM_STYLES: Record<number, { bg: string; border: string; glow: string; 
     bg: "linear-gradient(135deg, rgba(205,127,50,0.10) 0%, rgba(180,100,30,0.05) 100%)",
     border: "1px solid rgba(205,127,50,0.25)",
     glow: "0 0 16px rgba(205,127,50,0.1), inset 0 1px 0 rgba(205,127,50,0.12)",
-    iconColor: "text-amber-600",
+    iconColor: "text-amber-500",
     label: "3rd",
   },
 };
@@ -105,6 +106,7 @@ export default function Members() {
   const [roleFilter, setRoleFilter] = useState<"all" | "owner" | "admin" | "member">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
   const [editingRole, setEditingRole] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const pendingInvitations = invitations.filter(inv => inv.status === "pending");
 
@@ -423,67 +425,80 @@ export default function Members() {
 
                       <div className="col-span-2 flex items-center justify-end gap-1.5">
                         {canManage && (
-                          <>
-                            <div className="relative">
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                data-testid={`button-role-${member.userId}`}
-                                onClick={() => setEditingRole(editingRole === member.userId ? null : member.userId)}
-                                disabled={actionLoading === `role-${member.userId}`}
-                                className="px-2 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
-                              >
-                                {actionLoading === `role-${member.userId}` ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : member.role === "member" ? "Set Role" : "Edit Role"}
-                              </motion.button>
-                              <AnimatePresence>
-                                {editingRole === member.userId && (
+                          <div className="relative">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              data-testid={`button-menu-${member.userId}`}
+                              onClick={() => setOpenMenuId(openMenuId === member.userId ? null : member.userId)}
+                              className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all"
+                              title="Member actions"
+                            >
+                              <MoreVertical className="w-4 h-4 text-gray-400" />
+                            </motion.button>
+                            <AnimatePresence>
+                              {openMenuId === member.userId && (
+                                <>
+                                  {/* Backdrop to close menu */}
+                                  <div
+                                    className="fixed inset-0 z-10"
+                                    onClick={() => setOpenMenuId(null)}
+                                  />
                                   <motion.div
                                     initial={{ opacity: 0, y: -5, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -5, scale: 0.95 }}
-                                    className="absolute right-0 top-full mt-1 z-20 glass rounded-lg border border-white/10 overflow-hidden min-w-[100px]"
+                                    className="absolute right-0 top-full mt-1.5 z-20 glass rounded-xl border border-white/10 overflow-hidden min-w-[160px] shadow-lg shadow-black/30"
                                   >
                                     {member.role !== "admin" && (
                                       <button
                                         data-testid={`button-promote-${member.userId}`}
-                                        onClick={() => handleRoleChange(member.userId, "admin")}
-                                        className="w-full px-3 py-2 text-left text-[0.625rem] font-bold text-primary hover:bg-primary/10 transition-colors flex items-center gap-1.5"
+                                        onClick={() => { handleRoleChange(member.userId, "admin"); setOpenMenuId(null); }}
+                                        disabled={actionLoading === `role-${member.userId}`}
+                                        className="w-full px-4 py-2.5 text-left text-[0.6875rem] font-semibold text-primary hover:bg-primary/10 transition-colors flex items-center gap-2.5 disabled:opacity-50"
                                       >
-                                        <ChevronUp className="w-3 h-3" /> Promote
+                                        {actionLoading === `role-${member.userId}` ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <ShieldPlus className="w-3.5 h-3.5" />
+                                        )}
+                                        Promote to Admin
                                       </button>
                                     )}
                                     {member.role === "admin" && (
                                       <button
                                         data-testid={`button-demote-${member.userId}`}
-                                        onClick={() => handleRoleChange(member.userId, "member")}
-                                        className="w-full px-3 py-2 text-left text-[0.625rem] font-bold text-primary hover:bg-primary/10 transition-colors flex items-center gap-1.5"
+                                        onClick={() => { handleRoleChange(member.userId, "member"); setOpenMenuId(null); }}
+                                        disabled={actionLoading === `role-${member.userId}`}
+                                        className="w-full px-4 py-2.5 text-left text-[0.6875rem] font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-2.5 disabled:opacity-50"
                                       >
-                                        <ChevronDown className="w-3 h-3" /> Demote
+                                        {actionLoading === `role-${member.userId}` ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <ShieldMinus className="w-3.5 h-3.5" />
+                                        )}
+                                        Demote to Member
                                       </button>
                                     )}
+                                    <div className="h-px bg-white/[0.06] mx-2" />
+                                    <button
+                                      data-testid={`button-kick-${member.userId}`}
+                                      onClick={() => { handleKick(member.userId, member.displayName); setOpenMenuId(null); }}
+                                      disabled={actionLoading === `kick-${member.userId}`}
+                                      className="w-full px-4 py-2.5 text-left text-[0.6875rem] font-semibold text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2.5 disabled:opacity-50"
+                                    >
+                                      {actionLoading === `kick-${member.userId}` ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
+                                      ) : (
+                                        <UserX className="w-3.5 h-3.5" />
+                                      )}
+                                      Kick from Club
+                                    </button>
                                   </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              data-testid={`button-kick-${member.userId}`}
-                              onClick={() => handleKick(member.userId, member.displayName)}
-                              disabled={actionLoading === `kick-${member.userId}`}
-                              className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                              title="Remove from Club"
-                            >
-                              {actionLoading === `kick-${member.userId}` ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
-                              ) : (
-                                <UserX className="w-3.5 h-3.5 text-red-400" />
+                                </>
                               )}
-                            </motion.button>
-                          </>
+                            </AnimatePresence>
+                          </div>
                         )}
                         {!canManage && !isMe && (
                           <span className="text-[0.5625rem] text-gray-600 font-bold uppercase tracking-wider">--</span>

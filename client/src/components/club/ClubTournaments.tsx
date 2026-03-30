@@ -216,13 +216,7 @@ export function ClubTournaments() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="rounded-xl p-4"
-                style={{
-                  background: "rgba(20,31,40,0.65)",
-                  backdropFilter: "blur(16px)",
-                  border: "1px solid rgba(0,212,255,0.15)",
-                  boxShadow: "0 0 20px rgba(0,212,255,0.04)",
-                }}
+                className="rounded-xl p-4 glass"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
@@ -295,11 +289,7 @@ export function ClubTournaments() {
       {past.length > 0 && (
         <div>
           <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Past</h4>
-          <div className="rounded-xl overflow-hidden" style={{
-            background: "rgba(20,31,40,0.65)",
-            backdropFilter: "blur(16px)",
-            border: "1px solid rgba(255,255,255,0.05)",
-          }}>
+          <div className="rounded-xl overflow-hidden glass">
             {past.map((t, i) => (
               <div
                 key={t.id}

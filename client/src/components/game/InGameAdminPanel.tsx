@@ -42,6 +42,10 @@ export interface InGameSettings {
   sevenTwoBounty: number;
   guestChatEnabled: boolean;
   autoTrimExcessBets: boolean;
+  // T18: Advanced admin settings
+  maxValuePerHand: number;
+  turnTimerDuration: number;
+  autoStartNextHand: boolean;
 }
 
 interface InGameAdminPanelProps {
@@ -284,6 +288,14 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
             </select>
           </div>
           <div>
+            <label className={labelClass}>Turn Timer Duration</label>
+            <select value={local.turnTimerDuration} onChange={(e) => update("turnTimerDuration", parseInt(e.target.value))} className={inputClass} data-testid="admin-select-turn-timer">
+              {[15, 30, 45, 60, 90].map(n => (
+                <option key={n} value={n} className="bg-gray-900">{n}s</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className={labelClass}>Game Speed</label>
             <select value={local.speedMultiplier} onChange={(e) => update("speedMultiplier", parseFloat(e.target.value))} className={inputClass} data-testid="admin-select-speed">
               <option value={0.5} className="bg-gray-900">Turbo (2x)</option>
@@ -326,22 +338,35 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
               <option value="slow" className="bg-gray-900">Slow</option>
             </select>
           </div>
+          <div className="col-span-2">
+            <Toggle value={local.autoStartNextHand} onChange={(v) => update("autoStartNextHand", v)} icon={Clock} label="Auto-Start Next Hand" />
+          </div>
         </div>
       </div>
 
-      {/* Rake (multiplayer) */}
-      {isMultiplayer && (
-        <div>
-          <SectionHeader icon={Percent} label="Rake" color="amber" />
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className={labelClass}>Rake %</label>
-              <select value={local.rakePercent} onChange={(e) => update("rakePercent", parseFloat(e.target.value))} className={inputClass} data-testid="admin-select-rake">
-                {[0, 1, 2, 2.5, 3, 4, 5, 7, 10].map(n => (
-                  <option key={n} value={n} className="bg-gray-900">{n === 0 ? "No Rake" : `${n}%`}</option>
-                ))}
-              </select>
+      {/* Rake & Limits */}
+      <div>
+        <SectionHeader icon={Percent} label="Rake & Limits" color="amber" />
+        <div className="space-y-3">
+          {/* Rake percentage slider */}
+          <div>
+            <label className={labelClass}>Rake Percentage — {local.rakePercent}%</label>
+            <input
+              type="range"
+              min={0}
+              max={10}
+              step={0.5}
+              value={local.rakePercent}
+              onChange={(e) => update("rakePercent", parseFloat(e.target.value))}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-white/10 accent-amber-500"
+              data-testid="admin-slider-rake"
+            />
+            <div className="flex justify-between mt-0.5 px-0.5">
+              <span className="text-[0.5rem] text-gray-500">0%</span>
+              <span className="text-[0.5rem] text-gray-500">10%</span>
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={labelClass}>Rake Cap</label>
               <input
@@ -354,9 +379,21 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
                 data-testid="admin-input-rakecap"
               />
             </div>
+            <div>
+              <label className={labelClass}>Max Value / Hand</label>
+              <input
+                type="number"
+                value={local.maxValuePerHand}
+                onChange={(e) => update("maxValuePerHand", parseInt(e.target.value) || 0)}
+                min={0}
+                placeholder="No limit"
+                className={inputClass}
+                data-testid="admin-input-maxvalue"
+              />
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Bots */}
       <div>

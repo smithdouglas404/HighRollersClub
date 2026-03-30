@@ -113,7 +113,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   // ─── Loading state ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#111b2a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="spinner spinner-lg" />
       </div>
     );
@@ -240,7 +240,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#111b2a] text-white flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-background text-white flex items-center justify-center relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,30,40,0.5)_0%,rgba(0,0,0,0.85)_70%)]" />

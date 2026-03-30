@@ -68,13 +68,7 @@ export function ClubLeaderboard({ clubId }: { clubId: string }) {
 
       {/* Leaderboard Table */}
       <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "rgba(20,31,40,0.65)",
-          backdropFilter: "blur(16px)",
-          border: "1px solid rgba(0,212,255,0.15)",
-          boxShadow: "0 0 25px rgba(0,212,255,0.04)",
-        }}
+        className="rounded-xl overflow-hidden glass"
       >
         {/* Header row */}
         <div className="grid grid-cols-12 gap-2 px-5 py-2.5 border-b border-white/5">

@@ -11,7 +11,7 @@ import { MemberAvatar } from "./shared/MemberAvatar";
 import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
   BarChart3, LogOut, Search, Wallet, Medal,
-  Shield, ChevronDown, Check, Menu, X, Coins
+  Shield, ChevronDown, Check, Menu, X, Coins, Crown, Shirt
 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
@@ -33,6 +33,8 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse", "/clubs/create"] },
   { icon: Swords, label: "League & Alliances", href: "/leagues" },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
+  { icon: Shirt, label: "Wardrobe", href: "/wardrobe", match: ["/wardrobe", "/dye-shop"] },
+  { icon: Crown, label: "Premium", href: "/premium", match: ["/premium"] },
 ];
 
 const ADMIN_NAV_ITEM: NavItem = { icon: Shield, label: "Admin", href: "/admin", match: ["/admin"] };

@@ -37,8 +37,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   registration: { label: "Registration Open", color: "text-emerald-400" },
   registering: { label: "Registration Open", color: "text-emerald-400" },
   pending: { label: "Pending", color: "text-yellow-400" },
-  in_progress: { label: "In Progress", color: "text-cyan-400" },
-  running: { label: "Running", color: "text-cyan-400" },
+  in_progress: { label: "In Progress", color: "text-primary" },
+  running: { label: "Running", color: "text-primary" },
   complete: { label: "Complete", color: "text-gray-400" },
   completed: { label: "Complete", color: "text-gray-400" },
   cancelled: { label: "Cancelled", color: "text-red-400" },
@@ -125,7 +125,7 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
         {/* Loading */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-yellow-500/60 mb-3" />
+            <Loader2 className="w-8 h-8 animate-spin text-yellow-400 mb-3" />
             <p className="text-xs text-gray-500 tracking-wider uppercase">Loading tournament...</p>
           </div>
         )}
@@ -202,7 +202,7 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                     ? `${remaining} / ${playerCount}`
                     : `${playerCount}`,
                   sub: maxPlayers > 0 ? `Max ${maxPlayers}` : undefined,
-                  color: "text-cyan-400",
+                  color: "text-primary",
                 },
                 {
                   icon: Layers,
@@ -316,7 +316,7 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                     >
                       <div className="flex items-center gap-3">
                         <span className={`text-sm font-black tabular-nums w-6 text-center ${
-                          i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : "text-gray-500"
+                          i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-500" : "text-gray-500"
                         }`}>
                           {entry.rank ?? i + 1}
                         </span>

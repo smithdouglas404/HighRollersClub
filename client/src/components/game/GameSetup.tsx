@@ -414,7 +414,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
           initial={{ opacity: 1 }}
           animate={{ opacity: 0, scale: 1.2 }}
           transition={{ duration: 0.8 }}
-          className="min-h-screen bg-[#111b2a] flex items-center justify-center"
+          className="min-h-screen bg-background flex items-center justify-center"
         >
           <motion.div
             initial={{ scale: 1 }}
@@ -434,7 +434,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: step === 1 ? -20 : 20 }}
           transition={{ duration: 0.3 }}
-          className="min-h-screen bg-[#111b2a] text-white flex flex-col items-center relative overflow-hidden"
+          className="min-h-screen bg-background text-white flex flex-col items-center relative overflow-hidden"
           style={{ justifyContent: "safe center", paddingTop: "2vh", paddingBottom: "2vh" }}
         >
           {/* Background */}

@@ -173,7 +173,7 @@ export default function Tournaments() {
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-yellow-500/10 border border-yellow-500/15"
             >
-              <Trophy className="w-8 h-8 text-yellow-500/40" />
+              <Trophy className="w-8 h-8 text-yellow-400/60" />
             </div>
             <h3
               className="text-sm font-bold uppercase tracking-wider mb-1 gold-text"
@@ -284,7 +284,7 @@ export default function Tournaments() {
                         className={`px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider ${
                           isRegOpen
                             ? "bg-gradient-to-r from-yellow-600 to-yellow-400 text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]"
-                            : "bg-yellow-500/20 text-yellow-500/60"
+                            : "bg-yellow-500/20 text-yellow-300"
                         }`}
                       >
                         Register

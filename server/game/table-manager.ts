@@ -852,7 +852,7 @@ class TableManager {
   }
 
   /** Update table blind/ante settings mid-game (takes effect next hand) */
-  async updateTableSettings(tableId: string, settings: { smallBlind?: number; bigBlind?: number; ante?: number }): Promise<boolean> {
+  async updateTableSettings(tableId: string, settings: { smallBlind?: number; bigBlind?: number; ante?: number; rakePercent?: number; maxValuePerHand?: number; turnTimerDuration?: number; autoStartNextHand?: boolean }): Promise<boolean> {
     const instance = this.tables.get(tableId);
     if (!instance) return false;
     // Update in-memory config
@@ -866,6 +866,18 @@ class TableManager {
     }
     if (settings.ante !== undefined) {
       instance.engine.opts.ante = settings.ante;
+    }
+    if (settings.rakePercent !== undefined) {
+      (instance.config as any).rakePercent = settings.rakePercent;
+    }
+    if (settings.maxValuePerHand !== undefined) {
+      (instance.config as any).maxValuePerHand = settings.maxValuePerHand;
+    }
+    if (settings.turnTimerDuration !== undefined) {
+      (instance.config as any).turnTimerDuration = settings.turnTimerDuration;
+    }
+    if (settings.autoStartNextHand !== undefined) {
+      (instance.config as any).autoStartNextHand = settings.autoStartNextHand;
     }
     // Persist to database
     try {

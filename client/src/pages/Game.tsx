@@ -316,6 +316,12 @@ function GameTable({
   const [manageTableSB, setManageTableSB] = useState(currentSettings?.smallBlind || 10);
   const [manageTableBB, setManageTableBB] = useState(currentSettings?.bigBlind || 20);
   const [showPlayerMenu, setShowPlayerMenu] = useState(false);
+  // T19: Player Detail Report Modal
+  const [selectedPlayerDetail, setSelectedPlayerDetail] = useState<Player | null>(null);
+  // T20: Kick/Ban Confirmation Dialog
+  const [kickTarget, setKickTarget] = useState<Player | null>(null);
+  const [kickReason, setKickReason] = useState("Disruptive behavior");
+  const [kickBan, setKickBan] = useState(false);
   const speedMultiplier = (gameState as any).speedMultiplier || 1.0;
   const dealing = useDealingSequence(players, gameState, heroId, compactMode, speedMultiplier);
   const { opponentStats, hudEnabled, setHudEnabled } = useOpponentStats(gameState, players, heroId);
@@ -487,8 +493,9 @@ function GameTable({
     <div className="h-screen bg-[#0a0a0c] text-white overflow-hidden relative font-sans flex flex-col">
       {/* Background glow orbs */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] bg-[#00f3ff]/[0.03] rounded-full blur-[150px]" />
-        <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-purple-600/[0.02] rounded-full blur-[120px]" />
+        <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] bg-[#00f3ff]/[0.045] rounded-full blur-[150px]" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-purple-600/[0.03] rounded-full blur-[120px]" />
+        <div className="absolute top-[30%] right-[25%] w-[400px] h-[400px] bg-[#c9a84c]/[0.02] rounded-full blur-[130px]" />
       </div>
 
       <ChipAnimation containerRef={tableRef} />
@@ -524,7 +531,7 @@ function GameTable({
             }
           </span>
           <div className="w-px h-5 bg-white/10" />
-          <span className="text-sm font-bold text-cyan-400 font-mono tracking-wider" style={{ textShadow: "0 0 8px rgba(0,212,255,0.4)" }}>{phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
+          <span className="text-sm font-bold text-primary font-mono tracking-wider" style={{ textShadow: "0 0 8px rgba(0,212,255,0.4)" }}>{phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
           <span className="text-[0.625rem] text-gray-500 font-mono">
             {(gameState as any).handNumber
               ? <>Hand #{(gameState as any).handNumber}</>
@@ -541,7 +548,7 @@ function GameTable({
               boxShadow: "0 0 16px rgba(255,215,0,0.12)",
             }}
           >
-            <span className="text-[0.625rem] font-bold text-amber-500/60 uppercase tracking-wider">POT</span>
+            <span className="text-[0.625rem] font-bold text-amber-300 uppercase tracking-wider">POT</span>
             <span className="text-lg font-black font-mono" style={{ color: "#ffd700", textShadow: "0 0 12px rgba(255,215,0,0.5)" }}>${topBarPot.toLocaleString()}</span>
           </div>
 
@@ -576,7 +583,7 @@ function GameTable({
           )}
 
           {waiting && addBots && (
-            <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20">
+            <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-primary bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20">
               <Bot className="w-3 h-3" /> BOTS
             </button>
           )}
@@ -609,7 +616,7 @@ function GameTable({
                 ADMIN
                 {gamePaused && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />}
                 {waitingPlayers && waitingPlayers.length > 0 && (
-                  <span className="ml-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-cyan-500 text-[0.5rem] text-white font-bold">
+                  <span className="ml-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-primary text-[0.5rem] text-white font-bold">
                     {waitingPlayers.length}
                   </span>
                 )}
@@ -666,9 +673,9 @@ function GameTable({
                       className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
                       data-testid="button-manage-table"
                     >
-                      <Settings2 className="w-4 h-4 text-cyan-400" />
+                      <Settings2 className="w-4 h-4 text-primary" />
                       <div className="flex-1">
-                        <div className="text-xs font-bold text-cyan-300">Manage Table</div>
+                        <div className="text-xs font-bold text-primary">Manage Table</div>
                         <div className="text-[0.6rem] text-gray-500">Blinds, wallet limit, stakes</div>
                       </div>
                       <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
@@ -864,9 +871,9 @@ function GameTable({
               <Music className={`w-3.5 h-3.5 ${bgmPlaying ? "text-green-400" : "text-gray-500"}`} />
             </button>
             {showBgmPanel && (
-              <div className="absolute right-0 top-full mt-1 z-50 w-80 rounded-lg p-3 space-y-2.5" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(0,212,255,0.15)", backdropFilter: "blur(12px)" }}>
+              <div className="absolute right-0 top-full mt-1 z-50 w-80 rounded-lg p-3 space-y-2.5 glass" style={{ background: "rgba(20,31,40,0.92)" }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400">Music Library</span>
+                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-primary">Music Library</span>
                   <button onClick={() => setShowBgmPanel(false)} className="p-0.5 hover:bg-white/10 rounded"><X className="w-3 h-3 text-gray-500" /></button>
                 </div>
 
@@ -896,12 +903,12 @@ function GameTable({
                           isActive && bgmPlaying ? "bg-cyan-500/25" : "bg-white/10"
                         }`}>
                           {isActive && bgmPlaying
-                            ? <Pause className="w-3 h-3 text-cyan-400" />
+                            ? <Pause className="w-3 h-3 text-primary" />
                             : <Play className="w-3 h-3 text-gray-400 ml-0.5" />
                           }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-[0.6875rem] font-bold truncate ${isActive && bgmPlaying ? "text-cyan-400" : "text-white"}`}>{track.name}</div>
+                          <div className={`text-[0.6875rem] font-bold truncate ${isActive && bgmPlaying ? "text-primary" : "text-white"}`}>{track.name}</div>
                           <div className="text-[0.5625rem] text-gray-500 truncate">{track.artist}</div>
                         </div>
                         {isActive && bgmPlaying && (
@@ -928,7 +935,7 @@ function GameTable({
                   />
                   <button
                     onClick={() => { if (bgmUrl) { sound.setBgmUrl(bgmUrl); if (bgmPlaying) { sound.stopBgm(); setBgmPlaying(false); } else { sound.playBgm(); setBgmPlaying(true); } } }}
-                    className={`px-2 py-1.5 rounded text-[0.625rem] font-bold ${bgmPlaying ? "bg-red-500/20 text-red-400" : "bg-cyan-500/20 text-cyan-400"}`}
+                    className={`px-2 py-1.5 rounded text-[0.625rem] font-bold ${bgmPlaying ? "bg-red-500/20 text-red-400" : "bg-cyan-500/20 text-primary"}`}
                   >
                     {bgmPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                   </button>
@@ -972,7 +979,7 @@ function GameTable({
               <Palette className={`w-3.5 h-3.5 ${showThemePanel ? "text-purple-400" : "text-gray-500"}`} />
             </button>
             {showThemePanel && (
-              <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-lg p-3 space-y-3" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(168,85,247,0.15)", backdropFilter: "blur(12px)" }}>
+              <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-lg p-3 space-y-3 glass" style={{ background: "rgba(20,31,40,0.92)", borderColor: "rgba(168,85,247,0.15)" }}>
                 <div className="flex items-center justify-between">
                   <span className="text-[0.625rem] font-bold uppercase tracking-wider text-purple-400">Table Theme</span>
                   <button onClick={() => setShowThemePanel(false)} className="p-0.5 hover:bg-white/10 rounded"><X className="w-3 h-3 text-gray-500" /></button>
@@ -1070,7 +1077,7 @@ function GameTable({
                     <div className="flex items-center gap-2">
                       {/* Rank badge */}
                       <span className={`w-5 text-center font-black text-[0.6875rem] ${
-                        rank === 0 ? "text-amber-400" : rank === 1 ? "text-gray-300" : rank === 2 ? "text-amber-600" : "text-gray-600"
+                        rank === 0 ? "text-amber-400" : rank === 1 ? "text-gray-300" : rank === 2 ? "text-amber-500" : "text-gray-600"
                       }`}>
                         {rank + 1}
                       </span>
@@ -1086,7 +1093,7 @@ function GameTable({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
                           <span className={`text-[0.6875rem] font-bold truncate ${
-                            isMe ? "text-cyan-300" : isFolded ? "text-gray-600" : "text-gray-200"
+                            isMe ? "text-primary" : isFolded ? "text-gray-600" : "text-gray-200"
                           }`}>
                             {isMe ? "You" : p.name}
                           </span>
@@ -1140,8 +1147,9 @@ function GameTable({
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 45%, #1a2744 0%, #131d30 40%, #0e1624 70%, #0a101c 100%)" }} />
               {/* Atmospheric glow orbs (Stitch-style) */}
-              <div className="absolute top-[-15%] left-[10%] w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(0,243,255,0.03)" }} />
-              <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(147,51,234,0.02)" }} />
+              <div className="absolute top-[-15%] left-[10%] w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(0,243,255,0.045)" }} />
+              <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(147,51,234,0.03)" }} />
+              <div className="absolute top-[20%] right-[20%] w-[350px] h-[350px] rounded-full blur-[110px] pointer-events-none" style={{ background: "rgba(201,168,76,0.02)" }} />
 
               <div
                 ref={tableRef}
@@ -1164,7 +1172,7 @@ function GameTable({
                 {isMultiplayer && waiting && players.length < 2 && (
                   <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 30 }}>
                     <div className="glass rounded-xl px-6 py-4 text-center border border-white/10 pointer-events-auto">
-                      <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+                      <Users className="w-8 h-8 text-primary mx-auto mb-2" />
                       <p className="text-sm text-gray-300 mb-1">Waiting for players...</p>
                       <p className="text-xs text-gray-500">{players.length} / 2 minimum</p>
                     </div>
@@ -1196,6 +1204,7 @@ function GameTable({
                         dealCardCount={dealing.visiblePlayerCards.get(player.id)}
                         turnDeadline={gameState.turnDeadline}
                         turnTimerDuration={gameState.turnTimerDuration}
+                        onPlayerClick={(p) => setSelectedPlayerDetail(p)}
                       />
                     );
                   });
@@ -1347,7 +1356,7 @@ function GameTable({
             <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 text-[0.625rem] scrollbar-thin">
               {(gameState as any).chatMessages?.map((msg: any, i: number) => (
                 <div key={i} className="leading-relaxed">
-                  <span className="font-bold text-cyan-400">{msg.playerName}:</span>{" "}
+                  <span className="font-bold text-primary">{msg.playerName}:</span>{" "}
                   <span className="text-gray-300">{msg.message}</span>
                 </div>
               )) || <div className="text-gray-600 italic">No messages yet</div>}
@@ -1378,7 +1387,7 @@ function GameTable({
                       <Mic className="w-3 h-3" />
                     </button>
                   )}
-                  <button type="submit" className="px-2 py-1.5 rounded bg-cyan-500/20 text-cyan-400 text-[0.625rem] font-bold hover:bg-cyan-500/30">
+                  <button type="submit" className="px-2 py-1.5 rounded bg-cyan-500/20 text-primary text-[0.625rem] font-bold hover:bg-cyan-500/30">
                     &gt;
                   </button>
                 </form>
@@ -1680,7 +1689,7 @@ function GameTable({
               <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-cyan-500/15 border border-cyan-500/25">
-                    <Settings2 className="w-4 h-4 text-cyan-400" />
+                    <Settings2 className="w-4 h-4 text-primary" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white tracking-wide">Manage Table</h3>
@@ -1745,7 +1754,7 @@ function GameTable({
                   {/* Preview */}
                   <div className="mt-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5">
                     <span className="text-[0.6rem] text-gray-500">Preview: </span>
-                    <span className="text-[0.6rem] text-cyan-400 font-mono font-bold">{manageTableSB}/{manageTableBB}</span>
+                    <span className="text-[0.6rem] text-primary font-mono font-bold">{manageTableSB}/{manageTableBB}</span>
                     {manageTableWalletLimit > 0 && (
                       <span className="text-[0.6rem] text-gray-500 ml-2">
                         &middot; Wallet cap: <span className="text-amber-400 font-mono">{manageTableWalletLimit.toLocaleString()}</span>
@@ -1941,7 +1950,7 @@ function GameTable({
                 </div>
                 <h3 className="font-bold text-sm tracking-wider text-white">ADD CHIPS</h3>
                 <p className="text-[0.625rem] text-gray-500 mt-1">
-                  Wallet: <span className="text-cyan-400 font-mono">{(walletBalance || 0).toLocaleString()}</span> chips
+                  Wallet: <span className="text-primary font-mono">{(walletBalance || 0).toLocaleString()}</span> chips
                 </p>
               </div>
 
@@ -1981,7 +1990,7 @@ function GameTable({
 
                     {hero && sliderMax > 0 && (
                       <p className="text-center text-[0.625rem] text-gray-500 mb-4">
-                        Current stack: <span className="text-cyan-400 font-mono">{currentStack.toLocaleString()}</span>
+                        Current stack: <span className="text-primary font-mono">{currentStack.toLocaleString()}</span>
                         {" → "}
                         <span className="text-emerald-400 font-mono">{(currentStack + clampedAmount).toLocaleString()}</span>
                         <span className="text-gray-600"> / {maxBuyIn.toLocaleString()} max</span>
@@ -2063,6 +2072,295 @@ function GameTable({
         )}
       </AnimatePresence>
 
+      {/* ═══ T19: PLAYER DETAIL REPORT MODAL ═══ */}
+      <AnimatePresence>
+        {selectedPlayerDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setSelectedPlayerDetail(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl overflow-hidden"
+              style={{
+                background: "rgba(20,28,45,0.50)",
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                boxShadow: "0 0 40px rgba(0,0,0,0.4)",
+              }}
+            >
+              {/* Header with avatar */}
+              <div className="flex items-center gap-4 px-6 pt-6 pb-4">
+                {selectedPlayerDetail.avatar ? (
+                  <img
+                    src={selectedPlayerDetail.avatar}
+                    alt={selectedPlayerDetail.name}
+                    className="w-14 h-14 rounded-xl object-cover border-2 border-white/10"
+                    style={{ boxShadow: "0 0 16px rgba(0,212,255,0.15)" }}
+                  />
+                ) : (
+                  <div
+                    className="w-14 h-14 rounded-xl flex items-center justify-center text-xl font-black text-white/70 border-2 border-white/10"
+                    style={{ background: "linear-gradient(135deg, #0e7490, #164e63)" }}
+                  >
+                    {selectedPlayerDetail.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-bold text-white tracking-wide truncate">
+                    {selectedPlayerDetail.name}
+                  </h3>
+                  <p className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-bold mt-0.5">
+                    {selectedPlayerDetail.id === heroId ? "You" : selectedPlayerDetail.isBot ? "Bot" : "Player"}
+                    {selectedPlayerDetail.isDealer && " \u00b7 Dealer"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats grid */}
+              <div className="px-6 pb-5 space-y-3">
+                {/* Current session */}
+                <div>
+                  <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 mb-2">Session Stats</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">Stack</div>
+                      <div className="text-sm font-mono font-black" style={{ color: "#ffd700" }}>
+                        ${selectedPlayerDetail.chips.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">Status</div>
+                      <div className={`text-sm font-bold capitalize ${
+                        selectedPlayerDetail.status === "folded" ? "text-red-400" :
+                        selectedPlayerDetail.status === "all-in" ? "text-amber-400" :
+                        selectedPlayerDetail.status === "thinking" ? "text-primary" :
+                        (selectedPlayerDetail.isSittingOut || selectedPlayerDetail.status === "sitting-out") ? "text-orange-400" :
+                        "text-gray-300"
+                      }`}>
+                        {selectedPlayerDetail.isSittingOut || selectedPlayerDetail.status === "sitting-out" ? "Away" : selectedPlayerDetail.status}
+                      </div>
+                    </div>
+                    {selectedPlayerDetail.currentBet > 0 && (
+                      <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">Current Bet</div>
+                        <div className="text-sm font-mono font-bold text-primary">
+                          ${selectedPlayerDetail.currentBet.toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* HUD stats if available */}
+                {(() => {
+                  const stats = opponentStats.get(selectedPlayerDetail.id);
+                  if (!stats || stats.handsPlayed === 0) return null;
+                  const vpip = Math.round((stats.vpipCount / stats.handsPlayed) * 100);
+                  const pfr = Math.round((stats.pfrCount / stats.handsPlayed) * 100);
+                  const aggFactor = stats.passiveActions > 0
+                    ? Math.round((stats.aggressiveActions / stats.passiveActions) * 10) / 10
+                    : stats.aggressiveActions > 0 ? 99 : 0;
+                  return (
+                    <div>
+                      <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 mb-2">Opponent Stats</div>
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="rounded-lg px-2 py-2 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div className="text-[0.5rem] text-gray-500 uppercase">VPIP</div>
+                          <div className={`text-sm font-mono font-bold ${vpip >= 20 && vpip <= 35 ? "text-green-400" : vpip > 35 ? "text-red-400" : "text-yellow-400"}`}>
+                            {vpip}%
+                          </div>
+                        </div>
+                        <div className="rounded-lg px-2 py-2 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div className="text-[0.5rem] text-gray-500 uppercase">PFR</div>
+                          <div className={`text-sm font-mono font-bold ${pfr >= 15 && pfr <= 25 ? "text-green-400" : pfr > 25 ? "text-red-400" : "text-yellow-400"}`}>
+                            {pfr}%
+                          </div>
+                        </div>
+                        <div className="rounded-lg px-2 py-2 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div className="text-[0.5rem] text-gray-500 uppercase">AF</div>
+                          <div className={`text-sm font-mono font-bold ${aggFactor >= 1 && aggFactor <= 3 ? "text-green-400" : aggFactor > 3 ? "text-red-400" : "text-yellow-400"}`}>
+                            {aggFactor.toFixed(1)}
+                          </div>
+                        </div>
+                        <div className="rounded-lg px-2 py-2 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div className="text-[0.5rem] text-gray-500 uppercase">Hands</div>
+                          <div className="text-sm font-mono font-bold text-gray-300">
+                            {stats.handsPlayed}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Admin kick button */}
+                {isAdmin && selectedPlayerDetail.id !== heroId && (
+                  <button
+                    onClick={() => {
+                      setKickTarget(selectedPlayerDetail);
+                      setKickReason("Disruptive behavior");
+                      setKickBan(false);
+                      setSelectedPlayerDetail(null);
+                    }}
+                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-red-400 transition-all hover:bg-red-500/15"
+                    style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+                  >
+                    <span className="flex items-center justify-center gap-1.5">
+                      <UserX className="w-3.5 h-3.5" />
+                      Kick Player
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 pb-5">
+                <button
+                  onClick={() => setSelectedPlayerDetail(null)}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-400 transition-all hover:bg-white/5"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ T20: KICK/BAN CONFIRMATION DIALOG ═══ */}
+      <AnimatePresence>
+        {kickTarget && isAdmin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setKickTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl overflow-hidden"
+              style={{
+                background: "rgba(20,28,45,0.50)",
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
+                border: "1px solid rgba(239,68,68,0.15)",
+                boxShadow: "0 0 40px rgba(239,68,68,0.08)",
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-center gap-3 px-6 pt-6 pb-4" style={{ borderBottom: "1px solid rgba(239,68,68,0.1)" }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-red-500/15 border border-red-500/30">
+                  <UserX className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide">Kick Player</h3>
+                  <p className="text-[0.625rem] text-gray-500">This action cannot be undone</p>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-5 space-y-4">
+                {/* Player info */}
+                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {kickTarget.avatar ? (
+                    <img src={kickTarget.avatar} alt={kickTarget.name} className="w-10 h-10 rounded-lg object-cover border border-white/10" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-gray-700 border border-white/10 flex items-center justify-center text-sm font-bold text-white/50">
+                      {kickTarget.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-sm font-bold text-white">{kickTarget.name}</div>
+                    <div className="text-[0.625rem] text-gray-500 font-mono">${kickTarget.chips.toLocaleString()} chips</div>
+                  </div>
+                </div>
+
+                {/* Reason dropdown */}
+                <div>
+                  <label className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 block mb-1.5">
+                    Reason
+                  </label>
+                  <select
+                    value={kickReason}
+                    onChange={(e) => setKickReason(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2.5 text-sm text-white font-medium focus:outline-none transition-colors appearance-none cursor-pointer"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    <option value="Disruptive behavior" style={{ background: "#0f1723" }}>Disruptive behavior</option>
+                    <option value="Suspected collusion" style={{ background: "#0f1723" }}>Suspected collusion</option>
+                    <option value="AFK too long" style={{ background: "#0f1723" }}>AFK too long</option>
+                    <option value="Other" style={{ background: "#0f1723" }}>Other</option>
+                  </select>
+                </div>
+
+                {/* Ban checkbox */}
+                <label className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-red-500/5 transition-colors" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.1)" }}>
+                  <input
+                    type="checkbox"
+                    checked={kickBan}
+                    onChange={(e) => setKickBan(e.target.checked)}
+                    className="w-4 h-4 rounded border-red-500/50 text-red-500 focus:ring-red-500/30 bg-transparent"
+                  />
+                  <div>
+                    <div className="text-xs font-bold text-red-400">Ban from table</div>
+                    <div className="text-[0.5625rem] text-gray-500">Prevent this player from rejoining</div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 pb-5 flex items-center gap-3">
+                <button
+                  onClick={() => setKickTarget(null)}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-400 transition-all hover:bg-white/5"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    // Send kick command via WebSocket
+                    if (tableId) {
+                      wsClient.send({ type: "admin_kick_player", tableId, playerId: kickTarget.id, reason: kickReason, ban: kickBan } as any);
+                    }
+                    setKickTarget(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all hover:brightness-110"
+                  style={{
+                    background: "linear-gradient(180deg, #dc2626 0%, #b91c1c 100%)",
+                    border: "1px solid rgba(239,68,68,0.4)",
+                    boxShadow: "0 0 16px rgba(239,68,68,0.2)",
+                  }}
+                >
+                  <span className="flex items-center justify-center gap-1.5">
+                    <UserX className="w-3.5 h-3.5" />
+                    Kick Player
+                  </span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ═══ CHAT PANEL ═══ */}
       <ChatPanel isMultiplayer={isMultiplayer} sendChat={sendChat} />
 
@@ -2098,11 +2396,11 @@ function HandCountdownOverlay({ seconds }: { seconds: number | null }) {
           transition={{ duration: 0.3, ease: "easeOut" }}
           className="flex flex-col items-center"
         >
-          <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-cyan-400/70 mb-2">
+          <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-primary/70 mb-2">
             Next hand in
           </div>
           <div
-            className="text-6xl font-black tabular-nums text-cyan-400"
+            className="text-6xl font-black tabular-nums text-primary"
             style={{
               textShadow: "0 0 30px rgba(0,212,255,0.5), 0 0 60px rgba(0,212,255,0.2)",
             }}
@@ -2209,6 +2507,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
     dealToAwayPlayers: false, timeBankRefillHands: 0, spectatorMode: true,
     doubleBoard: false, sevenTwoBounty: 0, guestChatEnabled: true,
     autoTrimExcessBets: false,
+    maxValuePerHand: 0, turnTimerDuration: 30, autoStartNextHand: true,
   });
 
   useEffect(() => {
@@ -2266,8 +2565,12 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
   };
 
   if (!joined) {
+    const variant = tableInfo?.pokerVariant === "plo" ? "Pot-Limit Omaha"
+      : tableInfo?.pokerVariant === "plo5" ? "PLO-5"
+      : tableInfo?.pokerVariant === "shortdeck" ? "Short Deck"
+      : "No-Limit Hold'em";
     return (
-      <div className="min-h-screen bg-[#111b2a] text-white flex items-center justify-center relative overflow-hidden">
+      <div className="min-h-screen bg-background text-white flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,43,75,0.4)_0%,rgba(20,31,40,0.88)_70%)]" />
         </div>
@@ -2275,70 +2578,87 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="relative z-10 glass rounded-2xl p-8 w-full max-w-sm border border-white/10"
+          className="relative z-10 rounded-2xl p-8 w-full max-w-sm"
+          style={{
+            background: "rgba(20,28,45,0.50)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(255,255,255,0.06)",
+            boxShadow: "0 0 60px rgba(0,0,0,0.4), 0 0 30px rgba(0,212,255,0.04)",
+          }}
         >
+          {/* Table info header */}
           <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3">
+              <Trophy className="w-6 h-6 text-amber-400" />
+            </div>
             <h2 className="font-bold text-lg tracking-wider gold-text mb-1">
               {tableInfo?.name || "Join Table"}
             </h2>
             {tableInfo && (
-              <p className="text-xs text-gray-500 font-mono">
-                {tableInfo.smallBlind}/{tableInfo.bigBlind} &middot; {tableInfo.maxPlayers} seats
-                {isSNG && (
-                  <span className="ml-2 text-cyan-400">
-                    &middot; {tableInfo.gameFormat === "sng" ? "Sit & Go" : "Tournament"}
-                  </span>
-                )}
-              </p>
+              <div className="space-y-1">
+                <p className="text-xs text-gray-400 font-mono">
+                  {tableInfo.smallBlind}/{tableInfo.bigBlind} Blinds &middot; {tableInfo.maxPlayers} seats
+                </p>
+                <p className="text-[0.625rem] text-gray-500">
+                  {variant}
+                  {isSNG && (
+                    <span className="ml-2 text-primary font-bold">
+                      &middot; {tableInfo.gameFormat === "sng" ? "Sit & Go" : "Tournament"}
+                    </span>
+                  )}
+                </p>
+              </div>
             )}
           </div>
 
+          {/* Buy-in section */}
           {isSNG ? (
-            /* SNG: Fixed buy-in display */
-            <div className="mb-6">
+            <div className="mb-5">
               <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                 Fixed Buy-In
               </label>
-              <div className="glass rounded-lg p-4 border border-cyan-500/20 text-center">
-                <div className="text-2xl font-bold text-cyan-400 font-mono">
-                  {(tableInfo?.buyInAmount || 500).toLocaleString()}
+              <div className="rounded-lg p-4 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,212,255,0.15)" }}>
+                <div className="text-2xl font-bold text-primary font-mono">
+                  ${(tableInfo?.buyInAmount || 500).toLocaleString()}
                 </div>
                 <div className="text-[0.625rem] text-gray-500 mt-1">
                   Starting chips: {(tableInfo?.startingChips || 1500).toLocaleString()}
                 </div>
               </div>
               <p className="text-center text-[0.625rem] text-gray-600 mt-2">
-                Balance: {user?.chipBalance?.toLocaleString()} chips
+                Wallet: <span className="text-primary font-mono">{user?.chipBalance?.toLocaleString()}</span> chips
               </p>
             </div>
           ) : (
-            /* Cash game: Buy-in slider */
-            <div className="mb-6">
+            <div className="mb-5">
               <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                 Buy-In Amount
               </label>
-              <input
-                type="range"
-                min={tableInfo?.returnMinBuyIn || tableInfo?.minBuyIn || 200}
-                max={Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}
-                value={buyIn}
-                onChange={(e) => setBuyIn(parseInt(e.target.value))}
-                className="w-full mb-2"
-              />
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>{tableInfo?.returnMinBuyIn || tableInfo?.minBuyIn || 200}</span>
-                <span className="text-lg font-bold text-cyan-400">{buyIn}</span>
-                <span>{Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}</span>
+              <div className="rounded-lg p-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <input
+                  type="range"
+                  min={tableInfo?.returnMinBuyIn || tableInfo?.minBuyIn || 200}
+                  max={Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000)}
+                  value={buyIn}
+                  onChange={(e) => setBuyIn(parseInt(e.target.value))}
+                  className="w-full mb-2"
+                />
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>${(tableInfo?.returnMinBuyIn || tableInfo?.minBuyIn || 200).toLocaleString()}</span>
+                  <span className="text-xl font-bold text-primary font-mono">${buyIn.toLocaleString()}</span>
+                  <span>${Math.min(tableInfo?.maxBuyIn || 2000, user?.chipBalance || 2000).toLocaleString()}</span>
+                </div>
               </div>
-              <p className="text-center text-[0.625rem] text-gray-600 mt-1">
-                Balance: {user?.chipBalance?.toLocaleString()} chips
+              <p className="text-center text-[0.625rem] text-gray-600 mt-2">
+                Wallet: <span className="text-primary font-mono">{user?.chipBalance?.toLocaleString()}</span> chips
               </p>
             </div>
           )}
 
           {/* Seat Selection */}
           {tableInfo && (
-            <div className="mb-4">
+            <div className="mb-5">
               <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                 Pick Your Seat (optional)
               </label>
@@ -2360,7 +2680,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
                         isOccupied
                           ? "bg-red-500/10 border-red-500/20 text-red-400/40 cursor-not-allowed"
                           : isSelected
-                            ? "bg-cyan-500/25 border-cyan-400 text-cyan-400 shadow-[0_0_10px_rgba(0,212,255,0.3)]"
+                            ? "bg-cyan-500/25 border-cyan-400 text-primary shadow-[0_0_10px_rgba(0,212,255,0.3)]"
                             : "bg-white/5 border-white/10 text-gray-400 hover:border-cyan-500/30 hover:text-white"
                       }`}
                     >
@@ -2375,12 +2695,14 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
             </div>
           )}
 
+          {/* Action buttons */}
           <div className="flex gap-3">
             <button
               onClick={() => navigate("/lobby")}
-              className="flex-1 glass rounded-lg py-3 text-sm font-bold tracking-wider text-gray-400 hover:text-white border border-white/10 hover:border-white/15 transition-all"
+              className="flex-1 rounded-lg py-3 text-sm font-bold tracking-wider text-gray-400 hover:text-white transition-all hover:bg-white/5"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
             >
-              BACK
+              Cancel
             </button>
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -2388,13 +2710,18 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
               onClick={handleJoin}
               disabled={!connected || (isSNG ? (tableInfo?.buyInAmount || 500) : buyIn) > (user?.chipBalance || 0)}
               className="flex-1 gold-gradient rounded-lg py-3 text-sm font-bold tracking-wider text-black disabled:opacity-50"
+              style={{ boxShadow: "0 0 20px rgba(212,175,55,0.2)" }}
             >
-              {isSNG ? "REGISTER" : "SIT DOWN"}
+              {isSNG ? "REGISTER" : "CONFIRM & SIT"}
             </motion.button>
           </div>
 
           {!connected && (
-            <p className="text-center text-xs text-red-400 mt-3">Connecting to server...</p>
+            <p className="text-center text-xs text-red-400 mt-3 animate-pulse">Connecting to server...</p>
+          )}
+
+          {mpError && (
+            <p className="text-center text-xs text-red-400 mt-3">{mpError}</p>
           )}
         </motion.div>
       </div>
@@ -2512,6 +2839,7 @@ function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Pl
     dealToAwayPlayers: false, timeBankRefillHands: 0, spectatorMode: true,
     doubleBoard: false, sevenTwoBounty: 0, guestChatEnabled: true,
     autoTrimExcessBets: false,
+    maxValuePerHand: 0, turnTimerDuration: 30, autoStartNextHand: true,
   });
 
   const sendChat = useCallback((message: string) => {

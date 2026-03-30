@@ -49,7 +49,7 @@ function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: n
 }
 
 function getRankTier(handsPlayed: number): { label: string; color: string; bgClass: string; borderColor: string; icon: typeof Crown; glowStyle?: { boxShadow: string } } {
-  if (handsPlayed >= 1000) return { label: "Diamond", color: "text-cyan-300", bgClass: "from-cyan-500/20 to-blue-500/20", borderColor: "border-[#c9a84c]/50", icon: Crown, glowStyle: { boxShadow: "0 0 12px rgba(201,168,76,0.35), 0 0 24px rgba(201,168,76,0.15)" } };
+  if (handsPlayed >= 1000) return { label: "Diamond", color: "text-primary", bgClass: "from-cyan-500/20 to-blue-500/20", borderColor: "border-[#c9a84c]/50", icon: Crown, glowStyle: { boxShadow: "0 0 12px rgba(201,168,76,0.35), 0 0 24px rgba(201,168,76,0.15)" } };
   if (handsPlayed >= 500) return { label: "Platinum", color: "text-gray-200", bgClass: "from-gray-300/20 to-gray-500/20", borderColor: "border-[#c9a84c]/40", icon: Crown, glowStyle: { boxShadow: "0 0 10px rgba(201,168,76,0.25), 0 0 20px rgba(201,168,76,0.10)" } };
   if (handsPlayed >= 200) return { label: "Gold", color: "text-amber-400", bgClass: "from-amber-500/20 to-yellow-500/20", borderColor: "border-amber-400/40", icon: Star };
   if (handsPlayed >= 50) return { label: "Silver", color: "text-gray-400", bgClass: "from-gray-400/20 to-gray-500/20", borderColor: "border-gray-400/30", icon: Shield };
@@ -399,14 +399,17 @@ export default function Profile() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="grid grid-cols-2 md:grid-cols-5 gap-4"
+            className="grid grid-cols-2 md:grid-cols-4 gap-4"
           >
             {[
+              { label: "Security", icon: Shield, color: "cyan", path: "/security", gradient: "from-primary/10 to-purple-500/10", border: "hover:border-primary/30", iconBg: "bg-primary/10" },
               { label: "Wallet", icon: Wallet, color: "cyan", path: "/wallet", gradient: "from-primary/10 to-blue-600/10", border: "hover:border-primary/30", iconBg: "bg-primary/10" },
               { label: "Transactions", icon: Coins, color: "green", path: "/wallet?tab=history", gradient: "from-green-500/10 to-emerald-600/10", border: "hover:border-green-500/30", iconBg: "bg-green-500/10" },
               { label: "Analytics", icon: BookOpen, color: "amber", path: "/analytics", gradient: "from-amber-500/10 to-yellow-600/10", border: "hover:border-amber-500/30", iconBg: "bg-amber-500/10" },
               { label: "My Club", icon: Users, color: "green", path: "/club", gradient: "from-green-500/10 to-emerald-600/10", border: "hover:border-green-500/30", iconBg: "bg-green-500/10" },
               { label: "Leaderboard", icon: Trophy, color: "purple", path: "/leaderboard", gradient: "from-purple-500/10 to-violet-600/10", border: "hover:border-purple-500/30", iconBg: "bg-purple-500/10" },
+              { label: "Wardrobe", icon: User, color: "cyan", path: "/wardrobe", gradient: "from-cyan-500/10 to-blue-500/10", border: "hover:border-cyan-500/30", iconBg: "bg-cyan-500/10" },
+              { label: "Premium", icon: Crown, color: "amber", path: "/premium", gradient: "from-amber-500/10 to-yellow-500/10", border: "hover:border-amber-500/30", iconBg: "bg-amber-500/10" },
             ].map((link) => {
               const LinkIcon = link.icon;
               return (

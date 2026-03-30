@@ -102,7 +102,7 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.1 }}
           transition={{ duration: 0.5 }}
-          className="min-h-screen bg-[#111b2a] text-white flex flex-col items-center justify-center relative overflow-hidden"
+          className="min-h-screen bg-background text-white flex flex-col items-center justify-center relative overflow-hidden"
         >
           {/* Background */}
           <div className="absolute inset-0">
@@ -311,7 +311,7 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
           initial={{ opacity: 1 }}
           animate={{ opacity: 0, scale: 1.2 }}
           transition={{ duration: 0.8 }}
-          className="min-h-screen bg-[#111b2a] flex items-center justify-center"
+          className="min-h-screen bg-background flex items-center justify-center"
         >
           <motion.div
             initial={{ scale: 1 }}

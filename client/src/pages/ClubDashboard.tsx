@@ -211,10 +211,10 @@ export default function ClubDashboard() {
   ];
 
   const statsCards = [
-    { label: "Members", value: club?.memberCount ?? members.length, icon: Users, color: "text-primary" },
-    { label: "Online Now", value: onlineCount, icon: Wifi, color: "text-secondary" },
-    { label: "Hands Played", value: totalHands, icon: Gamepad2, color: "text-primary" },
-    { label: "Total Chips", value: totalChips, icon: Coins, color: "text-yellow-400" },
+    { label: "Members", value: club?.memberCount ?? members.length, icon: Users, color: "text-[#c9a84c]" },
+    { label: "Online Now", value: onlineCount, icon: Wifi, color: "text-[#c9a84c]" },
+    { label: "Hands Played", value: totalHands, icon: Gamepad2, color: "text-[#c9a84c]" },
+    { label: "Total Chips", value: totalChips, icon: Coins, color: "text-[#c9a84c]" },
   ];
 
   return (
@@ -224,7 +224,7 @@ export default function ClubDashboard() {
         <div className="relative z-10">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : !club ? (
             <div className="max-w-lg mx-auto py-12">
@@ -290,7 +290,7 @@ export default function ClubDashboard() {
                           <img src={logo.url} alt={logo.label} className="w-full h-full object-cover" />
                           {selectedLogo === logo.id && (
                             <div className="absolute inset-0 bg-cyan-500/20 flex items-center justify-center">
-                              <Check className="w-5 h-5 text-cyan-400 drop-shadow-lg" />
+                              <Check className="w-5 h-5 text-primary drop-shadow-lg" />
                             </div>
                           )}
                         </motion.button>
@@ -470,7 +470,7 @@ export default function ClubDashboard() {
                     <div
                       key={stat.label}
                       data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}
-                      className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06]"
+                      className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-[#c9a84c]/20 hover:border-[#c9a84c]/40 hover:shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-all duration-200"
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <Icon className={cn("w-4 h-4", stat.color)} />
@@ -562,7 +562,7 @@ export default function ClubDashboard() {
                       <div className="p-4">
                         {clubTablesLoading ? (
                           <div className="flex items-center justify-center py-12">
-                            <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
                           </div>
                         ) : clubTables.length === 0 ? (
                           <div className="py-12 text-center">
@@ -672,8 +672,36 @@ export default function ClubDashboard() {
                     </div>
                   </div>
 
-                  {/* Right side: Recent Activity (1/3 width) */}
-                  <div>
+                  {/* Right side: Quick Stats + Recent Activity (1/3 width) */}
+                  <div className="space-y-6">
+                    {/* Quick Stats */}
+                    <div>
+                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2 mb-3">
+                        <TrendingUp className="w-4 h-4 text-primary" /> Quick Stats
+                      </h3>
+                      <div className="bg-surface-high/50 backdrop-blur-xl rounded-md border border-white/[0.06] divide-y divide-white/[0.04]">
+                        {[
+                          { label: "Most Active Table", value: "High Rollers VIP", icon: Layers },
+                          { label: "Top Winner This Week", value: "Player_123 +5,400", icon: Trophy },
+                          { label: "Biggest Pot Today", value: "12,500 chips", icon: Coins },
+                        ].map((stat) => {
+                          const Icon = stat.icon;
+                          return (
+                            <div key={stat.label} className="flex items-center gap-3 px-4 py-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary/[0.08] border border-primary/15">
+                                <Icon className="w-4 h-4 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-bold">{stat.label}</p>
+                                <p className="text-xs font-bold text-white truncate">{stat.value}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Recent Activity */}
                     <div className="space-y-4">
                       <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
                         <Activity className="w-4 h-4 text-primary" /> Recent Activity
@@ -698,7 +726,7 @@ export default function ClubDashboard() {
                             const accentColor = isJoin
                               ? "text-green-400"
                               : isGame
-                                ? "text-cyan-400"
+                                ? "text-primary"
                                 : "text-amber-400";
                             const accentBg = isJoin
                               ? "bg-green-500/12 border-green-500/20"

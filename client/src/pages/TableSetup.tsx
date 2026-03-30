@@ -24,6 +24,7 @@ import {
   ClipboardList,
   Layers,
   Settings2,
+  CheckCircle,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -46,6 +47,9 @@ interface TableConfig {
   theme: string;
   isPrivate: boolean;
   password: string;
+  requireAdminApproval: boolean;
+  allowSpectators: boolean;
+  clubMembersOnly: boolean;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -181,6 +185,9 @@ const DEFAULT_CONFIG: TableConfig = {
   theme: "neon_vault",
   isPrivate: false,
   password: "",
+  requireAdminApproval: false,
+  allowSpectators: true,
+  clubMembersOnly: false,
 };
 
 // ─── Animation variants ─────────────────────────────────────────────────────
@@ -230,11 +237,11 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                 }`}
               >
                 {isCompleted ? (
-                  <Check className="w-4 h-4 text-cyan-400" />
+                  <Check className="w-4 h-4 text-primary" />
                 ) : (
                   <Icon
                     className={`w-4 h-4 ${
-                      isActive ? "text-cyan-400" : "text-gray-500"
+                      isActive ? "text-primary" : "text-gray-500"
                     }`}
                   />
                 )}
@@ -242,7 +249,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
               <span
                 className={`text-[0.5rem] mt-1.5 font-bold uppercase tracking-wider text-center leading-tight ${
                   isActive
-                    ? "text-cyan-400"
+                    ? "text-primary"
                     : isCompleted
                     ? "text-cyan-500/60"
                     : "text-gray-600"
@@ -447,7 +454,7 @@ function StepGameType({
                       animate={{ scale: 1 }}
                       className="w-6 h-6 rounded-full bg-cyan-500/25 border border-cyan-400 flex items-center justify-center"
                     >
-                      <Check className="w-3.5 h-3.5 text-cyan-400" />
+                      <Check className="w-3.5 h-3.5 text-primary" />
                     </motion.div>
                   )}
                 </div>
@@ -615,7 +622,7 @@ function StepStakes({
           <span className="text-[0.6875rem] text-gray-400">
             Buy-in range in chips
           </span>
-          <span className="text-sm font-bold text-cyan-400 tabular-nums">
+          <span className="text-sm font-bold text-primary tabular-nums">
             {minChips.toLocaleString()} &ndash; {maxChips.toLocaleString()}
           </span>
         </div>
@@ -652,7 +659,7 @@ function StepPlayers({
               onClick={() => setConfig((prev) => ({ ...prev, maxPlayers: n }))}
               className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${
                 isActive
-                  ? "bg-cyan-500/20 text-cyan-400 border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
+                  ? "bg-cyan-500/20 text-primary border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
                   : "bg-white/5 text-gray-400 border border-white/10 hover:border-white/20 hover:text-white"
               }`}
             >
@@ -715,7 +722,7 @@ function StepTimers({
                   }
                   className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${
                     isActive
-                      ? "bg-cyan-500/20 text-cyan-400 border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
+                      ? "bg-cyan-500/20 text-primary border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
                       : "bg-white/5 text-gray-400 border border-white/10 hover:border-white/20 hover:text-white"
                   }`}
                 >
@@ -744,7 +751,7 @@ function StepTimers({
                   }
                   className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${
                     isActive
-                      ? "bg-cyan-500/20 text-cyan-400 border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
+                      ? "bg-cyan-500/20 text-primary border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
                       : "bg-white/5 text-gray-400 border border-white/10 hover:border-white/20 hover:text-white"
                   }`}
                 >
@@ -857,7 +864,7 @@ function StepRules({
                 </div>
                 <div
                   className={`w-11 h-6 rounded-full flex items-center px-0.5 transition-colors shrink-0 ${
-                    isOn ? "bg-cyan-500" : "bg-white/10"
+                    isOn ? "bg-primary" : "bg-white/10"
                   }`}
                 >
                   <motion.div
@@ -1056,7 +1063,7 @@ function StepPrivacy({
                 >
                   <Icon
                     className={`w-5 h-5 ${
-                      isSelected ? "text-cyan-400" : "text-gray-500"
+                      isSelected ? "text-primary" : "text-gray-500"
                     }`}
                   />
                 </div>
@@ -1075,7 +1082,7 @@ function StepPrivacy({
                         animate={{ scale: 1 }}
                         className="w-5 h-5 rounded-full bg-cyan-500/25 border border-cyan-400 flex items-center justify-center"
                       >
-                        <Check className="w-3 h-3 text-cyan-400" />
+                        <Check className="w-3 h-3 text-primary" />
                       </motion.div>
                     )}
                   </div>
@@ -1133,6 +1140,71 @@ function StepPrivacy({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Access Control Toggles */}
+      <div className="mt-6">
+        <div className="text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-3">
+          Access Control
+        </div>
+        <div className="space-y-3">
+          {([
+            {
+              key: "requireAdminApproval" as keyof TableConfig,
+              label: "Require Admin Approval",
+              description: "New players must be approved by an admin before joining",
+            },
+            {
+              key: "allowSpectators" as keyof TableConfig,
+              label: "Allow Spectators",
+              description: "Non-players can watch the game without a seat",
+            },
+            {
+              key: "clubMembersOnly" as keyof TableConfig,
+              label: "Club Members Only",
+              description: "Restrict table access to club members only",
+            },
+          ] as const).map(({ key, label, description }) => {
+            const isOn = config[key] as boolean;
+            return (
+              <div
+                key={key}
+                className={`rounded-xl p-4 flex items-center justify-between gap-4 transition-all cursor-pointer ${
+                  isOn ? "border-cyan-500/25" : "border-white/5"
+                }`}
+                style={{
+                  background: isOn
+                    ? "linear-gradient(135deg, rgba(0,212,255,0.05), rgba(20,31,40,0.8))"
+                    : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${isOn ? "rgba(0,212,255,0.2)" : "rgba(255,255,255,0.05)"}`,
+                }}
+                onClick={() =>
+                  setConfig((prev) => ({ ...prev, [key]: !prev[key as keyof TableConfig] }))
+                }
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-white mb-0.5">
+                    {label}
+                  </div>
+                  <div className="text-[0.6875rem] text-gray-500 leading-relaxed">
+                    {description}
+                  </div>
+                </div>
+                <div
+                  className={`w-11 h-6 rounded-full flex items-center px-0.5 transition-colors shrink-0 ${
+                    isOn ? "bg-primary" : "bg-white/10"
+                  }`}
+                >
+                  <motion.div
+                    animate={{ x: isOn ? 20 : 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className="w-5 h-5 rounded-full bg-white shadow-lg"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1162,6 +1234,9 @@ function StepReview({
     { label: "Bomb Pots", value: config.bombPot ? "Enabled" : "Disabled" },
     { label: "Theme", value: theme?.name ?? config.theme },
     { label: "Privacy", value: config.isPrivate ? "Private (password protected)" : "Public" },
+    { label: "Admin Approval", value: config.requireAdminApproval ? "Required" : "Not Required" },
+    { label: "Spectators", value: config.allowSpectators ? "Allowed" : "Not Allowed" },
+    { label: "Club Members Only", value: config.clubMembersOnly ? "Yes" : "No" },
   ];
 
   return (
@@ -1208,6 +1283,7 @@ export default function TableSetup() {
   const [direction, setDirection] = useState(1);
   const [config, setConfig] = useState<TableConfig>(DEFAULT_CONFIG);
   const [submitting, setSubmitting] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState(false);
 
   const totalSteps = STEPS.length;
   const isFirst = step === 0;
@@ -1259,7 +1335,8 @@ export default function TableSetup() {
           title: "Table created",
           description: `Your table is ready. Redirecting...`,
         });
-        navigate(`/game/${table.id}`);
+        setCreateSuccess(true);
+        setTimeout(() => navigate(`/game/${table.id}`), 1000);
       } else {
         const err = await res.json().catch(() => ({ message: "Unknown error" }));
         toast({
@@ -1391,6 +1468,25 @@ export default function TableSetup() {
           )}
         </div>
       </div>
+
+      {/* Success overlay */}
+      <AnimatePresence>
+        {createSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-secondary/20 border border-secondary/30 flex items-center justify-center mb-3">
+                <CheckCircle className="w-8 h-8 text-secondary" />
+              </div>
+              <p className="text-lg font-bold text-secondary">Table Created Successfully!</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

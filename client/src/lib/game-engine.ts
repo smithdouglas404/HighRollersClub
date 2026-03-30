@@ -50,6 +50,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
   const [showdown, setShowdown] = useState<ShowdownData | null>(null);
   const handNumberRef = useRef(0);
   const actionNumberRef = useRef(0);
+  const actedThisRoundRef = useRef<Set<string>>(new Set());
 
   // Refs to always have latest state (avoids stale closures in setTimeout callbacks)
   const playersRef = useRef<Player[]>(initialPlayers);
@@ -158,6 +159,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     }));
 
     handNumberRef.current++;
+    actedThisRoundRef.current = new Set();
     setPlayers(finalPlayers);
     setDeck(newDeck);
     setShowdown(null);
@@ -303,6 +305,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       return;
     }
 
+    actedThisRoundRef.current = new Set();
     setDeck(currentDeck);
     setGameState(prev => ({
       ...prev,
@@ -337,8 +340,10 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
 
     if (action === 'fold') {
       newPlayers[currentPlayerIndex] = { ...newPlayers[currentPlayerIndex], status: 'folded' };
+      actedThisRoundRef.current.add(player.id);
     } else if (action === 'check') {
       newPlayers[currentPlayerIndex] = { ...newPlayers[currentPlayerIndex], status: 'checked' };
+      actedThisRoundRef.current.add(player.id);
     } else if (action === 'call') {
       const callAmount = Math.min(gs.minBet - player.currentBet, player.chips);
       const newChips = player.chips - callAmount;
@@ -346,9 +351,10 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
         ...newPlayers[currentPlayerIndex],
         chips: newChips,
         currentBet: player.currentBet + callAmount,
-        status: 'called',
+        status: newChips === 0 ? 'all-in' as const : 'called',
       };
       newPot += callAmount;
+      actedThisRoundRef.current.add(player.id);
     } else if (action === 'raise' && amount) {
       const added = Math.min(amount - player.currentBet, player.chips);
       const newChips = player.chips - added;
@@ -356,25 +362,23 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
         ...newPlayers[currentPlayerIndex],
         chips: newChips,
         currentBet: player.currentBet + added,
-        status: 'raised',
+        status: newChips === 0 ? 'all-in' as const : 'raised',
       };
       newPot += added;
       newMinBet = player.currentBet + added;
+      actedThisRoundRef.current.clear();
+      actedThisRoundRef.current.add(player.id);
     }
 
-    // Check if only one player remains (everyone else folded)
     const activePlayers = newPlayers.filter(p => p.status !== 'folded' && p.isActive);
     if (activePlayers.length === 1) {
-      // Last player standing wins
       const winner = activePlayers[0];
       const winnerIdx = newPlayers.findIndex(p => p.id === winner.id);
       newPlayers[winnerIdx] = { ...winner, chips: winner.chips + newPot };
 
-      // Update ref so startGame sees the awarded chips
       playersRef.current = newPlayers;
       setPlayers(newPlayers);
 
-      // Rotate dealer for next hand (skip eliminated players)
       const currentDealerIdx = newPlayers.findIndex(p => p.id === gs.dealerId);
       let nextDealerIdx = (currentDealerIdx + 1) % newPlayers.length;
       let dlrSafety = 0;
@@ -396,26 +400,20 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       return;
     }
 
-    // Find next active player who can still act (skip folded and all-in with 0 chips)
-    let nextIndex = (currentPlayerIndex + 1) % newPlayers.length;
-    let loopCount = 0;
-    while (loopCount < newPlayers.length) {
-      const np = newPlayers[nextIndex];
-      if (np.status !== 'folded' && np.chips > 0 && np.isActive) break;
-      nextIndex = (nextIndex + 1) % newPlayers.length;
-      loopCount++;
-    }
+    const eligible = newPlayers.filter(
+      p => p.status !== 'folded' && p.isActive && p.status !== 'all-in' && p.chips > 0
+    );
 
-    // Check if all remaining active players are all-in or only one can act
-    const playersWhoCanAct = newPlayers.filter(p => p.status !== 'folded' && p.isActive && p.chips > 0);
-    const nextPlayer = newPlayers[nextIndex];
+    const isRoundComplete = (() => {
+      if (eligible.length === 0) return true;
+      for (const p of eligible) {
+        if (!actedThisRoundRef.current.has(p.id)) return false;
+        if (p.currentBet !== newMinBet) return false;
+      }
+      return true;
+    })();
 
-    const isRoundOver =
-      playersWhoCanAct.length <= 1 ||
-      (nextPlayer.currentBet === newMinBet && nextPlayer.status !== 'thinking' && nextPlayer.status !== 'waiting') ||
-      newPlayers.filter(p => p.status !== 'folded' && p.isActive).every(p => p.status === 'checked' || p.chips === 0);
-
-    if (isRoundOver) {
+    if (isRoundComplete) {
       playersRef.current = newPlayers;
       setPlayers(newPlayers);
       setGameState(prev => ({
@@ -427,6 +425,15 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       }));
       setTimeout(nextPhase, 1000);
       return;
+    }
+
+    let nextIndex = (currentPlayerIndex + 1) % newPlayers.length;
+    let loopCount = 0;
+    while (loopCount < newPlayers.length) {
+      const np = newPlayers[nextIndex];
+      if (np.status !== 'folded' && np.chips > 0 && np.isActive) break;
+      nextIndex = (nextIndex + 1) % newPlayers.length;
+      loopCount++;
     }
 
     newPlayers[nextIndex] = { ...newPlayers[nextIndex], status: 'thinking', timeLeft: 100 };

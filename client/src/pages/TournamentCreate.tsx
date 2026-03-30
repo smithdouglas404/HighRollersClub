@@ -503,7 +503,7 @@ export default function TournamentCreate() {
         {/* Break Schedule */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <label className={goldLabelClass + " mb-0"}>
+            <label id="tournament-break-schedule-label" className={goldLabelClass + " mb-0"}>
               <Coffee className="w-3 h-3 inline mr-1 -mt-0.5" />
               Break Schedule
             </label>
@@ -540,10 +540,11 @@ export default function TournamentCreate() {
                 >
                   <div className="flex-1 grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600 block mb-1">
+                      <label htmlFor={`break-${brk.id}-levels`} className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600 block mb-1">
                         Every X Levels
                       </label>
                       <select
+                        id={`break-${brk.id}-levels`}
                         value={brk.everyXLevels}
                         onChange={(e) => updateBreak(brk.id, "everyXLevels", parseInt(e.target.value))}
                         className={goldSelectClass}
@@ -556,10 +557,11 @@ export default function TournamentCreate() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600 block mb-1">
+                      <label htmlFor={`break-${brk.id}-duration`} className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600 block mb-1">
                         Duration
                       </label>
                       <select
+                        id={`break-${brk.id}-duration`}
                         value={brk.durationMinutes}
                         onChange={(e) => updateBreak(brk.id, "durationMinutes", parseInt(e.target.value))}
                         className={goldSelectClass}

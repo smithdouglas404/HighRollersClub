@@ -68,7 +68,30 @@ interface RakebackResult {
   payouts: { userId: string; amount: number }[];
 }
 
-type Tab = "overview" | "withdrawals" | "collusion" | "system";
+interface TrialBalance {
+  playerBalanceSum: number;
+  escrowedAtTables: number;
+  moneyIn: number;
+  totalWithdrawals: number;
+  totalRake: number;
+  totalRakeback: number;
+  totalPrizes: number;
+  expectedBalance: number;
+  discrepancy: number;
+  healthy: boolean;
+}
+
+interface PaymentRecord {
+  id: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  provider: string;
+  createdAt: string;
+}
+
+type Tab = "overview" | "withdrawals" | "collusion" | "system" | "payments";
 
 export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -82,6 +105,8 @@ export default function AdminDashboard() {
   const [rakeByPlayer, setRakeByPlayer] = useState<RakeByPlayerEntry[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [rakebackResult, setRakebackResult] = useState<RakebackResult | null>(null);
+  const [trialBalance, setTrialBalance] = useState<TrialBalance | null>(null);
+  const [adminPayments, setAdminPayments] = useState<PaymentRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [processingRakeback, setProcessingRakeback] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
@@ -110,10 +135,15 @@ export default function AdminDashboard() {
           if (!r.ok) throw new Error("Failed to fetch rake report");
           return r.json();
         }).catch(() => []),
-      ]).then(([s, rev, rake]) => {
+        fetch("/api/admin/trial-balance", { credentials: "include" }).then(r => {
+          if (!r.ok) throw new Error("Failed to fetch trial balance");
+          return r.json();
+        }).catch(() => null),
+      ]).then(([s, rev, rake, tb]) => {
         if (s) setStats(s);
         if (rev) setRevenueSummary(rev);
         if (rake) setRakeReport(rake);
+        if (tb) setTrialBalance(tb);
       }).catch(err => {
         setError(err.message || "Failed to load overview data");
       }).finally(() => setLoading(false));
@@ -128,6 +158,12 @@ export default function AdminDashboard() {
         .then(r => r.ok ? r.json() : [])
         .then(setAlerts)
         .catch(err => setError(err.message || "Failed to load collusion alerts"))
+        .finally(() => setLoading(false));
+    } else if (activeTab === "payments") {
+      fetch("/api/admin/payments", { credentials: "include" })
+        .then(r => r.ok ? r.json() : [])
+        .then(setAdminPayments)
+        .catch(err => setError(err.message || "Failed to load payments"))
         .finally(() => setLoading(false));
     } else if (activeTab === "system") {
       Promise.all([
@@ -226,6 +262,7 @@ export default function AdminDashboard() {
     { key: "overview", label: "Overview", icon: <Shield className="w-4 h-4" /> },
     { key: "withdrawals", label: "Withdrawals", icon: <DollarSign className="w-4 h-4" /> },
     { key: "collusion", label: "Collusion", icon: <AlertTriangle className="w-4 h-4" /> },
+    { key: "payments", label: "Payments", icon: <Eye className="w-4 h-4" /> },
     { key: "system", label: "System", icon: <Server className="w-4 h-4" /> },
   ];
 
@@ -351,6 +388,91 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+
+            {/* Trial Balance from /api/admin/trial-balance */}
+            {trialBalance && (
+              <div>
+                <h3 className="text-sm font-bold text-white mb-3">Trial Balance (Audit)</h3>
+                <div className={`glass rounded-xl p-5 border ${trialBalance.healthy ? "border-green-500/20" : "border-red-500/30 bg-red-500/5"}`}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className={`w-2.5 h-2.5 rounded-full ${trialBalance.healthy ? "bg-green-500" : "bg-red-500 animate-pulse"}`} />
+                    <span className={`text-xs font-bold ${trialBalance.healthy ? "text-green-400" : "text-red-400"}`}>
+                      {trialBalance.healthy ? "Balanced — No Discrepancy" : `Discrepancy: $${(trialBalance.discrepancy / 100).toFixed(2)}`}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: "Player Balances", value: trialBalance.playerBalanceSum, color: "text-primary" },
+                      { label: "Table Escrow", value: trialBalance.escrowedAtTables, color: "text-amber-400" },
+                      { label: "Money In", value: trialBalance.moneyIn, color: "text-green-400" },
+                      { label: "Withdrawals", value: trialBalance.totalWithdrawals, color: "text-red-400" },
+                      { label: "Total Rake", value: trialBalance.totalRake, color: "text-primary" },
+                      { label: "Rakeback Paid", value: trialBalance.totalRakeback, color: "text-purple-400" },
+                      { label: "Prizes Paid", value: trialBalance.totalPrizes, color: "text-amber-400" },
+                      { label: "Expected Balance", value: trialBalance.expectedBalance, color: "text-white" },
+                    ].map((item) => (
+                      <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                        <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-bold">{item.label}</div>
+                        <div className={`text-sm font-mono font-bold mt-0.5 ${item.color}`}>${(item.value / 100).toFixed(2)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Payments */}
+        {!loading && activeTab === "payments" && (
+          <div className="space-y-3">
+            {adminPayments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+                  <DollarSign className="w-7 h-7 text-primary/40" />
+                </div>
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Payments</h3>
+                <p className="text-xs text-muted-foreground/60 max-w-xs">No payment records found.</p>
+              </div>
+            ) : (
+              <div className="glass rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">ID</th>
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">User</th>
+                      <th className="text-right p-3 text-gray-500 uppercase font-bold">Amount</th>
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">Currency</th>
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">Provider</th>
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">Status</th>
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminPayments.map((p) => (
+                      <tr key={p.id} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="p-3 text-gray-400 font-mono">{p.id.slice(0, 10)}...</td>
+                        <td className="p-3 text-gray-400 font-mono">{p.userId.slice(0, 12)}...</td>
+                        <td className="p-3 text-right text-primary font-mono font-bold">{p.amount}</td>
+                        <td className="p-3 text-gray-400 uppercase">{p.currency}</td>
+                        <td className="p-3 text-gray-400">{p.provider}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[0.5625rem] font-bold ${
+                            p.status === "completed" ? "bg-green-500/20 text-green-400" :
+                            p.status === "pending" ? "bg-amber-500/20 text-amber-400" :
+                            p.status === "failed" ? "bg-red-500/20 text-red-400" :
+                            "bg-white/10 text-gray-400"
+                          }`}>
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-gray-500 font-mono">{new Date(p.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

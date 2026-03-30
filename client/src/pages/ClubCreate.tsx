@@ -376,7 +376,7 @@ export default function ClubCreate() {
 
       {/* Club Theme Color */}
       <div className="space-y-2">
-        <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+        <label id="club-theme-color-label" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
           Club Theme Color
         </label>
         <div className="flex items-center gap-3">
@@ -426,7 +426,7 @@ export default function ClubCreate() {
     <div className="space-y-6">
       {/* Max Members */}
       <div className="space-y-2">
-        <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+        <label id="club-max-members-label" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
           <Users className="w-3.5 h-3.5" />
           Max Members
         </label>

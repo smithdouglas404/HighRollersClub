@@ -828,9 +828,12 @@ export default function ClubDashboard() {
                     </div>
 
                     {members.length === 0 ? (
-                      <div className="py-10 text-center">
-                        <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">No members yet</p>
+                      <div className="py-12 text-center">
+                        <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-primary/[0.08] border border-primary/15">
+                          <Users className="w-7 h-7 text-gray-600" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-500 mb-1">No members yet</p>
+                        <p className="text-[0.625rem] text-gray-600">Invite friends to join your club and start playing together</p>
                       </div>
                     ) : (
                       members.map((member, i) => {

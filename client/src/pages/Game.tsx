@@ -1260,6 +1260,7 @@ function GameTable({
               <span className="text-sm font-bold text-yellow-300 uppercase tracking-wider">You missed blinds</span>
               <button
                 onClick={postBlinds}
+                aria-label="Post missed blinds"
                 className="px-3 py-1 rounded text-xs font-bold text-white bg-green-600 hover:bg-green-500 transition-colors"
               >
                 Post Now
@@ -1631,6 +1632,8 @@ function GameTable({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[90] flex items-center justify-center bg-background/80 backdrop-blur-xl"
+            role="dialog"
+            aria-modal="true"
             data-testid="game-paused-overlay"
           >
             <motion.div
@@ -1670,6 +1673,8 @@ function GameTable({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
             onClick={() => setShowManageTable(false)}
+            role="dialog"
+            aria-modal="true"
             data-testid="manage-table-modal"
           >
             <motion.div
@@ -1819,6 +1824,8 @@ function GameTable({
               exit={{ x: 340, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="fixed right-0 top-0 bottom-0 z-[71] w-80 flex flex-col overflow-hidden"
+              role="dialog"
+              aria-modal="true"
               style={{
                 background: "linear-gradient(180deg, rgba(12,20,35,0.98) 0%, rgba(8,14,24,0.99) 100%)",
                 borderLeft: "1px solid rgba(168,85,247,0.15)",
@@ -1935,6 +1942,8 @@ function GameTable({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
             onClick={() => setShowAddChips(false)}
+            role="dialog"
+            aria-modal="true"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -2039,6 +2048,8 @@ function GameTable({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
           >
             <motion.div
               initial={{ scale: 0.8, y: 30 }}
@@ -2081,6 +2092,8 @@ function GameTable({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
             onClick={() => setSelectedPlayerDetail(null)}
+            role="dialog"
+            aria-modal="true"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -2246,6 +2259,8 @@ function GameTable({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm"
             onClick={() => setKickTarget(null)}
+            role="dialog"
+            aria-modal="true"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}

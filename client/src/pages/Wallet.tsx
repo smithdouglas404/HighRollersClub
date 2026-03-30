@@ -752,7 +752,8 @@ function DepositPanel() {
                         <span className="text-[0.625rem] font-bold text-gray-400 w-10 text-right tabular-nums">{allocation[w.key] || 0}%</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="range" min={0} max={100} step={5} value={allocation[w.key] || 0}
+                        <label htmlFor={`allocation-${w.key}`} className="sr-only">{w.shortLabel} allocation</label>
+                        <input id={`allocation-${w.key}`} type="range" min={0} max={100} step={5} value={allocation[w.key] || 0}
                           onChange={e => handleAllocationChange(w.key, parseInt(e.target.value))}
                           disabled={isLocked}
                           className="flex-1 accent-amber-500 h-1 disabled:opacity-40" />
@@ -1710,10 +1711,12 @@ export default function Wallet() {
                     <button onClick={exportCSV} className="p-1 rounded-md hover:bg-white/[0.05]"><Download className="w-3.5 h-3.5 text-gray-500" /></button>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                    <label htmlFor="history-start-date" className="sr-only">Start Date</label>
+                    <input id="history-start-date" type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                       className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-primary/20" />
                     <span className="text-[0.5rem] text-gray-600">to</span>
-                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                    <label htmlFor="history-end-date" className="sr-only">End Date</label>
+                    <input id="history-end-date" type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
                       className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-primary/20" />
                   </div>
                 </div>

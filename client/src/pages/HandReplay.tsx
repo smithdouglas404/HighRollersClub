@@ -208,6 +208,8 @@ export default function HandReplay({ handId }: { handId: string }) {
   const [copiedHash, setCopiedHash] = useState(false);
   const [showProof, setShowProof] = useState(false);
   const [viewMode, setViewMode] = useState<"visual" | "text">("visual");
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const [exportingJSON, setExportingJSON] = useState(false);
 
   // Verification state
   const [verifyExpanded, setVerifyExpanded] = useState(false);
@@ -252,18 +254,25 @@ export default function HandReplay({ handId }: { handId: string }) {
   };
 
   const exportJSON = () => {
-    if (!hand) return;
-    const blob = new Blob([JSON.stringify(hand, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `hand-${hand.handNumber || handId}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!hand || exportingJSON) return;
+    setExportingJSON(true);
+    try {
+      const blob = new Blob([JSON.stringify(hand, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hand-${hand.handNumber || handId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingJSON(false);
+    }
   };
 
   const exportPDF = async () => {
-    if (!hand) return;
+    if (!hand || exportingPDF) return;
+    setExportingPDF(true);
+    try {
     const { jsPDF } = await import("jspdf");
     const doc = new jsPDF();
     const summary = hand.summary;
@@ -340,6 +349,9 @@ export default function HandReplay({ handId }: { handId: string }) {
     }
 
     doc.save(`hand-${hand.handNumber || handId}.pdf`);
+    } finally {
+      setExportingPDF(false);
+    }
   };
 
   const handleVerify = async () => {
@@ -499,17 +511,27 @@ export default function HandReplay({ handId }: { handId: string }) {
                     )}
                     <button
                       onClick={exportPDF}
-                      className="glass rounded-lg p-2 hover:bg-white/5 transition-colors hover:border-primary/30 border border-transparent"
+                      disabled={exportingPDF}
+                      className="glass rounded-lg p-2 hover:bg-white/5 transition-colors hover:border-primary/30 border border-transparent disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Export PDF"
                     >
-                      <FileText className="w-4 h-4 text-primary" />
+                      {exportingPDF ? (
+                        <span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin block" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-primary" />
+                      )}
                     </button>
                     <button
                       onClick={exportJSON}
-                      className="glass rounded-lg p-2 hover:bg-white/5 transition-colors hover:border-primary/30 border border-transparent"
+                      disabled={exportingJSON}
+                      className="glass rounded-lg p-2 hover:bg-white/5 transition-colors hover:border-primary/30 border border-transparent disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Export JSON"
                     >
-                      <Download className="w-4 h-4 text-primary" />
+                      {exportingJSON ? (
+                        <span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin block" />
+                      ) : (
+                        <Download className="w-4 h-4 text-primary" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -669,7 +691,8 @@ export default function HandReplay({ handId }: { handId: string }) {
               >
                 <button
                   onClick={handleVerify}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors"
+                  disabled={verifyLoading}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-primary" />

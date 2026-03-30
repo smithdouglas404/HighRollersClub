@@ -313,7 +313,7 @@ function RetentionDonut({ segments }: { segments: { label: string; value: number
       <text x={CX} y={CY - 6} textAnchor="middle" fill="rgba(255,255,255,0.9)" fontSize="18" fontWeight="700" fontFamily="'Space Grotesk', sans-serif">
         {total}%
       </text>
-      <text x={CX} y={CY + 10} textAnchor="middle" fill="rgba(255,255,255,0.35)" fontSize="8" fontFamily="monospace" textTransform="uppercase" letterSpacing="0.1em">
+      <text x={CX} y={CY + 10} textAnchor="middle" fill="rgba(255,255,255,0.35)" fontSize="8" fontFamily="monospace" style={{ textTransform: "uppercase" }} letterSpacing="0.1em">
         RETENTION
       </text>
     </svg>

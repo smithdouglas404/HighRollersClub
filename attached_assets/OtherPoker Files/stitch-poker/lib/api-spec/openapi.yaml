@@ -1,0 +1,597 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Stitch Poker API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: users
+    description: User operations
+  - name: clubs
+    description: Club operations
+  - name: tables
+    description: Table operations
+  - name: games
+    description: Game operations
+  - name: tournaments
+    description: Tournament operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /users/me:
+    get:
+      operationId: getCurrentUser
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /clubs:
+    get:
+      operationId: listClubs
+      tags: [clubs]
+      summary: List all clubs
+      responses:
+        "200":
+          description: List of clubs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Club"
+    post:
+      operationId: createClub
+      tags: [clubs]
+      summary: Create a new club
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClubInput"
+      responses:
+        "201":
+          description: Club created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+  /clubs/{clubId}:
+    get:
+      operationId: getClub
+      tags: [clubs]
+      summary: Get club details
+      parameters:
+        - name: clubId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Club details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+  /clubs/{clubId}/members:
+    get:
+      operationId: getClubMembers
+      tags: [clubs]
+      summary: Get club members
+      parameters:
+        - name: clubId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Club members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClubMember"
+  /tables:
+    get:
+      operationId: listTables
+      tags: [tables]
+      summary: List available tables
+      parameters:
+        - name: gameType
+          in: query
+          schema:
+            type: string
+        - name: stakes
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of tables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PokerTable"
+    post:
+      operationId: createTable
+      tags: [tables]
+      summary: Create a new table
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTableInput"
+      responses:
+        "201":
+          description: Table created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PokerTable"
+  /tables/{tableId}:
+    get:
+      operationId: getTable
+      tags: [tables]
+      summary: Get table details
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Table details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PokerTable"
+  /tables/{tableId}/game:
+    get:
+      operationId: getGameState
+      tags: [games]
+      summary: Get current game state at a table
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Game state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameState"
+  /tables/{tableId}/action:
+    post:
+      operationId: performAction
+      tags: [games]
+      summary: Perform a game action
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameAction"
+      responses:
+        "200":
+          description: Action performed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameState"
+  /tournaments:
+    get:
+      operationId: listTournaments
+      tags: [tournaments]
+      summary: List tournaments
+      responses:
+        "200":
+          description: Tournament list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tournament"
+    post:
+      operationId: createTournament
+      tags: [tournaments]
+      summary: Create a tournament
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTournamentInput"
+      responses:
+        "201":
+          description: Tournament created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+  /tournaments/{tournamentId}:
+    get:
+      operationId: getTournament
+      tags: [tournaments]
+      summary: Get tournament details
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tournament details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+        chips:
+          type: integer
+        level:
+          type: integer
+        gamesPlayed:
+          type: integer
+        gamesWon:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - displayName
+        - chips
+        - level
+        - gamesPlayed
+        - gamesWon
+    Club:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        ownerUsername:
+          type: string
+        memberCount:
+          type: integer
+        maxMembers:
+          type: integer
+        isPrivate:
+          type: boolean
+        chipBuyIn:
+          type: integer
+        imageUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - ownerUsername
+        - memberCount
+        - maxMembers
+        - isPrivate
+    CreateClubInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        maxMembers:
+          type: integer
+        isPrivate:
+          type: boolean
+        chipBuyIn:
+          type: integer
+      required:
+        - name
+        - maxMembers
+    ClubMember:
+      type: object
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member]
+        chips:
+          type: integer
+        joinedAt:
+          type: string
+          format: date-time
+      required:
+        - username
+        - displayName
+        - role
+    PokerTable:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        gameType:
+          type: string
+          enum: [texas_holdem, omaha, short_deck, plo5]
+        stakes:
+          type: string
+        smallBlind:
+          type: integer
+        bigBlind:
+          type: integer
+        minBuyIn:
+          type: integer
+        maxBuyIn:
+          type: integer
+        maxPlayers:
+          type: integer
+        currentPlayers:
+          type: integer
+        status:
+          type: string
+          enum: [waiting, in_progress, paused]
+        isPrivate:
+          type: boolean
+        clubId:
+          type: integer
+      required:
+        - id
+        - name
+        - gameType
+        - stakes
+        - smallBlind
+        - bigBlind
+        - maxPlayers
+        - currentPlayers
+        - status
+    CreateTableInput:
+      type: object
+      properties:
+        name:
+          type: string
+        gameType:
+          type: string
+          enum: [texas_holdem, omaha, short_deck, plo5]
+        smallBlind:
+          type: integer
+        bigBlind:
+          type: integer
+        minBuyIn:
+          type: integer
+        maxBuyIn:
+          type: integer
+        maxPlayers:
+          type: integer
+        isPrivate:
+          type: boolean
+        clubId:
+          type: integer
+      required:
+        - name
+        - gameType
+        - smallBlind
+        - bigBlind
+        - maxPlayers
+    GameState:
+      type: object
+      properties:
+        tableId:
+          type: integer
+        pot:
+          type: integer
+        communityCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
+        currentPhase:
+          type: string
+          enum: [preflop, flop, turn, river, showdown]
+        currentPlayerIndex:
+          type: integer
+        dealerIndex:
+          type: integer
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerState"
+        myCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
+        minRaise:
+          type: integer
+        maxRaise:
+          type: integer
+      required:
+        - tableId
+        - pot
+        - communityCards
+        - currentPhase
+        - currentPlayerIndex
+        - dealerIndex
+        - players
+    Card:
+      type: object
+      properties:
+        suit:
+          type: string
+          enum: [hearts, diamonds, clubs, spades]
+        rank:
+          type: string
+          enum: ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+      required:
+        - suit
+        - rank
+    PlayerState:
+      type: object
+      properties:
+        seatIndex:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+        chips:
+          type: integer
+        bet:
+          type: integer
+        status:
+          type: string
+          enum: [active, folded, all_in, sitting_out]
+        isDealer:
+          type: boolean
+        isTurn:
+          type: boolean
+      required:
+        - seatIndex
+        - username
+        - displayName
+        - chips
+        - bet
+        - status
+        - isDealer
+        - isTurn
+    GameAction:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [fold, check, call, raise, all_in]
+        amount:
+          type: integer
+      required:
+        - action
+    Tournament:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        gameType:
+          type: string
+          enum: [texas_holdem, omaha, short_deck, plo5]
+        buyIn:
+          type: integer
+        prizePool:
+          type: integer
+        maxPlayers:
+          type: integer
+        registeredPlayers:
+          type: integer
+        startTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [registration, in_progress, completed, cancelled]
+        blindStructure:
+          type: string
+        startingChips:
+          type: integer
+        levels:
+          type: integer
+      required:
+        - id
+        - name
+        - gameType
+        - buyIn
+        - maxPlayers
+        - registeredPlayers
+        - status
+    CreateTournamentInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        gameType:
+          type: string
+          enum: [texas_holdem, omaha, short_deck, plo5]
+        buyIn:
+          type: integer
+        maxPlayers:
+          type: integer
+        startTime:
+          type: string
+          format: date-time
+        blindStructure:
+          type: string
+        startingChips:
+          type: integer
+      required:
+        - name
+        - gameType
+        - buyIn
+        - maxPlayers

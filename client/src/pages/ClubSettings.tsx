@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Settings, Save, Trash2, Shield, Globe, Lock,
   Users, Crown, Loader2, AlertTriangle, CheckCircle, X,
-  Languages, DollarSign, ShieldCheck, Palette,
+  Languages, DollarSign, ShieldCheck, Palette, Link2, Wallet,
 } from "lucide-react";
 
 export default function ClubSettings() {
@@ -501,7 +501,7 @@ export default function ClubSettings() {
 
               <div className="p-5 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                  <label id="settings-theme-color-label" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
                     Theme Color
                   </label>
                   <div className="flex items-center gap-3">
@@ -547,6 +547,57 @@ export default function ClubSettings() {
                     Preview: Club elements will use the <strong className="text-white">{THEME_COLORS.find(c => c.id === themeColor)?.label}</strong> theme
                   </span>
                 </div>
+              </div>
+            </motion.div>
+
+            {/* S15: Integration & API */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]">
+                <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
+                  <Link2 className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                    Integration & API
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">External wallet and API connections</p>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                  <div className="flex items-center gap-3">
+                    <Wallet className="w-5 h-5 text-primary" />
+                    <div>
+                      <div className="text-xs font-semibold text-white">External Wallet</div>
+                      <div className="text-[0.5625rem] text-gray-500">Connect an external crypto wallet for payouts</div>
+                    </div>
+                  </div>
+                  <button className="px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
+                    Connect
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-5 h-5 text-amber-400" />
+                    <div>
+                      <div className="text-xs font-semibold text-white">API Access</div>
+                      <div className="text-[0.5625rem] text-gray-500">Generate API keys for third-party integrations</div>
+                    </div>
+                  </div>
+                  <button className="px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:bg-white/[0.08] transition-colors">
+                    Generate Key
+                  </button>
+                </div>
+
+                <p className="text-[0.5625rem] text-gray-600 leading-relaxed">
+                  API keys grant full access to club management endpoints. Keep them secure and rotate regularly.
+                </p>
               </div>
             </motion.div>
 

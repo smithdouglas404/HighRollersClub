@@ -653,8 +653,7 @@ function GameTable({
                       </button>
                     )}
 
-                    {/* Sit Out / Sit In — multiplayer only */}
-                    {isMultiplayer && sitOut && sitIn && hero && (
+                    {sitOut && sitIn && hero && (
                       hero.isSittingOut || hero.status === "sitting-out" ? (
                         <button
                           onClick={() => { sitIn(); setShowPlayerMenu(false); }}
@@ -2047,7 +2046,7 @@ const BOT_CHAT_LINES = [
 ];
 
 function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Player[]; engineConfig?: GameEngineConfig }) {
-  const { players, gameState, handlePlayerAction, showdown, rebuyHero, sitIn, updateConfig } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
+  const { players, gameState, handlePlayerAction, showdown, rebuyHero, sitOut, sitIn, updateConfig } = useGameEngine(initialPlayers, HERO_ID, engineConfig);
   const [, navigate] = useLocation();
   const defaultBuyIn = initialPlayers.find(p => p.id === HERO_ID)?.chips || 1000;
   const [chatMessages, setChatMessages] = useState<{ playerName: string; message: string }[]>([]);
@@ -2101,6 +2100,7 @@ function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Pl
       sendChat={sendChat}
       rebuyHero={(amount) => rebuyHero(amount)}
       defaultBuyIn={defaultBuyIn}
+      sitOut={sitOut}
       sitIn={sitIn}
       isAdmin={true}
       currentSettings={adminSettings}

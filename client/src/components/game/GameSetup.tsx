@@ -183,6 +183,25 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
 
   const handleNext = () => {
     if (!playerName.trim()) return;
+    if (mode === "offline" && onStartOffline) {
+      setIsReady(true);
+      const practiceConfig: GameSetupConfig = {
+        ...buildConfig(),
+        gameFormat: "cash",
+        maxPlayers: 4,
+        smallBlind: 1,
+        bigBlind: 2,
+        ante: 0,
+        timeBankSeconds: 60,
+        minBuyIn: 100,
+        maxBuyIn: 500,
+        allowBots: true,
+        rakePercent: 0,
+        rakeCap: 0,
+      };
+      setTimeout(() => onStartOffline(selectedAvatar, playerName.trim(), practiceConfig), 800);
+      return;
+    }
     setStep(2);
   };
 

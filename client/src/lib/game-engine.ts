@@ -537,17 +537,6 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     setTimeout(() => startGame(), 500);
   }, [heroId, startGame]);
 
-  const sitOut = useCallback(() => {
-    setPlayers(prev => {
-      const updated = prev.map(p => {
-        if (p.id !== heroId) return p;
-        return { ...p, isSittingOut: true, status: 'sitting-out' as const };
-      });
-      playersRef.current = updated;
-      return updated;
-    });
-  }, [heroId]);
-
   const sitIn = useCallback(() => {
     const currentPhase = gameStateRef.current.phase;
     const handInProgress = currentPhase !== 'waiting' && currentPhase !== 'pre-flop';

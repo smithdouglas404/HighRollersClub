@@ -42,6 +42,24 @@ uri = "file://attached_assets/generated_images/preview/avatar_sample_fullbody.pn
 type = "image"
 title = "fullbody avatar sample"
 
+[[generated]]
+id = "bH5TNXJUhcGzYHgyF4eyv"
+uri = "file://attached_assets/generated_images/preview/table_with_players.png"
+type = "image"
+title = "table with players seated"
+
+[[generated]]
+id = "q29R7Cizno8icD6PZSn3b"
+uri = "file://attached_assets/generated_images/preview/table_hero_perspective.png"
+type = "image"
+title = "hero perspective table view"
+
+[[generated]]
+id = "u9jEOocugKyFTJvcF3-QI"
+uri = "file://attached_assets/generated_images/preview/lobby_with_cards.png"
+type = "image"
+title = "lobby with game mode cards"
+
 [[outputs]]
 id = "X1QAw5WP-1xocQO_VZlCQ"
 uri = "file://attached_assets/generated_images/preview/poker_table_scene.png"
@@ -83,3 +101,21 @@ id = "Hxw0awiqEKNdDlJoS60X4"
 uri = "file://attached_assets/generated_images/preview/avatar_sample_fullbody.png"
 type = "image"
 title = "Full-Body Avatar Sample"
+
+[[outputs]]
+id = "1tUH_nY8w_LQOnHcLb_80"
+uri = "file://attached_assets/generated_images/preview/table_with_players.png"
+type = "image"
+title = "Table with Players Seated"
+
+[[outputs]]
+id = "a-TWU0bwLOHqrTPRFZn8f"
+uri = "file://attached_assets/generated_images/preview/table_hero_perspective.png"
+type = "image"
+title = "Hero POV at Table"
+
+[[outputs]]
+id = "p0ox6MnjBrPiUnlJ2TR_f"
+uri = "file://attached_assets/generated_images/preview/lobby_with_cards.png"
+type = "image"
+title = "Lobby with Game Mode Cards"

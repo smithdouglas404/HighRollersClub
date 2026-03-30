@@ -76,6 +76,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         visible = visible.filter(t => t.gameFormat === format);
       }
 
+      // Optional variant filter
+      const variant = req.query.variant as string;
+      if (variant && variant !== "all") {
+        visible = visible.filter(t => t.pokerVariant === variant);
+      }
+
       res.json(visible);
     } catch (err) {
       next(err);
@@ -1505,7 +1511,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     try {
       const parsed = createTournamentSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message || "Invalid input" });
-      const { name, buyIn, startingChips, maxPlayers, clubId, startAt } = parsed.data;
+      const { name, buyIn, startingChips, maxPlayers, clubId, startAt, pokerVariant } = parsed.data;
       const { blindPreset } = req.body;
 
       const blindSchedule = blindPreset ? getBlindPreset(blindPreset) : getBlindPreset("mtt");
@@ -1527,6 +1533,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         startingChips,
         blindSchedule,
         maxPlayers,
+        pokerVariant,
         status: "registering",
         prizePool: 0,
         createdById: req.user!.id,
@@ -1671,6 +1678,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         buyInAmount: tourney.buyIn,
         blindSchedule,
         clubId: tourney.clubId,
+        pokerVariant: tourney.pokerVariant as "nlhe" | "plo" | "plo5" | "short_deck",
       });
 
       activeMTTs.set(tourney.id, mtt);

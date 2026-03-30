@@ -10,7 +10,7 @@ import {
   Users, Coins, Plus, Loader2,
   Settings, Search, Check, X,
   Shield, Medal, Gamepad2, Activity,
-  Layers, Wifi, Image
+  Layers, Wifi, Image, Megaphone, LayoutDashboard
 } from "lucide-react";
 import { ClubTournaments } from "@/components/club/ClubTournaments";
 import { ClubLeaderboard } from "@/components/club/ClubLeaderboard";
@@ -61,8 +61,11 @@ export default function ClubDashboard() {
     clubTournaments,
   } = useClub();
 
-  const [activeTab, setActiveTab] = useState<"members" | "tournaments" | "leaderboard">("members");
+  const [activeTab, setActiveTab] = useState<"overview" | "members" | "tournaments" | "leaderboard">("overview");
   const [creatingTable, setCreatingTable] = useState(false);
+  const [clubTables, setClubTables] = useState<any[]>([]);
+  const [clubTablesLoading, setClubTablesLoading] = useState(false);
+  const [clubActivity, setClubActivity] = useState<any[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [alliance, setAlliance] = useState<{ id: string; name: string; clubIds: string[] } | null>(null);
 
@@ -73,6 +76,65 @@ export default function ClubDashboard() {
       .then((data) => setAlliance(data || null))
       .catch(() => setAlliance(null));
   }, [club]);
+
+  // Fetch active tables for this club
+  useEffect(() => {
+    if (!club) return;
+    setClubTablesLoading(true);
+    fetch("/api/tables", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then((tables: any[]) => {
+        setClubTables(tables.filter((t: any) => t.clubId === club.id));
+      })
+      .catch(() => setClubTables([]))
+      .finally(() => setClubTablesLoading(false));
+  }, [club]);
+
+  // Fetch recent activity (announcements + events, combined into a feed)
+  useEffect(() => {
+    if (!club) return;
+    Promise.all([
+      fetch(`/api/clubs/${club.id}/announcements`).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch(`/api/clubs/${club.id}/events`).then(r => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([announcements, events]) => {
+      const items: any[] = [];
+      (announcements || []).forEach((a: any) => {
+        items.push({
+          id: `ann-${a.id}`,
+          type: "announcement",
+          user: a.authorName || "Admin",
+          action: a.title || a.content,
+          timestamp: a.createdAt,
+        });
+      });
+      (events || []).forEach((e: any) => {
+        items.push({
+          id: `evt-${e.id}`,
+          type: e.eventType === "tournament" ? "game" : "game",
+          user: e.name,
+          action: e.description || e.eventType,
+          timestamp: e.startTime || e.createdAt,
+        });
+      });
+      // Also generate join events from members (sorted by joinedAt)
+      const recentMembers = [...members]
+        .filter(m => m.joinedAt)
+        .sort((a, b) => new Date(b.joinedAt!).getTime() - new Date(a.joinedAt!).getTime())
+        .slice(0, 5);
+      recentMembers.forEach(m => {
+        items.push({
+          id: `join-${m.userId}`,
+          type: "join",
+          user: m.displayName,
+          action: "joined the club",
+          timestamp: m.joinedAt,
+        });
+      });
+      // Sort by timestamp descending
+      items.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+      setClubActivity(items.slice(0, 15));
+    });
+  }, [club, members]);
 
   const [newClubName, setNewClubName] = useState("");
   const [newClubDescription, setNewClubDescription] = useState("");
@@ -142,6 +204,7 @@ export default function ClubDashboard() {
   const clubLogo = club ? CLUB_LOGO_OPTIONS.find(l => l.id === (club as any).logoId) : null;
 
   const tabs = [
+    { key: "overview" as const, label: "Overview", icon: LayoutDashboard, count: null },
     { key: "members" as const, label: "Members", icon: Users, count: members.length },
     { key: "tournaments" as const, label: "Tournaments", icon: Trophy, count: clubTournaments.length },
     { key: "leaderboard" as const, label: "Leaderboard", icon: Medal, count: null },
@@ -556,6 +619,219 @@ export default function ClubDashboard() {
                   );
                 })}
               </div>
+
+              {/* ── Overview Tab Content ── */}
+              {activeTab === "overview" && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left side: Club Tables (2/3 width) */}
+                  <div className="lg:col-span-2">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-xl overflow-hidden"
+                      style={{
+                        background: "rgba(20,31,40,0.65)",
+                        backdropFilter: "blur(16px)",
+                        border: "1px solid rgba(0,212,255,0.20)",
+                        boxShadow: "0 0 40px rgba(0,212,255,0.06), inset 0 1px 0 rgba(0,212,255,0.08)",
+                      }}
+                    >
+                      <div
+                        className="px-6 py-3 border-b border-cyan-500/25 flex items-center justify-between"
+                        style={{
+                          background: "linear-gradient(90deg, rgba(0,212,255,0.18), rgba(180,140,50,0.06))",
+                          boxShadow: "inset 0 -1px 0 rgba(0,212,255,0.15)",
+                        }}
+                      >
+                        <h3
+                          className="text-sm font-black uppercase tracking-[0.15em] text-cyan-400"
+                          style={{ textShadow: "0 0 15px rgba(0,212,255,0.4)" }}
+                        >
+                          Club Tables
+                        </h3>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleCreateTable}
+                          disabled={creatingTable}
+                          className="px-4 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black flex items-center gap-1.5 disabled:opacity-50"
+                          style={{
+                            background: "linear-gradient(135deg, #00d4ff, #f0d078)",
+                            boxShadow: "0 0 15px rgba(0,212,255,0.25)",
+                          }}
+                        >
+                          {creatingTable ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                          Create Table
+                        </motion.button>
+                      </div>
+
+                      <div className="p-4">
+                        {clubTablesLoading ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                          </div>
+                        ) : clubTables.length === 0 ? (
+                          <div className="py-12 text-center">
+                            <div
+                              className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                              style={{ background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.15)" }}
+                            >
+                              <Layers className="w-7 h-7 text-gray-600" />
+                            </div>
+                            <p className="text-sm font-bold text-gray-500 mb-1">No active tables</p>
+                            <p className="text-[0.625rem] text-gray-600">Create a table to start playing with your club members</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {clubTables.map((table: any, i: number) => {
+                              const isLive = table.status === "playing";
+                              return (
+                                <motion.div
+                                  key={table.id}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: i * 0.06 }}
+                                  className="rounded-xl p-4 border border-white/[0.06] hover:border-cyan-500/20 transition-all group"
+                                  style={{
+                                    background: "rgba(255,255,255,0.02)",
+                                    boxShadow: "0 0 20px rgba(0,0,0,0.1)",
+                                  }}
+                                >
+                                  <div className="flex items-start justify-between mb-3">
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="text-sm font-bold text-white truncate mb-1">{table.name}</h4>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span
+                                          className="px-2 py-0.5 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/20"
+                                        >
+                                          {table.gameFormat || "cash"}
+                                        </span>
+                                        <span className="text-[0.625rem] text-gray-500">
+                                          {table.smallBlind}/{table.bigBlind}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <span
+                                      className={`shrink-0 ml-2 px-2.5 py-1 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider border ${
+                                        isLive
+                                          ? "bg-green-500/15 text-green-400 border-green-500/20"
+                                          : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                                      }`}
+                                    >
+                                      {isLive ? "LIVE" : "WAITING"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5 text-[0.625rem] text-gray-500">
+                                      <Users className="w-3.5 h-3.5" />
+                                      <span>{table.playerCount ?? 0}/{table.maxPlayers ?? 6} players</span>
+                                    </div>
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => navigate(`/game/${table.id}`)}
+                                      className="px-4 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-500/25 hover:bg-cyan-500/10 transition-colors"
+                                    >
+                                      Join
+                                    </motion.button>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  {/* Right side: Recent Activity (1/3 width) */}
+                  <div>
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.15 }}
+                      className="rounded-xl overflow-hidden"
+                      style={{
+                        background: "rgba(20,31,40,0.65)",
+                        backdropFilter: "blur(16px)",
+                        border: "1px solid rgba(0,212,255,0.12)",
+                        boxShadow: "0 0 25px rgba(0,212,255,0.04)",
+                      }}
+                    >
+                      <div className="px-4 py-3 border-b border-cyan-500/10">
+                        <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white flex items-center gap-2">
+                          <Activity className="w-3.5 h-3.5 text-cyan-400" /> Recent Activity
+                        </h3>
+                      </div>
+
+                      {clubActivity.length === 0 ? (
+                        <div className="py-10 text-center">
+                          <Activity className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                          <p className="text-[0.625rem] text-gray-600">No recent activity</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-white/[0.04]">
+                          {clubActivity.map((item: any, i: number) => {
+                            const isJoin = item.type === "join";
+                            const isGame = item.type === "game";
+                            const isAnnouncement = item.type === "announcement";
+
+                            const accentColor = isJoin
+                              ? "text-green-400"
+                              : isGame
+                                ? "text-cyan-400"
+                                : "text-amber-400";
+                            const accentBg = isJoin
+                              ? "bg-green-500/12 border-green-500/20"
+                              : isGame
+                                ? "bg-cyan-500/12 border-cyan-500/20"
+                                : "bg-amber-500/12 border-amber-500/20";
+                            const IconComponent = isJoin
+                              ? Users
+                              : isGame
+                                ? Gamepad2
+                                : Megaphone;
+
+                            const timeStr = item.timestamp
+                              ? new Date(item.timestamp).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : "";
+
+                            return (
+                              <motion.div
+                                key={item.id}
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.1 + i * 0.04 }}
+                                className="flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
+                              >
+                                <div
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${accentBg}`}
+                                >
+                                  <IconComponent className={`w-4 h-4 ${accentColor}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-white leading-snug">
+                                    <span className="font-bold">{item.user}</span>{" "}
+                                    <span className="text-gray-400">{item.action}</span>
+                                  </p>
+                                  {timeStr && (
+                                    <p className="text-[0.5625rem] text-gray-600 mt-0.5">{timeStr}</p>
+                                  )}
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </motion.div>
+                  </div>
+                </div>
+              )}
 
               {activeTab === "tournaments" && <ClubTournaments />}
 

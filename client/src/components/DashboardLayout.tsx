@@ -1,8 +1,9 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
+import { useWallet } from "@/lib/wallet-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { WalletBar } from "./wallet/WalletBar";
 import { NotificationCenter } from "./NotificationCenter";
@@ -10,7 +11,7 @@ import { MemberAvatar } from "./shared/MemberAvatar";
 import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
   BarChart3, LogOut, Search, Wallet, Medal,
-  Shield, ChevronDown, Check, Menu, X
+  Shield, ChevronDown, Check, Menu, X, Coins
 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
@@ -27,13 +28,13 @@ interface NavItem {
 const BASE_NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/lobby" },
   { icon: Users, label: "Members", href: "/members", match: ["/members"] },
-  { icon: Trophy, label: "Games & Tournaments", href: "/lobby", match: ["/lobby", "/game"] },
+  { icon: Trophy, label: "Games & Tables", href: "/lobby", match: ["/lobby", "/game", "/table"] },
+  { icon: Medal, label: "Tournaments", href: "/tournaments", match: ["/tournaments"] },
   { icon: ShoppingBag, label: "Shop", href: "/shop", match: ["/shop"] },
   { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
-  { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse"] },
+  { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse", "/clubs/create"] },
   { icon: Swords, label: "League & Alliances", href: "/leagues" },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
-  { icon: Medal, label: "Leaderboard", href: "/leaderboard", match: ["/leaderboard"] },
 ];
 
 const ADMIN_NAV_ITEM: NavItem = { icon: Shield, label: "Admin", href: "/admin", match: ["/admin"] };
@@ -112,9 +113,38 @@ function ClubSwitcher() {
   );
 }
 
+function GlobalSearch() {
+  const [query, setQuery] = useState("");
+  const [, navigate] = useLocation();
+
+  const handleSearch = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) {
+      navigate(`/lobby?search=${encodeURIComponent(query.trim())}`);
+      setQuery("");
+    }
+  }, [query, navigate]);
+
+  return (
+    <form onSubmit={handleSearch} className="px-3 pb-2">
+      <div className="relative group">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search tables..."
+          className="w-full pl-7 pr-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-[0.625rem] text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/30 focus:bg-white/[0.05] transition-all"
+        />
+      </div>
+    </form>
+  );
+}
+
 export function DashboardLayout({ children, title }: { children: ReactNode; title?: string }) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const { balance, balances } = useWallet();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -159,6 +189,9 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
       {/* Club Switcher */}
       <ClubSwitcher />
 
+      {/* Global Search */}
+      <GlobalSearch />
+
       {/* Nav Items */}
       <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
@@ -191,8 +224,24 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
         })}
       </nav>
 
-      {/* Bottom: User info */}
-      <div className="px-3 pb-4">
+      {/* Bottom: Chip Balance + User info */}
+      <div className="px-3 pb-4 space-y-2">
+        {/* Persistent Chip Balance */}
+        <Link href="/wallet">
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-cyan-500/[0.06] border border-cyan-500/10 hover:border-cyan-500/25 hover:bg-cyan-500/10 transition-all cursor-pointer group">
+            <div className="w-6 h-6 rounded-md bg-cyan-500/15 flex items-center justify-center shrink-0">
+              <Coins className="w-3 h-3 text-cyan-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[0.5rem] text-gray-500 uppercase tracking-wider font-medium">Total Balance</div>
+              <div className="text-xs font-bold text-cyan-400 tabular-nums group-hover:text-cyan-300 transition-colors">
+                {(balance ?? 0).toLocaleString()} <span className="text-[0.5rem] text-cyan-600">chips</span>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* User info */}
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/5">
           <Link href="/profile">
             <div className="cursor-pointer hover:opacity-80 transition-opacity">

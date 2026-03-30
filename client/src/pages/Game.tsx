@@ -39,7 +39,7 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS, CARD_BACK_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, MicOff, Eye, EyeOff, Link2, Palette, Settings2, LogOut, MoreVertical, DoorOpen } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, MicOff, Eye, EyeOff, Link2, Palette, Settings2, LogOut, MoreVertical, DoorOpen, UserCheck, UserX, Sliders, ChevronRight } from "lucide-react";
 import { InGameAdminPanel, type InGameSettings } from "@/components/game/InGameAdminPanel";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
@@ -232,6 +232,9 @@ function GameTable({
   sitOut, sitIn, postBlinds, waitForBB,
   rebuyHero, defaultBuyIn, inviteCode,
   isAdmin, currentSettings, onAdminSettingsApply,
+  gamePaused, onPauseGame, onResumeGame,
+  waitingPlayers, onApprovePlayer, onDeclinePlayer,
+  onUpdateTableSettings,
 }: {
   players: Player[];
   gameState: any;
@@ -281,6 +284,14 @@ function GameTable({
   isAdmin?: boolean;
   currentSettings?: InGameSettings;
   onAdminSettingsApply?: (settings: InGameSettings) => void;
+  // In-game admin controls
+  gamePaused?: boolean;
+  onPauseGame?: () => void;
+  onResumeGame?: () => void;
+  waitingPlayers?: { id: string; name: string; avatar?: string; chipBalance: number }[];
+  onApprovePlayer?: (playerId: string) => void;
+  onDeclinePlayer?: (playerId: string) => void;
+  onUpdateTableSettings?: (settings: { walletLimit?: number; smallBlind?: number; bigBlind?: number }) => void;
 }) {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showAddChips, setShowAddChips] = useState(false);
@@ -299,6 +310,12 @@ function GameTable({
   const { compactMode, toggleCompactMode, feltPreset, setFeltColor, cardBack, setCardBack, cardBackPreset } = useGameUI();
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showAdminControls, setShowAdminControls] = useState(false);
+  const [showWaitingList, setShowWaitingList] = useState(false);
+  const [showManageTable, setShowManageTable] = useState(false);
+  const [manageTableWalletLimit, setManageTableWalletLimit] = useState(0);
+  const [manageTableSB, setManageTableSB] = useState(currentSettings?.smallBlind || 10);
+  const [manageTableBB, setManageTableBB] = useState(currentSettings?.bigBlind || 20);
   const [showPlayerMenu, setShowPlayerMenu] = useState(false);
   const speedMultiplier = (gameState as any).speedMultiplier || 1.0;
   const dealing = useDealingSequence(players, gameState, heroId, compactMode, speedMultiplier);
@@ -575,6 +592,119 @@ function GameTable({
             >
               <Plus className="w-3 h-3" /> ADD CHIPS
             </button>
+          )}
+
+          {/* ═══ ADMIN CONTROLS DROPDOWN ═══ */}
+          {isAdmin && (
+            <div className="relative">
+              <button
+                onClick={() => setShowAdminControls(!showAdminControls)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold transition-colors ${
+                  showAdminControls || gamePaused
+                    ? "text-amber-400 bg-amber-500/15 border border-amber-500/30"
+                    : "text-amber-300/70 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20"
+                }`}
+                title="Admin Controls"
+                data-testid="button-admin-controls"
+              >
+                <Sliders className="w-3 h-3" />
+                ADMIN
+                {gamePaused && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />}
+                {waitingPlayers && waitingPlayers.length > 0 && (
+                  <span className="ml-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-cyan-500 text-[0.5rem] text-white font-bold">
+                    {waitingPlayers.length}
+                  </span>
+                )}
+              </button>
+              {showAdminControls && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowAdminControls(false)} />
+                  <div
+                    className="absolute right-0 top-full mt-1.5 z-50 w-56 rounded-lg overflow-hidden"
+                    style={{
+                      background: "rgba(15,23,35,0.97)",
+                      border: "1px solid rgba(245,158,11,0.2)",
+                      backdropFilter: "blur(16px)",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(245,158,11,0.05)",
+                    }}
+                  >
+                    {/* Pause / Resume Game */}
+                    <button
+                      onClick={() => {
+                        if (gamePaused) {
+                          onResumeGame?.();
+                        } else {
+                          onPauseGame?.();
+                        }
+                        setShowAdminControls(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
+                      data-testid="button-pause-resume"
+                    >
+                      {gamePaused ? (
+                        <Play className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Pause className="w-4 h-4 text-amber-400" />
+                      )}
+                      <div className="flex-1">
+                        <div className={`text-xs font-bold ${gamePaused ? "text-green-400" : "text-amber-300"}`}>
+                          {gamePaused ? "Resume Game" : "Pause Game"}
+                        </div>
+                        <div className="text-[0.6rem] text-gray-500">
+                          {gamePaused ? "Continue dealing hands" : "Pause after current hand"}
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Manage Table */}
+                    <button
+                      onClick={() => {
+                        setManageTableSB(currentSettings?.smallBlind || 10);
+                        setManageTableBB(currentSettings?.bigBlind || 20);
+                        setManageTableWalletLimit(0);
+                        setShowManageTable(true);
+                        setShowAdminControls(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
+                      data-testid="button-manage-table"
+                    >
+                      <Settings2 className="w-4 h-4 text-cyan-400" />
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-cyan-300">Manage Table</div>
+                        <div className="text-[0.6rem] text-gray-500">Blinds, wallet limit, stakes</div>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+                    </button>
+
+                    {/* Approve Players */}
+                    <button
+                      onClick={() => {
+                        setShowWaitingList(true);
+                        setShowAdminControls(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors"
+                      data-testid="button-approve-players"
+                    >
+                      <UserCheck className="w-4 h-4 text-purple-400" />
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-purple-300">Approve Players</div>
+                        <div className="text-[0.6rem] text-gray-500">
+                          {waitingPlayers && waitingPlayers.length > 0
+                            ? `${waitingPlayers.length} player${waitingPlayers.length > 1 ? "s" : ""} waiting`
+                            : "No players waiting"
+                          }
+                        </div>
+                      </div>
+                      {waitingPlayers && waitingPlayers.length > 0 && (
+                        <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-purple-500/30 text-[0.6rem] text-purple-300 font-bold border border-purple-500/30">
+                          {waitingPlayers.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           {/* Player Menu — Commentary, Sit Out / Away, Leave Table */}
@@ -1516,6 +1646,339 @@ function GameTable({
         />
       )}
 
+      {/* ═══ GAME PAUSED OVERLAY ═══ */}
+      <AnimatePresence>
+        {gamePaused && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] flex items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
+            data-testid="game-paused-overlay"
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="flex flex-col items-center"
+            >
+              {/* Pulsing pause icon */}
+              <div className="relative mb-6">
+                <div className="w-20 h-20 rounded-full flex items-center justify-center border-2 border-amber-500/40"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(180,83,9,0.1) 100%)",
+                    boxShadow: "0 0 40px rgba(245,158,11,0.15), inset 0 0 20px rgba(245,158,11,0.05)",
+                  }}
+                >
+                  <Pause className="w-8 h-8 text-amber-400" />
+                </div>
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-amber-400/30"
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.6, 0, 0.6] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                />
+              </div>
+
+              <h2
+                className="text-2xl font-black uppercase tracking-[0.25em] text-amber-400 mb-2"
+                style={{ textShadow: "0 0 30px rgba(245,158,11,0.4)" }}
+              >
+                Game Paused
+              </h2>
+              <p className="text-sm text-gray-400 mb-8 tracking-wide">
+                Waiting for admin to resume...
+              </p>
+
+              {/* Resume button (admin only) */}
+              {isAdmin && onResumeGame && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onResumeGame}
+                  className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold uppercase tracking-wider text-white transition-all"
+                  style={{
+                    background: "linear-gradient(180deg, #16a34a 0%, #15803d 100%)",
+                    border: "1px solid rgba(34,197,94,0.4)",
+                    boxShadow: "0 0 24px rgba(34,197,94,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
+                  }}
+                  data-testid="button-resume-overlay"
+                >
+                  <Play className="w-4 h-4" />
+                  Resume Game
+                </motion.button>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ MANAGE TABLE MODAL ═══ */}
+      <AnimatePresence>
+        {showManageTable && isAdmin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowManageTable(false)}
+            data-testid="manage-table-modal"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl overflow-hidden"
+              style={{
+                background: "linear-gradient(180deg, rgba(12,20,35,0.98) 0%, rgba(8,14,24,0.99) 100%)",
+                border: "1px solid rgba(0,212,255,0.15)",
+                boxShadow: "0 0 40px rgba(0,212,255,0.08), 0 20px 60px rgba(0,0,0,0.5)",
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-cyan-500/15 border border-cyan-500/25">
+                    <Settings2 className="w-4 h-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-wide">Manage Table</h3>
+                    <p className="text-[0.6rem] text-gray-500">Changes apply next hand</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowManageTable(false)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="px-5 py-5 space-y-5">
+                {/* Wallet Limit */}
+                <div>
+                  <label className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 block mb-1.5">
+                    Wallet Limit (0 = No Limit)
+                  </label>
+                  <div className="relative">
+                    <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                    <input
+                      type="number"
+                      value={manageTableWalletLimit}
+                      onChange={(e) => setManageTableWalletLimit(parseInt(e.target.value) || 0)}
+                      min={0}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-500/50 transition-colors"
+                      placeholder="No limit"
+                      data-testid="input-wallet-limit"
+                    />
+                  </div>
+                </div>
+
+                {/* Blinds */}
+                <div>
+                  <label className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 block mb-1.5">
+                    Blind Structure
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-[0.5rem] text-gray-600 uppercase tracking-wider block mb-1">Small Blind</span>
+                      <input
+                        type="number"
+                        value={manageTableSB}
+                        onChange={(e) => setManageTableSB(parseInt(e.target.value) || 1)}
+                        min={1}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-500/50 transition-colors"
+                        data-testid="input-manage-sb"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[0.5rem] text-gray-600 uppercase tracking-wider block mb-1">Big Blind</span>
+                      <input
+                        type="number"
+                        value={manageTableBB}
+                        onChange={(e) => setManageTableBB(parseInt(e.target.value) || 2)}
+                        min={2}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-500/50 transition-colors"
+                        data-testid="input-manage-bb"
+                      />
+                    </div>
+                  </div>
+                  {/* Preview */}
+                  <div className="mt-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5">
+                    <span className="text-[0.6rem] text-gray-500">Preview: </span>
+                    <span className="text-[0.6rem] text-cyan-400 font-mono font-bold">{manageTableSB}/{manageTableBB}</span>
+                    {manageTableWalletLimit > 0 && (
+                      <span className="text-[0.6rem] text-gray-500 ml-2">
+                        &middot; Wallet cap: <span className="text-amber-400 font-mono">{manageTableWalletLimit.toLocaleString()}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-4 flex items-center gap-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <button
+                  onClick={() => setShowManageTable(false)}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-400 transition-all hover:bg-white/5"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    onUpdateTableSettings?.({
+                      walletLimit: manageTableWalletLimit,
+                      smallBlind: manageTableSB,
+                      bigBlind: manageTableBB,
+                    });
+                    setShowManageTable(false);
+                    if (gamePaused) onResumeGame?.();
+                  }}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all"
+                  style={{
+                    background: "linear-gradient(180deg, #0891b2 0%, #0e7490 100%)",
+                    border: "1px solid rgba(0,212,255,0.3)",
+                    boxShadow: "0 0 16px rgba(0,212,255,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
+                  }}
+                  data-testid="button-save-resume"
+                >
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Play className="w-3.5 h-3.5" />
+                    Save & Resume
+                  </span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ WAITING LIST SLIDE-IN PANEL ═══ */}
+      <AnimatePresence>
+        {showWaitingList && isAdmin && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowWaitingList(false)}
+            />
+            <motion.div
+              initial={{ x: 340, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 340, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed right-0 top-0 bottom-0 z-[71] w-80 flex flex-col overflow-hidden"
+              style={{
+                background: "linear-gradient(180deg, rgba(12,20,35,0.98) 0%, rgba(8,14,24,0.99) 100%)",
+                borderLeft: "1px solid rgba(168,85,247,0.15)",
+                boxShadow: "-8px 0 32px rgba(0,0,0,0.5), -2px 0 16px rgba(168,85,247,0.05)",
+              }}
+              data-testid="waiting-list-panel"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-bold text-white tracking-wide">Waiting List</span>
+                  {waitingPlayers && waitingPlayers.length > 0 && (
+                    <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-purple-500/20 text-[0.6rem] text-purple-300 font-bold border border-purple-500/25">
+                      {waitingPlayers.length}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => setShowWaitingList(false)} className="p-1 hover:bg-white/10 rounded transition-colors">
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Player List */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {(!waitingPlayers || waitingPlayers.length === 0) ? (
+                  <div className="flex flex-col items-center justify-center py-16 px-6">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white/[0.03] border border-white/5 mb-4">
+                      <Users className="w-6 h-6 text-gray-600" />
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">No players waiting</p>
+                    <p className="text-[0.625rem] text-gray-600 mt-1 text-center">
+                      Players requesting to join will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="py-2">
+                    {waitingPlayers.map((wp) => (
+                      <div
+                        key={wp.id}
+                        className="px-4 py-3 flex items-center gap-3 hover:bg-white/[0.03] transition-colors"
+                        style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}
+                      >
+                        {/* Avatar */}
+                        <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/10 shrink-0 bg-gray-800">
+                          {wp.avatar ? (
+                            <img src={wp.avatar} alt={wp.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs font-bold">
+                              {wp.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Name & balance */}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-white truncate">{wp.name}</div>
+                          <div className="text-[0.6rem] text-gray-500 font-mono">
+                            <Wallet className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5" />
+                            {wp.chipBalance.toLocaleString()} chips
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => onApprovePlayer?.(wp.id)}
+                            className="p-1.5 rounded-lg transition-colors hover:bg-green-500/20"
+                            style={{
+                              background: "rgba(34,197,94,0.1)",
+                              border: "1px solid rgba(34,197,94,0.2)",
+                            }}
+                            title={`Approve ${wp.name}`}
+                            data-testid={`approve-${wp.id}`}
+                          >
+                            <UserCheck className="w-3.5 h-3.5 text-green-400" />
+                          </button>
+                          <button
+                            onClick={() => onDeclinePlayer?.(wp.id)}
+                            className="p-1.5 rounded-lg transition-colors hover:bg-red-500/20"
+                            style={{
+                              background: "rgba(239,68,68,0.1)",
+                              border: "1px solid rgba(239,68,68,0.2)",
+                            }}
+                            title={`Decline ${wp.name}`}
+                            data-testid={`decline-${wp.id}`}
+                          >
+                            <UserX className="w-3.5 h-3.5 text-red-400" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer hint */}
+              <div className="shrink-0 px-4 py-3" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                <p className="text-[0.5625rem] text-gray-600 text-center">
+                  Approved players join the table at the next available hand
+                </p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* ═══ ADD CHIPS MODAL ═══ */}
       <AnimatePresence>
         {showAddChips && addChips && maxBuyIn && (
@@ -1757,6 +2220,40 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
   const isTableAdmin = !!(user && tableInfo && (
     String(tableInfo.createdById) === String(user.id) || user.role === "admin"
   ));
+
+  // Admin controls state
+  const [mpGamePaused, setMpGamePaused] = useState(false);
+  const [mpWaitingPlayers, setMpWaitingPlayers] = useState<{ id: string; name: string; avatar?: string; chipBalance: number }[]>([]);
+
+  // Listen for admin-related WS events
+  useEffect(() => {
+    const handlePaused = () => setMpGamePaused(true);
+    const handleResumed = () => setMpGamePaused(false);
+    const handleWaitingList = (msg: any) => {
+      if (msg.players) setMpWaitingPlayers(msg.players);
+    };
+    const handlePlayerApproved = (msg: any) => {
+      if (msg.playerId) setMpWaitingPlayers(prev => prev.filter(p => p.id !== msg.playerId));
+    };
+    const handlePlayerDeclined = (msg: any) => {
+      if (msg.playerId) setMpWaitingPlayers(prev => prev.filter(p => p.id !== msg.playerId));
+    };
+
+    wsClient.on("game_paused", handlePaused);
+    wsClient.on("game_resumed", handleResumed);
+    wsClient.on("waiting_list", handleWaitingList);
+    wsClient.on("player_approved", handlePlayerApproved);
+    wsClient.on("player_declined", handlePlayerDeclined);
+
+    return () => {
+      wsClient.off("game_paused", handlePaused);
+      wsClient.off("game_resumed", handleResumed);
+      wsClient.off("waiting_list", handleWaitingList);
+      wsClient.off("player_approved", handlePlayerApproved);
+      wsClient.off("player_declined", handlePlayerDeclined);
+    };
+  }, []);
+
   const [mpAdminSettings, setMpAdminSettings] = useState<InGameSettings>({
     straddleEnabled: false, bigBlindAnte: false, runItTwice: "ask",
     rabbitHunting: false, showAllHands: true, autoTopUp: false,
@@ -1996,6 +2493,13 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
         isAdmin={isTableAdmin}
         currentSettings={mpAdminSettings}
         onAdminSettingsApply={(newSettings) => setMpAdminSettings(newSettings)}
+        gamePaused={mpGamePaused}
+        onPauseGame={() => wsClient.send({ type: "admin_pause_game", tableId } as any)}
+        onResumeGame={() => wsClient.send({ type: "admin_resume_game", tableId } as any)}
+        waitingPlayers={mpWaitingPlayers}
+        onApprovePlayer={(playerId) => wsClient.send({ type: "admin_approve_player", tableId, playerId } as any)}
+        onDeclinePlayer={(playerId) => wsClient.send({ type: "admin_decline_player", tableId, playerId } as any)}
+        onUpdateTableSettings={(settings) => wsClient.send({ type: "admin_update_table", tableId, settings } as any)}
       />
       {/* Join/Leave Notifications */}
       <div className="fixed top-16 right-4 z-[60] flex flex-col gap-2 pointer-events-none">
@@ -2039,6 +2543,7 @@ function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Pl
   const [, navigate] = useLocation();
   const defaultBuyIn = initialPlayers.find(p => p.id === HERO_ID)?.chips || 1000;
   const [chatMessages, setChatMessages] = useState<{ playerName: string; message: string }[]>([]);
+  const [offlinePaused, setOfflinePaused] = useState(false);
   const [adminSettings, setAdminSettings] = useState<InGameSettings>({
     straddleEnabled: false, bigBlindAnte: false, runItTwice: "ask",
     rabbitHunting: false, showAllHands: true, autoTopUp: false,
@@ -2096,6 +2601,18 @@ function OfflineGameTable({ initialPlayers, engineConfig }: { initialPlayers: Pl
       onAdminSettingsApply={(newSettings) => {
         setAdminSettings(newSettings);
         updateConfig({ smallBlind: newSettings.smallBlind, bigBlind: newSettings.bigBlind, ante: newSettings.ante });
+      }}
+      gamePaused={offlinePaused}
+      onPauseGame={() => setOfflinePaused(true)}
+      onResumeGame={() => setOfflinePaused(false)}
+      onUpdateTableSettings={(settings) => {
+        if (settings.smallBlind || settings.bigBlind) {
+          const sb = settings.smallBlind || adminSettings.smallBlind;
+          const bb = settings.bigBlind || adminSettings.bigBlind;
+          setAdminSettings(prev => ({ ...prev, smallBlind: sb, bigBlind: bb }));
+          updateConfig({ smallBlind: sb, bigBlind: bb, ante: adminSettings.ante });
+        }
+        setOfflinePaused(false);
       }}
     />
   );

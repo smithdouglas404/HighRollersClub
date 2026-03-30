@@ -25,6 +25,10 @@ import BrowseClubs from "@/pages/BrowseClubs";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/AdminDashboard";
+import Tournaments from "@/pages/Tournaments";
+import TournamentCreate from "@/pages/TournamentCreate";
+import TableSetup from "@/pages/TableSetup";
+import ClubCreate from "@/pages/ClubCreate";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -79,6 +83,22 @@ function ProtectedProfile() {
 
 function ProtectedAdmin() {
   return <AuthGate><AdminDashboard /></AuthGate>;
+}
+
+function ProtectedTournaments() {
+  return <AuthGate><Tournaments /></AuthGate>;
+}
+
+function ProtectedTournamentCreate() {
+  return <AuthGate><TournamentCreate /></AuthGate>;
+}
+
+function ProtectedTableSetup() {
+  return <AuthGate><TableSetup /></AuthGate>;
+}
+
+function ProtectedClubCreate() {
+  return <AuthGate><ClubCreate /></AuthGate>;
 }
 
 function GameWithTable({ params }: { params: { tableId: string } }) {
@@ -138,6 +158,10 @@ function Router() {
       <Route path="/clubs/browse" component={ProtectedBrowseClubs} />
       <Route path="/leaderboard" component={ProtectedLeaderboard} />
       <Route path="/profile" component={ProtectedProfile} />
+      <Route path="/tournaments" component={ProtectedTournaments} />
+      <Route path="/tournaments/new" component={ProtectedTournamentCreate} />
+      <Route path="/table/new" component={ProtectedTableSetup} />
+      <Route path="/clubs/create" component={ProtectedClubCreate} />
       <Route path="/admin" component={ProtectedAdmin} />
       <Route component={NotFound} />
     </Switch>

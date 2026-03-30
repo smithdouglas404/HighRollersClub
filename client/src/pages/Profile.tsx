@@ -56,6 +56,30 @@ function getRankTier(handsPlayed: number): { label: string; color: string; bgCla
   return { label: "Bronze", color: "text-orange-400", bgClass: "from-orange-500/20 to-amber-600/20", borderColor: "border-orange-400/30", icon: Shield };
 }
 
+function getPlayerTitle(handsPlayed: number, winRate: number): string {
+  if (handsPlayed >= 5000 && winRate >= 60) return "Grandmaster";
+  if (handsPlayed >= 2000 && winRate >= 50) return "Shark";
+  if (handsPlayed >= 1000) return "Veteran";
+  if (handsPlayed >= 500) return "Enforcer";
+  if (handsPlayed >= 200) return "Grinder";
+  if (handsPlayed >= 100) return "Regular";
+  if (handsPlayed >= 50) return "Contender";
+  if (handsPlayed >= 10) return "Rookie";
+  return "Newcomer";
+}
+
+function getPlayerLevel(handsPlayed: number): number {
+  if (handsPlayed >= 5000) return 50;
+  if (handsPlayed >= 2000) return 40;
+  if (handsPlayed >= 1000) return 30;
+  if (handsPlayed >= 500) return 20;
+  if (handsPlayed >= 200) return 15;
+  if (handsPlayed >= 100) return 10;
+  if (handsPlayed >= 50) return 5;
+  if (handsPlayed >= 10) return 2;
+  return 1;
+}
+
 const STAT_CARDS = [
   { key: "handsPlayed", label: "Hands Played", icon: Gamepad2, gradient: "from-cyan-500/15 to-blue-600/15", borderColor: "border-cyan-500/20", textColor: "text-cyan-400", glowColor: "rgba(0,212,255,0.12)" },
   { key: "potsWon", label: "Pots Won", icon: Trophy, gradient: "from-green-500/15 to-emerald-600/15", borderColor: "border-green-500/20", textColor: "text-green-400", glowColor: "rgba(34,197,94,0.12)" },
@@ -100,6 +124,8 @@ export default function Profile() {
 
   const rank = getRankTier(stats?.handsPlayed ?? 0);
   const RankIcon = rank.icon;
+  const playerLevel = getPlayerLevel(stats?.handsPlayed ?? 0);
+  const playerTitle = getPlayerTitle(stats?.handsPlayed ?? 0, winRate);
 
   return (
     <DashboardLayout title="Profile">
@@ -146,6 +172,11 @@ export default function Profile() {
                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.625rem] font-bold uppercase tracking-wider bg-gradient-to-r ${rank.bgClass} ${rank.borderColor} border ${rank.color}`}>
                   <RankIcon className="w-3 h-3" />
                   {rank.label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[0.625rem] font-bold uppercase tracking-widest text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/15">
+                  Level {playerLevel} {playerTitle}
                 </span>
               </div>
               <p className="text-sm text-gray-500 mt-1">@{user?.username}</p>
@@ -366,10 +397,11 @@ export default function Profile() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4"
+            className="grid grid-cols-2 md:grid-cols-5 gap-4"
           >
             {[
               { label: "Wallet", icon: Wallet, color: "cyan", path: "/wallet", gradient: "from-cyan-500/10 to-blue-600/10", border: "hover:border-cyan-500/30", iconBg: "bg-cyan-500/10" },
+              { label: "Transactions", icon: Coins, color: "green", path: "/wallet?tab=history", gradient: "from-green-500/10 to-emerald-600/10", border: "hover:border-green-500/30", iconBg: "bg-green-500/10" },
               { label: "Analytics", icon: BookOpen, color: "amber", path: "/analytics", gradient: "from-amber-500/10 to-yellow-600/10", border: "hover:border-amber-500/30", iconBg: "bg-amber-500/10" },
               { label: "My Club", icon: Users, color: "green", path: "/club", gradient: "from-green-500/10 to-emerald-600/10", border: "hover:border-green-500/30", iconBg: "bg-green-500/10" },
               { label: "Leaderboard", icon: Trophy, color: "purple", path: "/leaderboard", gradient: "from-purple-500/10 to-violet-600/10", border: "hover:border-purple-500/30", iconBg: "bg-purple-500/10" },

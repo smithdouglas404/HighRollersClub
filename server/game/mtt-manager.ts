@@ -49,6 +49,7 @@ export class MTTManager {
   blindSchedule: BlindLevel[];
   payoutStructure: PayoutEntry[] | null;
   clubId: string | null;
+  pokerVariant: "nlhe" | "plo" | "plo5" | "short_deck";
 
   // Track remaining player count per table (tableId -> count)
   private tablePlayerCounts = new Map<string, number>();
@@ -68,6 +69,7 @@ export class MTTManager {
       blindSchedule?: BlindLevel[];
       payoutStructure?: PayoutEntry[] | null;
       clubId?: string | null;
+      pokerVariant?: "nlhe" | "plo" | "plo5" | "short_deck";
     } = {},
   ) {
     this.tournamentId = tournamentId;
@@ -79,6 +81,7 @@ export class MTTManager {
     this.blindSchedule = opts.blindSchedule ?? MTT_SCHEDULE;
     this.payoutStructure = opts.payoutStructure ?? null;
     this.clubId = opts.clubId ?? null;
+    this.pokerVariant = opts.pokerVariant ?? "nlhe";
   }
 
   // ─── Start Tournament ───────────────────────────────────────────────────
@@ -142,7 +145,7 @@ export class MTTManager {
         sevenTwoBounty: 0,
         guestChatEnabled: true,
         autoTrimExcessBets: false,
-        pokerVariant: "nlhe",
+        pokerVariant: this.pokerVariant,
         useCentsValues: false,
       });
 

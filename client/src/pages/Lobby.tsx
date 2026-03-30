@@ -9,11 +9,14 @@ import { CreateTableModal } from "@/components/lobby/CreateTable";
 import {
   Plus, Users, Coins, ChevronRight,
   Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search,
-  Brain, Key, CheckCircle, XCircle, Flame, ImageOff
+  Brain, Key, CheckCircle, XCircle, Flame, ImageOff, Diamond, DollarSign,
+  Spade, Heart, Club
 } from "lucide-react";
 import feltBg from "@assets/generated_images/poker_felt_top_down.webp";
 
 type GameFormat = "all" | "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
+type StakeLevel = "all" | "micro" | "low" | "mid" | "high";
+type PokerVariant = "all" | "nlhe" | "plo" | "plo5" | "short_deck";
 
 interface TableInfo {
   id: string;
@@ -28,6 +31,7 @@ interface TableInfo {
   isPrivate: boolean;
   allowBots: boolean;
   gameFormat: string;
+  pokerVariant?: string;
   buyInAmount: number;
   startingChips: number;
   createdAt: string;
@@ -43,6 +47,21 @@ const FORMAT_TABS: { key: GameFormat; label: string; icon: any }[] = [
   { key: "heads_up", label: "Heads Up", icon: Swords },
   { key: "tournament", label: "Tournament", icon: Trophy },
   { key: "bomb_pot", label: "Bomb Pot", icon: Bomb },
+];
+
+const STAKE_TABS: { key: StakeLevel; label: string; description: string }[] = [
+  { key: "all", label: "All Stakes", description: "Any blind level" },
+  { key: "micro", label: "Micro", description: "BB \u2264 10" },
+  { key: "low", label: "Low", description: "BB 11-50" },
+  { key: "mid", label: "Mid", description: "BB 51-200" },
+  { key: "high", label: "High", description: "BB > 200" },
+];
+
+const VARIANT_CARDS: { key: PokerVariant; name: string; shortName: string; description: string; players: string; accent: string; bg: string; border: string; icon: any }[] = [
+  { key: "nlhe", name: "Texas Hold'em", shortName: "NLHE", description: "No-limit classic poker", players: "2-9 players", accent: "text-blue-400", bg: "from-blue-500/10 to-blue-500/5", border: "border-blue-500/20 hover:border-blue-500/40", icon: Spade },
+  { key: "plo", name: "Omaha", shortName: "PLO", description: "Pot-limit, 4 hole cards", players: "2-9 players", accent: "text-emerald-400", bg: "from-emerald-500/10 to-emerald-500/5", border: "border-emerald-500/20 hover:border-emerald-500/40", icon: Diamond },
+  { key: "short_deck", name: "Short Deck", shortName: "6+", description: "36-card action game", players: "2-6 players", accent: "text-red-400", bg: "from-red-500/10 to-red-500/5", border: "border-red-500/20 hover:border-red-500/40", icon: Heart },
+  { key: "plo5", name: "PLO-5", shortName: "PLO5", description: "5 hole cards, max action", players: "2-6 players", accent: "text-purple-400", bg: "from-purple-500/10 to-purple-500/5", border: "border-purple-500/20 hover:border-purple-500/40", icon: Club },
 ];
 
 function FormatBadge({ format }: { format: string }) {
@@ -280,6 +299,8 @@ export default function Lobby() {
   const [showCreateTable, setShowCreateTable] = useState(false);
   const [defaultPrivate, setDefaultPrivate] = useState(false);
   const [activeFormat, setActiveFormat] = useState<GameFormat>("all");
+  const [activeStakeLevel, setActiveStakeLevel] = useState<StakeLevel>("all");
+  const [activeVariant, setActiveVariant] = useState<PokerVariant>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [passwordModal, setPasswordModal] = useState<{ tableId: string; tableName: string } | null>(null);
@@ -327,7 +348,27 @@ export default function Lobby() {
   const filteredTables = tables.filter(t => {
     const matchesFormat = activeFormat === "all" || (t.gameFormat || "cash") === activeFormat;
     const matchesSearch = !debouncedSearch || t.name.toLowerCase().includes(debouncedSearch.toLowerCase());
-    return matchesFormat && matchesSearch;
+
+    // Stake level filter based on big blind
+    let matchesStake = true;
+    if (activeStakeLevel !== "all") {
+      const bb = t.bigBlind;
+      switch (activeStakeLevel) {
+        case "micro": matchesStake = bb <= 10; break;
+        case "low": matchesStake = bb >= 11 && bb <= 50; break;
+        case "mid": matchesStake = bb >= 51 && bb <= 200; break;
+        case "high": matchesStake = bb > 200; break;
+      }
+    }
+
+    // Variant filter based on pokerVariant field
+    let matchesVariant = true;
+    if (activeVariant !== "all") {
+      const variant = (t.pokerVariant || "nlhe").toLowerCase();
+      matchesVariant = variant === activeVariant;
+    }
+
+    return matchesFormat && matchesSearch && matchesStake && matchesVariant;
   });
 
   const handleTableClick = (table: TableInfo) => {
@@ -381,6 +422,33 @@ export default function Lobby() {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#111b2a]/85 to-[#111b2a]" />
         </div>
+        {/* Static Hero Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-4 relative"
+        >
+          <div className="flex flex-col items-start gap-1.5">
+            <span
+              className="inline-block px-2.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-[0.2em]"
+              style={{
+                background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(168,85,247,0.12))",
+                border: "1px solid rgba(0,212,255,0.15)",
+                color: "rgba(0,212,255,0.9)",
+              }}
+            >
+              High Stakes. Zero Limits.
+            </span>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+              Find Your Table
+            </h1>
+            <p className="text-xs text-gray-500 max-w-md">
+              Browse live cash games, tournaments, and sit-and-go tables. Filter by format, stakes, or variant to find the perfect game.
+            </p>
+          </div>
+        </motion.div>
+
         {/* Banner Carousel */}
         <LobbyBannerCarousel />
 
@@ -553,6 +621,67 @@ export default function Lobby() {
           />
         </motion.div>
 
+        {/* Game Variant Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"
+        >
+          {VARIANT_CARDS.map((variant, i) => {
+            const Icon = variant.icon;
+            const isActive = activeVariant === variant.key;
+            const variantCount = tables.filter(t => (t.pokerVariant || "nlhe").toLowerCase() === variant.key).length;
+            return (
+              <motion.button
+                key={variant.key}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setActiveVariant(activeVariant === variant.key ? "all" : variant.key)}
+                className={`relative rounded-xl p-3 text-left transition-all border bg-gradient-to-br ${variant.bg} ${
+                  isActive
+                    ? `${variant.border.split(" ")[0]} ring-1 ring-current/10 shadow-lg`
+                    : `${variant.border}`
+                }`}
+                style={{
+                  background: isActive
+                    ? undefined
+                    : "linear-gradient(135deg, rgba(20,31,40,0.7), rgba(16,24,36,0.9))",
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isActive ? "bg-white/10" : "bg-white/5"}`}>
+                    <Icon className={`w-3.5 h-3.5 ${variant.accent}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-[0.625rem] font-bold uppercase tracking-wider ${isActive ? variant.accent : "text-gray-300"}`}>
+                      {variant.name}
+                    </div>
+                    <div className="text-[0.5rem] text-gray-600 font-bold uppercase tracking-wider">{variant.shortName}</div>
+                  </div>
+                </div>
+                <p className="text-[0.5rem] text-gray-500 mb-1">{variant.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-[0.5rem] text-gray-600">{variant.players}</span>
+                  {variantCount > 0 && (
+                    <span className={`text-[0.5rem] font-bold ${variant.accent}`}>{variantCount} live</span>
+                  )}
+                </div>
+                {isActive && (
+                  <motion.div
+                    layoutId="variant-indicator"
+                    className="absolute inset-0 rounded-xl border-2"
+                    style={{ borderColor: "currentColor", opacity: 0.3 }}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                  />
+                )}
+              </motion.button>
+            );
+          })}
+        </motion.div>
+
         {/* Format tab bar */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -583,6 +712,38 @@ export default function Lobby() {
                       : "bg-white/10 text-gray-400"
                   }`}>
                     {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </motion.div>
+
+        {/* Stake-level filter pills */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="flex items-center gap-1.5 mb-5 flex-wrap"
+        >
+          <DollarSign className="w-3 h-3 text-amber-500/50 mr-1" />
+          {STAKE_TABS.map(stake => {
+            const isActive = activeStakeLevel === stake.key;
+            return (
+              <button
+                key={stake.key}
+                onClick={() => setActiveStakeLevel(stake.key)}
+                data-testid={`button-stake-${stake.key}`}
+                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
+                  isActive
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/25 shadow-[0_0_10px_rgba(245,158,11,0.1)]"
+                    : "text-gray-500 hover:text-gray-300 border border-white/5 hover:bg-white/5 hover:border-amber-500/15"
+                }`}
+              >
+                {stake.label}
+                {isActive && stake.key !== "all" && (
+                  <span className="text-[0.45rem] text-amber-500/60 font-medium normal-case tracking-normal">
+                    {stake.description}
                   </span>
                 )}
               </button>

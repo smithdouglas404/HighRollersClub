@@ -213,7 +213,7 @@ export const insertTableSchema = z.object({
   sevenTwoBounty: z.number().int().min(0).default(0),
   guestChatEnabled: z.boolean().default(true),
   autoTrimExcessBets: z.boolean().default(false),
-  pokerVariant: z.enum(["nlhe", "plo", "plo5"]).default("nlhe"),
+  pokerVariant: z.enum(["nlhe", "plo", "plo5", "short_deck"]).default("nlhe"),
   useCentsValues: z.boolean().default(false),
   awayTimeoutMinutes: z.number().int().min(1).max(60).default(5),
   scheduledStartTime: z.string().datetime().optional(),
@@ -360,6 +360,7 @@ export const tournaments = pgTable("tournaments", {
   status: text("status").notNull().default("registering"), // registering | running | final_table | complete
   prizePool: integer("prize_pool").notNull().default(0),
   createdById: varchar("created_by_id").notNull().references(() => users.id),
+  pokerVariant: text("poker_variant").notNull().default("nlhe"), // nlhe | plo | plo5 | short_deck
   startAt: timestamp("start_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
@@ -374,6 +375,7 @@ export const createTournamentSchema = z.object({
   buyIn: z.number().int().min(0).default(100),
   startingChips: z.number().int().min(100).default(1500),
   maxPlayers: z.number().int().min(2).max(1000).default(50),
+  pokerVariant: z.enum(["nlhe", "plo", "plo5", "short_deck"]).default("nlhe"),
   startAt: z.string().optional(),
   blindSchedule: z.array(z.object({
     level: z.number(),

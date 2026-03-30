@@ -117,6 +117,7 @@
     @apply font-sans antialiased bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
   }
   ::selection {
     background: rgba(0, 212, 255, 0.35);
@@ -253,6 +254,51 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Gold luxury theme utilities */
+.gradient-gold {
+  background: linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%);
+}
+
+.gold-glow {
+  box-shadow: 0 0 20px 2px rgba(212, 175, 55, 0.4), inset 0 0 10px rgba(243, 226, 173, 0.2);
+}
+
+.neon-text-glow {
+  text-shadow: 0 0 10px rgba(129, 236, 255, 0.5), 0 0 20px rgba(129, 236, 255, 0.3);
+}
+
+.neon-box-glow {
+  box-shadow: 0 0 15px rgba(129, 236, 255, 0.2), inset 0 0 10px rgba(129, 236, 255, 0.1);
+}
+
+.neon-border-glow {
+  border-color: rgba(129, 236, 255, 0.6);
+  box-shadow: 0 0 15px rgba(129, 236, 255, 0.4), inset 0 0 15px rgba(129, 236, 255, 0.4);
+}
+
+.glass-card {
+  background: rgba(22, 27, 34, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+/* Input gold border for tournament pages */
+.input-gold-border {
+  background: #161b22;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.3s;
+  background-clip: padding-box;
+}
+
+.input-gold-border:focus {
+  outline: none;
+  border-color: rgba(154, 123, 44, 0.5);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.2), inset 0 0 4px rgba(212, 175, 55, 0.1);
 }
 
 /* Scrollbar — cyan tint */

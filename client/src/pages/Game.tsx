@@ -1145,11 +1145,13 @@ function GameTable({
           {/* Table area */}
           <div className="flex-1 relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 45%, #1a2744 0%, #131d30 40%, #0e1624 70%, #0a101c 100%)" }} />
-              {/* Atmospheric glow orbs (Stitch-style) */}
-              <div className="absolute top-[-15%] left-[10%] w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(0,243,255,0.045)" }} />
-              <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(147,51,234,0.03)" }} />
-              <div className="absolute top-[20%] right-[20%] w-[350px] h-[350px] rounded-full blur-[110px] pointer-events-none" style={{ background: "rgba(201,168,76,0.02)" }} />
+              <div className="absolute inset-0" style={{
+                backgroundImage: "url(/images/poker-room-bg.png)",
+                backgroundSize: "cover",
+                backgroundPosition: "center 40%",
+                backgroundRepeat: "no-repeat",
+              }} />
+              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.6) 100%)" }} />
 
               <div
                 ref={tableRef}
@@ -2948,11 +2950,13 @@ export default function Game({ tableId }: { tableId?: string }) {
 
   if (!gameStarted) {
     return (
-      <GameSetup
-        mode="offline"
-        onStartOffline={handleGameSetup}
-        onExit={() => navigate("/")}
-      />
+      <GameUIProvider>
+        <GameSetup
+          mode="offline"
+          onStartOffline={handleGameSetup}
+          onExit={() => navigate("/")}
+        />
+      </GameUIProvider>
     );
   }
 

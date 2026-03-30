@@ -715,13 +715,17 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <div
               className="relative rounded-t-xl overflow-visible portrait-card"
               style={{
-                border: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+                border: isTurn
+                  ? `3px solid ${hexToRgba(glowColor, 1.0)}`
+                  : isWinner
+                  ? "3px solid #d4af37"
+                  : "3px solid rgba(212,175,55,0.6)",
                 borderBottom: "none",
                 boxShadow: isTurn
                   ? `0 0 30px ${hexToRgba(glowColor, 0.8)}, 0 0 60px ${hexToRgba(glowColor, 0.4)}, 0 0 90px ${hexToRgba(glowColor, 0.15)}, inset 0 0 20px ${hexToRgba(glowColor, 0.25)}`
                   : isWinner
-                  ? `0 0 25px rgba(212,175,55,0.5), 0 0 50px rgba(212,175,55,0.2)`
-                  : `0 0 12px ${hexToRgba(glowColor, 0.4)}, 0 4px 20px rgba(0,0,0,0.6)`,
+                  ? `0 0 25px rgba(212,175,55,0.6), 0 0 50px rgba(212,175,55,0.3), 0 0 80px rgba(212,175,55,0.1)`
+                  : `0 0 10px rgba(212,175,55,0.25), 0 4px 20px rgba(0,0,0,0.7)`,
                 transition: "all 0.3s ease",
                 animation: isTurn ? "seatTurnPulse 2s ease-in-out infinite" : undefined,
               }}
@@ -730,8 +734,12 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               <div
                 className="absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-xl"
                 style={{
-                  background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
-                  boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.7)}`,
+                  background: isTurn
+                    ? `linear-gradient(90deg, transparent, ${glowColor}, transparent)`
+                    : "linear-gradient(90deg, transparent, #d4af37, transparent)",
+                  boxShadow: isTurn
+                    ? `0 0 10px ${hexToRgba(glowColor, 0.7)}`
+                    : "0 0 8px rgba(212,175,55,0.5)",
                 }}
               />
 
@@ -799,11 +807,13 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <div
               className="relative z-30 w-full rounded-b-xl px-2.5 py-1.5"
               style={{
-                background: isTurn ? `linear-gradient(180deg, rgba(15,15,20,0.92) 0%, ${hexToRgba(glowColor, 0.06)} 100%)` : "rgba(15,15,20,0.92)",
+                background: isTurn
+                  ? `linear-gradient(180deg, rgba(15,15,20,0.92) 0%, ${hexToRgba(glowColor, 0.06)} 100%)`
+                  : "linear-gradient(180deg, rgba(15,15,20,0.95) 0%, rgba(10,8,3,0.95) 100%)",
                 backdropFilter: "blur(12px)",
-                borderLeft: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderRight: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderBottom: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+                borderLeft: isTurn ? `3px solid ${hexToRgba(glowColor, 1.0)}` : "3px solid rgba(212,175,55,0.6)",
+                borderRight: isTurn ? `3px solid ${hexToRgba(glowColor, 1.0)}` : "3px solid rgba(212,175,55,0.6)",
+                borderBottom: isTurn ? `3px solid ${hexToRgba(glowColor, 1.0)}` : "3px solid rgba(212,175,55,0.6)",
               }}
             >
               <div className="flex items-center gap-1">

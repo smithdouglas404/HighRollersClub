@@ -173,7 +173,10 @@
       "Bash(sort -t: -k1,1 -k2,2n)",
       "Bash(bash)",
       "Bash(cp:*)",
-      "Bash(ls /home/runner/workspace/client/public/cyberpunk*)"
+      "Bash(ls /home/runner/workspace/client/public/cyberpunk*)",
+      "Bash(grep -r noise /home/runner/workspace/client/src --include=*.css --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"plo\\\\|PLO\\\\|omaha\\\\|Omaha\\\\|short_deck\\\\|short-deck\" /home/runner/workspace/server --include=*.ts)",
+      "Bash(grep -r \"pokerVariant\\\\|poker_variant\\\\|gameVariant\" /home/runner/workspace --include=*.ts --include=*.tsx)"
     ]
   }
 }

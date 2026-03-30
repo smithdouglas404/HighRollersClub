@@ -266,7 +266,11 @@ export default function Lobby() {
 
   const fetchTables = async () => {
     try {
-      const res = await fetch("/api/tables");
+      const params = new URLSearchParams();
+      if (activeFormat !== "all") params.set("format", activeFormat);
+      if (activeVariant !== "all") params.set("variant", activeVariant);
+      const qs = params.toString();
+      const res = await fetch(`/api/tables${qs ? `?${qs}` : ""}`);
       if (res.ok) {
         setTables(await res.json());
       }
@@ -285,7 +289,7 @@ export default function Lobby() {
       if (data) { setAiEnabled(data.aiEnabled); setAiHasKey(data.hasKey); }
     }).catch(() => {});
     return () => clearInterval(interval);
-  }, []);
+  }, [activeFormat, activeVariant]);
 
   // Search debounce (300ms)
   useEffect(() => {

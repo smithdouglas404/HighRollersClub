@@ -39,7 +39,8 @@ function getCardFaceUrl(rank: string, suit: string): string {
   return `/cards/${rank}_${suit}.svg`;
 }
 
-const CARD_BACK_URL = "/cards/card_back.webp";
+const CARD_BACK_URL = "/cardbacks/cardback_neon.webp";
+const CARD_BACK_FALLBACK = "/cards/card_back.webp";
 
 /* ── Card face: Nano Banana generated image ── */
 function CardFace({ card, isHero }: { card: CardType; isHero: boolean }) {
@@ -65,12 +66,21 @@ function CardFace({ card, isHero }: { card: CardType; isHero: boolean }) {
 /* ── Card back: Nano Banana generated image ── */
 function CardBack({ imageUrl }: { imageUrl?: string }) {
   const src = imageUrl || CARD_BACK_URL;
+  const [imgSrc, setImgSrc] = useState(src);
+  // Update if prop changes
+  useEffect(() => { setImgSrc(imageUrl || CARD_BACK_URL); }, [imageUrl]);
   return (
     <div className="absolute inset-0 rounded-lg p-[1.5px]"
       style={{ background: "linear-gradient(135deg, #00d4ff 0%, #0077aa 25%, #00d4ff 50%, #0077aa 75%, #00d4ff 100%)" }}
     >
       <div className="w-full h-full rounded-[6px] overflow-hidden relative">
-        <img src={src} alt="card back" className="w-full h-full object-cover" draggable={false} />
+        <img
+          src={imgSrc}
+          alt="card back"
+          className="w-full h-full object-cover"
+          draggable={false}
+          onError={() => setImgSrc(CARD_BACK_FALLBACK)}
+        />
         <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-white/[0.06] to-transparent" style={{ height: "25%" }} />
       </div>
     </div>

@@ -60,6 +60,24 @@ uri = "file://attached_assets/generated_images/preview/lobby_with_cards.png"
 type = "image"
 title = "lobby with game mode cards"
 
+[[generated]]
+id = "hJ4NSXQN0hsfS0q7eJGz0"
+uri = "file://attached_assets/generated_images/preview/real_table_gameplay.png"
+type = "image"
+title = "realistic game table screenshot"
+
+[[generated]]
+id = "PMuUlJxp32eByojwsLOwg"
+uri = "file://attached_assets/generated_images/preview/real_table_active_hand.png"
+type = "image"
+title = "active hand table screenshot"
+
+[[generated]]
+id = "q02gbNC2UkNihN22SPwUw"
+uri = "file://attached_assets/generated_images/preview/real_table_showdown.png"
+type = "image"
+title = "showdown moment screenshot"
+
 [[outputs]]
 id = "X1QAw5WP-1xocQO_VZlCQ"
 uri = "file://attached_assets/generated_images/preview/poker_table_scene.png"
@@ -119,3 +137,21 @@ id = "p0ox6MnjBrPiUnlJ2TR_f"
 uri = "file://attached_assets/generated_images/preview/lobby_with_cards.png"
 type = "image"
 title = "Lobby with Game Mode Cards"
+
+[[outputs]]
+id = "j-73TeZHTGAX7SMvU2DLb"
+uri = "file://attached_assets/generated_images/preview/real_table_gameplay.png"
+type = "image"
+title = "Real Gameplay View"
+
+[[outputs]]
+id = "ooY0kzi2SlPKfBrU6jEGt"
+uri = "file://attached_assets/generated_images/preview/real_table_active_hand.png"
+type = "image"
+title = "Active Hand View"
+
+[[outputs]]
+id = "KxWNUZK8L0550UvyLgztB"
+uri = "file://attached_assets/generated_images/preview/real_table_showdown.png"
+type = "image"
+title = "Showdown View"

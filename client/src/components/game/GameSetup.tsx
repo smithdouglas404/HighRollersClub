@@ -8,8 +8,10 @@ import {
   Lock, Eye, EyeOff, Repeat, Gauge, Layers, RotateCcw,
   Timer, Rabbit, CreditCard, Percent, Hash, SlidersHorizontal,
   Shuffle, Coffee, Award, DollarSign, Info, MessageSquare,
+  Palette,
 } from "lucide-react";
 import { useWallet, type WalletType } from "@/lib/wallet-context";
+import { useGameUI, FELT_PRESETS, CARD_BACK_PRESETS } from "@/lib/game-ui-context";
 import { AVATAR_OPTIONS, type AvatarOption } from "../poker/AvatarSelect";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
@@ -99,6 +101,7 @@ interface GameSetupProps {
 }
 
 export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameSetupProps) {
+  const { feltColor, setFeltColor, cardBack, setCardBack } = useGameUI();
   const [step, setStep] = useState<1 | 2>(1);
   const [isReady, setIsReady] = useState(false);
 
@@ -1061,6 +1064,79 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                       </div>
                     </motion.div>
                   )}
+
+                  {/* Divider */}
+                  <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+
+                  {/* ─── Table Theme ─── */}
+                  <SectionHeader label="Table Theme" icon={Palette} color="amber" />
+                  <div className="space-y-3">
+                    {/* Felt selector */}
+                    <div>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">Table Felt</label>
+                      <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                        {FELT_PRESETS.map((fp) => (
+                          <button
+                            key={fp.id}
+                            onClick={() => setFeltColor(fp.id)}
+                            className={`group relative rounded-lg overflow-hidden border-2 transition-all ${
+                              feltColor === fp.id
+                                ? "border-[#d4af37] shadow-[0_0_10px_rgba(212,175,55,0.4)]"
+                                : "border-white/10 hover:border-white/25"
+                            }`}
+                            title={fp.label}
+                          >
+                            <div className="w-full aspect-square rounded-md overflow-hidden">
+                              {fp.imageUrl ? (
+                                <img src={fp.imageUrl} alt={fp.label} className="w-full h-full object-cover" draggable={false} />
+                              ) : (
+                                <div className="w-full h-full" style={{ background: fp.gradient }} />
+                              )}
+                            </div>
+                            {feltColor === fp.id && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
+                                <div className="w-2 h-2 rounded-full bg-[#d4af37]" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Card back selector */}
+                    <div>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">Card Back</label>
+                      <div className="grid grid-cols-5 gap-2" style={{ maxWidth: "280px" }}>
+                        {CARD_BACK_PRESETS.map((cb) => (
+                          <button
+                            key={cb.id}
+                            onClick={() => setCardBack(cb.id)}
+                            className={`group relative rounded-lg overflow-hidden border-2 transition-all ${
+                              cardBack === cb.id
+                                ? "border-[#00d4ff] shadow-[0_0_10px_rgba(0,212,255,0.4)]"
+                                : "border-white/10 hover:border-white/25"
+                            }`}
+                            title={cb.label}
+                          >
+                            <div className="w-full aspect-[2/3] rounded-md overflow-hidden">
+                              {cb.imageUrl ? (
+                                <img src={cb.imageUrl} alt={cb.label} className="w-full h-full object-cover" draggable={false} />
+                              ) : (
+                                <div className="w-full h-full" style={{
+                                  background: "linear-gradient(135deg, #1a0e3e 0%, #0d0522 50%, #1a0e3e 100%)",
+                                  border: "1px solid rgba(0,212,255,0.3)",
+                                }} />
+                              )}
+                            </div>
+                            {cardBack === cb.id && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
+                                <div className="w-2 h-2 rounded-full bg-[#00d4ff]" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Divider */}
                   <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />

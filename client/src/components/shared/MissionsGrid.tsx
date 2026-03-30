@@ -12,6 +12,18 @@ const MISSION_ICON_MAP: Record<string, any> = {
   heads_up_win: Users,
 };
 
+const MISSION_BADGE_MAP: Record<string, string> = {
+  hands_played: "/badges/badge_iron_player.webp",
+  pots_won: "/badges/badge_first_win.webp",
+  win_streak: "/badges/badge_streak_fire.webp",
+  consecutive_wins: "/badges/badge_streak_fire.webp",
+  sng_win: "/badges/badge_tournament_champ.webp",
+  bomb_pot: "/badges/badge_high_roller.webp",
+  heads_up_win: "/badges/badge_bluff_master.webp",
+  royal_flush: "/badges/badge_royal_flush.webp",
+  club_legend: "/badges/badge_club_legend.webp",
+};
+
 interface MissionsGridProps {
   missions: MissionData[];
   maxVisible?: number;
@@ -48,11 +60,20 @@ export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCo
       <div className="grid grid-cols-3 gap-3">
         {missions.slice(0, maxVisible).map((mission) => {
           const Icon = MISSION_ICON_MAP[mission.type] || Target;
+          const badgeUrl = MISSION_BADGE_MAP[mission.type];
           const progressPct = Math.min(Math.round((mission.progress / mission.target) * 100), 100);
           return (
             <div key={mission.id} className="text-center">
-              <div className={`w-10 h-10 rounded-lg ${mission.completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2`}>
-                <Icon className={`w-4 h-4 ${mission.completed ? "text-green-400" : "text-cyan-400"}`} />
+              <div className={`w-10 h-10 rounded-lg ${mission.completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2 overflow-hidden`}>
+                {badgeUrl ? (
+                  <img
+                    src={badgeUrl}
+                    alt={mission.label}
+                    className={`w-10 h-10 object-cover ${mission.completed ? "" : "opacity-60 grayscale"}`}
+                  />
+                ) : (
+                  <Icon className={`w-4 h-4 ${mission.completed ? "text-green-400" : "text-cyan-400"}`} />
+                )}
               </div>
               <div className="text-[0.625rem] font-medium text-gray-300 mb-1">{mission.label}</div>
               <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-1">

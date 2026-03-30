@@ -11,14 +11,23 @@ import {
 } from "lucide-react";
 import chipPile from "@assets/generated_images/chip_stack_gold_pile.webp";
 
-const TABS = ["Avatars", "Table Themes", "Emotes", "Taunts", "Premium", "Wishlist", "Inventory"];
+const TABS = ["Avatars", "Table Themes", "Frames", "Emotes", "Taunts", "Premium", "Wishlist", "Inventory"];
 
 const TAB_CATEGORY_MAP: Record<string, string> = {
   Avatars: "avatar",
   "Table Themes": "table_theme",
+  Frames: "frame",
   Emotes: "emote",
   Taunts: "taunt",
   Premium: "premium",
+};
+
+const FRAME_IMAGES: Record<string, string> = {
+  bronze: "/frames/frame_bronze.webp",
+  silver: "/frames/frame_silver.webp",
+  gold: "/frames/frame_gold.webp",
+  platinum: "/frames/frame_platinum.webp",
+  diamond: "/frames/frame_diamond.webp",
 };
 
 interface ShopItem {
@@ -75,6 +84,27 @@ function getRarityGradient(rarity: string): string {
 }
 
 function ItemImage({ item, className = "" }: { item: ShopItem; className?: string }) {
+  // For frame items, show frame image overlaid around an avatar silhouette
+  if (item.category === "frame") {
+    const frameKey = item.name.toLowerCase().replace(/\s+/g, "_").replace("frame_", "").replace("_frame", "");
+    const frameUrl = item.imageUrl || FRAME_IMAGES[frameKey] || Object.values(FRAME_IMAGES).find(u => u.includes(frameKey));
+    return (
+      <div className={`w-full h-full bg-gradient-to-br ${getRarityGradient(item.rarity)} flex items-center justify-center relative ${className}`}>
+        {/* Avatar placeholder */}
+        <div className="w-16 h-16 rounded-full bg-white/10 border border-white/5 flex items-center justify-center">
+          <Shield className="w-7 h-7 text-white/20" />
+        </div>
+        {/* Frame overlay */}
+        {frameUrl && (
+          <img
+            src={frameUrl}
+            alt={item.name}
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+          />
+        )}
+      </div>
+    );
+  }
   if (item.imageUrl) {
     return (
       <img

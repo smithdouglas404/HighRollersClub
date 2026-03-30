@@ -12,14 +12,14 @@ export interface Emote {
 }
 
 export const EMOTES: Emote[] = [
-  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#00d4ff", imageUrl: "/attached_assets/generated_images/emotes/emote_gg.webp" },
-  { id: "nice", emoji: "\ud83d\udc4f", label: "Nice Hand", color: "#ffd700", imageUrl: "/attached_assets/generated_images/emotes/emote_nice.webp" },
-  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#00d4ff", imageUrl: "/attached_assets/generated_images/emotes/emote_bluff.webp" },
-  { id: "allin", emoji: "\ud83d\ude80", label: "All In!", color: "#ff3366", imageUrl: "/attached_assets/generated_images/emotes/emote_allin.webp" },
-  { id: "gl", emoji: "\ud83c\udf40", label: "Good Luck", color: "#22c55e", imageUrl: "/attached_assets/generated_images/emotes/emote_gl.webp" },
-  { id: "think", emoji: "\ud83e\udde0", label: "Hmm...", color: "#b44dff", imageUrl: "/attached_assets/generated_images/emotes/emote_think.webp" },
-  { id: "wow", emoji: "\ud83d\ude32", label: "Wow!", color: "#f59e0b", imageUrl: "/attached_assets/generated_images/emotes/emote_wow.webp" },
-  { id: "cry", emoji: "\ud83d\ude2d", label: "Bad Beat", color: "#6b7280", imageUrl: "/attached_assets/generated_images/emotes/emote_cry.webp" },
+  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#00d4ff", imageUrl: "/emotes/emote_gg.webp" },
+  { id: "nice", emoji: "\ud83d\udc4f", label: "Nice Hand", color: "#ffd700", imageUrl: "/emotes/emote_nice.webp" },
+  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#00d4ff", imageUrl: "/emotes/emote_bluff.webp" },
+  { id: "allin", emoji: "\ud83d\ude80", label: "All In!", color: "#ff3366", imageUrl: "/emotes/emote_allin.webp" },
+  { id: "gl", emoji: "\ud83c\udf40", label: "Good Luck", color: "#22c55e", imageUrl: "/emotes/emote_gl.webp" },
+  { id: "think", emoji: "\ud83e\udde0", label: "Hmm...", color: "#b44dff", imageUrl: "/emotes/emote_think.webp" },
+  { id: "wow", emoji: "\ud83d\ude32", label: "Wow!", color: "#f59e0b", imageUrl: "/emotes/emote_wow.webp" },
+  { id: "cry", emoji: "\ud83d\ude2d", label: "Bad Beat", color: "#6b7280", imageUrl: "/emotes/emote_cry.webp" },
 ];
 
 const EMOTE_MAP = new Map(EMOTES.map(e => [e.id, e]));
@@ -74,15 +74,22 @@ export function EmoteBubble({ playerId }: { playerId: string }) {
           className="absolute -top-12 left-1/2 -translate-x-1/2 z-[60] pointer-events-none"
         >
           <div
-            className="glass rounded-xl px-3 py-1.5 flex items-center gap-1.5 whitespace-nowrap"
+            className="glass rounded-xl px-3 py-2 flex flex-col items-center gap-1 whitespace-nowrap"
             style={{
               border: `1px solid ${b.emote.color}40`,
-              boxShadow: `0 0 15px ${b.emote.color}20`,
+              boxShadow: `0 0 20px ${b.emote.color}30`,
             }}
           >
             {b.emote.imageUrl
-              ? <img src={b.emote.imageUrl} alt={b.emote.label} className="w-5 h-5 rounded-sm object-cover" />
-              : <span className="text-base">{b.emote.emoji}</span>
+              ? <motion.img
+                  src={b.emote.imageUrl}
+                  alt={b.emote.label}
+                  className="w-12 h-12 rounded-md object-cover"
+                  initial={{ rotate: -10, scale: 0.8 }}
+                  animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }}
+                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                />
+              : <span className="text-3xl">{b.emote.emoji}</span>
             }
             <span className="text-[0.625rem] font-bold" style={{ color: b.emote.color }}>{b.emote.label}</span>
           </div>
@@ -157,7 +164,7 @@ export function EmotePicker({ heroId, isMultiplayer }: { heroId: string; isMulti
                 title={emote.label}
               >
                 {emote.imageUrl
-                  ? <img src={emote.imageUrl} alt={emote.label} className="w-6 h-6 rounded-sm object-cover" />
+                  ? <img src={emote.imageUrl} alt={emote.label} className="w-10 h-10 rounded-md object-cover" />
                   : <span className="text-xl">{emote.emoji}</span>
                 }
                 <span className="text-[0.5rem] text-gray-500 font-bold">{emote.label}</span>

@@ -111,7 +111,7 @@ export function ImageTable({
   showBurnCard = false,
   dealPhase,
 }: ImageTableProps) {
-  const { compactMode } = useGameUI();
+  const { compactMode, feltPreset } = useGameUI();
   const occupiedCount = players?.length || playerCount;
   const dealerPos = dealerSeatIndex >= 0 && dealerSeatIndex < DEALER_POSITIONS.length
     ? DEALER_POSITIONS[dealerSeatIndex]
@@ -153,9 +153,13 @@ export function ImageTable({
         transform: "translate(-50%, -50%)",
         width: "62%", paddingBottom: "36%",
       }}>
-        {/* Main felt surface — radial gradient green */}
+        {/* Main felt surface — image or radial gradient */}
         <div className="absolute inset-0 rounded-[50%]" style={{
-          background: "radial-gradient(ellipse at 50% 40%, #1a3a2a 0%, #0f2a1c 30%, #0a1f15 50%, #071a10 70%, #040e08 100%)",
+          background: feltPreset.imageUrl
+            ? `url(${feltPreset.imageUrl})`
+            : feltPreset.gradient || "radial-gradient(ellipse at 50% 40%, #1a3a2a 0%, #0f2a1c 30%, #0a1f15 50%, #071a10 70%, #040e08 100%)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
           boxShadow: "inset 0 0 80px rgba(0,0,0,0.5), inset 0 -8px 30px rgba(0,0,0,0.3), 0 8px 40px rgba(0,0,0,0.7), 0 0 100px rgba(0,0,0,0.3), 0 0 60px rgba(212,175,55,0.12), 0 0 120px rgba(212,175,55,0.06)",
           border: "7px solid #18181e",
         }}>

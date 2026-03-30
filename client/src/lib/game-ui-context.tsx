@@ -44,7 +44,7 @@ export const FELT_PRESETS: FeltPreset[] = [
     gradient: 'radial-gradient(ellipse at 50% 48%, #6b1a2a 0%, #551525 30%, #3d0f1c 55%, #330b18 75%, #2a0815 100%)',
     spotlightOverlay: 'radial-gradient(ellipse 45% 40% at 50% 48%, rgba(255,200,200,0.06) 0%, transparent 60%)',
     swatch: '#6b1a2a',
-    imageUrl: '/attached_assets/generated_images/felts/felt_royal_velvet.webp',
+    imageUrl: '/felts/felt_royal_velvet.webp',
   },
   {
     id: 'ocean_deep',
@@ -52,7 +52,7 @@ export const FELT_PRESETS: FeltPreset[] = [
     gradient: 'radial-gradient(ellipse at 50% 48%, #1a2a6b 0%, #152255 30%, #0f1a45 55%, #0b1438 75%, #081030 100%)',
     spotlightOverlay: 'radial-gradient(ellipse 45% 40% at 50% 48%, rgba(150,200,255,0.06) 0%, transparent 60%)',
     swatch: '#1a2a6b',
-    imageUrl: '/attached_assets/generated_images/felts/felt_ocean_deep.webp',
+    imageUrl: '/felts/felt_ocean_deep.webp',
   },
   {
     id: 'emerald_luxury',
@@ -60,7 +60,7 @@ export const FELT_PRESETS: FeltPreset[] = [
     gradient: 'radial-gradient(ellipse at 50% 48%, #1a6b3c 0%, #15552d 30%, #0f4524 55%, #0b3b1e 75%, #08301a 100%)',
     spotlightOverlay: 'radial-gradient(ellipse 45% 40% at 50% 48%, rgba(200,255,220,0.06) 0%, transparent 60%)',
     swatch: '#1a6b3c',
-    imageUrl: '/attached_assets/generated_images/felts/felt_emerald_luxury.webp',
+    imageUrl: '/felts/felt_emerald_luxury.webp',
   },
   {
     id: 'cosmic_purple',
@@ -68,7 +68,7 @@ export const FELT_PRESETS: FeltPreset[] = [
     gradient: 'radial-gradient(ellipse at 50% 48%, #3a1a5c 0%, #2d154d 30%, #241040 55%, #1c0b33 75%, #15082a 100%)',
     spotlightOverlay: 'radial-gradient(ellipse 45% 40% at 50% 48%, rgba(200,150,255,0.06) 0%, transparent 60%)',
     swatch: '#3a1a5c',
-    imageUrl: '/attached_assets/generated_images/felts/felt_cosmic_purple.webp',
+    imageUrl: '/felts/felt_cosmic_purple.webp',
   },
   {
     id: 'carbon_fiber',
@@ -76,7 +76,7 @@ export const FELT_PRESETS: FeltPreset[] = [
     gradient: 'radial-gradient(ellipse at 50% 48%, #2a2a2a 0%, #222222 30%, #1a1a1a 55%, #141414 75%, #0e0e0e 100%)',
     spotlightOverlay: 'radial-gradient(ellipse 45% 40% at 50% 48%, rgba(255,255,255,0.04) 0%, transparent 60%)',
     swatch: '#2a2a2a',
-    imageUrl: '/attached_assets/generated_images/felts/felt_carbon_fiber.webp',
+    imageUrl: '/felts/felt_carbon_fiber.webp',
   },
   {
     id: 'gold_vip',
@@ -84,7 +84,7 @@ export const FELT_PRESETS: FeltPreset[] = [
     gradient: 'radial-gradient(ellipse at 50% 48%, #2a2210 0%, #221c0c 30%, #1a1508 55%, #141006 75%, #0e0c04 100%)',
     spotlightOverlay: 'radial-gradient(ellipse 45% 40% at 50% 48%, rgba(255,215,0,0.06) 0%, transparent 60%)',
     swatch: '#2a2210',
-    imageUrl: '/attached_assets/generated_images/felts/felt_gold_vip.webp',
+    imageUrl: '/felts/felt_gold_vip.webp',
   },
 ];
 
@@ -98,10 +98,10 @@ export interface CardBackPreset {
 
 export const CARD_BACK_PRESETS: CardBackPreset[] = [
   { id: 'default', label: 'Default', swatch: '#1a0e3e' },
-  { id: 'classic', label: 'Classic Navy', imageUrl: '/attached_assets/generated_images/cardbacks/cardback_classic.webp', swatch: '#1a2a5c' },
-  { id: 'neon', label: 'Neon Cyber', imageUrl: '/attached_assets/generated_images/cardbacks/cardback_neon.webp', swatch: '#00d4ff' },
-  { id: 'royal', label: 'Royal Red', imageUrl: '/attached_assets/generated_images/cardbacks/cardback_royal.webp', swatch: '#8b0000' },
-  { id: 'holographic', label: 'Holographic', imageUrl: '/attached_assets/generated_images/cardbacks/cardback_holographic.webp', swatch: '#c0c0ff' },
+  { id: 'classic', label: 'Classic Navy', imageUrl: '/cardbacks/cardback_classic.webp', swatch: '#1a2a5c' },
+  { id: 'neon', label: 'Neon Cyber', imageUrl: '/cardbacks/cardback_neon.webp', swatch: '#00d4ff' },
+  { id: 'royal', label: 'Royal Red', imageUrl: '/cardbacks/cardback_royal.webp', swatch: '#8b0000' },
+  { id: 'holographic', label: 'Holographic', imageUrl: '/cardbacks/cardback_holographic.webp', swatch: '#c0c0ff' },
 ];
 
 export type RunItTwicePreference = "always" | "ask" | "once";

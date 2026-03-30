@@ -49,7 +49,6 @@ import { CommentarySubtitles, CommentaryControls } from "@/components/poker/Comm
 import { commentaryPlayer } from "@/lib/commentary-engine";
 import { wsClient } from "@/lib/ws-client";
 
-import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.webp";
 import avatar1 from "@assets/generated_images/avatars/avatar_red_wolf.webp";
 import avatar2 from "@assets/generated_images/avatars/avatar_steel_ghost.webp";
 import avatar3 from "@assets/generated_images/avatars/avatar_dark_ace.webp";
@@ -485,11 +484,11 @@ function GameTable({
   };
 
   return (
-    <div className="h-screen bg-[#0e1a2e] text-white overflow-hidden relative font-sans flex flex-col">
-      {/* Background layers */}
-      <div className="absolute inset-0">
-        <img src={casinoBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" style={{ filter: "brightness(0.75) saturate(1.8) blur(1px)" }} />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(40,55,90,0.2)_0%,rgba(12,20,40,0.55)_80%)]" />
+    <div className="h-screen bg-[#0a0a0c] text-white overflow-hidden relative font-sans flex flex-col">
+      {/* Background glow orbs */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] bg-[#00f3ff]/[0.03] rounded-full blur-[150px]" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-purple-600/[0.02] rounded-full blur-[120px]" />
       </div>
 
       <ChipAnimation containerRef={tableRef} />
@@ -502,10 +501,10 @@ function GameTable({
       <div
         className="relative z-50 h-11 flex items-center justify-between px-4 shrink-0"
         style={{
-          background: "linear-gradient(180deg, rgba(8,14,28,0.92) 0%, rgba(6,10,22,0.88) 100%)",
-          backdropFilter: "blur(16px)",
-          borderBottom: "1px solid rgba(0,212,255,0.1)",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+          background: "rgba(10,10,12,0.85)",
+          backdropFilter: "blur(20px)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          boxShadow: "0 2px 16px rgba(0,0,0,0.4)",
         }}
       >
         <div className="flex items-center gap-3">
@@ -1142,6 +1141,9 @@ function GameTable({
           <div className="flex-1 relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 45%, #1a2744 0%, #131d30 40%, #0e1624 70%, #0a101c 100%)" }} />
+              {/* Atmospheric glow orbs (Stitch-style) */}
+              <div className="absolute top-[-15%] left-[10%] w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(0,243,255,0.03)" }} />
+              <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(147,51,234,0.02)" }} />
 
               <div
                 ref={tableRef}
@@ -1437,30 +1439,6 @@ function GameTable({
             </div>
           </div>
 
-          {/* Hand Strength section (shown in sidebar instead of floating overlay) */}
-          {heroHoleCards && gameState.phase !== "showdown" && gameState.phase !== "waiting" && (() => {
-            const strength = getHandStrength(heroHoleCards, gameState.communityCards);
-            return (
-              <div className="border-b border-white/5">
-                <div className="px-3 py-2 border-b border-white/5">
-                  <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Hand Strength</span>
-                </div>
-                <div className="px-3 py-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[0.625rem] font-bold" style={{ color: strength.color }}>{strength.label}</span>
-                    <span className="text-[0.625rem] font-mono font-bold" style={{ color: strength.color }}>{strength.percentage}%</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full overflow-hidden bg-white/5">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${strength.percentage}%`, background: strength.color }}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
           {/* Game Stats section */}
           <div className="border-b border-white/5">
             <div className="px-3 py-2 border-b border-white/5">
@@ -1612,14 +1590,6 @@ function GameTable({
           <RunItResults boards={gameState.runItBoards} heroId={heroId} />
         )}
       </AnimatePresence>
-
-      {!screen.showSidebars && (
-        <HandStrengthMeter
-          holeCards={heroHoleCards}
-          communityCards={gameState.communityCards}
-          visible={gameState.phase !== "showdown" && !!heroCards}
-        />
-      )}
 
       <AnimatePresence>
         {showProvablyFair && (
@@ -2125,6 +2095,12 @@ function GameTable({
         )}
       </AnimatePresence>
 
+      {/* ═══ CHAT PANEL ═══ */}
+      <ChatPanel isMultiplayer={isMultiplayer} sendChat={sendChat} />
+
+      {/* ═══ HAND HISTORY DRAWER ═══ */}
+      {tableId && <HandHistoryDrawer tableId={tableId} />}
+
     </div>
   );
 }
@@ -2280,10 +2256,21 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
     }
   }, [tableInfo]);
 
+  // Auto-detect reconnection: if we receive game_state with hero already seated, skip join screen
+  useEffect(() => {
+    if (!joined && user && players.length > 0) {
+      const heroInGame = players.find(p => p.id === user.id);
+      if (heroInGame) {
+        setJoined(true);
+        soundEngine.init();
+      }
+    }
+  }, [joined, user, players]);
+
   // Reset joined state only for join-rejection errors (not in-game action errors)
   useEffect(() => {
     if (mpError && joined) {
-      const joinErrors = ["Table is full", "No seats available", "Insufficient chips", "Already at this table", "Table not found", "User not found", "Already registered", "Tournament already started"];
+      const joinErrors = ["Table is full", "No seats available", "Insufficient chips", "Table not found", "User not found", "Already registered", "Tournament already started"];
       const isJoinError = joinErrors.some(e => mpError.includes(e));
       if (isJoinError) {
         setJoined(false);

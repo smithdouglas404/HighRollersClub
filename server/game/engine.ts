@@ -177,7 +177,7 @@ export class GameEngine {
 
   constructor(
     public tableId: string,
-    opts: GameEngineOpts
+    public opts: GameEngineOpts
   ) {
     this.smallBlind = opts.smallBlind;
     this.bigBlind = opts.bigBlind;

@@ -704,59 +704,104 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             />
           )}
 
-          <div
-            className="relative rounded-xl overflow-hidden portrait-card"
-            style={{
-              border: `2px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-              boxShadow: isTurn
-                ? `0 0 20px ${hexToRgba(glowColor, 0.7)}, 0 0 40px ${hexToRgba(glowColor, 0.3)}, inset 0 0 12px ${hexToRgba(glowColor, 0.2)}`
-                : `0 0 10px ${hexToRgba(glowColor, 0.35)}, 0 4px 16px rgba(0,0,0,0.5)`,
-              transition: "all 0.3s ease",
-              ...parallaxStyle,
-              ...reactionStyle,
-            }}
-          >
+          <div className="relative" style={{ ...parallaxStyle, ...reactionStyle }}>
+            {/* Avatar section */}
             <div
-              className="absolute top-0 left-0 right-0 h-[3px] z-20"
+              className="relative rounded-t-xl overflow-visible portrait-card"
               style={{
-                background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
-                boxShadow: `0 0 8px ${hexToRgba(glowColor, 0.6)}`,
+                border: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+                borderBottom: "none",
+                boxShadow: isTurn
+                  ? `0 0 24px ${hexToRgba(glowColor, 0.7)}, 0 0 48px ${hexToRgba(glowColor, 0.3)}, inset 0 0 16px ${hexToRgba(glowColor, 0.2)}`
+                  : isWinner
+                  ? `0 0 25px rgba(212,175,55,0.5), 0 0 50px rgba(212,175,55,0.2)`
+                  : `0 0 12px ${hexToRgba(glowColor, 0.4)}, 0 4px 20px rgba(0,0,0,0.6)`,
+                transition: "all 0.3s ease",
               }}
-            />
-
-            {player.avatar ? (
-              <img
-                src={player.avatar}
-                alt={player.name}
-                className="w-full h-full object-cover relative z-[1]"
-              />
-            ) : (
+            >
+              {/* Top glow bar */}
               <div
-                className="w-full h-full flex items-center justify-center text-2xl font-bold text-white/70 relative z-[1]"
+                className="absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-xl"
                 style={{
-                  background: isHero
-                    ? "linear-gradient(135deg, #0e7490, #164e63)"
-                    : "linear-gradient(135deg, #78716c, #44403c)",
+                  background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
+                  boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.7)}`,
                 }}
-              >
-                {player.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+              />
 
+              {player.avatar ? (
+                <img
+                  src={player.avatar}
+                  alt={player.name}
+                  className="w-full h-full object-cover object-top relative z-[1] rounded-t-xl"
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center text-3xl font-black text-white/70 relative z-[1] rounded-t-xl"
+                  style={{
+                    background: isHero
+                      ? "linear-gradient(135deg, #0e7490, #164e63)"
+                      : "linear-gradient(135deg, #78716c, #44403c)",
+                  }}
+                >
+                  {player.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              {/* Dark gradient overlay on avatar bottom */}
+              <div
+                className="absolute inset-0 z-[2] pointer-events-none rounded-t-xl"
+                style={{ background: "linear-gradient(180deg, transparent 25%, rgba(10,10,12,0.85) 100%)" }}
+              />
+
+              {/* Face-down hole cards overlapping avatar bottom (Stitch style) */}
+              {!hideCards && !isHero && player.cards && player.cards.length > 0 && !isFolded && (
+                <div className="absolute left-1/2 -translate-x-1/2 flex z-20" style={{ bottom: "-6px" }}>
+                  {player.cards.filter((_, i) => dealCardCount === undefined || i < dealCardCount).map((_, i) => (
+                    <div
+                      key={`card-back-${i}`}
+                      className="rounded-md overflow-hidden"
+                      style={{
+                        width: 36,
+                        height: 50,
+                        transform: i === 0 ? "rotate(-10deg) translateX(5px)" : "rotate(10deg) translateX(-5px)",
+                        background: "linear-gradient(135deg, #1e3a5f, #0d1b2a)",
+                        border: "2px solid rgba(0,243,255,0.3)",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.8)",
+                      }}
+                    >
+                      <div
+                        className="w-full h-full flex items-center justify-center"
+                        style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,243,255,0.06) 3px, rgba(0,243,255,0.06) 6px)" }}
+                      >
+                        <div className="w-4 h-5 rounded border border-[#00f3ff]/30 bg-[#00f3ff]/10 flex items-center justify-center">
+                          <span className="text-[#00f3ff]/40 text-[9px] font-black">S</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Glass info panel below avatar (Stitch style) */}
             <div
-              className="absolute inset-0 z-[2] pointer-events-none"
-              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 35%, transparent 60%)" }}
-            />
-
-            <div className="absolute bottom-0 left-0 right-0 z-[3] px-2 pb-1.5 pt-1">
-              <div className="flex items-center justify-center gap-1">
+              className="relative z-30 w-full rounded-b-xl px-2.5 py-1.5"
+              style={{
+                background: "rgba(15,15,20,0.92)",
+                backdropFilter: "blur(12px)",
+                borderLeft: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+                borderRight: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+                borderBottom: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+              }}
+            >
+              <div className="flex items-center gap-1">
                 <span
                   className={cn(
-                    "text-[0.7rem] uppercase font-extrabold tracking-wide leading-tight truncate max-w-[100px]",
-                    isTurn ? "text-white" : "text-gray-200"
+                    "text-[0.6875rem] uppercase font-extrabold tracking-wide leading-tight truncate flex-1",
+                    isTurn ? "text-white" : "text-white/80"
                   )}
                   style={{
-                    textShadow: `0 1px 4px rgba(0,0,0,0.8)${isTurn ? `, 0 0 8px ${hexToRgba(glowColor, 0.5)}` : ""}`,
+                    textShadow: isTurn ? `0 0 8px ${hexToRgba(glowColor, 0.5)}` : undefined,
                   }}
                 >
                   {player.name}
@@ -764,30 +809,45 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 {!isHero && <PlayerNoteIcon playerId={player.id} />}
               </div>
 
-              <div className="flex items-center justify-center gap-1 mt-0.5">
-                <svg width="12" height="12" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
-                  <circle cx="10" cy="10" r="9" fill="#ffd700" stroke="#b8860b" strokeWidth="1.5" />
-                  <circle cx="10" cy="10" r="5.5" fill="none" stroke="#b8860b" strokeWidth="0.8" />
-                  <circle cx="10" cy="10" r="2.5" fill="#b8860b" opacity="0.3" />
-                </svg>
-                <span
-                  className="text-[0.875rem] font-mono font-black leading-tight"
-                  style={{
-                    color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
-                    textShadow: chipsAnimating
-                      ? chipsDelta < 0 ? "0 0 10px rgba(239,68,68,0.6)" : "0 0 10px rgba(34,197,94,0.6)"
-                      : "0 0 8px rgba(255,215,0,0.4), 0 1px 3px rgba(0,0,0,0.8)",
-                    transition: "color 0.3s ease, text-shadow 0.3s ease",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  {formatChips(animatedChips)}
-                </span>
+              <div className="flex items-center justify-between mt-0.5">
+                <div className="flex items-center gap-0.5">
+                  <svg width="10" height="10" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
+                    <circle cx="10" cy="10" r="9" fill="#ffd700" stroke="#b8860b" strokeWidth="1.5" />
+                    <circle cx="10" cy="10" r="5.5" fill="none" stroke="#b8860b" strokeWidth="0.8" />
+                  </svg>
+                  <span
+                    className="text-[0.8125rem] font-mono font-black leading-tight"
+                    style={{
+                      color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
+                      textShadow: chipsAnimating
+                        ? chipsDelta < 0 ? "0 0 10px rgba(239,68,68,0.6)" : "0 0 10px rgba(34,197,94,0.6)"
+                        : "0 0 6px rgba(255,215,0,0.3)",
+                      transition: "color 0.3s ease, text-shadow 0.3s ease",
+                    }}
+                  >
+                    {formatChips(animatedChips)}
+                  </span>
+                </div>
+                {player.currentBet > 0 && (
+                  <span className="text-[#d4af37] text-[0.625rem] font-bold font-mono">
+                    {formatChips(player.currentBet)}
+                  </span>
+                )}
+                {isFolded && (
+                  <span className="text-red-400 text-[0.5625rem] font-bold uppercase">Fold</span>
+                )}
               </div>
+
+              {isWinner && (
+                <div className="mt-0.5 text-center">
+                  <span className="text-[#d4af37] text-[0.5625rem] font-black uppercase tracking-wider animate-pulse">WINNER</span>
+                </div>
+              )}
             </div>
 
+            {/* Gold bottom accent line */}
             <div
-              className="absolute bottom-0 left-0 right-0 h-[2px] z-[4]"
+              className="absolute bottom-0 left-0 right-0 h-[2px] z-[40] rounded-b-xl"
               style={{
                 background: "linear-gradient(90deg, transparent 5%, #d4a843 20%, #ffd700 50%, #d4a843 80%, transparent 95%)",
                 boxShadow: "0 0 6px rgba(212,168,67,0.4)",
@@ -811,9 +871,10 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -right-2 -top-2 z-30 w-6 h-6 rounded-full flex items-center justify-center text-[0.5625rem] font-black text-black gold-gradient shadow-[0_0_8px_rgba(212,168,67,0.5)]"
+              className="absolute -right-2 -top-2 z-40 w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-lg"
+              style={{ border: "2.5px solid #d4af37", boxShadow: "0 0 10px rgba(212,175,55,0.4)" }}
             >
-              D
+              <span className="text-[11px] font-black text-gray-900">D</span>
             </motion.div>
           )}
 
@@ -910,38 +971,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         </AnimatePresence>
       </div>
 
-      {/* Face-down hole cards for non-hero players — hidden in 3D mode */}
-      {!hideCards && !isHero && player.cards && player.cards.length > 0 && !isFolded && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 20 }}
-          className="flex -mt-1"
-        >
-          {player.cards.filter((_, i) => dealCardCount === undefined || i < dealCardCount).map((_, i) => (
-            <div
-              key={`card-back-${i}`}
-              className="rounded-md overflow-hidden"
-              style={{
-                width: 34,
-                height: 48,
-                marginLeft: i > 0 ? -10 : 0,
-                transform: `rotate(${i === 0 ? -8 : 8}deg)`,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(212,168,67,0.3)",
-                border: "1px solid rgba(212,168,67,0.4)",
-              }}
-            >
-              <div className="w-full h-full flex items-center justify-center"
-                style={{ background: "linear-gradient(145deg, #1a1040 0%, #0d0820 40%, #1a0a30 70%, #0a0618 100%)" }}
-              >
-                <div className="w-4 h-4 rounded-full border border-amber-700/30"
-                  style={{ background: "radial-gradient(circle, rgba(212,168,67,0.12) 0%, transparent 70%)" }}
-                />
-              </div>
-            </div>
-          ))}
-        </motion.div>
-      )}
+      {/* Face-down cards are now rendered inside the avatar section above */}
     </div>
   );
 }

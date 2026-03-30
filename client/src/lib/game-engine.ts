@@ -338,6 +338,8 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     let newPot = gs.pot;
     let newMinBet = gs.minBet;
 
+    console.log(`[BET] ${player.name} action=${action} amount=${amount} chips=${player.chips} currentBet=${player.currentBet} minBet=${gs.minBet} pot=${gs.pot}`);
+
     if (action === 'fold') {
       newPlayers[currentPlayerIndex] = { ...newPlayers[currentPlayerIndex], status: 'folded' };
       actedThisRoundRef.current.add(player.id);
@@ -347,6 +349,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     } else if (action === 'call') {
       const callAmount = Math.min(gs.minBet - player.currentBet, player.chips);
       const newChips = player.chips - callAmount;
+      console.log(`[BET] CALL: callAmount=${callAmount} newChips=${newChips} (minBet=${gs.minBet} - currentBet=${player.currentBet} = ${gs.minBet - player.currentBet}, capped by chips=${player.chips})`);
       newPlayers[currentPlayerIndex] = {
         ...newPlayers[currentPlayerIndex],
         chips: newChips,
@@ -358,6 +361,7 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
     } else if (action === 'raise' && amount) {
       const added = Math.min(amount - player.currentBet, player.chips);
       const newChips = player.chips - added;
+      console.log(`[BET] RAISE: raiseTotal=${amount} added=${added} newChips=${newChips} (amount=${amount} - currentBet=${player.currentBet} = ${amount - player.currentBet}, capped by chips=${player.chips})`);
       newPlayers[currentPlayerIndex] = {
         ...newPlayers[currentPlayerIndex],
         chips: newChips,
@@ -369,6 +373,8 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
       actedThisRoundRef.current.clear();
       actedThisRoundRef.current.add(player.id);
     }
+
+    console.log(`[BET] RESULT: ${player.name} chips=${newPlayers[currentPlayerIndex].chips} currentBet=${newPlayers[currentPlayerIndex].currentBet} pot=${newPot}`);
 
     const activePlayers = newPlayers.filter(p => p.status !== 'folded' && p.isActive);
     if (activePlayers.length === 1) {

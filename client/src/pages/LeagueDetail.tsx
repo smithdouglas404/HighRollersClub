@@ -91,7 +91,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
     const now = new Date();
     const start = new Date(s.startDate);
     const end = new Date(s.endDate);
-    if (now < start) return { label: "Upcoming", color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" };
+    if (now < start) return { label: "Upcoming", color: "text-primary", bg: "bg-primary/10 border-primary/20" };
     if (now > end) return { label: "Completed", color: "text-gray-400", bg: "bg-gray-500/10 border-gray-500/20" };
     return { label: "Active", color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" };
   };
@@ -213,21 +213,21 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
   const status = season ? getSeasonStatus(season) : null;
   const isActive = status?.label === "Active";
   const sortedStandings = [...(season?.standings || [])].sort((a, b) => b.points - a.points);
-  const medalColors = ["text-cyan-400", "text-gray-300", "text-cyan-600"];
+  const medalColors = ["text-primary", "text-gray-300", "text-primary/60"];
 
   return (
     <DashboardLayout title="League Details">
       <div className="px-8 pb-8">
         <button
           onClick={() => navigate("/leagues")}
-          className="flex items-center gap-1.5 text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 hover:text-cyan-400 transition-colors mb-6"
+          className="flex items-center gap-1.5 text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 hover:text-primary transition-colors mb-6"
         >
           <ChevronLeft className="w-3.5 h-3.5" /> Back to Leagues
         </button>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : !season ? (
           <div className="text-center py-20 text-gray-500">League season not found</div>
@@ -237,41 +237,36 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl p-6"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(0,212,255,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
             >
               {editing ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">Name</label>
+                    <label className="text-[0.625rem] font-bold uppercase tracking-wider text-primary mb-1.5 block">Name</label>
                     <input
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-amber-500/20 transition-all"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">Start Date</label>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-primary mb-1.5 block">Start Date</label>
                       <input
                         type="date"
                         value={editStart}
                         onChange={(e) => setEditStart(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
                       />
                     </div>
                     <div>
-                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">End Date</label>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-primary mb-1.5 block">End Date</label>
                       <input
                         type="date"
                         value={editEnd}
                         onChange={(e) => setEditEnd(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
                       />
                     </div>
                   </div>
@@ -279,8 +274,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                     <button
                       onClick={handleSaveDetails}
                       disabled={actionLoading}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black shadow-[0_0_20px_rgba(0,212,255,0.3)]"
-                      style={{ background: "linear-gradient(135deg, #00d4ff, #f0d078)" }}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black"
                     >
                       {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Save
                     </button>
@@ -294,12 +288,12 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                 </div>
               ) : (
                 <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                    <Trophy className="w-7 h-7 text-cyan-400" />
+                  <div className="w-14 h-14 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
+                    <Trophy className="w-7 h-7 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h1 className="text-lg font-bold text-white tracking-wide">{season.name}</h1>
+                      <h1 className="text-lg font-bold font-display text-white tracking-wide">{season.name}</h1>
                       <button
                         onClick={() => setEditing(true)}
                         className="p-1 rounded hover:bg-white/5 transition-colors"
@@ -322,7 +316,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                       <button
                         onClick={handleCompleteSeason}
                         disabled={actionLoading}
-                        className="flex items-center gap-1 px-3 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-colors"
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors"
                       >
                         <Flag className="w-3 h-3" /> Complete
                       </button>
@@ -337,19 +331,14 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(0,212,255,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
             >
               <div className="px-5 py-3 border-b border-white/[0.04] flex items-center justify-between">
                 <h2 className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Standings</h2>
                 {!editingStandings ? (
                   <button
                     onClick={() => { setEditingStandings(true); setStandingsData(season.standings || []); }}
-                    className="flex items-center gap-1 px-3 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                    className="flex items-center gap-1 px-3 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-primary hover:bg-primary/10 transition-colors"
                   >
                     <Edit2 className="w-3 h-3" /> Edit
                   </button>
@@ -358,8 +347,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                     <button
                       onClick={handleSaveStandings}
                       disabled={actionLoading}
-                      className="flex items-center gap-1 px-3 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-black shadow-[0_0_15px_rgba(0,212,255,0.2)]"
-                      style={{ background: "linear-gradient(135deg, #00d4ff, #f0d078)" }}
+                      className="flex items-center gap-1 px-3 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider bg-primary text-black"
                     >
                       {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
                     </button>
@@ -380,7 +368,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                     <select
                       value={addClubId}
                       onChange={(e) => setAddClubId(e.target.value)}
-                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/30 transition-all [color-scheme:dark]"
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary/30 transition-all [color-scheme:dark]"
                     >
                       <option value="">Add a club...</option>
                       {clubs.filter(c => !standingsClubIds.has(c.id)).map(c => (
@@ -390,9 +378,9 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                     <button
                       onClick={handleAddClub}
                       disabled={!addClubId}
-                      className="p-2 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-40 transition-colors"
+                      className="p-2 rounded-lg bg-primary/15 hover:bg-primary/25 disabled:opacity-40 transition-colors"
                     >
-                      <Plus className="w-4 h-4 text-cyan-400" />
+                      <Plus className="w-4 h-4 text-primary" />
                     </button>
                   </div>
 
@@ -417,19 +405,19 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                               type="number"
                               value={entry.points}
                               onChange={(e) => updateStandingsEntry(entry.clubId, "points", parseInt(e.target.value) || 0)}
-                              className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-cyan-400 font-mono text-center focus:outline-none focus:border-cyan-500/30"
+                              className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-primary font-mono text-center focus:outline-none focus:border-primary/30"
                             />
                             <input
                               type="number"
                               value={entry.wins}
                               onChange={(e) => updateStandingsEntry(entry.clubId, "wins", parseInt(e.target.value) || 0)}
-                              className="w-14 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-green-400 font-mono text-center focus:outline-none focus:border-cyan-500/30"
+                              className="w-14 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-green-400 font-mono text-center focus:outline-none focus:border-primary/30"
                             />
                             <input
                               type="number"
                               value={entry.losses}
                               onChange={(e) => updateStandingsEntry(entry.clubId, "losses", parseInt(e.target.value) || 0)}
-                              className="w-14 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-red-400 font-mono text-center focus:outline-none focus:border-cyan-500/30"
+                              className="w-14 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-red-400 font-mono text-center focus:outline-none focus:border-primary/30"
                             />
                             <button
                               onClick={() => handleRemoveFromStandings(entry.clubId)}
@@ -484,7 +472,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                                 {entry.clubName || club?.name || entry.clubId.slice(0, 8)}
                               </span>
                             </div>
-                            <span className="w-14 text-center text-xs font-bold text-cyan-400">{entry.points}</span>
+                            <span className="w-14 text-center text-xs font-bold text-primary">{entry.points}</span>
                             <span className="w-10 text-center text-xs font-medium text-green-400">{entry.wins}</span>
                             <span className="w-10 text-center text-xs font-medium text-red-400">{entry.losses}</span>
                           </div>
@@ -506,11 +494,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl p-5"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(239,68,68,0.1)",
-              }}
+              className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-red-500/10"
             >
               <h2 className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-3">Danger Zone</h2>
               {confirmDelete ? (

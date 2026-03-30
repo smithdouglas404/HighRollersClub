@@ -17,8 +17,8 @@ import {
 
 function RoleLabel({ role }: { role: string }) {
   const colorMap: Record<string, string> = {
-    owner: "text-cyan-400",
-    admin: "text-cyan-400",
+    owner: "text-primary",
+    admin: "text-primary",
     member: "text-gray-400",
   };
   const color = colorMap[role] || colorMap.member;
@@ -195,7 +195,7 @@ export default function Members() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : members.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -210,19 +210,14 @@ export default function Members() {
 
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center gap-3 mb-1 flex-wrap">
-                <h2 className="text-sm font-black uppercase tracking-[0.15em] text-white">Members</h2>
-                <span data-testid="badge-member-count" className="px-2.5 py-0.5 rounded-full text-[0.625rem] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                <h2 className="text-sm font-black uppercase tracking-[0.15em] text-white font-display">Members</h2>
+                <span data-testid="badge-member-count" className="px-2.5 py-0.5 rounded-full text-[0.625rem] font-bold bg-primary/15 text-primary border border-primary/20">
                   {members.length}
                 </span>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full border"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(16,185,129,0.06) 100%)",
-                    borderColor: "rgba(34,197,94,0.25)",
-                    boxShadow: "0 0 12px rgba(34,197,94,0.1)",
-                  }}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full border bg-secondary/10 border-secondary/25"
                 >
                   <Wifi className="w-3 h-3 text-green-400" />
                   <span data-testid="badge-online-count" className="text-[0.625rem] font-bold text-green-400">{onlineCount} Online Now</span>
@@ -238,7 +233,7 @@ export default function Members() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search members..."
-                    className="w-full bg-white/5 border border-white/10 rounded-full pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/40 focus:ring-2 focus:ring-cyan-500/15 transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-full pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/15 transition-all"
                   />
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -251,7 +246,7 @@ export default function Members() {
                       onClick={() => setRoleFilter(role)}
                       className={`px-3 py-1.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider transition-all border ${
                         roleFilter === role
-                          ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-400 shadow-[0_0_10px_rgba(0,212,255,0.15)]"
+                          ? "bg-primary/20 border-primary/30 text-primary shadow-[0_0_10px_hsl(var(--primary)/0.15)]"
                           : "border-white/8 text-gray-500 hover:text-gray-300 hover:border-white/15 hover:bg-white/[0.03]"
                       }`}
                     >
@@ -271,7 +266,7 @@ export default function Members() {
                         statusFilter === status
                           ? status === "online"
                             ? "bg-green-500/20 border-green-500/30 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.15)]"
-                            : "bg-cyan-500/20 border-cyan-500/30 text-cyan-400 shadow-[0_0_10px_rgba(0,212,255,0.15)]"
+                            : "bg-primary/20 border-primary/30 text-primary shadow-[0_0_10px_hsl(var(--primary)/0.15)]"
                           : "border-white/8 text-gray-500 hover:text-gray-300 hover:border-white/15 hover:bg-white/[0.03]"
                       }`}
                     >
@@ -285,15 +280,9 @@ export default function Members() {
               </div>
 
               <div
-                className="rounded-xl overflow-hidden"
-                style={{
-                  background: "rgba(20,31,40,0.65)",
-                  backdropFilter: "blur(16px)",
-                  border: "1px solid rgba(0,212,255,0.15)",
-                  boxShadow: "0 0 40px rgba(0,212,255,0.06), inset 0 1px 0 rgba(0,212,255,0.08)",
-                }}
+                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
               >
-                <div className="grid grid-cols-12 gap-2 px-6 py-3.5 border-b border-cyan-500/10">
+                <div className="grid grid-cols-12 gap-2 px-6 py-3.5 border-b border-primary/10">
                   <span className="col-span-5 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Name / Role</span>
                   <span className="col-span-2 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Status</span>
                   <span className="col-span-3 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Stats</span>
@@ -326,7 +315,7 @@ export default function Members() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className={`grid grid-cols-12 gap-3 items-center px-6 py-6 border-b border-white/[0.04] hover:bg-cyan-500/[0.06] transition-all duration-200 group ${
+                      className={`grid grid-cols-12 gap-3 items-center px-6 py-6 border-b border-white/[0.04] hover:bg-primary/[0.06] transition-all duration-200 group ${
                         podiumStyle ? "relative" : ""
                       }`}
                       style={podiumStyle ? {
@@ -348,7 +337,7 @@ export default function Members() {
                             size="xl"
                           />
                           <span
-                            className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#111b2a] ${
+                            className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background ${
                               isOnline
                                 ? "bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.7)]"
                                 : "bg-gray-600"
@@ -369,7 +358,7 @@ export default function Members() {
                               {member.displayName}
                             </span>
                             {isMe && (
-                              <span className="text-[0.5rem] text-cyan-400 font-bold uppercase bg-cyan-500/10 px-1.5 py-0.5 rounded">You</span>
+                              <span className="text-[0.5rem] text-primary font-bold uppercase bg-primary/10 px-1.5 py-0.5 rounded">You</span>
                             )}
                           </div>
                         </div>
@@ -415,7 +404,7 @@ export default function Members() {
                                 data-testid={`button-role-${member.userId}`}
                                 onClick={() => setEditingRole(editingRole === member.userId ? null : member.userId)}
                                 disabled={actionLoading === `role-${member.userId}`}
-                                className="px-2 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+                                className="px-2 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
                               >
                                 {actionLoading === `role-${member.userId}` ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -433,7 +422,7 @@ export default function Members() {
                                       <button
                                         data-testid={`button-promote-${member.userId}`}
                                         onClick={() => handleRoleChange(member.userId, "admin")}
-                                        className="w-full px-3 py-2 text-left text-[0.625rem] font-bold text-cyan-400 hover:bg-cyan-500/10 transition-colors flex items-center gap-1.5"
+                                        className="w-full px-3 py-2 text-left text-[0.625rem] font-bold text-primary hover:bg-primary/10 transition-colors flex items-center gap-1.5"
                                       >
                                         <ChevronUp className="w-3 h-3" /> Promote
                                       </button>
@@ -442,7 +431,7 @@ export default function Members() {
                                       <button
                                         data-testid={`button-demote-${member.userId}`}
                                         onClick={() => handleRoleChange(member.userId, "member")}
-                                        className="w-full px-3 py-2 text-left text-[0.625rem] font-bold text-cyan-400 hover:bg-cyan-500/10 transition-colors flex items-center gap-1.5"
+                                        className="w-full px-3 py-2 text-left text-[0.625rem] font-bold text-primary hover:bg-primary/10 transition-colors flex items-center gap-1.5"
                                       >
                                         <ChevronDown className="w-3 h-3" /> Demote
                                       </button>
@@ -473,7 +462,7 @@ export default function Members() {
                           <span className="text-[0.5625rem] text-gray-600 font-bold uppercase tracking-wider">--</span>
                         )}
                         {isMe && (
-                          <span className="text-[0.5625rem] text-cyan-400/60 font-bold uppercase tracking-wider">--</span>
+                          <span className="text-[0.5625rem] text-primary/60 font-bold uppercase tracking-wider">--</span>
                         )}
                       </div>
                     </motion.div>
@@ -488,27 +477,17 @@ export default function Members() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="rounded-xl overflow-hidden"
-                style={{
-                  background: "rgba(20,31,40,0.65)",
-                  backdropFilter: "blur(16px)",
-                  border: "1px solid rgba(0,212,255,0.12)",
-                  boxShadow: "0 0 25px rgba(0,212,255,0.04)",
-                }}
+                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
               >
                 <div
-                  className="px-4 py-3.5 flex items-center justify-between"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(139,92,246,0.08) 100%)",
-                    borderBottom: "1px solid rgba(0,212,255,0.15)",
-                  }}
+                  className="px-4 py-3.5 flex items-center justify-between bg-primary/10 border-b border-primary/15"
                 >
                   <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                    <span className="w-1 h-4 rounded-full bg-gradient-to-b from-cyan-400 to-purple-500" />
+                    <span className="w-1 h-4 rounded-full bg-gradient-to-b from-primary to-purple-500" />
                     Club & Alliance News
                   </h3>
                   <div className="relative">
-                    <Bell className="w-4 h-4 text-cyan-400" />
+                    <Bell className="w-4 h-4 text-primary" />
                     {announcements.length > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[0.5rem] font-bold flex items-center justify-center animate-pulse">
                         {announcements.length}
@@ -525,7 +504,7 @@ export default function Members() {
                   ) : (
                     announcements.slice(0, 5).map(a => (
                       <div key={a.id} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                        <div className="text-[0.625rem] font-bold text-cyan-400 mb-0.5">{a.title}</div>
+                        <div className="text-[0.625rem] font-bold text-primary mb-0.5">{a.title}</div>
                         <p className="text-[0.6875rem] text-gray-400 line-clamp-2">{a.content}</p>
                         <span className="text-[0.5625rem] text-gray-600 mt-1 block">{formatTimeAgo(a.createdAt)}</span>
                       </div>
@@ -539,13 +518,7 @@ export default function Members() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.35 }}
-                  className="rounded-xl overflow-hidden"
-                  style={{
-                    background: "rgba(20,31,40,0.65)",
-                    backdropFilter: "blur(16px)",
-                    border: "1px solid rgba(0,212,255,0.12)",
-                    boxShadow: "0 0 25px rgba(0,212,255,0.04)",
-                  }}
+                  className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
                 >
                   <button
                     data-testid="button-toggle-pending"
@@ -555,7 +528,7 @@ export default function Members() {
                     <h3 className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2">
                       Pending Join Requests
                       {pendingCount > 0 && (
-                        <span className="bg-cyan-500/20 text-cyan-400 text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full border border-cyan-500/30">
+                        <span className="bg-primary/20 text-primary text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full border border-primary/30">
                           {pendingCount}
                         </span>
                       )}
@@ -641,23 +614,13 @@ export default function Members() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="rounded-xl overflow-hidden"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(20,31,40,0.8) 0%, rgba(30,45,60,0.65) 100%)",
-                    backdropFilter: "blur(16px)",
-                    border: "1px solid rgba(0,212,255,0.18)",
-                    boxShadow: "0 0 30px rgba(0,212,255,0.06)",
-                  }}
+                  className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
                 >
                   <div
-                    className="px-4 py-3.5"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(34,197,94,0.06) 100%)",
-                      borderBottom: "1px solid rgba(0,212,255,0.12)",
-                    }}
+                    className="px-4 py-3.5 bg-primary/10 border-b border-primary/15"
                   >
                     <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                      <UserPlus className="w-4 h-4 text-cyan-400" />
+                      <UserPlus className="w-4 h-4 text-primary" />
                       Invite Player
                     </h3>
                     <p className="text-[0.5625rem] text-gray-500 mt-0.5">Send an invite to grow your club</p>
@@ -678,7 +641,7 @@ export default function Members() {
                             if (e.key === "Enter") handleInvite();
                           }}
                           placeholder="Enter username..."
-                          className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/30 focus:ring-2 focus:ring-cyan-500/15 transition-all"
+                          className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary/30 focus:ring-2 focus:ring-primary/15 transition-all"
                         />
                       </div>
                       <motion.button
@@ -687,15 +650,7 @@ export default function Members() {
                         data-testid="button-send-invite"
                         onClick={handleInvite}
                         disabled={inviteLoading || !inviteUsername.trim()}
-                        className="px-5 py-2.5 rounded-lg font-bold text-white text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-                        style={{
-                          background: inviteUsername.trim()
-                            ? "linear-gradient(135deg, #00d4ff 0%, #0099cc 100%)"
-                            : "rgba(0,212,255,0.15)",
-                          boxShadow: inviteUsername.trim()
-                            ? "0 0 20px rgba(0,212,255,0.3), 0 4px 12px rgba(0,0,0,0.3)"
-                            : "none",
-                        }}
+                        className={`px-5 py-2.5 rounded-lg font-bold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 ${inviteUsername.trim() ? "bg-primary text-black" : "bg-primary/15 text-primary"}`}
                       >
                         {inviteLoading ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -736,16 +691,10 @@ export default function Members() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="rounded-xl p-5"
-            style={{
-              background: "rgba(20,31,40,0.65)",
-              backdropFilter: "blur(16px)",
-              border: "1px solid rgba(0,212,255,0.12)",
-              boxShadow: "0 0 25px rgba(0,212,255,0.04)",
-            }}
+            className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-4 flex items-center gap-2">
-              <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-primary/80 mb-4 flex items-center gap-2">
+              <span className="w-0.5 h-3.5 bg-primary/60 rounded-full" />
               Daily Missions
             </h3>
             <MissionsGrid missions={missions} />
@@ -755,17 +704,11 @@ export default function Members() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="rounded-xl p-5"
-            style={{
-              background: "rgba(20,31,40,0.65)",
-              backdropFilter: "blur(16px)",
-              border: "1px solid rgba(0,212,255,0.12)",
-              boxShadow: "0 0 25px rgba(0,212,255,0.04)",
-            }}
+            className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/80 mb-4 flex items-center gap-2">
-              <span className="w-0.5 h-3.5 bg-cyan-400/60 rounded-full" />
-              <CalendarDays className="w-3.5 h-3.5 text-cyan-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-primary/80 mb-4 flex items-center gap-2">
+              <span className="w-0.5 h-3.5 bg-primary/60 rounded-full" />
+              <CalendarDays className="w-3.5 h-3.5 text-primary" />
               Upcoming Private Games
             </h3>
             {events.length === 0 ? (

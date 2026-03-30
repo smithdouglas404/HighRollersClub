@@ -22,12 +22,22 @@ const AVATAR_IDS = [
 // Bots start at index 4 ("red-wolf") to avoid clashing with human defaults
 const BOT_AVATAR_START_INDEX = 4;
 
+export interface WaitingPlayer {
+  id: string;
+  name: string;
+  avatar?: string;
+  chipBalance: number;
+  requestedAt: number;
+}
+
 export interface TableInstance {
   engine: GameEngine;
   bots: BotPlayer[];
   lifecycle: SNGLifecycle | null;
   avatarMap: Map<string, string>; // playerId → avatarId
   handCountdownTimer: ReturnType<typeof setTimeout> | null; // prevent stacking
+  isPaused: boolean;
+  waitingPlayers: WaitingPlayer[]; // players awaiting admin approval
   config: {
     maxPlayers: number;
     smallBlind: number;
@@ -462,6 +472,8 @@ class TableManager {
       lifecycle,
       avatarMap,
       handCountdownTimer: null,
+      isPaused: false,
+      waitingPlayers: [],
       config: {
         maxPlayers: tableRow.maxPlayers,
         smallBlind: tableRow.smallBlind,
@@ -785,9 +797,92 @@ class TableManager {
     return { ok: true };
   }
 
+  /** Pause the game — prevents new hands from starting */
+  pauseGame(tableId: string): boolean {
+    const instance = this.tables.get(tableId);
+    if (!instance) return false;
+    instance.isPaused = true;
+    // Cancel any pending hand countdown
+    if (instance.handCountdownTimer) {
+      clearTimeout(instance.handCountdownTimer);
+      instance.handCountdownTimer = null;
+    }
+    return true;
+  }
+
+  /** Resume the game — allows hands to start again */
+  resumeGame(tableId: string): boolean {
+    const instance = this.tables.get(tableId);
+    if (!instance) return false;
+    instance.isPaused = false;
+    // Kick off countdown if conditions are met
+    this.maybeStartCountdown(tableId, instance);
+    return true;
+  }
+
+  /** Add a player to the waiting list for admin approval */
+  addToWaitingList(tableId: string, player: WaitingPlayer): void {
+    const instance = this.tables.get(tableId);
+    if (!instance) return;
+    // Don't add duplicates
+    if (!instance.waitingPlayers.find(p => p.id === player.id)) {
+      instance.waitingPlayers.push(player);
+    }
+  }
+
+  /** Remove a player from the waiting list */
+  removeFromWaitingList(tableId: string, playerId: string): WaitingPlayer | undefined {
+    const instance = this.tables.get(tableId);
+    if (!instance) return undefined;
+    const idx = instance.waitingPlayers.findIndex(p => p.id === playerId);
+    if (idx === -1) return undefined;
+    return instance.waitingPlayers.splice(idx, 1)[0];
+  }
+
+  /** Get the waiting list for a table */
+  getWaitingList(tableId: string): WaitingPlayer[] {
+    const instance = this.tables.get(tableId);
+    return instance?.waitingPlayers ?? [];
+  }
+
+  /** Check if a table is paused */
+  isGamePaused(tableId: string): boolean {
+    const instance = this.tables.get(tableId);
+    return instance?.isPaused ?? false;
+  }
+
+  /** Update table blind/ante settings mid-game (takes effect next hand) */
+  async updateTableSettings(tableId: string, settings: { smallBlind?: number; bigBlind?: number; ante?: number }): Promise<boolean> {
+    const instance = this.tables.get(tableId);
+    if (!instance) return false;
+    // Update in-memory config
+    if (settings.smallBlind !== undefined) {
+      instance.config.smallBlind = settings.smallBlind;
+      instance.engine.opts.smallBlind = settings.smallBlind;
+    }
+    if (settings.bigBlind !== undefined) {
+      instance.config.bigBlind = settings.bigBlind;
+      instance.engine.opts.bigBlind = settings.bigBlind;
+    }
+    if (settings.ante !== undefined) {
+      instance.engine.opts.ante = settings.ante;
+    }
+    // Persist to database
+    try {
+      await storage.updateTable(tableId, {
+        smallBlind: settings.smallBlind ?? instance.config.smallBlind,
+        bigBlind: settings.bigBlind ?? instance.config.bigBlind,
+        ante: settings.ante ?? (instance.engine.opts.ante || 0),
+      });
+    } catch {}
+    return true;
+  }
+
   /** Trigger hand-start countdown if 2+ non-sitting-out players with chips */
-  private maybeStartCountdown(tableId: string, instance: { engine: any; handCountdownTimer: ReturnType<typeof setTimeout> | null }) {
+  private maybeStartCountdown(tableId: string, instance: { engine: any; isPaused?: boolean; handCountdownTimer: ReturnType<typeof setTimeout> | null }) {
     const { engine } = instance;
+    // Don't start hands if the game is paused
+    if (instance.isPaused) return;
     if (engine.state.phase === "waiting" && engine.canStartHand()) {
       if (instance.handCountdownTimer) {
         clearTimeout(instance.handCountdownTimer);

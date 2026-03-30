@@ -9,10 +9,11 @@ import { CreateTableModal } from "@/components/lobby/CreateTable";
 import {
   Plus, Users, Coins, ChevronRight,
   Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search,
-  Brain, Key, CheckCircle, XCircle, Flame, ImageOff, Diamond, DollarSign,
+  Brain, Key, CheckCircle, XCircle, Flame, Diamond,
   Spade, Heart, Club
 } from "lucide-react";
-import feltBg from "@assets/generated_images/poker_felt_top_down.webp";
+import { cn } from "@/lib/utils";
+import { NeonButton } from "@/components/ui/neon";
 
 type GameFormat = "all" | "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
 type StakeLevel = "all" | "micro" | "low" | "mid" | "high";
@@ -57,90 +58,45 @@ const STAKE_TABS: { key: StakeLevel; label: string; description: string }[] = [
   { key: "high", label: "High", description: "BB > 200" },
 ];
 
-const VARIANT_CARDS: { key: PokerVariant; name: string; shortName: string; description: string; players: string; accent: string; bg: string; border: string; icon: any }[] = [
-  { key: "nlhe", name: "Texas Hold'em", shortName: "NLHE", description: "No-limit classic poker", players: "2-9 players", accent: "text-blue-400", bg: "from-blue-500/10 to-blue-500/5", border: "border-blue-500/20 hover:border-blue-500/40", icon: Spade },
-  { key: "plo", name: "Omaha", shortName: "PLO", description: "Pot-limit, 4 hole cards", players: "2-9 players", accent: "text-emerald-400", bg: "from-emerald-500/10 to-emerald-500/5", border: "border-emerald-500/20 hover:border-emerald-500/40", icon: Diamond },
-  { key: "short_deck", name: "Short Deck", shortName: "6+", description: "36-card action game", players: "2-6 players", accent: "text-red-400", bg: "from-red-500/10 to-red-500/5", border: "border-red-500/20 hover:border-red-500/40", icon: Heart },
-  { key: "plo5", name: "PLO-5", shortName: "PLO5", description: "5 hole cards, max action", players: "2-6 players", accent: "text-purple-400", bg: "from-purple-500/10 to-purple-500/5", border: "border-purple-500/20 hover:border-purple-500/40", icon: Club },
+const VARIANT_CARDS: { key: PokerVariant; name: string; shortName: string; description: string; players: string; difficulty: string; icon: any }[] = [
+  { key: "nlhe", name: "Texas Hold'em", shortName: "NLHE", description: "The classic. Two hole cards, five community cards. Master position, reads, and calculated aggression.", players: "2-9", difficulty: "All Levels", icon: Spade },
+  { key: "plo", name: "Omaha", shortName: "PLO", description: "Four hole cards, bigger hands, bigger pots. Must use exactly two from your hand.", players: "2-9", difficulty: "Intermediate", icon: Diamond },
+  { key: "short_deck", name: "Short Deck", shortName: "6+", description: "36-card deck, no cards below 6. Flush beats a full house. Fast and volatile.", players: "2-6", difficulty: "Advanced", icon: Heart },
+  { key: "plo5", name: "PLO-5", shortName: "PLO5", description: "Five hole cards, pot-limit betting. Maximum complexity, maximum action.", players: "2-6", difficulty: "Expert", icon: Club },
 ];
 
 function FormatBadge({ format }: { format: string }) {
-  const colors: Record<string, string> = {
-    cash: "bg-emerald-600/20 text-emerald-400 border-emerald-500/20",
-    sng: "bg-cyan-500/20 text-cyan-400 border-cyan-500/20",
-    heads_up: "bg-violet-500/20 text-violet-400 border-violet-500/20",
-    tournament: "bg-cyan-600/20 text-cyan-300 border-cyan-500/20",
-    bomb_pot: "bg-red-500/20 text-red-400 border-red-500/20",
-  };
   const labels: Record<string, string> = {
     cash: "CASH", sng: "SNG", heads_up: "H/U", tournament: "MTT", bomb_pot: "BOMB",
   };
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider border ${colors[format] || colors.cash}`}>
-      {labels[format] || "CASH"}
+    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+      {labels[format] || format.replace("_", " ").toUpperCase()}
     </span>
   );
 }
 
-function SeatDots({ current, max }: { current: number; max: number }) {
-  return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: max }).map((_, i) => (
-        <div
-          key={i}
-          className={`w-2 h-2 rounded-full transition-all ${
-            i < current
-              ? "bg-cyan-400 shadow-[0_0_6px_rgba(0,212,255,0.5)]"
-              : "bg-white/10 border border-white/5"
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
-
-const FORMAT_GRADIENT: Record<string, string> = {
-  cash: "from-emerald-500/8 via-transparent to-emerald-500/3",
-  sng: "from-cyan-500/8 via-transparent to-cyan-500/3",
-  heads_up: "from-violet-500/8 via-transparent to-violet-500/3",
-  tournament: "from-amber-500/8 via-transparent to-amber-500/3",
-  bomb_pot: "from-red-500/8 via-transparent to-red-500/3",
-};
-
-const FORMAT_ACCENT: Record<string, string> = {
-  cash: "border-emerald-500/15",
-  sng: "border-cyan-500/15",
-  heads_up: "border-violet-500/15",
-  tournament: "border-amber-500/15",
-  bomb_pot: "border-red-500/15",
-};
 
 function TableCard({ table, onClick, featured }: { table: TableInfo; onClick: () => void; featured?: boolean }) {
   const isFull = table.playerCount >= table.maxPlayers;
   const isPlaying = table.status === "playing";
-  const isHot = table.playerCount > 0 && table.playerCount >= table.maxPlayers * 0.7;
   const blindsLabel = `${table.smallBlind}/${table.bigBlind}`;
-  const gradient = FORMAT_GRADIENT[table.gameFormat] || FORMAT_GRADIENT.cash;
-  const accent = FORMAT_ACCENT[table.gameFormat] || FORMAT_ACCENT.cash;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02, y: -3, boxShadow: "0 0 24px rgba(0,212,255,0.08), 0 8px 32px rgba(0,0,0,0.4)" }}
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
       onClick={onClick}
       data-testid={`card-table-${table.id}`}
-      className={`relative rounded-xl p-5 cursor-pointer transition-all border bg-gradient-to-br ${gradient} ${
-        featured ? "border-cyan-500/25 ring-1 ring-cyan-500/10" : `${accent} hover:border-cyan-500/25`
-      } ${isFull ? "opacity-60" : ""}`}
-      style={{
-        background: featured
-          ? "linear-gradient(135deg, rgba(0,212,255,0.04), rgba(20,31,40,0.9), rgba(0,212,255,0.02))"
-          : "linear-gradient(135deg, rgba(20,31,40,0.7), rgba(16,24,36,0.9))",
-        boxShadow: featured
-          ? "0 0 30px rgba(0,212,255,0.06), 0 4px 24px rgba(0,0,0,0.3)"
-          : "0 4px 20px rgba(0,0,0,0.25)",
-      }}
+      className={cn(
+        "group cursor-pointer rounded-md p-5 transition-all duration-300 relative overflow-hidden",
+        "bg-surface-high/50 backdrop-blur-2xl border border-white/[0.06]",
+        "hover:border-primary/30 hover:shadow-[0_0_25px_rgba(129,236,255,0.12)]",
+        isPlaying && "border-l-2 border-l-secondary",
+        isFull && "opacity-60"
+      )}
     >
       {featured && (
         <div className="absolute -top-2.5 left-4 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 text-black flex items-center gap-1 shadow-lg">
@@ -149,78 +105,54 @@ function TableCard({ table, onClick, featured }: { table: TableInfo; onClick: ()
         </div>
       )}
 
-      {table.isPrivate && (
-        <div className="absolute top-3 right-3">
-          <Lock className="w-3.5 h-3.5 text-cyan-400/60" />
-        </div>
-      )}
-
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h3 className="font-bold text-sm text-cyan-400 tracking-wide truncate" data-testid={`text-table-name-${table.id}`}>{table.name}</h3>
-            <FormatBadge format={table.gameFormat} />
-            {isHot && !featured && (
-              <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/20 animate-pulse">
-                HOT
-              </span>
-            )}
-            {isFull && (
-              <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-500/20">
-                FULL
-              </span>
-            )}
-            {table.scheduledStartTime && new Date(table.scheduledStartTime) > new Date() && (
-              <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400 border border-purple-500/20">
-                Starts {new Date(table.scheduledStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-            {table.recurringSchedule && table.recurringSchedule.days?.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-400 border border-indigo-500/20">
-                {table.recurringSchedule.days.map(d => d.charAt(0).toUpperCase()).join("")} {table.recurringSchedule.startTime}–{table.recurringSchedule.endTime}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wider shrink-0 ${
-          isPlaying
-            ? "bg-green-500/20 text-green-400 border border-green-500/20"
-            : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
-        }`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${isPlaying ? "bg-green-500 animate-pulse" : "bg-cyan-500"}`} />
-          {isPlaying ? "Live" : "Open"}
+      <div className="flex justify-between items-start mb-3">
+        <span className="px-2 py-0.5 rounded bg-surface-lowest/80 text-[10px] font-bold uppercase tracking-widest text-primary">
+          <FormatBadge format={table.gameFormat} />
+        </span>
+        <div className="flex items-center gap-2">
+          {table.isPrivate && <Lock className="w-3.5 h-3.5 text-destructive" />}
+          <span className={cn(
+            "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full",
+            isPlaying
+              ? "bg-secondary/10 text-secondary"
+              : "bg-surface-lowest/60 text-muted-foreground"
+          )}>
+            {isPlaying ? "LIVE" : "OPEN"}
+          </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-3">
-        <div className="px-3 py-1.5 rounded-lg text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="text-[0.5rem] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Blinds</div>
-          <div className="text-sm font-bold text-white" data-testid={`text-blinds-${table.id}`}>{blindsLabel}</div>
-        </div>
-        <div className="px-3 py-1.5 rounded-lg text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="text-[0.5rem] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Buy-in</div>
-          <div className="text-sm font-bold text-white" data-testid={`text-buyin-${table.id}`}>
+      <h3 className="text-xl font-display font-bold text-white mb-1 group-hover:text-primary transition-colors" data-testid={`text-table-name-${table.id}`}>
+        {table.name}
+      </h3>
+
+      <div className="flex items-center gap-4 text-sm mb-4">
+        <span className="text-muted-foreground">
+          Stakes: <span className="text-foreground font-bold" data-testid={`text-blinds-${table.id}`}>{blindsLabel}</span>
+        </span>
+        <span className="text-muted-foreground">
+          Buy-in: <span className="text-foreground font-bold" data-testid={`text-buyin-${table.id}`}>
             {table.gameFormat === "sng" ? table.buyInAmount : `${table.minBuyIn}-${table.maxBuyIn}`}
-          </div>
-        </div>
+          </span>
+        </span>
         {table.allowBots && (
-          <div className="flex items-center gap-1 text-[0.5625rem] text-gray-500 px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)" }}>
-            <Bot className="w-3 h-3" />
-            Bots
-          </div>
+          <span className="flex items-center gap-1 text-muted-foreground text-xs">
+            <Bot className="w-3 h-3" /> Bots
+          </span>
         )}
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <SeatDots current={table.playerCount} max={table.maxPlayers} />
-          <span className="text-xs font-bold text-gray-300" data-testid={`text-players-${table.id}`}>
-            {table.playerCount}<span className="text-gray-600">/{table.maxPlayers}</span>
+      <div className="flex items-center justify-between pt-3 border-t border-white/[0.05]">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-primary" />
+          <span className="text-sm" data-testid={`text-players-${table.id}`}>
+            <span className="font-bold text-white">{table.playerCount}</span>
+            <span className="text-muted-foreground">/{table.maxPlayers}</span>
           </span>
         </div>
-        <div className="flex items-center gap-1 text-xs text-cyan-400/70 font-medium">
-          Join <ChevronRight className="w-3.5 h-3.5" />
-        </div>
+        <span className="text-primary text-xs font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          Join <ChevronRight className="w-3 h-3" />
+        </span>
       </div>
     </motion.div>
   );
@@ -248,11 +180,11 @@ function LobbyBannerCarousel() {
 
   if (validBanners.length === 0) {
     return (
-      <div className="relative w-full h-[80px] mb-4 rounded-xl overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.08), rgba(20,31,40,0.9), rgba(168,85,247,0.06))" }}>
+      <div className="relative w-full h-[80px] mb-6 rounded-md overflow-hidden bg-surface-high/40 border border-white/[0.06]">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <Flame className="w-5 h-5 text-cyan-400/40 mx-auto mb-1" />
-            <p className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400/50">Games & Tournaments</p>
+            <Flame className="w-5 h-5 text-primary/40 mx-auto mb-1" />
+            <p className="text-[0.625rem] font-bold uppercase tracking-wider text-primary/50">Games & Tournaments</p>
           </div>
         </div>
       </div>
@@ -260,7 +192,7 @@ function LobbyBannerCarousel() {
   }
 
   return (
-    <div className="relative w-full h-[80px] mb-4 rounded-xl overflow-hidden">
+    <div className="relative w-full h-[80px] mb-6 rounded-md overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.img
           key={current}
@@ -282,7 +214,7 @@ function LobbyBannerCarousel() {
             key={i}
             onClick={() => setCurrent(i)}
             data-testid={`button-banner-dot-${i}`}
-            className={`w-1.5 h-1.5 rounded-full transition-all ${i === current ? 'bg-cyan-400 w-4' : 'bg-white/30'}`}
+            className={`w-1.5 h-1.5 rounded-full transition-all ${i === current ? 'bg-primary w-4' : 'bg-white/30'}`}
           />
         ))}
       </div>
@@ -411,102 +343,73 @@ export default function Lobby() {
 
   return (
     <DashboardLayout title="Games & Tournaments">
-      <div className="px-8 pb-8 relative">
-        {/* Felt texture background */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <img
-            src={feltBg}
-            alt=""
-            loading="lazy"
-            className="w-full h-48 object-cover opacity-10"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#111b2a]/85 to-[#111b2a]" />
-        </div>
-        {/* Static Hero Section */}
+      <div className="px-6 md:px-8 pb-8 relative">
+        {/* Hero Section — Stitch style */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-4 relative"
+          transition={{ duration: 0.6 }}
+          className="mb-6 relative pt-2"
         >
-          <div className="flex flex-col items-start gap-1.5">
-            <span
-              className="inline-block px-2.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-[0.2em]"
-              style={{
-                background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(168,85,247,0.12))",
-                border: "1px solid rgba(0,212,255,0.15)",
-                color: "rgba(0,212,255,0.9)",
-              }}
-            >
-              High Stakes. Zero Limits.
-            </span>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
-              Find Your Table
-            </h1>
-            <p className="text-xs text-gray-500 max-w-md">
-              Browse live cash games, tournaments, and sit-and-go tables. Filter by format, stakes, or variant to find the perfect game.
-            </p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4 backdrop-blur-md border border-primary/20">
+            <Flame className="w-3.5 h-3.5 text-destructive animate-pulse" />
+            <span>High Stakes. Zero Limits.</span>
           </div>
+          <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-3 leading-none tracking-tighter">
+            SELECT YOUR <br />
+            <span className="text-transparent bg-clip-text gradient-primary neon-text-glow">GAME MODE</span>
+          </h1>
+          <p className="text-muted-foreground text-base max-w-lg font-body">
+            Choose your variant. Find your table. Enter the vault.
+          </p>
         </motion.div>
 
         {/* Banner Carousel */}
         <LobbyBannerCarousel />
 
-        {/* Actions row */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="flex items-center justify-between mb-4"
-        >
-          <div className="flex items-center gap-4">
-            <h2 className="text-sm font-bold tracking-wider text-gray-400 uppercase">
-              Open Tables
-              <span className="ml-2 text-cyan-400">{filteredTables.length}</span>
+        {/* Active Tables header + actions */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-3xl font-display font-bold text-white flex items-center gap-3">
+              <Zap className="w-7 h-7 text-primary" />
+              Active Tables
             </h2>
+            <p className="text-muted-foreground mt-1">Jump right into the action.</p>
           </div>
 
           <div className="flex items-center gap-2">
             {user?.role === "admin" && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <NeonButton
+                variant={aiEnabled ? "secondary" : "ghost"}
+                size="sm"
                 onClick={() => setShowAISettings(!showAISettings)}
-                className={`glass rounded-lg px-4 py-2 text-[0.625rem] font-bold tracking-wider border transition-all flex items-center gap-2 ${
-                  aiEnabled
-                    ? "text-purple-400 border-purple-500/20 hover:border-purple-500/40"
-                    : "text-gray-400 border-white/5 hover:border-white/15 hover:text-white"
-                }`}
+                className="gap-1.5"
               >
                 <Brain className="w-3.5 h-3.5" />
                 AI BOTS
-                {aiEnabled && <span className="w-1.5 h-1.5 rounded-full bg-green-400" />}
-              </motion.button>
+                {aiEnabled && <span className="w-1.5 h-1.5 rounded-full bg-secondary" />}
+              </NeonButton>
             )}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <NeonButton
+              variant="secondary"
+              size="sm"
               onClick={() => navigate("/game")}
-              className="glass rounded-lg px-4 py-2 text-[0.625rem] font-bold tracking-wider text-gray-400 hover:text-white border border-white/5 hover:border-white/15 transition-all flex items-center gap-2"
+              className="gap-1.5"
             >
               <Bot className="w-3.5 h-3.5" />
               PLAY OFFLINE
-            </motion.button>
+            </NeonButton>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <NeonButton
+              size="sm"
               onClick={() => { setDefaultPrivate(false); setShowCreateTable(true); }}
-              className="rounded-lg px-5 py-2 text-[0.625rem] font-bold tracking-wider text-black flex items-center gap-2"
-              style={{
-                background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
-                boxShadow: "0 0 20px rgba(0,212,255,0.3)",
-              }}
+              className="gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
               CREATE TABLE
-            </motion.button>
+            </NeonButton>
           </div>
-        </motion.div>
+        </div>
 
         {/* AI Settings Panel (admin only) */}
         <AnimatePresence>
@@ -517,13 +420,8 @@ export default function Lobby() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden mb-4"
             >
-              <div
-                className="rounded-xl p-4"
-                style={{
-                  background: "linear-gradient(135deg, rgba(88,28,135,0.1), rgba(20,31,40,0.8))",
-                  border: "1px solid rgba(168,85,247,0.15)",
-                }}
-              >
+              <div className="rounded-md p-4 bg-surface-high/50 backdrop-blur-xl border border-purple-500/15">
+
                 <div className="flex items-center gap-2 mb-3">
                   <Brain className="w-4 h-4 text-purple-400" />
                   <span className="text-xs font-bold uppercase tracking-wider text-purple-400">AI Bot Configuration</span>
@@ -544,8 +442,7 @@ export default function Lobby() {
                       value={aiKeyInput}
                       onChange={(e) => setAiKeyInput(e.target.value)}
                       placeholder={aiHasKey ? "Key is set (enter new to replace)" : "sk-ant-..."}
-                      className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-purple-500/30"
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
+                      className="w-full pl-9 pr-4 py-2 rounded-md text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-purple-500/30 bg-surface-highest/50 border border-white/[0.06]"
                     />
                   </div>
                   <button
@@ -605,128 +502,96 @@ export default function Lobby() {
         </AnimatePresence>
 
         {/* Search bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative max-w-xs mb-4"
-        >
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+        <div className="relative max-w-sm mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search tables..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs text-white placeholder-gray-500 outline-none transition-all focus:ring-1 focus:ring-amber-500/30"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(0,212,255,0.15)" }}
+            className="w-full bg-surface-high/50 border border-white/[0.06] rounded-md pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-primary/30 transition-all"
           />
-        </motion.div>
+        </div>
 
-        {/* Game Variant Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"
-        >
+        {/* Game Variant Cards — Stitch glassmorphic style */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {VARIANT_CARDS.map((variant, i) => {
             const Icon = variant.icon;
             const isActive = activeVariant === variant.key;
             const variantCount = tables.filter(t => (t.pokerVariant || "nlhe").toLowerCase() === variant.key).length;
             return (
-              <motion.button
+              <motion.div
                 key={variant.key}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                whileHover={{ scale: 1.03, y: -2 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setActiveVariant(activeVariant === variant.key ? "all" : variant.key)}
-                className={`relative rounded-xl p-3 text-left transition-all border bg-gradient-to-br ${variant.bg} ${
-                  isActive
-                    ? `${variant.border.split(" ")[0]} ring-1 ring-current/10 shadow-lg`
-                    : `${variant.border}`
-                }`}
-                style={{
-                  background: isActive
-                    ? undefined
-                    : "linear-gradient(135deg, rgba(20,31,40,0.7), rgba(16,24,36,0.9))",
-                }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
               >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isActive ? "bg-white/10" : "bg-white/5"}`}>
-                    <Icon className={`w-3.5 h-3.5 ${variant.accent}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-[0.625rem] font-bold uppercase tracking-wider ${isActive ? variant.accent : "text-gray-300"}`}>
-                      {variant.name}
-                    </div>
-                    <div className="text-[0.5rem] text-gray-600 font-bold uppercase tracking-wider">{variant.shortName}</div>
-                  </div>
-                </div>
-                <p className="text-[0.5rem] text-gray-500 mb-1">{variant.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[0.5rem] text-gray-600">{variant.players}</span>
-                  {variantCount > 0 && (
-                    <span className={`text-[0.5rem] font-bold ${variant.accent}`}>{variantCount} live</span>
+                <div
+                  onClick={() => setActiveVariant(activeVariant === variant.key ? "all" : variant.key)}
+                  className={cn(
+                    "group cursor-pointer relative overflow-hidden rounded-md transition-all duration-300",
+                    "bg-surface-high/60 backdrop-blur-2xl",
+                    isActive
+                      ? "ring-1 ring-primary shadow-[0_0_30px_rgba(129,236,255,0.25)]"
+                      : "border border-white/[0.06] hover:border-primary/30 hover:shadow-[0_0_20px_rgba(129,236,255,0.1)]"
                   )}
+                >
+                  <div className="relative h-28 overflow-hidden bg-gradient-to-b from-surface-highest/80 to-surface-high/40 flex items-center justify-center">
+                    <Icon className="w-16 h-16 text-primary/20 group-hover:text-primary/30 transition-colors duration-500 group-hover:scale-110" />
+                    <div className="absolute top-3 right-3">
+                      <span className="px-2 py-0.5 rounded-full bg-surface-lowest/80 backdrop-blur-md text-[10px] font-bold uppercase tracking-widest text-primary border border-primary/20">
+                        {variant.difficulty}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 pt-2">
+                    <h3 className="text-lg font-display font-bold text-white group-hover:text-primary transition-colors mb-1">
+                      {variant.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
+                      {variant.description}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                        <Users className="w-3 h-3" /> {variant.players} Players
+                      </span>
+                      <span className="text-primary text-xs font-bold flex items-center gap-1 group-hover:gap-2 transition-all">
+                        {variantCount > 0 && <span className="text-secondary text-[10px]">{variantCount} live</span>}
+                        Play <ChevronRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                {isActive && (
-                  <motion.div
-                    layoutId="variant-indicator"
-                    className="absolute inset-0 rounded-xl border-2"
-                    style={{ borderColor: "currentColor", opacity: 0.3 }}
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                  />
-                )}
-              </motion.button>
+              </motion.div>
             );
           })}
-        </motion.div>
+        </div>
 
-        {/* Format tab bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-1 mb-5 p-1 glass rounded-xl border border-white/5 w-fit"
-        >
+        {/* Filter pills — Stitch style */}
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <Search className="w-4 h-4 text-muted-foreground mr-1" />
           {FORMAT_TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeFormat === tab.key;
-            const count = tab.key === "all" ? tables.length : tables.filter(t => (t.gameFormat || "cash") === tab.key).length;
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveFormat(tab.key)}
                 data-testid={`button-format-${tab.key}`}
-                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5",
                   isActive
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(0,212,255,0.1)]"
-                    : "text-gray-500 hover:text-gray-300 border border-transparent hover:bg-white/5"
-                }`}
+                    ? "bg-primary/15 text-primary border border-primary/30"
+                    : "bg-surface-high/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
+                )}
               >
                 <Icon className="w-3 h-3" />
                 {tab.label}
-                {count > 0 && (
-                  <span className={`min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[0.5rem] font-bold ${
-                    isActive
-                      ? "bg-cyan-500/30 text-cyan-300"
-                      : "bg-white/10 text-gray-400"
-                  }`}>
-                    {count}
-                  </span>
-                )}
               </button>
             );
           })}
-        </motion.div>
-
-        {/* Stake-level filter pills */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="flex items-center gap-1.5 mb-5 flex-wrap"
-        >
-          <DollarSign className="w-3 h-3 text-amber-500/50 mr-1" />
+          <div className="w-px h-5 bg-white/10 mx-1" />
           {STAKE_TABS.map(stake => {
             const isActive = activeStakeLevel === stake.key;
             return (
@@ -734,22 +599,18 @@ export default function Lobby() {
                 key={stake.key}
                 onClick={() => setActiveStakeLevel(stake.key)}
                 data-testid={`button-stake-${stake.key}`}
-                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200",
                   isActive
-                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/25 shadow-[0_0_10px_rgba(245,158,11,0.1)]"
-                    : "text-gray-500 hover:text-gray-300 border border-white/5 hover:bg-white/5 hover:border-amber-500/15"
-                }`}
+                    ? "bg-secondary/15 text-secondary border border-secondary/30"
+                    : "bg-surface-high/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
+                )}
               >
                 {stake.label}
-                {isActive && stake.key !== "all" && (
-                  <span className="text-[0.45rem] text-amber-500/60 font-medium normal-case tracking-normal">
-                    {stake.description}
-                  </span>
-                )}
               </button>
             );
           })}
-        </motion.div>
+        </div>
 
         {/* Quick play cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
@@ -765,15 +626,15 @@ export default function Lobby() {
                 navigate("/game");
               }
             }}
-            className="glass rounded-xl p-4 border border-cyan-500/10 hover:border-cyan-500/20 cursor-pointer transition-all"
+            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-cyan-400" />
+              <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <div className="text-xs font-bold text-white uppercase tracking-wider">Quick Match</div>
-                <div className="text-[0.5625rem] text-gray-500">{tables.some(t => t.playerCount < t.maxPlayers) ? "Join an open table" : "Play offline vs bots"}</div>
+                <div className="text-xs font-display font-bold text-white uppercase tracking-wider">Quick Match</div>
+                <div className="text-[0.5625rem] text-muted-foreground">{tables.some(t => t.playerCount < t.maxPlayers) ? "Join an open table" : "Play offline vs bots"}</div>
               </div>
             </div>
           </motion.div>
@@ -800,15 +661,15 @@ export default function Lobby() {
                 startingChips: 1500,
               });
             }}
-            className="glass rounded-xl p-4 border border-cyan-500/10 hover:border-cyan-500/20 cursor-pointer transition-all"
+            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-cyan-400" />
+              <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <div className="text-xs font-bold text-white uppercase tracking-wider">Sit & Go</div>
-                <div className="text-[0.5625rem] text-gray-500">Quick 6-max, 500 buy-in</div>
+                <div className="text-xs font-display font-bold text-white uppercase tracking-wider">Sit & Go</div>
+                <div className="text-[0.5625rem] text-muted-foreground">Quick 6-max, 500 buy-in</div>
               </div>
             </div>
           </motion.div>
@@ -819,15 +680,15 @@ export default function Lobby() {
             transition={{ delay: 0.1 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => { setDefaultPrivate(true); setShowCreateTable(true); }}
-            className="glass rounded-xl p-4 border border-cyan-500/10 hover:border-cyan-500/20 cursor-pointer transition-all"
+            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                <Users className="w-5 h-5 text-cyan-400" />
+              <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Users className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <div className="text-xs font-bold text-white uppercase tracking-wider">Private Game</div>
-                <div className="text-[0.5625rem] text-gray-500">Create a friends-only table</div>
+                <div className="text-xs font-display font-bold text-white uppercase tracking-wider">Private Game</div>
+                <div className="text-[0.5625rem] text-muted-foreground">Create a friends-only table</div>
               </div>
             </div>
           </motion.div>
@@ -864,70 +725,35 @@ export default function Lobby() {
 
         {/* Table grid */}
         {loading ? (
-          <div className="text-center py-20">
-            <div className="spinner spinner-lg mx-auto mb-4" />
-            <p className="text-sm text-gray-500">Loading tables...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-44 bg-surface-high/40 backdrop-blur-xl rounded-md animate-pulse" />
+            ))}
           </div>
         ) : filteredTables.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex justify-center py-12"
-          >
-            <div className="rounded-2xl px-12 py-10 text-center max-w-md" style={{ background: "linear-gradient(135deg, rgba(20,31,40,0.8), rgba(16,24,36,0.95))", border: "1px solid rgba(255,255,255,0.05)" }}>
-              <div className="w-20 h-20 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: "rgba(0,212,255,0.05)", border: "1px solid rgba(0,212,255,0.1)" }}>
-                <ImageOff className="w-8 h-8 text-cyan-400/30" />
-              </div>
-              <img
-                src="/attached_assets/generated_images/empty/empty_no_tables.webp"
-                alt=""
-                className="w-40 h-28 object-cover rounded-xl mx-auto mb-4 opacity-60 hidden"
-                onLoad={(e) => {
-                  (e.target as HTMLImageElement).classList.remove('hidden');
-                  const prev = (e.target as HTMLImageElement).previousElementSibling as HTMLElement;
-                  if (prev) prev.style.display = 'none';
-                }}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-              <p className="text-sm text-gray-300 mb-1 font-medium" data-testid="text-empty-state">
-                {activeFormat === "all" ? "No tables yet" : `No ${activeFormat.replace("_", " ")} tables`}
-              </p>
-              <p className="text-xs text-gray-600 mb-6">Create the first table or play offline vs bots</p>
-              <div className="flex items-center gap-3 justify-center">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate("/game")}
-                  data-testid="button-play-bots-empty"
-                  className="rounded-lg px-5 py-2.5 text-xs font-bold tracking-wider text-gray-300 border border-white/10 hover:border-white/15 transition-all flex items-center gap-2"
-                  style={{ background: "rgba(255,255,255,0.05)" }}
-                >
-                  <Bot className="w-4 h-4" />
-                  PLAY VS BOTS
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowCreateTable(true)}
-                  data-testid="button-create-table-empty"
-                  className="rounded-lg px-5 py-2.5 text-xs font-bold tracking-wider text-black flex items-center gap-2"
-                  style={{
-                    background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
-                    boxShadow: "0 0 20px rgba(0,212,255,0.3)",
-                  }}
-                >
-                  <Plus className="w-4 h-4" />
-                  CREATE TABLE
-                </motion.button>
-              </div>
+          <div className="flex flex-col items-center justify-center py-16 text-center bg-surface-low/30 backdrop-blur-xl rounded-md">
+            <LayoutGrid className="w-14 h-14 text-muted-foreground mb-4 opacity-30" />
+            <h3 className="text-xl font-display font-bold text-white mb-2" data-testid="text-empty-state">
+              {activeFormat === "all" ? "No tables found" : `No ${activeFormat.replace("_", " ")} tables`}
+            </h3>
+            <p className="text-muted-foreground mb-6 text-sm">Try adjusting your filters or create a new table.</p>
+            <div className="flex items-center gap-3">
+              <NeonButton variant="secondary" onClick={() => navigate("/game")} data-testid="button-play-bots-empty" className="gap-2">
+                <Bot className="w-4 h-4" />
+                Play vs Bots
+              </NeonButton>
+              <NeonButton onClick={() => setShowCreateTable(true)} data-testid="button-create-table-empty" className="gap-2">
+                <Plus className="w-4 h-4" />
+                Create Table
+              </NeonButton>
             </div>
-          </motion.div>
+          </div>
         ) : (
           <>
             <div className="flex items-center gap-2 mb-3">
-              <LayoutGrid className="w-3.5 h-3.5 text-gray-500" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">All Tables</h3>
-              <div className="flex-1 h-px bg-gradient-to-r from-white/5 to-transparent" />
+              <LayoutGrid className="w-3.5 h-3.5 text-muted-foreground" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">All Tables</h3>
+              <div className="flex-1 h-px bg-gradient-to-r from-white/[0.06] to-transparent" />
             </div>
             <motion.div
               initial={{ opacity: 0 }}
@@ -970,18 +796,13 @@ export default function Lobby() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-sm rounded-xl p-6"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.95), rgba(16,24,36,0.98))",
-                border: "1px solid rgba(255,255,255,0.1)",
-                boxShadow: "0 25px 80px rgba(0,0,0,0.5)",
-              }}
+              className="relative w-full max-w-sm glass-card p-6"
             >
               <div className="flex items-center gap-3 mb-4">
-                <Lock className="w-5 h-5 text-cyan-400" />
+                <Lock className="w-5 h-5 text-primary" />
                 <div>
-                  <h3 className="text-sm font-bold text-white">Private Table</h3>
-                  <p className="text-[0.625rem] text-gray-500">{passwordModal.tableName}</p>
+                  <h3 className="text-sm font-display font-bold text-white">Private Table</h3>
+                  <p className="text-[0.625rem] text-muted-foreground">{passwordModal.tableName}</p>
                 </div>
               </div>
               <input
@@ -991,23 +812,15 @@ export default function Lobby() {
                 onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
                 placeholder="Enter table password..."
                 autoFocus
-                className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none mb-4"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
+                className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-4"
               />
               <div className="flex gap-2">
-                <button
-                  onClick={() => setPasswordModal(null)}
-                  className="flex-1 py-2 rounded-lg text-xs font-bold text-gray-400 border border-white/10 hover:border-white/15 transition-all"
-                >
+                <NeonButton variant="ghost" onClick={() => setPasswordModal(null)} className="flex-1">
                   Cancel
-                </button>
-                <button
-                  onClick={handlePasswordSubmit}
-                  className="flex-1 py-2 rounded-lg text-xs font-bold text-black"
-                  style={{ background: "linear-gradient(135deg, #00d4ff, #66e5ff)" }}
-                >
+                </NeonButton>
+                <NeonButton onClick={handlePasswordSubmit} className="flex-1">
                   Join Table
-                </button>
+                </NeonButton>
               </div>
             </motion.div>
           </motion.div>

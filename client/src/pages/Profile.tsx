@@ -81,7 +81,7 @@ function getPlayerLevel(handsPlayed: number): number {
 }
 
 const STAT_CARDS = [
-  { key: "handsPlayed", label: "Hands Played", icon: Gamepad2, gradient: "from-cyan-500/15 to-blue-600/15", borderColor: "border-cyan-500/20", textColor: "text-cyan-400", glowColor: "rgba(0,212,255,0.12)" },
+  { key: "handsPlayed", label: "Hands Played", icon: Gamepad2, gradient: "from-primary/15 to-blue-600/15", borderColor: "border-primary/20", textColor: "text-primary", glowColor: "rgba(0,212,255,0.12)" },
   { key: "potsWon", label: "Pots Won", icon: Trophy, gradient: "from-green-500/15 to-emerald-600/15", borderColor: "border-green-500/20", textColor: "text-green-400", glowColor: "rgba(34,197,94,0.12)" },
   { key: "winRate", label: "Win Rate", icon: TrendingUp, gradient: "from-amber-500/15 to-yellow-600/15", borderColor: "border-amber-500/20", textColor: "text-amber-400", glowColor: "rgba(245,158,11,0.12)", suffix: "%" },
   { key: "bestWinStreak", label: "Best Streak", icon: Zap, gradient: "from-purple-500/15 to-violet-600/15", borderColor: "border-purple-500/20", textColor: "text-purple-400", glowColor: "rgba(168,85,247,0.12)" },
@@ -137,9 +137,9 @@ export default function Profile() {
           className="relative overflow-hidden rounded-2xl mx-4 md:mx-8 mb-6"
           style={{ minHeight: 200 }}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628] via-[#0d1f3c] to-[#0a1628]" />
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/8 via-transparent to-purple-500/8" />
-          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-surface-high to-background" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.08] via-transparent to-purple-500/8" />
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
 
           <img
@@ -148,9 +148,9 @@ export default function Profile() {
             loading="lazy"
             className="absolute -top-6 -right-10 w-52 h-52 object-contain opacity-10 pointer-events-none rotate-12"
           />
-          <div className="absolute -top-32 -right-32 w-80 h-80 bg-cyan-500/5 rounded-full blur-[80px] pointer-events-none" />
+          <div className="absolute -top-32 -right-32 w-80 h-80 bg-primary/5 rounded-full blur-[80px] pointer-events-none" />
           <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-purple-500/5 rounded-full blur-[60px] pointer-events-none" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[200px] bg-cyan-500/3 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[200px] bg-primary/3 rounded-full blur-[100px] pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 p-8 md:p-10">
             <div className="relative">
@@ -160,13 +160,13 @@ export default function Profile() {
                   displayName={user?.displayName || user?.username || "Player"}
                   size="xl"
                 />
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-400 border-2 border-[#0a1628] shadow-[0_0_8px_rgba(74,222,128,0.6)]" />
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-400 border-2 border-background shadow-[0_0_8px_rgba(74,222,128,0.6)]" />
               </div>
             </div>
 
             <div className="flex-1 text-center md:text-left">
               <div className="flex items-center gap-3 justify-center md:justify-start">
-                <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight" data-testid="text-username">
+                <h2 className="text-2xl md:text-3xl font-display font-black text-white tracking-tight" data-testid="text-username">
                   {user?.displayName || user?.username || "Player"}
                 </h2>
                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.625rem] font-bold uppercase tracking-wider bg-gradient-to-r ${rank.bgClass} ${rank.borderColor} border ${rank.color}`}>
@@ -181,14 +181,14 @@ export default function Profile() {
               </div>
               <p className="text-sm text-gray-500 mt-1">@{user?.username}</p>
               <div className="flex items-center gap-4 mt-3 justify-center md:justify-start">
-                <span className="flex items-center gap-1.5 text-sm font-bold text-cyan-400" data-testid="text-chip-balance">
+                <span className="flex items-center gap-1.5 text-sm font-bold text-primary" data-testid="text-chip-balance">
                   <Coins className="w-4 h-4" />
                   {(user?.chipBalance ?? 0).toLocaleString()} chips
                 </span>
                 <span className={`px-2.5 py-0.5 rounded text-[0.625rem] font-bold uppercase tracking-wider ${
                   user?.role === "admin"
                     ? "bg-purple-500/15 text-purple-400 border border-purple-500/20"
-                    : "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20"
+                    : "bg-primary/15 text-primary border border-primary/20"
                 }`} data-testid="text-role">
                   {user?.role || "member"}
                 </span>
@@ -206,12 +206,12 @@ export default function Profile() {
             className="mb-6"
           >
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-cyan-500/70" />
+              <TrendingUp className="w-4 h-4 text-primary/70" />
               Your Statistics
             </h3>
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : statsError ? (
               <div className="flex items-center justify-center py-12">
@@ -230,7 +230,6 @@ export default function Profile() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15 + i * 0.05 }}
                         className={`relative text-center p-5 rounded-xl bg-gradient-to-br ${card.gradient} border ${card.borderColor} overflow-hidden group hover:scale-[1.02] transition-transform`}
-                        style={{ boxShadow: `0 0 20px ${card.glowColor}` }}
                         data-testid={`stat-card-${card.key}`}
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
@@ -319,7 +318,7 @@ export default function Profile() {
                     {!unlocked && (
                       <div className="w-12 h-1 rounded-full bg-white/10 overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-cyan-500/60 to-cyan-400/60 transition-all"
+                          className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary/60 transition-all"
                           style={{ width: `${progressPct}%` }}
                         />
                       </div>
@@ -338,7 +337,7 @@ export default function Profile() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 4, scale: 0.95 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 px-3 py-2 rounded-lg bg-[#0d1f3c] border border-white/10 shadow-xl whitespace-nowrap"
+                          className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 px-3 py-2 rounded-lg bg-surface-low border border-white/10 shadow-xl whitespace-nowrap"
                         >
                           <div className="text-[0.625rem] font-bold text-white">{badge.criteria}</div>
                           {!unlocked && (
@@ -346,7 +345,7 @@ export default function Profile() {
                               {prog.current.toLocaleString()}/{prog.max.toLocaleString()}
                             </div>
                           )}
-                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-[#0d1f3c] border-r border-b border-white/10" />
+                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-surface-low border-r border-b border-white/10" />
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -364,7 +363,7 @@ export default function Profile() {
             className="glass rounded-xl p-6 border border-white/5 mb-6"
           >
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-cyan-500/70" />
+              <Clock className="w-4 h-4 text-primary/70" />
               Recent Sessions
             </h3>
             <div className="space-y-2">
@@ -374,8 +373,8 @@ export default function Profile() {
                 { time: "2 days ago", hands: 42, result: "+3,800", positive: true },
               ].map((session, i) => (
                 <div key={i} className="flex items-center gap-4 p-3.5 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors" data-testid={`session-row-${i}`}>
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500/10 to-purple-500/10 flex items-center justify-center">
-                    <Gamepad2 className="w-4 h-4 text-cyan-400/60" />
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center">
+                    <Gamepad2 className="w-4 h-4 text-primary/60" />
                   </div>
                   <div className="flex-1">
                     <div className="text-xs font-semibold text-white">{session.time}</div>
@@ -400,7 +399,7 @@ export default function Profile() {
             className="grid grid-cols-2 md:grid-cols-5 gap-4"
           >
             {[
-              { label: "Wallet", icon: Wallet, color: "cyan", path: "/wallet", gradient: "from-cyan-500/10 to-blue-600/10", border: "hover:border-cyan-500/30", iconBg: "bg-cyan-500/10" },
+              { label: "Wallet", icon: Wallet, color: "cyan", path: "/wallet", gradient: "from-primary/10 to-blue-600/10", border: "hover:border-primary/30", iconBg: "bg-primary/10" },
               { label: "Transactions", icon: Coins, color: "green", path: "/wallet?tab=history", gradient: "from-green-500/10 to-emerald-600/10", border: "hover:border-green-500/30", iconBg: "bg-green-500/10" },
               { label: "Analytics", icon: BookOpen, color: "amber", path: "/analytics", gradient: "from-amber-500/10 to-yellow-600/10", border: "hover:border-amber-500/30", iconBg: "bg-amber-500/10" },
               { label: "My Club", icon: Users, color: "green", path: "/club", gradient: "from-green-500/10 to-emerald-600/10", border: "hover:border-green-500/30", iconBg: "bg-green-500/10" },
@@ -510,7 +509,7 @@ function TauntVoicePicker({ currentVoice }: { currentVoice: string }) {
               <div className="text-[0.5rem] text-gray-500 leading-tight mb-2">{voice.description}</div>
               <button
                 onClick={(e) => { e.stopPropagation(); preview(voice.id); }}
-                className="flex items-center gap-1 text-[0.5625rem] text-cyan-400 hover:text-cyan-300 transition-colors"
+                className="flex items-center gap-1 text-[0.5625rem] text-primary hover:text-primary/80 transition-colors"
                 data-testid={`button-preview-${voice.id}`}
               >
                 <Volume2 className="w-2.5 h-2.5" />

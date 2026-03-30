@@ -6,8 +6,7 @@ import type { Player } from "@/lib/poker-types";
 import { TABLE_SEATS, DEALER_POSITIONS } from "@/lib/table-constants";
 import { useGameUI } from "@/lib/game-ui-context";
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
-
-import pokerTableImg from "@assets/generated_images/poker_table_clean_topdown.webp";
+import { DollarSign } from "lucide-react";
 
 interface ImageTableProps {
   communityCards: CardType[];
@@ -148,18 +147,39 @@ export function ImageTable({
 
   return (
     <>
-      {/* ── Clean table background ── */}
-      <img
-        src={pokerTableImg}
-        alt=""
-        draggable={false}
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{
-          zIndex: 1,
-          objectFit: "contain",
-          objectPosition: "center",
-        }}
-      />
+      {/* ══ CSS-Rendered Poker Table (Stitch style) ══ */}
+      <div className="absolute z-[1]" style={{
+        left: "50%", top: "48%",
+        transform: "translate(-50%, -50%)",
+        width: "62%", paddingBottom: "36%",
+      }}>
+        {/* Main felt surface — radial gradient green */}
+        <div className="absolute inset-0 rounded-[50%]" style={{
+          background: "radial-gradient(ellipse at 50% 40%, #1a3a2a 0%, #0f2a1c 30%, #0a1f15 50%, #071a10 70%, #040e08 100%)",
+          boxShadow: "inset 0 0 80px rgba(0,0,0,0.5), inset 0 -8px 30px rgba(0,0,0,0.3), 0 8px 40px rgba(0,0,0,0.7), 0 0 100px rgba(0,0,0,0.3)",
+          border: "7px solid #18181e",
+        }}>
+          {/* Gold border ring */}
+          <div className="absolute inset-[5px] rounded-[50%]" style={{
+            border: "2.5px solid #d4af37",
+            boxShadow: "0 0 12px rgba(212,175,55,0.25), inset 0 0 12px rgba(212,175,55,0.08)",
+          }} />
+          {/* Inner accent ring */}
+          <div className="absolute inset-[14px] rounded-[50%]" style={{
+            border: "1px solid rgba(212,175,55,0.12)",
+          }} />
+          {/* Shine reflection */}
+          <div className="absolute inset-0 rounded-[50%]" style={{
+            background: "radial-gradient(ellipse at 40% 30%, rgba(255,255,255,0.03) 0%, transparent 50%)",
+          }} />
+          {/* Subtle center watermark */}
+          <div className="absolute" style={{ left: "50%", top: "55%", transform: "translate(-50%, -50%)" }}>
+            <span className="text-[#d4af37]/[0.08] font-display font-black text-2xl tracking-[0.4em] uppercase select-none pointer-events-none" style={{ textShadow: "0 0 15px rgba(212,175,55,0.05)" }}>
+              POKER
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* ── Game elements overlay (z-index: 10) ── */}
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
@@ -182,7 +202,7 @@ export function ImageTable({
               <div
                 className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all hover:border-white/30"
                 style={{
-                  borderColor: "rgba(255,255,255,0.15)",
+                  borderColor: "rgba(212,175,55,0.2)",
                   background: "radial-gradient(circle, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 100%)",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.3), inset 0 1px 3px rgba(0,0,0,0.2)",
                 }}
@@ -211,11 +231,13 @@ export function ImageTable({
             >
               <div className="w-[50px] h-[70px] rounded-md overflow-hidden"
                 style={{
-                  background: "linear-gradient(145deg, #1a1040 0%, #0d0820 40%, #1a0a30 70%, #0a0618 100%)",
-                  border: "1.5px solid rgba(0,212,255,0.4)",
+                  background: "linear-gradient(135deg, #1e3a5f, #0d1b2a)",
+                  border: "2px solid rgba(0,243,255,0.3)",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
                 }}
-              />
+              >
+                <div className="w-full h-full" style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0,243,255,0.08) 4px, rgba(0,243,255,0.08) 8px)" }} />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -230,7 +252,7 @@ export function ImageTable({
               transform: "translate(-50%, -50%)",
               width: "420px",
               height: "180px",
-              background: "radial-gradient(ellipse at center, rgba(0,212,255,0.06) 0%, rgba(0,212,255,0.02) 40%, transparent 70%)",
+              background: "radial-gradient(ellipse at center, rgba(212,175,55,0.06) 0%, rgba(212,175,55,0.02) 40%, transparent 70%)",
               zIndex: 9,
             }}
           />
@@ -272,7 +294,7 @@ export function ImageTable({
           })()}
         </AnimatePresence>
 
-        {/* ── Pot display with chip stacks ── */}
+        {/* ── Pot display (Stitch style — gold glass pill) ── */}
         <AnimatePresence>
           {pot > 0 && (
             <motion.div
@@ -281,77 +303,81 @@ export function ImageTable({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
               transition={compactMode ? { duration: 0 } : undefined}
-              className="absolute flex items-center gap-2.5"
+              className="absolute flex flex-col items-center gap-1"
               style={{ left: "50%", top: "27%", transform: "translate(-50%, -50%)" }}
             >
-              {/* 3D chip stacks */}
-              {!compactMode && (
-                <motion.div
-                  initial={{ scale: 0.7 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="flex items-end gap-1"
-                  style={{ perspective: "120px" }}
+              {/* Phase label */}
+              {dealPhase && (
+                <span
+                  className="text-[0.625rem] font-black uppercase tracking-[0.15em] text-[#00f3ff]"
+                  style={{ textShadow: "0 0 10px rgba(0,243,255,0.4)" }}
                 >
-                  {getPotChipStacks(animatedPot).map((stack, si) => (
-                    <div key={si} className="flex flex-col-reverse items-center">
-                      {Array.from({ length: stack.count }).map((_, ci) => (
-                        <PotChip key={ci} chip={stack} index={ci} />
-                      ))}
-                    </div>
-                  ))}
-                </motion.div>
+                  {dealPhase === "pre-flop" ? "Pre-Flop" : dealPhase === "flop" ? "Flop" : dealPhase === "turn" ? "Turn" : dealPhase === "river" ? "River" : ""}
+                </span>
               )}
-              {/* Pot label with pulse glow on change */}
-              <motion.div
-                animate={potAnimating && !compactMode ? {
-                  boxShadow: [
-                    "0 0 24px rgba(255,215,0,0.25), 0 0 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
-                    "0 0 40px rgba(255,215,0,0.6), 0 0 80px rgba(255,215,0,0.25), 0 0 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
-                    "0 0 24px rgba(255,215,0,0.25), 0 0 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
-                  ],
-                  scale: [1, 1.06, 1],
-                } : {
-                  boxShadow: "0 0 24px rgba(255,215,0,0.25), 0 0 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
-                  scale: 1,
-                }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                className="px-5 py-2 rounded-xl border border-amber-500/40"
-                style={{
-                  background: "linear-gradient(180deg, rgba(20,15,5,0.85) 0%, rgba(10,8,3,0.92) 100%)",
-                  backdropFilter: "blur(12px)",
-                }}
-              >
-                <div className="flex flex-col items-center gap-0.5">
-                  <span
-                    className="text-[0.625rem] font-black uppercase tracking-[0.15em] text-cyan-400"
-                    style={{ textShadow: "0 0 10px rgba(0,212,255,0.4)" }}
+
+              {/* 3D chip stacks + pot pill */}
+              <div className="flex items-center gap-2.5">
+                {!compactMode && (
+                  <motion.div
+                    initial={{ scale: 0.7 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="flex items-end gap-1"
+                    style={{ perspective: "120px" }}
                   >
-                    {dealPhase === "pre-flop" ? "Pre-Flop" : dealPhase === "flop" ? "Flop" : dealPhase === "turn" ? "Turn" : dealPhase === "river" ? "River" : ""}
+                    {getPotChipStacks(animatedPot).map((stack, si) => (
+                      <div key={si} className="flex flex-col-reverse items-center">
+                        {Array.from({ length: stack.count }).map((_, ci) => (
+                          <PotChip key={ci} chip={stack} index={ci} />
+                        ))}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+
+                {/* Pot amount pill */}
+                <motion.div
+                  animate={potAnimating && !compactMode ? {
+                    boxShadow: [
+                      "0 0 15px rgba(212,175,55,0.15)",
+                      "0 0 30px rgba(212,175,55,0.4)",
+                      "0 0 15px rgba(212,175,55,0.15)",
+                    ],
+                    scale: [1, 1.06, 1],
+                  } : {
+                    boxShadow: "0 0 15px rgba(212,175,55,0.15)",
+                    scale: 1,
+                  }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full"
+                  style={{
+                    background: "rgba(15,15,20,0.85)",
+                    border: "1px solid rgba(212,175,55,0.3)",
+                  }}
+                >
+                  <DollarSign className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <span className="text-[#d4af37] font-display font-black text-sm tracking-wide">
+                    {animatedPot.toLocaleString()}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-amber-500/70">POT</span>
-                    <span className="text-xl font-mono font-black" style={{ color: "#ffd700", textShadow: "0 0 16px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2)" }}>
-                      ${animatedPot.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-                {/* Floating delta indicator */}
-                <AnimatePresence>
-                  {potAnimating && potDelta > 0 && !compactMode && (
-                    <motion.span
-                      initial={{ opacity: 1, y: 0 }}
-                      animate={{ opacity: 0, y: -20 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      className="absolute -top-4 right-0 text-xs font-mono font-bold text-green-400"
-                      style={{ textShadow: "0 0 8px rgba(34,197,94,0.5)" }}
-                    >
-                      +${potDelta.toLocaleString()}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.div>
+                </motion.div>
+              </div>
+
+              {/* Floating delta indicator */}
+              <AnimatePresence>
+                {potAnimating && potDelta > 0 && !compactMode && (
+                  <motion.span
+                    initial={{ opacity: 1, y: 0 }}
+                    animate={{ opacity: 0, y: -20 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="absolute -top-4 right-0 text-xs font-mono font-bold text-green-400"
+                    style={{ textShadow: "0 0 8px rgba(34,197,94,0.5)" }}
+                  >
+                    +${potDelta.toLocaleString()}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
@@ -378,12 +404,12 @@ export function ImageTable({
               style={{ transform: "translate(-50%, -50%)", zIndex: 15 }}
             >
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm text-black"
+                className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs text-gray-900"
                 data-testid="dealer-button"
                 style={{
-                  background: "radial-gradient(circle at 35% 30%, #ffffff 0%, #f5ecd4 30%, #d4a843 70%, #b8860b 100%)",
-                  border: "3px solid #c9a84c",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.6), 0 0 20px rgba(212,168,67,0.3), inset 0 2px 6px rgba(255,255,255,0.7), inset 0 -2px 4px rgba(0,0,0,0.2)",
+                  background: "white",
+                  border: "2.5px solid #d4af37",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.5), 0 0 12px rgba(212,175,55,0.3)",
                 }}
               >
                 D
@@ -402,7 +428,7 @@ export function ImageTable({
               transition={{ duration: 0.5, ease: "easeOut" }}
               className="absolute inset-0 pointer-events-none"
               style={{
-                background: "radial-gradient(ellipse at center, rgba(255,215,0,0.25) 0%, rgba(255,215,0,0.08) 40%, transparent 70%)",
+                background: "radial-gradient(ellipse at center, rgba(212,175,55,0.25) 0%, rgba(212,175,55,0.08) 40%, transparent 70%)",
                 zIndex: 20,
               }}
             />

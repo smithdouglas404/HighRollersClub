@@ -99,36 +99,21 @@ export default function Tournaments() {
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative mb-8 overflow-hidden rounded-xl p-6"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(20,31,40,0.90) 40%, rgba(16,24,36,0.95) 100%)",
-            border: "1px solid rgba(201,168,76,0.15)",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.3), 0 0 60px rgba(201,168,76,0.04)",
-          }}
+          className="relative mb-8 overflow-hidden rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-yellow-500/20"
         >
           {/* Decorative gold glow */}
-          <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-10 pointer-events-none" style={{ background: "radial-gradient(circle, #f0d48a 0%, transparent 70%)" }} />
+          <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-10 pointer-events-none bg-gradient-radial from-yellow-300 to-transparent" />
 
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                style={{
-                  background: "linear-gradient(135deg, rgba(201,168,76,0.20), rgba(240,212,138,0.10))",
-                  border: "1px solid rgba(201,168,76,0.25)",
-                }}
+                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-yellow-500/15 border border-yellow-500/20"
               >
-                <Trophy className="w-6 h-6 drop-shadow-[0_0_8px_rgba(201,168,76,0.5)]" style={{ color: "#f0d48a" }} />
+                <Trophy className="w-6 h-6 text-yellow-300 drop-shadow-[0_0_8px_rgba(201,168,76,0.5)]" />
               </div>
               <div>
                 <h2
-                  className="text-lg font-black tracking-[0.14em] uppercase"
-                  style={{
-                    background: "linear-gradient(135deg, #c9a84c, #f0d48a)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
+                  className="text-lg font-black tracking-[0.14em] uppercase gold-text font-display"
                 >
                   TOURNAMENTS
                 </h2>
@@ -142,11 +127,7 @@ export default function Tournaments() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black shrink-0"
-                style={{
-                  background: "linear-gradient(135deg, #c9a84c, #f0d48a)",
-                  boxShadow: "0 0 20px rgba(201,168,76,0.3)",
-                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider shrink-0 bg-gradient-to-r from-yellow-600 to-yellow-400 text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Create Tournament
@@ -158,7 +139,7 @@ export default function Tournaments() {
         {/* ── Loading State ──────────────────────────────────────── */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mb-3" style={{ borderColor: "rgba(201,168,76,0.4)", borderTopColor: "transparent" }} />
+            <div className="w-8 h-8 border-2 border-yellow-500/40 border-t-transparent rounded-full animate-spin mb-3" />
             <p className="text-xs text-gray-500 tracking-wider uppercase">Loading tournaments...</p>
           </div>
         )}
@@ -171,11 +152,7 @@ export default function Tournaments() {
             className="flex flex-col items-center justify-center py-20 text-center"
           >
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-              style={{
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.15)",
-              }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-red-500/10 border border-red-500/15"
             >
               <Trophy className="w-8 h-8 text-red-400/50" />
             </div>
@@ -194,21 +171,12 @@ export default function Tournaments() {
             className="flex flex-col items-center justify-center py-20 text-center"
           >
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-              style={{
-                background: "rgba(201,168,76,0.08)",
-                border: "1px solid rgba(201,168,76,0.15)",
-              }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-yellow-500/10 border border-yellow-500/15"
             >
-              <Trophy className="w-8 h-8" style={{ color: "rgba(201,168,76,0.4)" }} />
+              <Trophy className="w-8 h-8 text-yellow-500/40" />
             </div>
             <h3
-              className="text-sm font-bold uppercase tracking-wider mb-1"
-              style={{
-                background: "linear-gradient(135deg, #c9a84c, #f0d48a)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
+              className="text-sm font-bold uppercase tracking-wider mb-1 gold-text"
             >
               No Tournaments
             </h3>
@@ -236,13 +204,7 @@ export default function Tournaments() {
                   key={tournament.id}
                   variants={cardVariants}
                   whileHover={{ scale: 1.005, y: -2 }}
-                  className="rounded-xl overflow-hidden transition-all cursor-pointer"
-                  style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    boxShadow:
-                      "0 8px 32px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(201,168,76,0.06) inset",
-                  }}
+                  className="rounded-xl overflow-hidden transition-all cursor-pointer bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
                   onClick={() => navigate(`/tournaments/${tournament.id}`)}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5">
@@ -252,12 +214,7 @@ export default function Tournaments() {
                       <div className="flex items-center gap-2 mb-2">
                         {/* Game variant badge */}
                         <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider"
-                          style={{
-                            background: "rgba(201,168,76,0.12)",
-                            border: "1px solid rgba(201,168,76,0.20)",
-                            color: "#f0d48a",
-                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-yellow-500/10 border border-yellow-500/20 text-yellow-300"
                         >
                           <Gamepad2 className="w-3 h-3" />
                           {getVariantLabel(tournament.pokerVariant)}
@@ -272,7 +229,7 @@ export default function Tournaments() {
                         )}
 
                         {!isRegOpen && tournament.status && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/10">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/[0.06]">
                             {tournament.status.replace(/_/g, " ")}
                           </span>
                         )}
@@ -296,13 +253,7 @@ export default function Tournaments() {
                         Prize Pool
                       </div>
                       <div
-                        className="text-2xl sm:text-3xl font-black tabular-nums"
-                        style={{
-                          background: "linear-gradient(135deg, #c9a84c, #f0d48a)",
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          filter: "drop-shadow(0 0 12px rgba(201,168,76,0.2))",
-                        }}
+                        className="text-2xl sm:text-3xl font-black tabular-nums gold-text"
                       >
                         {prizePool.toLocaleString()}
                       </div>
@@ -330,16 +281,11 @@ export default function Tournaments() {
                           e.stopPropagation();
                           navigate(`/tournaments/${tournament.id}`);
                         }}
-                        className="px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black"
-                        style={{
-                          background: isRegOpen
-                            ? "linear-gradient(135deg, #c9a84c, #f0d48a)"
-                            : "linear-gradient(135deg, rgba(201,168,76,0.3), rgba(240,212,138,0.2))",
-                          boxShadow: isRegOpen
-                            ? "0 0 16px rgba(201,168,76,0.25)"
-                            : "none",
-                          color: isRegOpen ? "#000" : "rgba(201,168,76,0.6)",
-                        }}
+                        className={`px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider ${
+                          isRegOpen
+                            ? "bg-gradient-to-r from-yellow-600 to-yellow-400 text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]"
+                            : "bg-yellow-500/20 text-yellow-500/60"
+                        }`}
                       >
                         Register
                       </motion.button>
@@ -348,11 +294,7 @@ export default function Tournaments() {
 
                   {/* Subtle bottom gold accent line */}
                   <div
-                    className="h-px w-full"
-                    style={{
-                      background:
-                        "linear-gradient(to right, transparent, rgba(201,168,76,0.15) 30%, rgba(201,168,76,0.15) 70%, transparent)",
-                    }}
+                    className="h-px w-full bg-gradient-to-r from-transparent via-yellow-500/15 to-transparent"
                   />
                 </motion.div>
               );

@@ -125,7 +125,7 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab(t.key)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
                 activeTab === t.key
-                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                  ? "bg-primary/20 text-primary border border-primary/30"
                   : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
               }`}
             >
@@ -144,14 +144,14 @@ export default function AdminDashboard() {
         {!loading && activeTab === "overview" && stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: "Total Users", value: stats.totalUsers, color: "cyan" },
-              { label: "Active Tables", value: stats.activeTables, color: "green" },
-              { label: "Total Deposits", value: `$${(stats.totalDeposits / 100).toFixed(2)}`, color: "cyan" },
-              { label: "Withdrawals", value: `$${(stats.totalWithdrawals / 100).toFixed(2)}`, color: "red" },
+              { label: "Total Users", value: stats.totalUsers, colorClass: "text-primary" },
+              { label: "Active Tables", value: stats.activeTables, colorClass: "text-green-400" },
+              { label: "Total Deposits", value: `$${(stats.totalDeposits / 100).toFixed(2)}`, colorClass: "text-primary" },
+              { label: "Withdrawals", value: `$${(stats.totalWithdrawals / 100).toFixed(2)}`, colorClass: "text-red-400" },
             ].map((stat, i) => (
               <div key={i} className="glass rounded-xl p-4 text-center">
                 <div className="text-xs text-gray-500 uppercase mb-1">{stat.label}</div>
-                <div className={`text-xl font-bold font-mono text-${stat.color}-400`}>{stat.value}</div>
+                <div className={`text-xl font-bold font-mono ${stat.colorClass}`}>{stat.value}</div>
               </div>
             ))}
           </div>
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
                     </button>
                     <button
                       onClick={() => handleAlertReview(a.id, "reviewed")}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 text-xs font-bold hover:bg-cyan-500/30 transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30 transition-colors"
                     >
                       <Eye className="w-3 h-3" /> Review
                     </button>

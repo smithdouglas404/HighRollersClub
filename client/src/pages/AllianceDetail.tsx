@@ -198,14 +198,14 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
         {/* Back button */}
         <button
           onClick={() => navigate("/leagues")}
-          className="flex items-center gap-1.5 text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 hover:text-cyan-400 transition-colors mb-6"
+          className="flex items-center gap-1.5 text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 hover:text-primary transition-colors mb-6"
         >
           <ChevronLeft className="w-3.5 h-3.5" /> Back to Leagues
         </button>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : !alliance ? (
           <div className="text-center py-20 text-gray-500">Alliance not found</div>
@@ -215,16 +215,11 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl p-6"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(0,212,255,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
             >
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                  <Swords className="w-7 h-7 text-cyan-400" />
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-primary/20 flex items-center justify-center shrink-0">
+                  <Swords className="w-7 h-7 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   {editing ? (
@@ -233,15 +228,15 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="flex-1 bg-white/5 border border-cyan-500/30 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-amber-500/20"
+                        className="flex-1 bg-white/5 border border-primary/30 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-amber-500/20"
                         autoFocus
                       />
                       <button
                         onClick={handleSaveName}
                         disabled={actionLoading}
-                        className="p-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 transition-colors"
+                        className="p-1.5 rounded-lg bg-primary/15 hover:bg-primary/25 transition-colors"
                       >
-                        <Check className="w-4 h-4 text-cyan-400" />
+                        <Check className="w-4 h-4 text-primary" />
                       </button>
                       <button
                         onClick={() => { setEditing(false); setEditName(alliance.name); }}
@@ -252,7 +247,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <h1 className="text-lg font-bold text-white tracking-wide">{alliance.name}</h1>
+                      <h1 className="text-lg font-bold font-display text-white tracking-wide">{alliance.name}</h1>
                       {isFoundingLeader && (
                         <button
                           onClick={() => setEditing(true)}
@@ -276,7 +271,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                 <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
                   alliance.clubs.length >= 2
                     ? "text-green-400 bg-green-500/10 border-green-500/20"
-                    : "text-cyan-400 bg-cyan-500/10 border-cyan-500/20"
+                    : "text-primary bg-primary/10 border-primary/20"
                 }`}>
                   {alliance.clubs.length >= 2 ? "Active" : "Forming"}
                 </span>
@@ -288,12 +283,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(0,212,255,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
             >
               <div className="px-5 py-3 border-b border-white/[0.04]">
                 <h2 className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Member Clubs</h2>
@@ -305,12 +295,12 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                     className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] transition-colors"
                   >
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                      ci === 0 ? "bg-cyan-500/15 border border-cyan-500/20" : "bg-cyan-500/10 border border-cyan-500/15"
+                      ci === 0 ? "bg-primary/15 border border-primary/20" : "bg-primary/10 border border-primary/15"
                     }`}>
                       {ci === 0 ? (
-                        <Crown className="w-4 h-4 text-cyan-400" />
+                        <Crown className="w-4 h-4 text-primary" />
                       ) : (
-                        <Shield className="w-4 h-4 text-cyan-400" />
+                        <Shield className="w-4 h-4 text-primary" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -351,19 +341,14 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="rounded-xl p-5"
-                style={{
-                  background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                  border: "1px solid rgba(0,212,255,0.1)",
-                  boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-                }}
+                className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
               >
                 <h2 className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-3">Join This Alliance</h2>
                 <div className="flex items-center gap-3">
                   <select
                     value={selectedJoinClub}
                     onChange={(e) => setSelectedJoinClub(e.target.value)}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
                   >
                     <option value="">Select your club...</option>
                     {eligibleClubs.map(c => (
@@ -373,8 +358,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                   <button
                     onClick={handleJoin}
                     disabled={actionLoading || !selectedJoinClub}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black disabled:opacity-40 shadow-[0_0_20px_rgba(0,212,255,0.3)]"
-                    style={{ background: "linear-gradient(135deg, #00d4ff, #f0d078)" }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black disabled:opacity-40"
                   >
                     <UserPlus className="w-3.5 h-3.5" /> Join
                   </button>
@@ -388,11 +372,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="rounded-xl p-5"
-                style={{
-                  background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                  border: "1px solid rgba(239,68,68,0.1)",
-                }}
+                className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-red-500/10"
               >
                 <h2 className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-3">Danger Zone</h2>
                 {confirmDelete ? (

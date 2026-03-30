@@ -15,8 +15,6 @@ import {
 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
-import serverBg from "@assets/generated_images/cinematic_server_room_bg.webp";
-import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.webp";
 
 interface NavItem {
   icon: any;
@@ -49,13 +47,9 @@ function ClubSwitcher() {
     <div className="px-3 pb-2">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all hover:bg-white/5"
-        style={{
-          background: "rgba(0,212,255,0.04)",
-          border: "1px solid rgba(0,212,255,0.1)",
-        }}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all hover:bg-white/5 bg-primary/[0.04] border border-primary/10"
       >
-        <Shield className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+        <Shield className="w-3.5 h-3.5 text-primary shrink-0" />
         <span className="flex-1 text-[0.625rem] font-bold text-white truncate tracking-wide">
           {club?.name ?? "Select Club"}
         </span>
@@ -73,18 +67,14 @@ function ClubSwitcher() {
             className="overflow-hidden"
           >
             <div
-              className="mt-1 rounded-lg py-1 space-y-0.5"
-              style={{
-                background: "rgba(20,31,40,0.95)",
-                border: "1px solid rgba(0,212,255,0.12)",
-              }}
+              className="mt-1 rounded-lg py-1 space-y-0.5 bg-surface-low/95 border border-primary/10"
             >
               {allClubs.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => { switchClub(c.id); setOpen(false); }}
                   className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all hover:bg-white/5 ${
-                    c.id === club?.id ? "bg-cyan-500/10" : ""
+                    c.id === club?.id ? "bg-primary/10" : ""
                   }`}
                 >
                   <span className="flex-1 min-w-0">
@@ -92,14 +82,14 @@ function ClubSwitcher() {
                     <span className="block text-[0.5rem] text-gray-400">{c.memberCount} members</span>
                   </span>
                   {c.id === club?.id && (
-                    <Check className="w-3 h-3 text-cyan-400 shrink-0" />
+                    <Check className="w-3 h-3 text-primary shrink-0" />
                   )}
                 </button>
               ))}
               <Link href="/clubs/browse">
                 <div
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-[0.5625rem] text-cyan-500 hover:text-cyan-400 transition-colors cursor-pointer border-t border-white/5 mt-1 pt-1.5"
+                  className="flex items-center gap-2 px-3 py-1.5 text-[0.5625rem] text-primary hover:text-primary/80 transition-colors cursor-pointer border-t border-white/5 mt-1 pt-1.5"
                 >
                   <Search className="w-3 h-3" />
                   Browse More Clubs
@@ -128,13 +118,13 @@ function GlobalSearch() {
   return (
     <form onSubmit={handleSearch} className="px-3 pb-2">
       <div className="relative group">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search tables..."
-          className="w-full pl-7 pr-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-[0.625rem] text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/30 focus:bg-white/[0.05] transition-all"
+          className="w-full pl-7 pr-3 py-2 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-[0.625rem] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 focus:bg-surface-highest transition-all"
         />
       </div>
     </form>
@@ -163,11 +153,11 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
       {/* Logo */}
       <div className="px-5 pt-6 pb-4 flex items-center gap-3">
         <div className="w-10 h-10 relative shrink-0">
-          <div className="absolute inset-0 bg-cyan-500/20 blur-lg rounded-full" />
+          <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full" />
           <img
             src={lionLogo}
             alt="High Rollers"
-            className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_8px_rgba(0,212,255,0.4)]"
+            className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_8px_hsl(189_100%_75%/0.4)]"
           />
         </div>
         <div className="flex-1">
@@ -205,18 +195,18 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
                 whileHover={{ x: 2 }}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer group ${
                   isActive
-                    ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(0,212,255,0.05)]"
-                    : "text-gray-400 hover:text-gray-300 hover:bg-white/5 border border-transparent"
+                    ? "bg-primary/10 text-primary border border-primary/20 neon-box-glow"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
                 }`}
               >
                 <Icon
                   className={`w-4 h-4 shrink-0 ${
-                    isActive ? "text-cyan-400" : "text-gray-400 group-hover:text-gray-300"
+                    isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                   }`}
                 />
                 <span className="tracking-wide">{item.label}</span>
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(0,212,255,0.5)]" />
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
                 )}
               </motion.div>
             </Link>
@@ -228,21 +218,21 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
       <div className="px-3 pb-4 space-y-2">
         {/* Persistent Chip Balance */}
         <Link href="/wallet">
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-cyan-500/[0.06] border border-cyan-500/10 hover:border-cyan-500/25 hover:bg-cyan-500/10 transition-all cursor-pointer group">
-            <div className="w-6 h-6 rounded-md bg-cyan-500/15 flex items-center justify-center shrink-0">
-              <Coins className="w-3 h-3 text-cyan-400" />
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-primary/[0.06] border border-primary/10 hover:border-primary/25 hover:bg-primary/10 transition-all cursor-pointer group">
+            <div className="w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center shrink-0">
+              <Coins className="w-3 h-3 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[0.5rem] text-gray-500 uppercase tracking-wider font-medium">Total Balance</div>
-              <div className="text-xs font-bold text-cyan-400 tabular-nums group-hover:text-cyan-300 transition-colors">
-                {(balance ?? 0).toLocaleString()} <span className="text-[0.5rem] text-cyan-600">chips</span>
+              <div className="text-[0.5rem] text-muted-foreground uppercase tracking-wider font-medium">Total Balance</div>
+              <div className="text-xs font-bold text-primary tabular-nums group-hover:text-primary/80 transition-colors">
+                {(balance ?? 0).toLocaleString()} <span className="text-[0.5rem] text-primary/60">chips</span>
               </div>
             </div>
           </div>
         </Link>
 
         {/* User info */}
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/5">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-high/50 border border-white/[0.06]">
           <Link href="/profile">
             <div className="cursor-pointer hover:opacity-80 transition-opacity">
               <MemberAvatar
@@ -254,11 +244,11 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
           </Link>
           <div className="flex-1 min-w-0">
             <Link href="/profile">
-              <div className="text-[0.625rem] font-medium text-gray-300 truncate cursor-pointer hover:text-white transition-colors">
+              <div className="text-[0.625rem] font-medium text-foreground/80 truncate cursor-pointer hover:text-foreground transition-colors">
                 {user?.displayName || user?.username}
               </div>
             </Link>
-            <div className="text-[0.5rem] text-gray-400 uppercase tracking-wider">
+            <div className="text-[0.5rem] text-muted-foreground uppercase tracking-wider">
               {user?.role}
             </div>
           </div>
@@ -267,7 +257,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             className="p-1 hover:bg-white/5 rounded transition-colors"
             title="Logout"
           >
-            <LogOut className="w-3 h-3 text-gray-500 hover:text-gray-300" />
+            <LogOut className="w-3 h-3 text-muted-foreground hover:text-foreground" />
           </button>
         </div>
       </div>
@@ -275,15 +265,11 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
   );
 
   return (
-    <div className="min-h-screen bg-[#111b2a] text-white flex relative overflow-hidden">
-      {/* Background layers */}
-      <div className="absolute inset-0 z-0">
-        <img
-          src={casinoBg}
-          alt=""
-          className="w-full h-full object-cover opacity-25 blur-[1px] scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#111b2a]/75 via-[#111b2a]/65 to-[#111b2a]/80" />
+    <div className="min-h-screen bg-background text-white flex relative overflow-hidden">
+      {/* Background glow orbs */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute top-[-15%] left-[5%] w-[500px] h-[500px] bg-primary/[0.03] rounded-full blur-[150px]" />
+        <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] bg-purple-600/[0.02] rounded-full blur-[120px]" />
       </div>
 
 
@@ -296,11 +282,11 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
           className="relative z-10 w-[220px] min-h-screen flex flex-col shrink-0"
         >
           {/* Glass panel */}
-          <div className="absolute inset-0 bg-[#141f30]/85 backdrop-blur-xl border-r border-cyan-500/10" />
+          <div className="absolute inset-0 bg-surface-lowest/90 backdrop-blur-xl border-r border-white/[0.06]" />
           <div
             className="absolute inset-y-0 right-0 w-px"
             style={{
-              background: "linear-gradient(to bottom, transparent, rgba(0,212,255,0.2) 20%, rgba(0,212,255,0.2) 80%, transparent)",
+              background: "linear-gradient(to bottom, transparent, rgba(129,236,255,0.15) 20%, rgba(129,236,255,0.15) 80%, transparent)",
             }}
           />
           {sidebarContent}
@@ -328,7 +314,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
               transition={{ duration: 0.25, ease: "easeOut" }}
               className="fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col"
             >
-              <div className="absolute inset-0 bg-[#141f30]/95 backdrop-blur-xl border-r border-cyan-500/10" />
+              <div className="absolute inset-0 bg-surface-lowest/95 backdrop-blur-xl border-r border-white/[0.06]" />
               {sidebarContent}
             </motion.aside>
           </>
@@ -345,14 +331,14 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
                 onClick={() => setSidebarOpen(true)}
                 className="p-2 rounded-lg hover:bg-white/5 transition-colors border border-white/10"
               >
-                <Menu className="w-5 h-5 text-gray-400" />
+                <Menu className="w-5 h-5 text-muted-foreground" />
               </button>
             )}
             {title ? (
               <motion.h1
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="text-base md:text-lg font-bold tracking-wider text-white uppercase gold-text"
+                className="text-base md:text-lg font-display font-bold tracking-wider text-white uppercase"
               >
                 {title}
               </motion.h1>

@@ -65,7 +65,7 @@ export default function ClubInvitations() {
   const statusIcon = (status: string) => {
     switch (status) {
       case "pending":
-        return <Clock className="w-3.5 h-3.5 text-cyan-400" />;
+        return <Clock className="w-3.5 h-3.5 text-primary" />;
       case "accepted":
         return <CheckCircle className="w-3.5 h-3.5 text-green-400" />;
       case "declined":
@@ -78,7 +78,7 @@ export default function ClubInvitations() {
   const statusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "text-cyan-400";
+        return "text-primary";
       case "accepted":
         return "text-green-400";
       case "declined":
@@ -93,7 +93,7 @@ export default function ClubInvitations() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : !club ? (
           <motion.div
@@ -105,11 +105,7 @@ export default function ClubInvitations() {
             <p className="text-sm text-gray-500">You don't belong to any club yet.</p>
             <button
               onClick={() => navigate("/lobby")}
-              className="mt-4 px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
-              style={{
-                background: "linear-gradient(135deg, #00d4ff, #f0d078)",
-                boxShadow: "0 0 20px rgba(0,212,255,0.3)",
-              }}
+              className="mt-4 px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider bg-primary text-black"
             >
               Back to Lobby
             </button>
@@ -120,22 +116,16 @@ export default function ClubInvitations() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(0,212,255,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
             >
               <div
-                className="flex items-center gap-3 px-5 py-4"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
               >
-                <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                  <UserPlus className="w-5 h-5 text-cyan-400" />
+                <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-cyan-400 tracking-wider uppercase">
+                  <h3 className="text-sm font-bold text-primary tracking-wider uppercase">
                     Invite Player
                   </h3>
                   <p className="text-[0.5625rem] text-gray-500">Send an invite by username</p>
@@ -150,22 +140,14 @@ export default function ClubInvitations() {
                     onChange={(e) => setInviteUsername(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSendInvite()}
                     placeholder="Enter username..."
-                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40"
-                    style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                    }}
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-surface-highest/50 border border-white/[0.06]"
                   />
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={handleSendInvite}
                     disabled={sending || !inviteUsername.trim()}
-                    className="px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                    style={{
-                      background: "linear-gradient(135deg, #00d4ff, #f0d078)",
-                      boxShadow: "0 0 20px rgba(0,212,255,0.3)",
-                    }}
+                    className="px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-primary text-black flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                   >
                     {sending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -214,20 +196,14 @@ export default function ClubInvitations() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(255,165,0,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-amber-500/15"
             >
               <div
-                className="flex items-center justify-between px-5 py-4"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                className="flex items-center justify-between px-5 py-4 border-b border-b-white/[0.06]"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                    <Inbox className="w-5 h-5 text-cyan-400" />
+                  <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
+                    <Inbox className="w-5 h-5 text-primary" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold tracking-wider uppercase gold-text">
@@ -238,7 +214,7 @@ export default function ClubInvitations() {
                 </div>
                 {pendingRequests.length > 0 && (
                   <span
-                    className="text-[0.5625rem] font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20"
+                    className="text-[0.5625rem] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20"
                   >
                     {pendingRequests.length} pending
                   </span>
@@ -258,10 +234,9 @@ export default function ClubInvitations() {
                         key={inv.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-white/[0.02]"
-                        style={{ border: "1px solid rgba(255,255,255,0.04)" }}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-white/[0.02] border border-white/[0.06]"
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(0,212,255,0.15)]">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_hsl(var(--primary)/0.15)]">
                           <span className="text-[0.625rem] font-bold text-white">
                             {inv.displayName.charAt(0).toUpperCase()}
                           </span>
@@ -278,11 +253,7 @@ export default function ClubInvitations() {
                             whileTap={{ scale: 0.9 }}
                             onClick={() => handleAction(inv.id, "accepted")}
                             disabled={actionLoading[inv.id]}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
-                            style={{
-                              background: "rgba(0,212,255,0.1)",
-                              border: "1px solid rgba(0,212,255,0.2)",
-                            }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 bg-primary/10 border border-primary/20"
                           >
                             {actionLoading[inv.id] ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-green-400" />
@@ -295,11 +266,7 @@ export default function ClubInvitations() {
                             whileTap={{ scale: 0.9 }}
                             onClick={() => handleAction(inv.id, "declined")}
                             disabled={actionLoading[inv.id]}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
-                            style={{
-                              background: "rgba(255,60,60,0.1)",
-                              border: "1px solid rgba(255,60,60,0.2)",
-                            }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 bg-destructive/10 border border-destructive/20"
                           >
                             <X className="w-3.5 h-3.5 text-red-400" />
                           </motion.button>
@@ -316,16 +283,10 @@ export default function ClubInvitations() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(120,80,220,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
             >
               <div
-                className="flex items-center gap-3 px-5 py-4"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
               >
                 <div className="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center">
                   <Send className="w-5 h-5 text-purple-400" />
@@ -351,10 +312,9 @@ export default function ClubInvitations() {
                         key={inv.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg"
-                        style={{ border: "1px solid rgba(255,255,255,0.04)" }}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg border border-white/[0.06]"
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_rgba(0,212,255,0.15)]">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_hsl(var(--primary)/0.15)]">
                           <span className="text-[0.625rem] font-bold text-white">
                             {inv.displayName.charAt(0).toUpperCase()}
                           </span>

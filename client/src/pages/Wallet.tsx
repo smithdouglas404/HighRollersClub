@@ -31,7 +31,7 @@ const CRYPTO_CURRENCIES = [
   { id: "USDT", name: "Tether", icon: "$", color: "text-green-400" },
   { id: "SOL", name: "Solana", icon: "◎", color: "text-purple-400" },
   { id: "LTC", name: "Litecoin", icon: "Ł", color: "text-gray-400" },
-  { id: "DOGE", name: "Dogecoin", icon: "Ð", color: "text-cyan-400" },
+  { id: "DOGE", name: "Dogecoin", icon: "Ð", color: "text-primary" },
 ];
 
 const GATEWAYS = [
@@ -84,7 +84,7 @@ function getTypeColor(type: string) {
     case "buy_in": case "buyin": case "purchase": case "withdraw": return "text-red-400";
     case "cashout": case "prize": case "deposit": return "text-green-400";
     case "transfer": return "text-blue-400";
-    default: return "text-cyan-400";
+    default: return "text-primary";
   }
 }
 
@@ -219,7 +219,6 @@ function WalletPillSelector({ value, onChange, exclude, balances, label }: {
               style={isSelected ? {
                 backgroundColor: `rgba(${w.rgb}, 0.1)`,
                 borderColor: `rgba(${w.rgb}, 0.25)`,
-                boxShadow: `0 0 12px rgba(${w.rgb}, 0.1)`,
               } : undefined}
             >
               <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${w.bg}`}>
@@ -315,9 +314,9 @@ function TransferPanel({ onComplete, initialFrom, initialTo }: { onComplete: () 
           whileHover={{ scale: 1.15, rotate: 180 }}
           whileTap={{ scale: 0.9 }}
           onClick={handleSwap}
-          className="w-8 h-8 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center hover:bg-cyan-500/10 hover:border-cyan-500/20 transition-colors"
+          className="w-8 h-8 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center hover:bg-primary/10 hover:border-primary/20 transition-colors"
         >
-          <ArrowRightLeft className="w-4 h-4 text-cyan-400" />
+          <ArrowRightLeft className="w-4 h-4 text-primary" />
         </motion.button>
         <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/[0.06]" />
       </div>
@@ -336,14 +335,14 @@ function TransferPanel({ onComplete, initialFrom, initialTo }: { onComplete: () 
         <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Amount</label>
         <div className="relative">
           <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min={1} max={maxAmount}
-            placeholder="Enter amount" className="w-full px-3 py-2.5 pr-20 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 outline-none focus:border-cyan-500/30 transition-colors" />
-          <button onClick={() => setAmount(String(maxAmount))} className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors">Max</button>
+            placeholder="Enter amount" className="w-full px-3 py-2.5 pr-20 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 outline-none focus:border-primary/30 transition-colors" />
+          <button onClick={() => setAmount(String(maxAmount))} className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase text-primary bg-primary/10 hover:bg-primary/20 transition-colors">Max</button>
         </div>
         {/* Quick amount buttons */}
         <div className="flex gap-1.5 mt-2">
           {[0.25, 0.5, 0.75].map(pct => (
             <button key={pct} onClick={() => setAmount(String(Math.floor(maxAmount * pct)))}
-              className="flex-1 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase text-gray-500 bg-white/[0.03] border border-white/[0.06] hover:bg-cyan-500/10 hover:text-cyan-400 hover:border-cyan-500/20 transition-all">
+              className="flex-1 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase text-gray-500 bg-white/[0.03] border border-white/[0.06] hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all">
               {pct * 100}%
             </button>
           ))}
@@ -352,7 +351,7 @@ function TransferPanel({ onComplete, initialFrom, initialTo }: { onComplete: () 
       </div>
 
       <button onClick={handleTransfer} disabled={loading || !amount || parseInt(amount) <= 0 || parseInt(amount) > maxAmount}
-        className="w-full py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/40 transition-all disabled:opacity-40">
+        className="w-full py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-primary border border-primary/20 hover:border-primary/40 transition-all disabled:opacity-40">
         {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Transfer"}
       </button>
     </div>
@@ -492,7 +491,7 @@ function DepositPanel() {
             <QrCode className="w-7 h-7 text-green-400" />
           </motion.div>
           <p className="text-sm font-bold text-white">Send Payment</p>
-          <p className="text-xs text-gray-500">Send exactly <span className="text-cyan-400 font-bold">{depositResult.payAmount} {depositResult.currency}</span></p>
+          <p className="text-xs text-gray-500">Send exactly <span className="text-primary font-bold">{depositResult.payAmount} {depositResult.currency}</span></p>
         </div>
 
         {/* Address with copy */}
@@ -509,7 +508,7 @@ function DepositPanel() {
         {expirySeconds > 0 && (
           <div className="flex items-center justify-center gap-2 text-[0.625rem] text-gray-500">
             <Clock className="w-3 h-3" />
-            <span>Expires in <span className="text-cyan-400 font-bold tabular-nums">{expiryMin}:{expirySec.toString().padStart(2, "0")}</span></span>
+            <span>Expires in <span className="text-primary font-bold tabular-nums">{expiryMin}:{expirySec.toString().padStart(2, "0")}</span></span>
           </div>
         )}
 
@@ -553,11 +552,11 @@ function DepositPanel() {
           { n: 3, label: "Allocate" },
         ].map((s, i) => (
           <div key={s.n} className="flex items-center gap-1">
-            {i > 0 && <div className={`w-6 h-px ${step >= s.n ? "bg-cyan-500/40" : "bg-white/[0.06]"}`} />}
+            {i > 0 && <div className={`w-6 h-px ${step >= s.n ? "bg-primary/40" : "bg-white/[0.06]"}`} />}
             <button
               onClick={() => { if (s.n === 1 || (s.n === 2 && amountNum > 0) || (s.n === 3 && amountNum > 0)) setStep(s.n as 1|2|3); }}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
-                step === s.n ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/25" :
+                step === s.n ? "bg-primary/15 text-primary border border-primary/25" :
                 step > s.n ? "text-green-400 border border-green-500/15 bg-green-500/5" :
                 "text-gray-600 border border-white/[0.05]"
               }`}
@@ -575,12 +574,12 @@ function DepositPanel() {
             <div>
               <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Amount (USD)</label>
               <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min={1} placeholder="Enter amount in USD"
-                className="w-full px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 outline-none focus:border-cyan-500/30 transition-colors" />
+                className="w-full px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 outline-none focus:border-primary/30 transition-colors" />
               <div className="flex gap-1.5 mt-2">
                 {[10, 25, 50, 100].map(v => (
                   <button key={v} onClick={() => setAmount(String(v))}
                     className={`flex-1 py-1.5 rounded-lg text-[0.5625rem] font-bold border transition-all ${
-                      amount === String(v) ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/25" : "text-gray-500 bg-white/[0.03] border-white/[0.06] hover:bg-cyan-500/10 hover:text-cyan-400"
+                      amount === String(v) ? "bg-primary/15 text-primary border-primary/25" : "text-gray-500 bg-white/[0.03] border-white/[0.06] hover:bg-primary/10 hover:text-primary"
                     }`}>
                     ${v}
                   </button>
@@ -588,7 +587,7 @@ function DepositPanel() {
               </div>
             </div>
             <button onClick={() => setStep(2)} disabled={amountNum <= 0}
-              className="w-full py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/40 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+              className="w-full py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-primary border border-primary/20 hover:border-primary/40 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
               Continue <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </motion.div>
@@ -603,7 +602,7 @@ function DepositPanel() {
                 {CRYPTO_CURRENCIES.map(c => (
                   <button key={c.id} onClick={() => setCurrency(c.id)}
                     className={`px-2 py-2.5 rounded-lg text-[0.625rem] font-semibold border transition-all flex items-center gap-1.5 justify-center ${
-                      currency === c.id ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
+                      currency === c.id ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
                     }`}>
                     <span className={c.color}>{c.icon}</span>
                     {c.id}
@@ -619,13 +618,13 @@ function DepositPanel() {
                 {GATEWAYS.map(g => (
                   <button key={g.id} onClick={() => setGateway(g.id)}
                     className={`w-full px-3 py-2.5 rounded-lg text-left border transition-all flex items-center justify-between ${
-                      gateway === g.id ? "bg-cyan-500/10 border-cyan-500/20" : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]"
+                      gateway === g.id ? "bg-primary/10 border-primary/20" : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]"
                     }`}>
                     <div>
-                      <p className={`text-xs font-medium ${gateway === g.id ? "text-cyan-400" : "text-gray-300"}`}>{g.name}</p>
+                      <p className={`text-xs font-medium ${gateway === g.id ? "text-primary" : "text-gray-300"}`}>{g.name}</p>
                       <p className="text-[0.5625rem] text-gray-600">{g.desc}</p>
                     </div>
-                    <span className={`text-[0.5rem] font-bold uppercase px-1.5 py-0.5 rounded ${gateway === g.id ? "bg-cyan-500/20 text-cyan-400" : "bg-white/[0.05] text-gray-600"}`}>
+                    <span className={`text-[0.5rem] font-bold uppercase px-1.5 py-0.5 rounded ${gateway === g.id ? "bg-primary/20 text-primary" : "bg-white/[0.05] text-gray-600"}`}>
                       {g.badge}
                     </span>
                   </button>
@@ -636,7 +635,7 @@ function DepositPanel() {
             <div className="flex gap-2">
               <button onClick={() => setStep(1)} className="px-4 py-2.5 rounded-lg text-xs font-bold uppercase text-gray-400 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">Back</button>
               <button onClick={() => setStep(3)}
-                className="flex-1 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/40 transition-all flex items-center justify-center gap-2">
+                className="flex-1 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-primary border border-primary/20 hover:border-primary/40 transition-all flex items-center justify-center gap-2">
                 Continue <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -648,7 +647,7 @@ function DepositPanel() {
             {/* Summary */}
             <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.06]">
               <span className="text-[0.625rem] text-gray-500">Depositing</span>
-              <span className="text-sm font-bold text-cyan-400">${amountNum} USD</span>
+              <span className="text-sm font-bold text-primary">${amountNum} USD</span>
             </div>
 
             {/* Preset buttons */}
@@ -657,7 +656,7 @@ function DepositPanel() {
               <div className="flex gap-1.5">
                 {ALLOCATION_PRESETS.map(p => (
                   <button key={p.label} onClick={() => setAllocation({ ...p.alloc })}
-                    className="flex-1 py-1.5 rounded-lg text-[0.5rem] font-bold uppercase text-gray-500 bg-white/[0.03] border border-white/[0.06] hover:bg-cyan-500/10 hover:text-cyan-400 hover:border-cyan-500/20 transition-all leading-tight">
+                    className="flex-1 py-1.5 rounded-lg text-[0.5rem] font-bold uppercase text-gray-500 bg-white/[0.03] border border-white/[0.06] hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all leading-tight">
                     {p.label}
                   </button>
                 ))}
@@ -682,7 +681,7 @@ function DepositPanel() {
                         </div>
                         <span className={`text-[0.625rem] font-medium flex-1 ${w.color}`}>{w.shortLabel}</span>
                         <button onClick={() => toggleLock(w.key)} className="p-0.5 rounded hover:bg-white/[0.05] transition-colors" title={isLocked ? "Unlock" : "Lock"}>
-                          {isLocked ? <Lock className="w-3 h-3 text-cyan-400" /> : <Unlock className="w-3 h-3 text-gray-600" />}
+                          {isLocked ? <Lock className="w-3 h-3 text-primary" /> : <Unlock className="w-3 h-3 text-gray-600" />}
                         </button>
                         <span className="text-[0.625rem] font-bold text-gray-400 w-10 text-right tabular-nums">{allocation[w.key] || 0}%</span>
                       </div>
@@ -790,8 +789,8 @@ function WithdrawPanel() {
         <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Amount (chips)</label>
         <div className="relative">
           <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min={1} max={mainBalance} placeholder="Chips to withdraw"
-            className="w-full px-3 py-2.5 pr-20 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 outline-none focus:border-cyan-500/30 transition-colors" />
-          <button onClick={() => setAmount(String(mainBalance))} className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors">Max</button>
+            className="w-full px-3 py-2.5 pr-20 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 outline-none focus:border-primary/30 transition-colors" />
+          <button onClick={() => setAmount(String(mainBalance))} className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase text-primary bg-primary/10 hover:bg-primary/20 transition-colors">Max</button>
         </div>
       </div>
 
@@ -800,7 +799,7 @@ function WithdrawPanel() {
         <div className="flex gap-1.5">
           {["USDT", "BTC", "ETH", "SOL"].map(c => (
             <button key={c} onClick={() => setCurrency(c)}
-              className={`flex-1 px-3 py-2 rounded-lg text-[0.625rem] font-semibold border transition-all ${currency === c ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"}`}>
+              className={`flex-1 px-3 py-2 rounded-lg text-[0.625rem] font-semibold border transition-all ${currency === c ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"}`}>
               {c}
             </button>
           ))}
@@ -811,7 +810,7 @@ function WithdrawPanel() {
       <div>
         <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">{currency} Address</label>
         <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder={`Enter your ${currency} wallet address`}
-          className="w-full px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 font-mono outline-none focus:border-cyan-500/30 transition-colors" />
+          className="w-full px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 font-mono outline-none focus:border-primary/30 transition-colors" />
       </div>
 
       <button onClick={handleSubmit} disabled={loading || !amount || parseInt(amount) <= 0 || !address || parseInt(amount) > mainBalance}
@@ -821,9 +820,9 @@ function WithdrawPanel() {
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <DialogContent className="bg-[#141f30]/95 backdrop-blur-xl border-white/10 max-w-md">
+        <DialogContent className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-cyan-400 font-display tracking-wider text-base">Confirm Withdrawal</DialogTitle>
+            <DialogTitle className="text-primary font-display tracking-wider text-base">Confirm Withdrawal</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 space-y-2.5">
@@ -919,7 +918,7 @@ function TransactionRow({ tx }: { tx: Transaction }) {
             <div className="px-4 pb-3 pt-1 space-y-2 border-t border-white/[0.04] ml-11">
               <div className="flex items-center justify-between">
                 <span className="text-[0.5625rem] text-gray-600">Transaction ID</span>
-                <button onClick={copyId} className="flex items-center gap-1 text-[0.5625rem] text-gray-400 font-mono hover:text-cyan-400 transition-colors">
+                <button onClick={copyId} className="flex items-center gap-1 text-[0.5625rem] text-gray-400 font-mono hover:text-primary transition-colors">
                   {tx.id.slice(0, 12)}...
                   {copiedId ? <Check className="w-2.5 h-2.5 text-green-400" /> : <Copy className="w-2.5 h-2.5" />}
                 </button>
@@ -1072,7 +1071,7 @@ export default function Wallet() {
           <motion.div
             animate={{ scale: [1, 1.15, 1], opacity: [0.08, 0.15, 0.08] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-20 -right-20 w-60 h-60 bg-cyan-500 rounded-full blur-3xl pointer-events-none"
+            className="absolute -top-20 -right-20 w-60 h-60 bg-primary rounded-full blur-3xl pointer-events-none"
           />
           <motion.div
             animate={{ scale: [1, 1.1, 1], opacity: [0.05, 0.1, 0.05] }}
@@ -1083,13 +1082,13 @@ export default function Wallet() {
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div className="space-y-2">
               <p className="text-xs text-gray-500 uppercase tracking-widest font-medium flex items-center gap-1.5">
-                <Coins className="w-3.5 h-3.5 text-cyan-500" /> Total Balance
+                <Coins className="w-3.5 h-3.5 text-primary" /> Total Balance
               </p>
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl sm:text-5xl font-display font-bold gold-text tabular-nums">
                   <AnimatedChips value={balance} className="gold-text" />
                 </span>
-                <span className="text-sm text-cyan-600/70 font-semibold uppercase tracking-wider">chips</span>
+                <span className="text-sm text-primary/70 font-semibold uppercase tracking-wider">chips</span>
               </div>
               {/* Allocation bar */}
               <div className="w-full max-w-xs">
@@ -1102,7 +1101,7 @@ export default function Wallet() {
                   <Clock className="w-4 h-4 text-gray-500" />
                   <div>
                     <p className="text-[0.625rem] text-gray-500 uppercase tracking-wider">Next bonus in</p>
-                    <p className="text-sm font-bold text-cyan-400 tabular-nums">{timeLeft}</p>
+                    <p className="text-sm font-bold text-primary tabular-nums">{timeLeft}</p>
                   </div>
                 </div>
               ) : (
@@ -1113,7 +1112,7 @@ export default function Wallet() {
                 </motion.button>
               )}
               <div className="flex items-center gap-1.5 text-[0.625rem] text-gray-600">
-                <Sparkles className="w-3 h-3 text-cyan-500/60" />
+                <Sparkles className="w-3 h-3 text-primary/60" />
                 <span>+{bonusAmount.toLocaleString()} chips daily{hasElitePass ? " (Elite)" : ""}</span>
               </div>
             </div>
@@ -1132,8 +1131,7 @@ export default function Wallet() {
                   animate={{ y: 0, opacity: 1 }}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
                   transition={{ delay: 0.1 + i * 0.05 }}
-                  className={`rounded-xl bg-gradient-to-br ${w.gradient} border ${w.border} p-4 relative overflow-hidden group cursor-pointer`}
-                  style={{ transition: "box-shadow 0.3s" }}
+                  className={`rounded-xl bg-gradient-to-br ${w.gradient} border ${w.border} p-4 relative overflow-hidden group cursor-pointer transition-shadow duration-300`}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px rgba(${w.rgb}, 0.15)`; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
                 >
@@ -1178,7 +1176,7 @@ export default function Wallet() {
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all ${
-                  activeTab === tab.key ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
+                  activeTab === tab.key ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
                 }`}>
                 <tab.icon className="w-3.5 h-3.5" /> {tab.label}
               </button>
@@ -1197,8 +1195,8 @@ export default function Wallet() {
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}
           className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-cyan-500/70" /> Balance History
+            <h2 className="text-xs font-display font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary/70" /> Balance History
             </h2>
           </div>
           <div className="h-32 sm:h-40"><BalanceChart transactions={transactions} /></div>
@@ -1208,17 +1206,17 @@ export default function Wallet() {
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.4 }}
           className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Filter className="w-4 h-4 text-cyan-500/70" /> Transactions
+            <h2 className="text-xs font-display font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+              <Filter className="w-4 h-4 text-primary/70" /> Transactions
               <button onClick={() => refreshTransactions()} className="p-1 rounded-md hover:bg-white/[0.05]"><RefreshCw className="w-3.5 h-3.5 text-gray-500" /></button>
               <button onClick={exportCSV} className="p-1 rounded-md hover:bg-white/[0.05]"><Download className="w-3.5 h-3.5 text-gray-500" /></button>
             </h2>
             <div className="flex items-center gap-2">
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-cyan-500/20" />
+                className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-primary/20" />
               <span className="text-[0.5rem] text-gray-600">to</span>
               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-cyan-500/20" />
+                className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-primary/20" />
             </div>
           </div>
 
@@ -1227,7 +1225,7 @@ export default function Wallet() {
             {FILTER_OPTIONS.map(opt => (
               <button key={opt.key} onClick={() => setFilter(opt.key)}
                 className={`px-2.5 py-1 rounded-lg text-[0.5625rem] font-semibold uppercase tracking-wider border transition-all ${
-                  filter === opt.key ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:text-gray-300"
+                  filter === opt.key ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:text-gray-300"
                 }`}>{opt.label}</button>
             ))}
           </div>
@@ -1258,7 +1256,7 @@ export default function Wallet() {
               ))}
               {hasMore && (
                 <button onClick={loadMore} disabled={loadingTx}
-                  className="w-full py-3 text-[0.625rem] font-bold uppercase text-cyan-400 hover:text-white transition-colors flex items-center justify-center gap-2">
+                  className="w-full py-3 text-[0.625rem] font-bold uppercase text-primary hover:text-white transition-colors flex items-center justify-center gap-2">
                   {loadingTx ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                   Load More
                 </button>

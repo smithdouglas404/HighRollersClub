@@ -131,7 +131,7 @@ export default function Leagues() {
     const now = new Date();
     const start = new Date(s.startDate);
     const end = new Date(s.endDate);
-    if (now < start) return { label: "Upcoming", color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" };
+    if (now < start) return { label: "Upcoming", color: "text-primary", bg: "bg-primary/10 border-primary/20" };
     if (now > end) return { label: "Completed", color: "text-gray-400", bg: "bg-gray-500/10 border-gray-500/20" };
     return { label: "Active", color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" };
   };
@@ -141,7 +141,7 @@ export default function Leagues() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : (
           <>
@@ -158,15 +158,15 @@ export default function Leagues() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${
                       isActive
-                        ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/20 shadow-[0_0_15px_rgba(0,212,255,0.05)]"
+                        ? "bg-primary/20 text-primary border-primary/30"
                         : "text-gray-500 hover:text-gray-300 border-white/5 hover:border-white/10 bg-white/[0.02]"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? "text-cyan-400" : "text-gray-600"}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-gray-600"}`} />
                     {tab.label}
                     {tab.count > 0 && (
                       <span className={`text-[0.5625rem] px-1.5 py-0.5 rounded-full ${
-                        isActive ? "bg-cyan-500/20 text-cyan-400" : "bg-white/5 text-gray-500"
+                        isActive ? "bg-primary/20 text-primary" : "bg-white/5 text-gray-500"
                       }`}>
                         {tab.count}
                       </span>
@@ -182,10 +182,7 @@ export default function Leagues() {
                   setCreateType(activeTab === "alliances" ? "alliance" : "league");
                   setShowCreate(true);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black shadow-[0_0_20px_rgba(0,212,255,0.3)]"
-                style={{
-                  background: "linear-gradient(135deg, #00d4ff, #f0d078)",
-                }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Create {activeTab === "alliances" ? "Alliance" : "Season"}
@@ -201,10 +198,10 @@ export default function Leagues() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-center justify-center py-16 text-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center mb-4">
-                      <Swords className="w-8 h-8 text-cyan-400/50" />
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/15 flex items-center justify-center mb-4">
+                      <Swords className="w-8 h-8 text-primary/50" />
                     </div>
-                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wider mb-1">No Alliances Yet</h3>
+                    <h3 className="text-sm font-bold font-display text-primary uppercase tracking-wider mb-1">No Alliances Yet</h3>
                     <p className="text-xs text-gray-600 max-w-xs">
                       Create an alliance to unite clubs and compete together in leagues.
                     </p>
@@ -221,17 +218,12 @@ export default function Leagues() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.05 }}
                           onClick={() => navigate(`/alliances/${alliance.id}`)}
-                          className="rounded-xl overflow-hidden cursor-pointer hover:border-cyan-500/20 transition-all"
-                          style={{
-                            background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                            border: "1px solid rgba(0,212,255,0.1)",
-                            boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-                          }}
+                          className="rounded-xl overflow-hidden cursor-pointer hover:border-primary/20 transition-all bg-surface-high/50 backdrop-blur-xl border border-primary/15"
                         >
                           <div className="p-5">
                             <div className="flex items-start gap-3 mb-4">
-                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                                <Swords className="w-5 h-5 text-cyan-400" />
+                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-primary/20 flex items-center justify-center shrink-0">
+                                <Swords className="w-5 h-5 text-primary" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h3 className="text-sm font-bold text-white tracking-wide">{alliance.name}</h3>
@@ -247,7 +239,7 @@ export default function Leagues() {
                               <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
                                 allianceClubs.length >= 2
                                   ? "text-green-400 bg-green-500/10 border-green-500/20"
-                                  : "text-cyan-400 bg-cyan-500/10 border-cyan-500/20"
+                                  : "text-primary bg-primary/10 border-primary/20"
                               }`}>
                                 {allianceClubs.length >= 2 ? "Active" : "Forming"}
                               </span>
@@ -260,11 +252,11 @@ export default function Leagues() {
                                   key={club.id}
                                   className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/10"
                                 >
-                                  <div className="w-8 h-8 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                                  <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
                                     {ci === 0 ? (
-                                      <Crown className="w-4 h-4 text-cyan-400" />
+                                      <Crown className="w-4 h-4 text-primary" />
                                     ) : (
-                                      <Shield className="w-4 h-4 text-cyan-400" />
+                                      <Shield className="w-4 h-4 text-primary" />
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">
@@ -299,10 +291,10 @@ export default function Leagues() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-center justify-center py-16 text-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center mb-4">
-                      <Trophy className="w-8 h-8 text-cyan-400/50" />
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/15 flex items-center justify-center mb-4">
+                      <Trophy className="w-8 h-8 text-primary/50" />
                     </div>
-                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wider mb-1">No League Seasons</h3>
+                    <h3 className="text-sm font-bold font-display text-primary uppercase tracking-wider mb-1">No League Seasons</h3>
                     <p className="text-xs text-gray-600 max-w-xs">
                       Create a league season to track inter-club competition and rankings.
                     </p>
@@ -318,18 +310,13 @@ export default function Leagues() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
                         onClick={() => navigate(`/leagues/${season.id}`)}
-                        className="rounded-xl overflow-hidden cursor-pointer hover:border-cyan-500/20 transition-all"
-                        style={{
-                          background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                          border: "1px solid rgba(0,212,255,0.1)",
-                          boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-                        }}
+                        className="rounded-xl overflow-hidden cursor-pointer hover:border-primary/20 transition-all bg-surface-high/50 backdrop-blur-xl border border-primary/15"
                       >
                         {/* Season Header */}
                         <div className="px-5 py-4 border-b border-white/[0.04] flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                              <Trophy className="w-5 h-5 text-cyan-400" />
+                            <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center">
+                              <Trophy className="w-5 h-5 text-primary" />
                             </div>
                             <div>
                               <h3 className="text-sm font-bold text-white tracking-wide">{season.name}</h3>
@@ -356,7 +343,7 @@ export default function Leagues() {
                             </div>
                             {standings.map((entry: any, rank: number) => {
                               const club = clubMap.get(entry.clubId);
-                              const medalColors = ["text-cyan-400", "text-gray-300", "text-cyan-600"];
+                              const medalColors = ["text-primary", "text-gray-300", "text-primary/60"];
                               return (
                                 <div
                                   key={entry.clubId}
@@ -379,7 +366,7 @@ export default function Leagues() {
                                       {entry.clubName || club?.name || entry.clubId.slice(0, 8)}
                                     </span>
                                   </div>
-                                  <span className="w-14 text-center text-xs font-bold text-cyan-400">{entry.points}</span>
+                                  <span className="w-14 text-center text-xs font-bold text-primary">{entry.points}</span>
                                   <span className="w-10 text-center text-xs font-medium text-green-400">{entry.wins}</span>
                                   <span className="w-10 text-center text-xs font-medium text-red-400">{entry.losses}</span>
                                 </div>
@@ -416,20 +403,15 @@ export default function Leagues() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-md rounded-2xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.95) 0%, rgba(16,24,36,0.98) 100%)",
-                border: "1px solid rgba(0,212,255,0.1)",
-                boxShadow: "0 25px 80px rgba(0,0,0,0.5), 0 0 40px rgba(0,212,255,0.05)",
-              }}
+              className="relative w-full max-w-md rounded-2xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
             >
-              <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
                     {createType === "alliance" ? (
-                      <Swords className="w-5 h-5 text-cyan-400" />
+                      <Swords className="w-5 h-5 text-primary" />
                     ) : (
-                      <Trophy className="w-5 h-5 text-cyan-400" />
+                      <Trophy className="w-5 h-5 text-primary" />
                     )}
                   </div>
                   <div>
@@ -455,7 +437,7 @@ export default function Leagues() {
                       onClick={() => setCreateType(type)}
                       className={`flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all border ${
                         createType === type
-                          ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/20"
+                          ? "bg-primary/15 text-primary border-primary/20"
                           : "text-gray-500 border-white/5 hover:border-white/10"
                       }`}
                     >
@@ -466,24 +448,24 @@ export default function Leagues() {
 
                 {/* Name */}
                 <div>
-                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">Name</label>
+                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-primary mb-1.5 block">Name</label>
                   <input
                     type="text"
                     value={createName}
                     onChange={(e) => setCreateName(e.target.value)}
                     placeholder={createType === "alliance" ? "Alliance name..." : "Season name..."}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-amber-500/20 transition-all"
                   />
                 </div>
 
                 {/* Alliance-specific: club picker */}
                 {createType === "alliance" && (
                   <div>
-                    <label className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">Founding Club</label>
+                    <label className="text-[0.625rem] font-bold uppercase tracking-wider text-primary mb-1.5 block">Founding Club</label>
                     <select
                       value={selectedClubId}
                       onChange={(e) => setSelectedClubId(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
                     >
                       <option value="">Select a club...</option>
                       {clubs.map(c => (
@@ -497,21 +479,21 @@ export default function Leagues() {
                 {createType === "league" && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">Start Date</label>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-primary mb-1.5 block">Start Date</label>
                       <input
                         type="date"
                         value={leagueStart}
                         onChange={(e) => setLeagueStart(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
                       />
                     </div>
                     <div>
-                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 mb-1.5 block">End Date</label>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-primary mb-1.5 block">End Date</label>
                       <input
                         type="date"
                         value={leagueEnd}
                         onChange={(e) => setLeagueEnd(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
                       />
                     </div>
                   </div>
@@ -521,18 +503,14 @@ export default function Leagues() {
                 <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => setShowCreate(false)}
-                    className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                    className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors bg-white/[0.03] border border-white/[0.06]"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleCreate}
                     disabled={createLoading || !createName.trim() || (createType === "alliance" && !selectedClubId) || (createType === "league" && (!leagueStart || !leagueEnd))}
-                    className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(0,212,255,0.3)]"
-                    style={{
-                      background: "linear-gradient(135deg, #00d4ff, #f0d078)",
-                    }}
+                    className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
                     {createLoading ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />

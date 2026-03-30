@@ -174,11 +174,7 @@ export default function BrowseClubs() {
     }
     return (
       <div
-        className={`${dim} rounded-xl flex items-center justify-center flex-shrink-0 ${textSize} font-black text-white/80`}
-        style={{
-          background: "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
-          border: "1px solid rgba(255,255,255,0.1)",
-        }}
+        className={`${dim} rounded-xl flex items-center justify-center flex-shrink-0 ${textSize} font-black text-white/80 bg-white/[0.03] border border-white/[0.06]`}
       >
         {club.name.charAt(0).toUpperCase()}
       </div>
@@ -193,11 +189,7 @@ export default function BrowseClubs() {
       return (
         <div
           data-testid={`status-member-${club.id}`}
-          className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center text-cyan-400"
-          style={{
-            background: "rgba(0,212,255,0.06)",
-            border: "1px solid rgba(0,212,255,0.15)",
-          }}
+          className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center text-primary bg-primary/[0.06] border border-primary/15"
         >
           Your Club
         </div>
@@ -207,11 +199,7 @@ export default function BrowseClubs() {
       return (
         <div
           data-testid={`status-pending-${club.id}`}
-          className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center text-amber-400 flex items-center justify-center gap-1.5"
-          style={{
-            background: "rgba(245,158,11,0.06)",
-            border: "1px solid rgba(245,158,11,0.15)",
-          }}
+          className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center text-amber-400 flex items-center justify-center gap-1.5 bg-amber-500/[0.06] border border-amber-500/15"
         >
           <Clock className="w-3.5 h-3.5" />
           Pending Request
@@ -225,20 +213,11 @@ export default function BrowseClubs() {
         whileTap={{ scale: 0.98 }}
         onClick={() => handleJoin(club.id, club.isPublic)}
         disabled={joiningId === club.id}
-        className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
-        style={
+        className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer ${
           club.isPublic
-            ? {
-                background: "linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,200,220,0.1))",
-                border: "1px solid rgba(0,212,255,0.25)",
-                color: "#00d4ff",
-              }
-            : {
-                background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(200,130,10,0.1))",
-                border: "1px solid rgba(245,158,11,0.25)",
-                color: "#f59e0b",
-              }
-        }
+            ? "bg-primary/15 border border-primary/25 text-primary"
+            : "bg-amber-500/15 border border-amber-500/25 text-amber-500"
+        }`}
       >
         {joiningId === club.id ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -267,11 +246,7 @@ export default function BrowseClubs() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search clubs by name or description..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-500 outline-none transition-all focus:ring-2 focus:ring-cyan-500/30"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
+                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-500 outline-none transition-all focus:ring-2 focus:ring-primary/30 bg-surface-highest/50 border border-white/[0.06]"
               />
             </div>
 
@@ -284,7 +259,7 @@ export default function BrowseClubs() {
                   onClick={() => setSortBy(opt.value)}
                   className={`px-3 py-1.5 rounded-full text-[0.6875rem] font-semibold transition-all cursor-pointer ${
                     sortBy === opt.value
-                      ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
+                      ? "bg-primary/15 text-primary border border-primary/30"
                       : "text-gray-500 hover:text-gray-300 border border-transparent hover:border-white/10"
                   }`}
                 >
@@ -301,7 +276,7 @@ export default function BrowseClubs() {
 
         {loading && (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         )}
 
@@ -312,11 +287,7 @@ export default function BrowseClubs() {
             className="text-center py-20"
           >
             <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5"
-              style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
+              className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5 bg-white/[0.03] border border-white/[0.06]"
             >
               <FolderSearch className="w-10 h-10 text-gray-600" />
             </div>
@@ -340,7 +311,7 @@ export default function BrowseClubs() {
               <div className="w-6 h-6 rounded-lg bg-amber-500/15 flex items-center justify-center">
                 <Star className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <h2 className="text-sm font-bold text-white tracking-wide" data-testid="text-featured-heading">Featured Clubs</h2>
+              <h2 className="text-sm font-bold text-white tracking-wide font-display" data-testid="text-featured-heading">Featured Clubs</h2>
               <div className="flex-1 h-px bg-gradient-to-r from-amber-500/20 to-transparent ml-2" />
             </div>
 
@@ -355,12 +326,7 @@ export default function BrowseClubs() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 + i * 0.08 }}
                     whileHover={{ y: -3, scale: 1.01 }}
-                    className="relative rounded-xl overflow-hidden group"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      boxShadow: `0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)`,
-                    }}
+                    className="relative rounded-xl overflow-hidden group bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
                   >
                     <div
                       className="h-1"
@@ -381,7 +347,7 @@ export default function BrowseClubs() {
                           <h3 className="text-sm font-bold text-white truncate">{club.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <span className={`inline-flex items-center gap-1 text-[0.5625rem] font-semibold ${
-                              club.isPublic ? "text-cyan-400" : "text-amber-400"
+                              club.isPublic ? "text-primary" : "text-amber-400"
                             }`}>
                               {club.isPublic ? <Globe className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
                               {club.isPublic ? "Public" : "Private"}
@@ -414,7 +380,7 @@ export default function BrowseClubs() {
                 <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center">
                   <Globe className="w-3.5 h-3.5 text-gray-400" />
                 </div>
-                <h2 className="text-sm font-bold text-white tracking-wide" data-testid="text-all-clubs-heading">All Clubs</h2>
+                <h2 className="text-sm font-bold text-white tracking-wide font-display" data-testid="text-all-clubs-heading">All Clubs</h2>
                 <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent ml-2" />
               </div>
             )}
@@ -441,12 +407,7 @@ export default function BrowseClubs() {
                       exit={{ opacity: 0, scale: 0.95 }}
                       layout
                       whileHover={{ y: -3, scale: 1.01 }}
-                      className="rounded-xl overflow-hidden transition-shadow group"
-                      style={{
-                        background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
-                        border: "1px solid rgba(255,255,255,0.07)",
-                        boxShadow: "0 4px 24px rgba(0,0,0,0.25)",
-                      }}
+                      className="rounded-xl overflow-hidden transition-shadow group bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
                     >
                       <div
                         className="h-[3px]"
@@ -486,7 +447,7 @@ export default function BrowseClubs() {
                                 <span
                                   className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider ${
                                     club.isPublic
-                                      ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                                      ? "bg-primary/10 text-primary border border-primary/20"
                                       : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                                   }`}
                                 >

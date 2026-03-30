@@ -185,8 +185,8 @@ export default function Analytics() {
       icon: Gamepad2,
       color: "amber",
       gradient: "from-amber-500/20 to-blue-500/20",
-      border: "border-cyan-500/20",
-      textColor: "text-cyan-400",
+      border: "border-primary/20",
+      textColor: "text-primary",
     },
     {
       label: "Pots Won",
@@ -203,8 +203,8 @@ export default function Analytics() {
       icon: Target,
       color: "amber",
       gradient: "from-amber-500/20 to-orange-500/20",
-      border: "border-cyan-500/20",
-      textColor: "text-cyan-400",
+      border: "border-primary/20",
+      textColor: "text-primary",
     },
     {
       label: "Balance",
@@ -249,7 +249,7 @@ export default function Analytics() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : loadError ? (
           <div className="flex flex-col items-center justify-center py-20">
@@ -267,11 +267,7 @@ export default function Analytics() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className={`rounded-xl p-4 border ${card.border} relative overflow-hidden`}
-                    style={{
-                      background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                      boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-                    }}
+                    className={`rounded-xl p-4 border ${card.border} relative overflow-hidden bg-surface-high/50 backdrop-blur-xl border-white/[0.06]`}
                   >
                     <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${card.gradient} blur-3xl rounded-full opacity-30`} />
                     <div className="relative">
@@ -295,17 +291,12 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(0,212,255,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Winnings Over Time</h3>
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-primary/70">Winnings Over Time</h3>
                 </div>
                 {cumulativeWinnings.length > 0 && (
                   <span className={`text-xs font-bold ${
@@ -336,16 +327,11 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(0,212,255,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Detailed Statistics</h3>
+                <BarChart3 className="w-4 h-4 text-primary" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-primary/70">Detailed Statistics</h3>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-white/[0.03]">
                 {advancedStats.map((stat, i) => (
@@ -378,16 +364,11 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(120,80,220,0.08) 0%, rgba(20,31,40,0.90) 100%)",
-                border: "1px solid rgba(120,80,220,0.15)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl overflow-hidden bg-purple-500/[0.08] backdrop-blur-xl border border-purple-500/15"
             >
               <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
                 <Brain className="w-4 h-4 text-purple-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400/70">Play Style Assessment</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-primary/70">Play Style Assessment</h3>
               </div>
               <div className="p-5">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -416,8 +397,8 @@ export default function Analytics() {
                       />
                     </div>
                     <div className="flex justify-between text-[0.5625rem]">
-                      <span className="text-cyan-400">Tight</span>
-                      <span className="text-cyan-400">Loose</span>
+                      <span className="text-primary">Tight</span>
+                      <span className="text-primary">Loose</span>
                     </div>
                   </div>
 

@@ -38,7 +38,13 @@ export type ClientMessage =
   | { type: "post_blinds" }
   | { type: "wait_for_bb" }
   | { type: "commentary_toggle"; enabled: boolean }
-  | { type: "commentary_omniscient"; enabled: boolean };
+  | { type: "commentary_omniscient"; enabled: boolean }
+  // Admin controls
+  | { type: "admin_pause_game"; tableId: string }
+  | { type: "admin_resume_game"; tableId: string }
+  | { type: "admin_approve_player"; tableId: string; playerId: string }
+  | { type: "admin_decline_player"; tableId: string; playerId: string }
+  | { type: "admin_update_table"; tableId: string; settings: { walletLimit?: number; smallBlind?: number; bigBlind?: number; ante?: number } };
 
 // Message types: Server → Client
 export type ServerMessage =
@@ -73,7 +79,13 @@ export type ServerMessage =
   | { type: "hand_countdown"; seconds: number }
   | { type: "player_moved"; playerId: string; displayName: string; toTableId: string; reason: string }
   | { type: "commentary"; segment: any }
-  | { type: "commentary_status"; enabled: boolean; omniscientMode: boolean };
+  | { type: "commentary_status"; enabled: boolean; omniscientMode: boolean }
+  // Admin control responses
+  | { type: "game_paused"; pausedBy: string }
+  | { type: "game_resumed"; resumedBy: string }
+  | { type: "waiting_list"; players: { id: string; name: string; avatar?: string; chipBalance: number }[] }
+  | { type: "player_approved"; playerId: string; displayName: string }
+  | { type: "player_declined"; playerId: string };
 
 // Global map of connected clients
 const clients = new Map<string, WsClient>();
@@ -276,6 +288,15 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
       clients.delete(user.id);
     });
   });
+}
+
+/** Check if a user is the table creator or a site admin */
+async function isTableAdmin(userId: string, tableId: string): Promise<boolean> {
+  const table = await storage.getTable(tableId);
+  if (!table) return false;
+  if (String(table.createdById) === String(userId)) return true;
+  const user = await storage.getUser(userId);
+  return user?.role === "admin";
 }
 
 async function handleMessage(client: WsClient, msg: ClientMessage) {
@@ -644,6 +665,133 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         enabled: true,
         omniscientMode: msg.enabled,
       });
+      break;
+    }
+
+    // ═══ ADMIN CONTROLS ═══
+
+    case "admin_pause_game": {
+      const adminTableId = msg.tableId;
+      if (!adminTableId) return;
+      const isAdmin = await isTableAdmin(client.userId, adminTableId);
+      if (!isAdmin) {
+        sendToUser(client.userId, { type: "error", message: "Only the table creator can pause the game" });
+        return;
+      }
+      const paused = tableManager.pauseGame(adminTableId);
+      if (!paused) {
+        sendToUser(client.userId, { type: "error", message: "Table not found" });
+        return;
+      }
+      broadcastToTable(adminTableId, { type: "game_paused", pausedBy: client.displayName });
+      break;
+    }
+
+    case "admin_resume_game": {
+      const adminTableId = msg.tableId;
+      if (!adminTableId) return;
+      const isAdmin = await isTableAdmin(client.userId, adminTableId);
+      if (!isAdmin) {
+        sendToUser(client.userId, { type: "error", message: "Only the table creator can resume the game" });
+        return;
+      }
+      const resumed = tableManager.resumeGame(adminTableId);
+      if (!resumed) {
+        sendToUser(client.userId, { type: "error", message: "Table not found" });
+        return;
+      }
+      broadcastToTable(adminTableId, { type: "game_resumed", resumedBy: client.displayName });
+      sendGameStateToTable(adminTableId);
+      break;
+    }
+
+    case "admin_approve_player": {
+      const adminTableId = msg.tableId;
+      const playerId = msg.playerId;
+      if (!adminTableId || !playerId) return;
+      const isAdmin = await isTableAdmin(client.userId, adminTableId);
+      if (!isAdmin) {
+        sendToUser(client.userId, { type: "error", message: "Only the table creator can approve players" });
+        return;
+      }
+      const approved = tableManager.removeFromWaitingList(adminTableId, playerId);
+      if (!approved) {
+        sendToUser(client.userId, { type: "error", message: "Player not found in waiting list" });
+        return;
+      }
+      // Auto-join the approved player to the table
+      const joinResult = await tableManager.joinTable(
+        adminTableId, playerId, approved.name, approved.chipBalance
+      );
+      if (!joinResult.ok) {
+        sendToUser(client.userId, { type: "error", message: `Could not seat player: ${joinResult.error}` });
+        return;
+      }
+      // Set the approved player's WS client table association
+      const approvedClient = clients.get(playerId);
+      if (approvedClient) {
+        approvedClient.tableId = adminTableId;
+      }
+      broadcastToTable(adminTableId, { type: "player_approved", playerId, displayName: approved.name });
+      // Send updated waiting list to admin
+      const remainingWL = tableManager.getWaitingList(adminTableId);
+      sendToUser(client.userId, {
+        type: "waiting_list",
+        players: remainingWL,
+      });
+      sendGameStateToTable(adminTableId);
+      break;
+    }
+
+    case "admin_decline_player": {
+      const adminTableId = msg.tableId;
+      const playerId = msg.playerId;
+      if (!adminTableId || !playerId) return;
+      const isAdmin = await isTableAdmin(client.userId, adminTableId);
+      if (!isAdmin) {
+        sendToUser(client.userId, { type: "error", message: "Only the table creator can decline players" });
+        return;
+      }
+      const declined = tableManager.removeFromWaitingList(adminTableId, playerId);
+      if (!declined) {
+        sendToUser(client.userId, { type: "error", message: "Player not found in waiting list" });
+        return;
+      }
+      // Notify the declined player
+      sendToUser(playerId, { type: "error", message: "Your request to join was declined by the table admin" });
+      broadcastToTable(adminTableId, { type: "player_declined", playerId });
+      // Send updated waiting list to admin
+      const remainingWL = tableManager.getWaitingList(adminTableId);
+      sendToUser(client.userId, {
+        type: "waiting_list",
+        players: remainingWL,
+      });
+      break;
+    }
+
+    case "admin_update_table": {
+      const adminTableId = msg.tableId;
+      if (!adminTableId) return;
+      const isAdmin = await isTableAdmin(client.userId, adminTableId);
+      if (!isAdmin) {
+        sendToUser(client.userId, { type: "error", message: "Only the table creator can update settings" });
+        return;
+      }
+      const settings = msg.settings || {};
+      const updated = await tableManager.updateTableSettings(adminTableId, {
+        smallBlind: settings.smallBlind,
+        bigBlind: settings.bigBlind,
+        ante: settings.ante,
+      });
+      if (!updated) {
+        sendToUser(client.userId, { type: "error", message: "Table not found" });
+        return;
+      }
+      broadcastToTable(adminTableId, {
+        type: "info",
+        message: `${client.displayName} updated table settings — changes take effect next hand`,
+      } as any);
+      sendGameStateToTable(adminTableId);
       break;
     }
 

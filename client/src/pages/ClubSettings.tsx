@@ -93,7 +93,7 @@ export default function ClubSettings() {
       <div className="px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : !club ? (
           <motion.div
@@ -105,11 +105,7 @@ export default function ClubSettings() {
             <p className="text-sm text-gray-500">You don't belong to any club yet.</p>
             <button
               onClick={() => navigate("/lobby")}
-              className="mt-4 px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
-              style={{
-                background: "linear-gradient(135deg, #00d4ff, #00d4aa)",
-                boxShadow: "0 0 15px rgba(0,212,255,0.2)",
-              }}
+              className="mt-4 px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider bg-primary text-black"
             >
               Back to Lobby
             </button>
@@ -123,11 +119,7 @@ export default function ClubSettings() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                  style={{
-                    background: "rgba(0,212,255,0.08)",
-                    border: "1px solid rgba(0,212,255,0.2)",
-                  }}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/[0.08] border border-primary/20"
                 >
                   <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
                   <span className="text-xs text-green-300">{successMsg}</span>
@@ -139,19 +131,13 @@ export default function ClubSettings() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                border: "1px solid rgba(0,212,255,0.1)",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
             >
               <div
-                className="flex items-center gap-3 px-5 py-4"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
               >
-                <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-cyan-400" />
+                <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white tracking-wider uppercase">
@@ -172,11 +158,7 @@ export default function ClubSettings() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     maxLength={50}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40"
-                    style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                    }}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-surface-highest/50 border border-white/[0.06]"
                     placeholder="Enter club name..."
                   />
                 </div>
@@ -191,11 +173,7 @@ export default function ClubSettings() {
                     onChange={(e) => setDescription(e.target.value)}
                     maxLength={300}
                     rows={3}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none resize-none transition-all focus:ring-1 focus:ring-amber-500/40"
-                    style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                    }}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none resize-none transition-all focus:ring-1 focus:ring-primary/40 bg-surface-highest/50 border border-white/[0.06]"
                     placeholder="Describe your club..."
                   />
                   <div className="text-right text-[0.5625rem] text-gray-600">{description.length}/300</div>
@@ -207,7 +185,7 @@ export default function ClubSettings() {
                     {isPublic ? (
                       <Globe className="w-4 h-4 text-green-400" />
                     ) : (
-                      <Lock className="w-4 h-4 text-cyan-400" />
+                      <Lock className="w-4 h-4 text-primary" />
                     )}
                     <div>
                       <div className="text-xs font-semibold text-white">
@@ -222,12 +200,7 @@ export default function ClubSettings() {
                   </div>
                   <button
                     onClick={() => setIsPublic(!isPublic)}
-                    className="relative w-11 h-6 rounded-full transition-colors"
-                    style={{
-                      background: isPublic
-                        ? "linear-gradient(135deg, #00d4ff, #00d4aa)"
-                        : "rgba(255,255,255,0.1)",
-                    }}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${isPublic ? "bg-primary" : "bg-white/10"}`}
                   >
                     <motion.div
                       layout
@@ -244,11 +217,7 @@ export default function ClubSettings() {
                   whileTap={{ scale: 0.99 }}
                   onClick={handleSave}
                   disabled={saving || !name.trim()}
-                  className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: "linear-gradient(135deg, #00d4ff, #00d4aa)",
-                    boxShadow: "0 0 20px rgba(0,212,255,0.15)",
-                  }}
+                  className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider bg-primary text-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -266,19 +235,13 @@ export default function ClubSettings() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="rounded-xl overflow-hidden"
-                style={{
-                  background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                  border: "1px solid rgba(255,165,0,0.1)",
-                  boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-                }}
+                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-amber-500/15"
               >
                 <div
-                  className="flex items-center gap-3 px-5 py-4"
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                  className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                    <Crown className="w-5 h-5 text-cyan-400" />
+                  <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-primary" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white tracking-wider uppercase">
@@ -289,8 +252,8 @@ export default function ClubSettings() {
                 </div>
 
                 <div className="p-5 space-y-4">
-                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(255,165,0,0.04)", border: "1px solid rgba(255,165,0,0.1)" }}>
-                    <AlertTriangle className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/[0.04] border border-amber-500/15">
+                    <AlertTriangle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                     <p className="text-[0.625rem] text-gray-400 leading-relaxed">
                       Transferring ownership is permanent. You will be demoted to a regular member
                       and the new owner will have full control over the club.
@@ -304,17 +267,13 @@ export default function ClubSettings() {
                     <select
                       value={transferTarget}
                       onChange={(e) => setTransferTarget(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-amber-500/40 appearance-none cursor-pointer"
-                      style={{
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                      }}
+                      className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-white/[0.03] border border-white/[0.06]"
                     >
-                      <option value="" className="bg-[#141f30]">
+                      <option value="" className="bg-surface-lowest">
                         Select a member...
                       </option>
                       {otherMembers.map((m) => (
-                        <option key={m.userId} value={m.userId} className="bg-[#141f30]">
+                        <option key={m.userId} value={m.userId} className="bg-surface-lowest">
                           {m.displayName} (@{m.username})
                         </option>
                       ))}
@@ -326,11 +285,7 @@ export default function ClubSettings() {
                     whileTap={{ scale: 0.99 }}
                     onClick={handleTransferOwnership}
                     disabled={!transferTarget || saving}
-                    className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed text-cyan-300 transition-colors hover:text-cyan-200"
-                    style={{
-                      background: "rgba(255,165,0,0.08)",
-                      border: "1px solid rgba(255,165,0,0.2)",
-                    }}
+                    className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed text-primary transition-colors hover:text-primary bg-amber-500/[0.08] border border-amber-500/20"
                   >
                     <Shield className="w-4 h-4" />
                     Transfer Ownership
@@ -345,16 +300,10 @@ export default function ClubSettings() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="rounded-xl overflow-hidden"
-                style={{
-                  background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-                  border: "1px solid rgba(255,60,60,0.1)",
-                  boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-                }}
+                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-destructive/15"
               >
                 <div
-                  className="flex items-center gap-3 px-5 py-4"
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                  className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
                 >
                   <div className="w-9 h-9 rounded-lg bg-red-500/15 border border-red-500/20 flex items-center justify-center">
                     <Trash2 className="w-5 h-5 text-red-400" />
@@ -378,11 +327,7 @@ export default function ClubSettings() {
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         onClick={() => setShowDeleteConfirm(true)}
-                        className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-red-400 flex items-center justify-center gap-2 transition-colors hover:text-red-300"
-                        style={{
-                          background: "rgba(255,60,60,0.06)",
-                          border: "1px solid rgba(255,60,60,0.15)",
-                        }}
+                        className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-red-400 flex items-center justify-center gap-2 transition-colors hover:text-red-300 bg-destructive/[0.06] border border-destructive/15"
                       >
                         <Trash2 className="w-4 h-4" />
                         Delete Club
@@ -395,7 +340,7 @@ export default function ClubSettings() {
                         exit={{ opacity: 0, scale: 0.98 }}
                         className="space-y-3"
                       >
-                        <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(255,60,60,0.06)", border: "1px solid rgba(255,60,60,0.15)" }}>
+                        <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/[0.06] border border-destructive/15">
                           <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
                           <div>
                             <div className="text-xs font-bold text-red-300">Are you sure?</div>
@@ -408,11 +353,7 @@ export default function ClubSettings() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => setShowDeleteConfirm(false)}
-                            className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
-                            style={{
-                              background: "rgba(255,255,255,0.03)",
-                              border: "1px solid rgba(255,255,255,0.06)",
-                            }}
+                            className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors bg-white/[0.03] border border-white/[0.06]"
                           >
                             Cancel
                           </button>
@@ -421,11 +362,7 @@ export default function ClubSettings() {
                             whileTap={{ scale: 0.98 }}
                             onClick={handleDelete}
                             disabled={deleting}
-                            className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-white flex items-center justify-center gap-1.5 disabled:opacity-50"
-                            style={{
-                              background: "linear-gradient(135deg, #ff3c3c, #cc2020)",
-                              boxShadow: "0 0 15px rgba(255,60,60,0.2)",
-                            }}
+                            className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-destructive text-white flex items-center justify-center gap-1.5 disabled:opacity-50"
                           >
                             {deleting ? (
                               <Loader2 className="w-3 h-3 animate-spin" />

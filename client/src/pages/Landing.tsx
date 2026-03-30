@@ -79,7 +79,7 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white font-sans relative overflow-hidden" data-testid="landing-page">
+    <div className="min-h-screen bg-background text-white font-sans relative overflow-hidden" data-testid="landing-page">
 
       <div className="absolute inset-0 z-0">
         <AnimatePresence mode="wait">
@@ -94,18 +94,12 @@ export default function Landing() {
             className="absolute inset-0 w-full h-full object-cover"
           />
         </AnimatePresence>
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e1a]/60 via-[#0a0e1a]/80 to-[#0a0e1a]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
       </div>
 
       <div className="absolute inset-0 z-[1] pointer-events-none overflow-hidden">
-        <div
-          className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%)" }}
-        />
-        <div
-          className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(255,215,0,0.04) 0%, transparent 70%)" }}
-        />
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/[0.06] blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-amber-500/[0.04] blur-[120px]" />
       </div>
 
       <div className="relative z-10 min-h-screen flex flex-col">
@@ -127,7 +121,7 @@ export default function Landing() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-extrabold text-base tracking-[0.2em] leading-none" style={{ color: "#d4a843" }}>
+              <span className="font-display font-extrabold text-base tracking-[0.2em] leading-none gold-text">
                 HIGH ROLLERS
               </span>
               <span className="text-[0.6rem] text-gray-500 tracking-[0.25em] font-mono mt-0.5">CLUB</span>
@@ -136,19 +130,13 @@ export default function Landing() {
 
           <div className="flex items-center gap-6">
             <Link href="/lobby">
-              <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold hidden md:block cursor-pointer hover:text-cyan-400 transition-colors" data-testid="link-lobby">
+              <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold hidden md:block cursor-pointer hover:text-primary transition-colors" data-testid="link-lobby">
                 Lobby
               </span>
             </Link>
             <Link href="/lobby">
               <button
-                className="rounded-lg px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
-                style={{
-                  background: "linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.05))",
-                  border: "1px solid rgba(0,212,255,0.3)",
-                  color: "#00d4ff",
-                  boxShadow: "0 0 20px rgba(0,212,255,0.1)",
-                }}
+                className="rounded-lg px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 bg-primary/10 border border-primary/30 text-primary"
                 data-testid="button-launch"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
@@ -168,25 +156,17 @@ export default function Landing() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, delay: 0.15 }}
                 >
-                  <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6" style={{ background: "rgba(0,255,157,0.08)", border: "1px solid rgba(0,255,157,0.15)" }}>
-                    <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(0,255,157,0.6)]" style={{ animation: "pulse 2s ease-in-out infinite" }} />
+                  <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 bg-green-500/[0.08] border border-green-500/15">
+                    <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(0,255,157,0.6)] animate-pulse" />
                     <span className="text-[0.7rem] text-green-400 uppercase tracking-wider font-semibold">
                       {onlineCount > 0 ? `${onlineCount} Players Online` : "Live Now"}
                     </span>
                   </div>
 
-                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-black leading-[0.95] tracking-tight">
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-black leading-[0.95] tracking-tight">
                     <span className="block text-white">The Future</span>
                     <span className="block text-white">of Online</span>
-                    <span
-                      className="block"
-                      style={{
-                        background: "linear-gradient(135deg, #00d4ff, #00ff9d)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        filter: "drop-shadow(0 0 30px rgba(0,212,255,0.3))",
-                      }}
-                    >
+                    <span className="block text-transparent bg-clip-text gradient-primary neon-text-glow">
                       Poker
                     </span>
                   </h1>
@@ -210,11 +190,7 @@ export default function Landing() {
                 >
                   <Link href="/lobby">
                     <button
-                      className="group relative overflow-hidden rounded-xl px-10 py-4 font-bold text-base uppercase tracking-wider text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
-                      style={{
-                        background: "linear-gradient(135deg, #00d4ff, #00b4d8)",
-                        boxShadow: "0 0 40px rgba(0,212,255,0.25), 0 4px 20px rgba(0,0,0,0.3)",
-                      }}
+                      className="group relative overflow-hidden rounded-xl px-10 py-4 font-bold text-base uppercase tracking-wider gradient-primary text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
                       data-testid="button-play-now"
                     >
                       <div className="absolute inset-0 bg-white/0 group-hover:bg-white/15 transition-all duration-300" />
@@ -228,11 +204,7 @@ export default function Landing() {
 
                   <Link href="/game">
                     <button
-                      className="rounded-xl px-7 py-4 text-sm font-semibold text-gray-300 hover:text-white transition-all"
-                      style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                      }}
+                      className="rounded-xl px-7 py-4 text-sm font-semibold text-gray-300 hover:text-white transition-all bg-white/[0.03] border border-white/[0.06]"
                       data-testid="button-play-offline"
                     >
                       <div className="flex items-center gap-2">
@@ -251,11 +223,7 @@ export default function Landing() {
                 className="relative hidden lg:block"
               >
                 <div
-                  className="relative rounded-2xl overflow-hidden"
-                  style={{
-                    border: "1px solid rgba(0,212,255,0.12)",
-                    boxShadow: "0 30px 80px rgba(0,0,0,0.5), 0 0 40px rgba(0,212,255,0.06)",
-                  }}
+                  className="relative rounded-2xl overflow-hidden border border-primary/15"
                 >
                   <div className="aspect-[16/10] relative">
                     <img src={feltImg} alt="Poker Table" loading="lazy" className="w-full h-full object-cover" />
@@ -269,9 +237,9 @@ export default function Landing() {
                     />
 
                     <div className="absolute top-5 left-5">
-                      <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(0,212,255,0.2)" }}>
+                      <div className="flex items-center gap-2 rounded-lg px-3 py-1.5 bg-black/60 border border-primary/20">
                         <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                        <span className="text-[0.7rem] text-cyan-400 font-mono font-bold uppercase tracking-wider">Live</span>
+                        <span className="text-[0.7rem] text-primary font-mono font-bold uppercase tracking-wider">Live</span>
                       </div>
                     </div>
 
@@ -285,15 +253,9 @@ export default function Landing() {
                 </div>
 
                 <div
-                  className="absolute -bottom-4 -right-4 rounded-xl px-5 py-3 flex items-center gap-3 z-20"
-                  style={{
-                    background: "rgba(10,14,26,0.9)",
-                    border: "1px solid rgba(0,255,157,0.2)",
-                    boxShadow: "0 8px 30px rgba(0,0,0,0.4), 0 0 20px rgba(0,255,157,0.05)",
-                    backdropFilter: "blur(12px)",
-                  }}
+                  className="absolute -bottom-4 -right-4 rounded-xl px-5 py-3 flex items-center gap-3 z-20 bg-background/90 border border-green-500/20 backdrop-blur-xl"
                 >
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "rgba(0,255,157,0.1)", border: "1px solid rgba(0,255,157,0.2)" }}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-500/10 border border-green-500/20">
                     <Shield className="w-5 h-5 text-green-400" />
                   </div>
                   <div>
@@ -314,7 +276,7 @@ export default function Landing() {
         >
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-black text-white mb-3">Why High Rollers Club?</h2>
+              <h2 className="text-2xl md:text-3xl font-display font-black text-white mb-3">Why High Rollers Club?</h2>
               <p className="text-sm text-gray-500 max-w-md mx-auto">Not just another poker app. Built for serious players who demand transparency and community.</p>
             </div>
 
@@ -325,19 +287,7 @@ export default function Landing() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.8 + i * 0.08 }}
-                  className="group rounded-xl p-6 transition-all duration-300 hover:translate-y-[-2px]"
-                  style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = `${f.accent}30`;
-                    (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 30px ${f.accent}08`;
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.05)";
-                    (e.currentTarget as HTMLElement).style.boxShadow = "none";
-                  }}
+                  className="group rounded-xl p-6 transition-all duration-300 hover:translate-y-[-2px] bg-white/[0.03] border border-white/[0.06] hover:border-white/10"
                 >
                   <div
                     className="w-11 h-11 rounded-lg flex items-center justify-center mb-4"
@@ -356,11 +306,7 @@ export default function Landing() {
         <div className="px-6 md:px-12 lg:px-20 pb-8">
           <div className="max-w-7xl mx-auto">
             <div
-              className="rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6"
-              style={{
-                background: "linear-gradient(135deg, rgba(0,212,255,0.06), rgba(0,255,157,0.03))",
-                border: "1px solid rgba(0,212,255,0.1)",
-              }}
+              className="rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 bg-primary/[0.06] border border-primary/10"
             >
               <div>
                 <h3 className="text-xl font-bold text-white mb-1">Ready to play?</h3>
@@ -368,11 +314,7 @@ export default function Landing() {
               </div>
               <Link href="/lobby">
                 <button
-                  className="rounded-xl px-8 py-3.5 font-bold text-sm uppercase tracking-wider text-black shrink-0"
-                  style={{
-                    background: "linear-gradient(135deg, #00d4ff, #00b4d8)",
-                    boxShadow: "0 0 25px rgba(0,212,255,0.2)",
-                  }}
+                  className="rounded-xl px-8 py-3.5 font-bold text-sm uppercase tracking-wider gradient-primary text-black shrink-0"
                   data-testid="button-cta-bottom"
                 >
                   <div className="flex items-center gap-2">

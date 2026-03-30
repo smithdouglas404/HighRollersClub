@@ -168,6 +168,13 @@ export function useMultiplayerGame(tableId: string, userId: string) {
   // Keep tableId in a ref so closures always see the latest value
   const tableIdRef = useRef(tableId);
   tableIdRef.current = tableId;
+  // Refs for optimistic updates in handlePlayerAction
+  const heroIdRef = useRef(userId);
+  heroIdRef.current = userId;
+  const playersRef = useRef(players);
+  playersRef.current = players;
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
 
   // Connect WebSocket and set up handlers — re-runs when tableId changes
   useEffect(() => {
@@ -475,9 +482,58 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     };
   }, [tableId]);
 
-  // Handle actions
+  // Handle actions — with optimistic chip update so UI reflects bets immediately
   const handlePlayerAction = useCallback(
     (action: string, amount?: number) => {
+      // Optimistic local update: deduct chips from hero immediately
+      setPlayers(prev => {
+        const heroIdx = prev.findIndex(p => p.id === heroIdRef.current);
+        if (heroIdx === -1) return prev;
+        const hero = prev[heroIdx];
+        let newChips = hero.chips;
+        let newCurrentBet = hero.currentBet;
+        let newStatus: string = hero.status;
+
+        if (action === "call") {
+          const callAmount = Math.min(
+            Math.max(0, (gameStateRef.current?.minBet || 0) - hero.currentBet),
+            hero.chips
+          );
+          newChips = hero.chips - callAmount;
+          newCurrentBet = hero.currentBet + callAmount;
+          newStatus = newChips === 0 ? "all-in" : "called";
+        } else if (action === "raise" && amount) {
+          const toAdd = Math.min(amount - hero.currentBet, hero.chips);
+          newChips = hero.chips - toAdd;
+          newCurrentBet = hero.currentBet + toAdd;
+          newStatus = newChips === 0 ? "all-in" : "raised";
+        } else if (action === "fold") {
+          newStatus = "folded";
+        } else if (action === "check") {
+          newStatus = "checked";
+        }
+
+        if (newChips === hero.chips && newStatus === hero.status) return prev;
+        const updated = [...prev];
+        updated[heroIdx] = { ...hero, chips: newChips, currentBet: newCurrentBet, status: newStatus as any };
+        return updated;
+      });
+
+      // Also update pot optimistically for calls/raises
+      if (action === "call" || action === "raise") {
+        setGameState(prev => {
+          const hero = playersRef.current?.find((p: any) => p.id === heroIdRef.current);
+          if (!hero) return prev;
+          let added = 0;
+          if (action === "call") {
+            added = Math.min(Math.max(0, (prev.minBet || 0) - hero.currentBet), hero.chips);
+          } else if (action === "raise" && amount) {
+            added = Math.min(amount - hero.currentBet, hero.chips);
+          }
+          return { ...prev, pot: prev.pot + added };
+        });
+      }
+
       wsClient.send({
         type: "player_action",
         action,

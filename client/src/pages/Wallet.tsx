@@ -1238,23 +1238,70 @@ function ConnectedWalletsSection() {
   const [expanded, setExpanded] = useState(true);
   const [connectedWallets, setConnectedWallets] = useState<Record<string, string>>({});
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [loadingWallets, setLoadingWallets] = useState(true);
 
-  const handleConnect = useCallback((providerId: string) => {
-    setConnecting(providerId);
-    // Simulate wallet connection delay
-    setTimeout(() => {
-      const address = generateMockAddress(providerId);
-      setConnectedWallets(prev => ({ ...prev, [providerId]: address }));
-      setConnecting(null);
-    }, 1200);
+  // Fetch connected wallets on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/wallets", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          const map: Record<string, string> = {};
+          for (const w of data.wallets ?? []) {
+            map[w.provider] = w.address;
+          }
+          setConnectedWallets(map);
+        }
+      } catch {
+        // ignore fetch errors
+      } finally {
+        setLoadingWallets(false);
+      }
+    })();
   }, []);
 
-  const handleDisconnect = useCallback((providerId: string) => {
-    setConnectedWallets(prev => {
-      const next = { ...prev };
-      delete next[providerId];
-      return next;
-    });
+  const handleConnect = useCallback(async (providerId: string) => {
+    setConnecting(providerId);
+    try {
+      const address = generateMockAddress(providerId);
+      const res = await fetch("/api/auth/wallet/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ provider: providerId, address }),
+      });
+      if (res.ok) {
+        setConnectedWallets(prev => ({ ...prev, [providerId]: address }));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setConnecting(null);
+    }
+  }, []);
+
+  const handleDisconnect = useCallback(async (providerId: string) => {
+    setConnecting(providerId);
+    try {
+      const res = await fetch("/api/auth/wallet/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ provider: providerId }),
+      });
+      if (res.ok) {
+        setConnectedWallets(prev => {
+          const next = { ...prev };
+          delete next[providerId];
+          return next;
+        });
+      }
+    } catch {
+      // ignore
+    } finally {
+      setConnecting(null);
+    }
   }, []);
 
   const connectedCount = Object.keys(connectedWallets).length;
@@ -1313,6 +1360,12 @@ function ConnectedWalletsSection() {
             className="overflow-hidden"
           >
             <div className="px-5 sm:px-6 pb-5 space-y-3">
+              {loadingWallets ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary/40" />
+                </div>
+              ) : (
+              <>
               {/* Provider cards grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {WALLET_PROVIDERS.map((provider) => {
@@ -1394,6 +1447,8 @@ function ConnectedWalletsSection() {
                   Your wallet connections are encrypted and secure
                 </p>
               </div>
+              </>
+              )}
             </div>
           </motion.div>
         )}

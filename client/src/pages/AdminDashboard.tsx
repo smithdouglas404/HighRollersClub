@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
-import { useLocation } from "wouter";
-import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw } from "lucide-react";
+import { useLocation, Link } from "wouter";
+import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Megaphone } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;
@@ -249,7 +249,7 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-bold text-white font-display">Admin Dashboard</h1>
 
         {/* Tabs */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {tabs.map(t => (
             <button
               key={t.key}
@@ -263,6 +263,11 @@ export default function AdminDashboard() {
               {t.icon} {t.label}
             </button>
           ))}
+          <Link href="/sponsorship">
+            <span className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 border border-transparent transition-all cursor-pointer">
+              <Megaphone className="w-4 h-4" /> Sponsorship Reports
+            </span>
+          </Link>
         </div>
 
         {loading && (

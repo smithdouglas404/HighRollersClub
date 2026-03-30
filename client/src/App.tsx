@@ -36,6 +36,8 @@ import AnnouncementManager from "@/pages/AnnouncementManager";
 import SponsorshipReports from "@/pages/SponsorshipReports";
 import AccountRecovery from "@/pages/AccountRecovery";
 import AvatarWardrobe from "@/pages/AvatarWardrobe";
+import AvatarCustomizer from "@/pages/AvatarCustomizer";
+import AvatarRenderProgress from "@/pages/AvatarRenderProgress";
 import DyeShop from "@/pages/DyeShop";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
@@ -133,6 +135,14 @@ function ProtectedDyeShop() {
   return <AuthGate><DyeShop /></AuthGate>;
 }
 
+function ProtectedAvatarCustomizer() {
+  return <AuthGate><AvatarCustomizer /></AuthGate>;
+}
+
+function ProtectedAvatarRenderProgress() {
+  return <AuthGate><AvatarRenderProgress /></AuthGate>;
+}
+
 function GameWithTable({ params }: { params: { tableId: string } }) {
   return <AuthGate><ErrorBoundary fallbackTitle="Game Error"><Game tableId={params.tableId} /></ErrorBoundary></AuthGate>;
 }
@@ -207,6 +217,8 @@ function Router() {
       <Route path="/recovery" component={AccountRecovery} />
       <Route path="/wardrobe" component={ProtectedWardrobe} />
       <Route path="/dye-shop" component={ProtectedDyeShop} />
+      <Route path="/avatar-customizer" component={ProtectedAvatarCustomizer} />
+      <Route path="/avatar-render" component={ProtectedAvatarRenderProgress} />
       <Route component={NotFound} />
     </Switch>
   );

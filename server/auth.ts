@@ -7,7 +7,7 @@ import { type Express, type Request } from "express";
 import { storage } from "./storage";
 import { hasDatabase, getPool } from "./db";
 import { type User } from "@shared/schema";
-import { randomUUID, scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { randomUUID, scrypt, randomBytes, timingSafeEqual, createHmac } from "crypto";
 import { promisify } from "util";
 
 const scryptAsync = promisify(scrypt);
@@ -26,10 +26,34 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
   return timingSafeEqual(derived, hashBuffer);
 }
 
+function verifyTOTP(secret: string, code: string): boolean {
+  const time = Math.floor(Date.now() / 30000); // 30-second window
+  for (let i = -1; i <= 1; i++) { // Check current, previous, and next window
+    const hmac = createHmac("sha1", Buffer.from(secret, "hex"));
+    const timeVal = time + i;
+    hmac.update(Buffer.from([
+      (timeVal >> 24) & 0xff,
+      (timeVal >> 16) & 0xff,
+      (timeVal >> 8) & 0xff,
+      timeVal & 0xff,
+      0, 0, 0, 0,
+    ]));
+    const hash = hmac.digest();
+    const offset = hash[hash.length - 1] & 0x0f;
+    const otp =
+      ((hash[offset] & 0x7f) << 24 |
+        hash[offset + 1] << 16 |
+        hash[offset + 2] << 8 |
+        hash[offset + 3]) % 1000000;
+    if (otp.toString().padStart(6, "0") === code) return true;
+  }
+  return false;
+}
+
 // Extend Express types for session user
 declare global {
   namespace Express {
-    interface User extends Omit<import("@shared/schema").User, "password"> {}
+    interface User extends Omit<import("@shared/schema").User, "password" | "twoFactorSecret"> {}
   }
 }
 
@@ -107,9 +131,9 @@ export function setupAuth(app: Express) {
   return sessionMiddleware;
 }
 
-// Strip password from user object
+// Strip sensitive fields from user object
 function sanitizeUser(user: User): Express.User {
-  const { password, ...safe } = user;
+  const { password, twoFactorSecret, ...safe } = user;
   return safe;
 }
 
@@ -301,6 +325,155 @@ export function registerAuthRoutes(app: Express) {
   app.get("/api/auth/me", (req, res) => {
     if (!req.user) return res.status(401).json({ message: "Not authenticated" });
     res.json(req.user);
+  });
+
+  // Change password
+  app.post("/api/auth/change-password", requireAuth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new passwords are required" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters" });
+      }
+
+      // Get user with password from storage
+      const user = await storage.getUser(req.user!.id);
+      if (!user || !user.password) {
+        return res.status(400).json({ message: "Cannot change password for this account" });
+      }
+
+      // Verify current password
+      const isValid = await verifyPassword(currentPassword, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash and store new password
+      const hashed = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { password: hashed });
+
+      res.json({ message: "Password changed successfully" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  // Generate 2FA secret
+  app.post("/api/auth/2fa/setup", requireAuth, async (req, res) => {
+    try {
+      // Generate a random secret (hex-encoded for HMAC use)
+      const secret = randomBytes(20).toString("hex");
+
+      // Store secret on user (not yet enabled)
+      await storage.updateUser(req.user!.id, { twoFactorSecret: secret });
+
+      // Return the secret for QR code generation (client-side)
+      const otpauthUrl = `otpauth://totp/HighRollers:${req.user!.username}?secret=${secret}&issuer=HighRollers`;
+
+      res.json({ secret, otpauthUrl });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to setup 2FA" });
+    }
+  });
+
+  // Verify and enable 2FA
+  app.post("/api/auth/2fa/verify", requireAuth, async (req, res) => {
+    try {
+      const { code } = req.body;
+      if (!code) return res.status(400).json({ message: "Verification code required" });
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user?.twoFactorSecret) {
+        return res.status(400).json({ message: "2FA not initialized. Call /api/auth/2fa/setup first" });
+      }
+
+      // Simple TOTP verification using HMAC
+      const isValid = verifyTOTP(user.twoFactorSecret, code);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid verification code" });
+      }
+
+      await storage.updateUser(user.id, { twoFactorEnabled: true });
+      res.json({ message: "2FA enabled successfully" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to verify 2FA" });
+    }
+  });
+
+  // Disable 2FA
+  app.post("/api/auth/2fa/disable", requireAuth, async (req, res) => {
+    try {
+      await storage.updateUser(req.user!.id, { twoFactorEnabled: false, twoFactorSecret: null });
+      res.json({ message: "2FA disabled" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to disable 2FA" });
+    }
+  });
+
+  // ── Wallet Connection Endpoints ────────────────────────────────────
+
+  const VALID_WALLET_PROVIDERS = ["metamask", "coinbase", "walletconnect", "phantom"];
+
+  // Connect a wallet
+  app.post("/api/auth/wallet/connect", requireAuth, async (req, res) => {
+    try {
+      const { provider, address } = req.body;
+      if (!provider || !VALID_WALLET_PROVIDERS.includes(provider)) {
+        return res.status(400).json({ message: "Invalid wallet provider. Must be one of: " + VALID_WALLET_PROVIDERS.join(", ") });
+      }
+      if (!address || typeof address !== "string" || address.trim().length === 0) {
+        return res.status(400).json({ message: "Wallet address is required" });
+      }
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const existing: Array<{ provider: string; address: string }> = Array.isArray(user.connectedWallets) ? user.connectedWallets as any : [];
+      // Replace if provider already exists, otherwise add
+      const updated = existing.filter((w: any) => w.provider !== provider);
+      updated.push({ provider, address: address.trim() });
+
+      await storage.updateUser(user.id, { connectedWallets: updated });
+      res.json({ message: "Wallet connected", provider, address: address.trim() });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to connect wallet" });
+    }
+  });
+
+  // Disconnect a wallet
+  app.post("/api/auth/wallet/disconnect", requireAuth, async (req, res) => {
+    try {
+      const { provider } = req.body;
+      if (!provider || !VALID_WALLET_PROVIDERS.includes(provider)) {
+        return res.status(400).json({ message: "Invalid wallet provider" });
+      }
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const existing: Array<{ provider: string; address: string }> = Array.isArray(user.connectedWallets) ? user.connectedWallets as any : [];
+      const updated = existing.filter((w: any) => w.provider !== provider);
+
+      await storage.updateUser(user.id, { connectedWallets: updated });
+      res.json({ message: "Wallet disconnected" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to disconnect wallet" });
+    }
+  });
+
+  // Get connected wallets
+  app.get("/api/auth/wallets", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const wallets: Array<{ provider: string; address: string }> = Array.isArray(user.connectedWallets) ? user.connectedWallets as any : [];
+      res.json({ wallets });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch wallets" });
+    }
   });
 }
 

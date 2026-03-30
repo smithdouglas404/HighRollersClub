@@ -777,6 +777,39 @@ export default function ClubDashboard() {
                       )}
                       </div>
                     </div>
+
+                    {/* Tournament Alerts */}
+                    <div className="space-y-4">
+                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-400" /> Tournament Alerts
+                      </h3>
+                      <div className="bg-surface-high/50 backdrop-blur-xl rounded-md border border-white/[0.06] divide-y divide-white/[0.04]">
+                        {[
+                          { id: 1, text: "Final Table starting in 5 min", time: "Just now", color: "text-red-400", bg: "bg-red-500/12 border-red-500/20", icon: Activity },
+                          { id: 2, text: "New tournament registration open", time: "10 min ago", color: "text-green-400", bg: "bg-green-500/12 border-green-500/20", icon: Trophy },
+                          { id: 3, text: "Sunday Special begins at 8 PM", time: "1 hr ago", color: "text-amber-400", bg: "bg-amber-500/12 border-amber-500/20", icon: Medal },
+                        ].map((alert, i) => {
+                          const AlertIcon = alert.icon;
+                          return (
+                            <motion.div
+                              key={alert.id}
+                              initial={{ opacity: 0, x: -8 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.2 + i * 0.06 }}
+                              className="flex items-start gap-3 px-4 py-3"
+                            >
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${alert.bg}`}>
+                                <AlertIcon className={`w-4 h-4 ${alert.color}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-white leading-snug font-medium">{alert.text}</p>
+                                <p className="text-[0.5625rem] text-gray-600 mt-0.5">{alert.time}</p>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

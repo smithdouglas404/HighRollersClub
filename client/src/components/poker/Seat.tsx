@@ -13,7 +13,7 @@ import { VideoThumbnail } from "./VideoOverlay";
 import { useTimerCountdown } from "@/hooks/useTimerCountdown";
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
 import { StickyNote } from "lucide-react";
-import type { AvatarOption } from "./AvatarSelect";
+import { AVATAR_OPTIONS, type AvatarOption } from "./AvatarSelect";
 import type { OpponentHudStats } from "@/lib/useOpponentStats";
 
 // ─── Player Note Popover ────────────────────────────────────────────────────
@@ -443,6 +443,10 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   const { compactMode } = useGameUI();
   const winnerCanvasRef = useWinnerParticles(isWinner && !compactMode);
 
+  // Look up full-body avatar image if available
+  const avatarOption = player.avatar ? AVATAR_OPTIONS.find(a => a.image === player.avatar) : undefined;
+  const fullBodyImage = avatarOption?.fullBodyImage;
+
   const isTurn = player.status === "thinking";
   const isFolded = player.status === "folded";
   const sound = useSoundEngine();
@@ -733,9 +737,14 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
 
               {player.avatar ? (
                 <img
-                  src={player.avatar}
+                  src={fullBodyImage || player.avatar}
                   alt={player.name}
                   className="w-full h-full object-cover object-top relative z-[1] rounded-t-xl"
+                  style={fullBodyImage ? {
+                    // For full-body images (768x1408), show head and upper torso
+                    // by positioning from the top of the image
+                    objectPosition: "center 5%",
+                  } : undefined}
                 />
               ) : (
                 <div
@@ -826,7 +835,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                     <circle cx="10" cy="10" r="5.5" fill="none" stroke="#b8860b" strokeWidth="0.8" />
                   </svg>
                   <span
-                    className="text-[0.8125rem] font-mono font-black leading-tight"
+                    className="text-[0.8125rem] font-mono font-black leading-tight tabular-nums"
                     style={{
                       color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
                       textShadow: chipsAnimating
@@ -839,7 +848,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                   </span>
                 </div>
                 {player.currentBet > 0 && (
-                  <span className="text-[#d4af37] text-[0.625rem] font-bold font-mono">
+                  <span className="text-[#d4af37] text-[0.625rem] font-bold font-mono tabular-nums">
                     {formatChips(player.currentBet)}
                   </span>
                 )}
@@ -967,7 +976,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             >
               <BetChipStack amount={player.currentBet} />
               <span
-                className="text-[0.75rem] font-mono font-black px-1.5 py-px rounded-md"
+                className="text-[0.75rem] font-mono font-black tabular-nums px-1.5 py-px rounded-md"
                 style={{
                   color: "#ffd700",
                   textShadow: "0 0 8px rgba(255,215,0,0.4)",

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Zap, Shield, Crown, Star, Trophy, Flame } from "lucide-react";
+import { ChevronRight, Zap, Shield, Crown, Star, Trophy, Flame, User } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
 
@@ -29,24 +29,35 @@ import avDataThief from "@assets/generated_images/avatars/avatar_data_thief.webp
 import avNeonMedic from "@assets/generated_images/avatars/avatar_neon_medic.webp";
 import avMerchantBoss from "@assets/generated_images/avatars/avatar_merchant_boss.webp";
 
+// Full-body 3D avatar imports (premium tiers only: 6 legendary + 2 epic)
+import fullBody1 from "@/assets/avatars/avatar-full-1.png";
+import fullBody2 from "@/assets/avatars/avatar-full-2.png";
+import fullBody3 from "@/assets/avatars/avatar-full-3.png";
+import fullBody4 from "@/assets/avatars/avatar-full-4.png";
+import fullBody5 from "@/assets/avatars/avatar-full-5.png";
+import fullBody6 from "@/assets/avatars/avatar-full-6.png";
+import fullBody7 from "@/assets/avatars/avatar-full-7.png";
+import fullBody8 from "@/assets/avatars/avatar-full-8.png";
+
 export interface AvatarOption {
   id: string;
   name: string;
   image: string;
+  fullBodyImage?: string;
   tier: "legendary" | "epic" | "rare" | "common";
   borderColor: string;
   glowColor: string;
 }
 
 export const AVATAR_OPTIONS: AvatarOption[] = [
-  { id: "neon-viper",      name: "Neon Viper",      image: avNeonViper,      tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
-  { id: "chrome-siren",    name: "Chrome Siren",    image: avChromeSiren,    tier: "legendary", borderColor: "#b44dff", glowColor: "rgba(180,77,255,0.3)" },
-  { id: "gold-phantom",    name: "Gold Phantom",    image: avGoldPhantom,    tier: "legendary", borderColor: "#ffd700", glowColor: "rgba(255,215,0,0.3)" },
-  { id: "shadow-king",     name: "Shadow King",     image: avShadowKing,     tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
-  { id: "void-witch",      name: "Void Witch",      image: avVoidWitch,      tier: "legendary", borderColor: "#a855f7", glowColor: "rgba(168,85,247,0.3)" },
-  { id: "cyber-samurai",   name: "Cyber Samurai",   image: avCyberSamurai,   tier: "legendary", borderColor: "#ef4444", glowColor: "rgba(239,68,68,0.3)" },
-  { id: "red-wolf",        name: "Red Wolf",        image: avRedWolf,        tier: "epic", borderColor: "#ff3366", glowColor: "rgba(255,51,102,0.3)" },
-  { id: "ice-queen",       name: "Ice Queen",       image: avIceQueen,       tier: "epic", borderColor: "#67e8f9", glowColor: "rgba(103,232,249,0.3)" },
+  { id: "neon-viper",      name: "Neon Viper",      image: avNeonViper,      fullBodyImage: fullBody1, tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
+  { id: "chrome-siren",    name: "Chrome Siren",    image: avChromeSiren,    fullBodyImage: fullBody2, tier: "legendary", borderColor: "#b44dff", glowColor: "rgba(180,77,255,0.3)" },
+  { id: "gold-phantom",    name: "Gold Phantom",    image: avGoldPhantom,    fullBodyImage: fullBody3, tier: "legendary", borderColor: "#ffd700", glowColor: "rgba(255,215,0,0.3)" },
+  { id: "shadow-king",     name: "Shadow King",     image: avShadowKing,     fullBodyImage: fullBody4, tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
+  { id: "void-witch",      name: "Void Witch",      image: avVoidWitch,      fullBodyImage: fullBody5, tier: "legendary", borderColor: "#a855f7", glowColor: "rgba(168,85,247,0.3)" },
+  { id: "cyber-samurai",   name: "Cyber Samurai",   image: avCyberSamurai,   fullBodyImage: fullBody6, tier: "legendary", borderColor: "#ef4444", glowColor: "rgba(239,68,68,0.3)" },
+  { id: "red-wolf",        name: "Red Wolf",        image: avRedWolf,        fullBodyImage: fullBody7, tier: "epic", borderColor: "#ff3366", glowColor: "rgba(255,51,102,0.3)" },
+  { id: "ice-queen",       name: "Ice Queen",       image: avIceQueen,       fullBodyImage: fullBody8, tier: "epic", borderColor: "#67e8f9", glowColor: "rgba(103,232,249,0.3)" },
   { id: "tech-monk",       name: "Tech Monk",       image: avTechMonk,       tier: "epic", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
   { id: "cyber-punk",      name: "Cyber Punk",      image: avCyberPunk,      tier: "epic", borderColor: "#ff69b4", glowColor: "rgba(255,105,180,0.3)" },
   { id: "oracle-seer",     name: "Oracle Seer",     image: avOracleSeer,     tier: "epic", borderColor: "#34d399", glowColor: "rgba(52,211,153,0.3)" },
@@ -211,6 +222,16 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
                         </div>
                       </div>
 
+                      {/* Full Body badge */}
+                      {av.fullBodyImage && (
+                        <div className="absolute bottom-6 right-1.5">
+                          <div className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[6px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 backdrop-blur-sm">
+                            <User className="w-2 h-2" />
+                            3D
+                          </div>
+                        </div>
+                      )}
+
                       {/* Name at bottom */}
                       <div className="absolute bottom-0 left-0 right-0 px-2 pb-1.5">
                         <div className="text-[0.625rem] font-bold text-white truncate drop-shadow-lg">{av.name}</div>
@@ -233,10 +254,21 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
                   className="w-12 h-12 rounded-lg overflow-hidden"
                   style={{ border: `2px solid ${selected.borderColor}`, boxShadow: `0 0 15px ${selected.glowColor}` }}
                 >
-                  <img src={selected.image} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={selected.fullBodyImage || selected.image}
+                    alt=""
+                    className={`w-full h-full ${selected.fullBodyImage ? "object-cover object-top" : "object-cover"}`}
+                  />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-white">{selected.name}</div>
+                  <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                    {selected.name}
+                    {selected.fullBodyImage && (
+                      <span className="px-1.5 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        3D Full Body
+                      </span>
+                    )}
+                  </div>
                   <div className={`text-[0.5625rem] font-bold uppercase tracking-wider ${TIER_CONFIG[selected.tier].text}`}>
                     {TIER_CONFIG[selected.tier].label}
                   </div>

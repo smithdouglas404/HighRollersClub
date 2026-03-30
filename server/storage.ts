@@ -254,6 +254,9 @@ export class MemStorage implements IStorage {
       role: data.role || "guest",
       provider: data.provider || "local",
       providerId: data.providerId || null,
+      twoFactorSecret: data.twoFactorSecret || null,
+      twoFactorEnabled: data.twoFactorEnabled ?? false,
+      connectedWallets: data.connectedWallets ?? null,
       lastDailyClaim: null,
       createdAt: new Date(),
     };

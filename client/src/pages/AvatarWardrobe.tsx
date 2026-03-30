@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import {
   User, Crown, Shirt, Sparkles,
-  Check, Save
+  Check, Save, Wand2, Palette
 } from "lucide-react";
 
 /* ── Types & Mock Data ──────────────────────────────────────── */
@@ -223,14 +224,32 @@ export default function AvatarWardrobe() {
             </div>
           </div>
 
-          {/* Save Preset button */}
-          <button
-            onClick={handleSavePreset}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider gradient-gold text-black border border-[#c9a84c]/40 hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,168,67,0.2)]"
-          >
-            <Save className="w-3.5 h-3.5" />
-            Save Preset
-          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Create New Avatar button */}
+            <Link href="/avatar-customizer">
+              <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/25 hover:bg-primary/20 transition-all">
+                <Wand2 className="w-3.5 h-3.5" />
+                Create New Avatar
+              </button>
+            </Link>
+
+            {/* Dye Shop button */}
+            <Link href="/dye-shop">
+              <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/25 hover:bg-purple-500/20 transition-all">
+                <Palette className="w-3.5 h-3.5" />
+                Dye Shop
+              </button>
+            </Link>
+
+            {/* Save Preset button */}
+            <button
+              onClick={handleSavePreset}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider gradient-gold text-black border border-[#c9a84c]/40 hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,168,67,0.2)]"
+            >
+              <Save className="w-3.5 h-3.5" />
+              Save Preset
+            </button>
+          </div>
         </motion.div>
 
         {/* Main avatar preview + equipped slots */}

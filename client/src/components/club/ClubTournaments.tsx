@@ -3,8 +3,9 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useClub } from "@/lib/club-context";
 import {
-  Trophy, Plus, Users, Coins, Clock, Loader2, X, Calendar
+  Trophy, Plus, Users, Coins, Clock, Loader2, X, Calendar, Radio, CheckCircle
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function ClubTournaments() {
   const [, navigate] = useLocation();
@@ -19,8 +20,23 @@ export function ClubTournaments() {
   const [maxPlayers, setMaxPlayers] = useState(8);
   const [startAt, setStartAt] = useState("");
 
+  const [filter, setFilter] = useState<"all" | "live" | "upcoming" | "completed">("all");
+
+  const live = clubTournaments.filter(t => t.status === "in_progress");
   const upcoming = clubTournaments.filter(t => t.status === "registering" || t.status === "pending");
-  const past = clubTournaments.filter(t => t.status === "complete" || t.status === "in_progress");
+  const completed = clubTournaments.filter(t => t.status === "complete");
+
+  const filteredTournaments = filter === "live" ? live
+    : filter === "upcoming" ? upcoming
+    : filter === "completed" ? completed
+    : clubTournaments;
+
+  const filterTabs = [
+    { key: "all" as const, label: "All", count: clubTournaments.length, icon: Trophy },
+    { key: "live" as const, label: "Live", count: live.length, icon: Radio },
+    { key: "upcoming" as const, label: "Upcoming", count: upcoming.length, icon: Calendar },
+    { key: "completed" as const, label: "Completed", count: completed.length, icon: CheckCircle },
+  ];
 
   const handleCreate = async () => {
     if (creating || !name.trim()) return;
@@ -205,12 +221,52 @@ export function ClubTournaments() {
         )}
       </AnimatePresence>
 
-      {/* Upcoming Tournaments */}
-      {upcoming.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Upcoming</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {upcoming.map((t, i) => (
+      {/* Filter Tabs */}
+      <div className="flex gap-1 bg-surface-low/30 rounded-md p-1 border border-white/[0.04]">
+        {filterTabs.map(tab => {
+          const Icon = tab.icon;
+          const isActive = filter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(tab.key)}
+              className={cn(
+                "flex-1 py-2 rounded-md text-[0.625rem] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5",
+                isActive
+                  ? "bg-primary/15 text-primary border border-primary/20"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {tab.label}
+              {tab.count > 0 && (
+                <span className={cn(
+                  "text-[0.5rem] font-bold px-1.5 py-0.5 rounded-full",
+                  isActive ? "bg-primary/25 text-primary" : "bg-white/5 text-muted-foreground"
+                )}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tournament Cards */}
+      {filteredTournaments.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {filteredTournaments.map((t, i) => {
+            const isLive = t.status === "in_progress";
+            const isComplete = t.status === "complete";
+            const isUpcoming = t.status === "registering" || t.status === "pending";
+
+            const statusStyle = isLive
+              ? "bg-green-500/15 text-green-400 border-green-500/20"
+              : isComplete
+              ? "bg-gray-500/15 text-gray-400 border-gray-500/20"
+              : "bg-cyan-500/15 text-cyan-400 border-cyan-500/20";
+
+            return (
               <motion.div
                 key={t.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -221,8 +277,17 @@ export function ClubTournaments() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h5 className="text-sm font-bold text-white">{t.name}</h5>
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
-                      {t.status}
+                    <span className={cn(
+                      "inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-wider border",
+                      statusStyle
+                    )}>
+                      {isLive && (
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
+                        </span>
+                      )}
+                      {t.status === "in_progress" ? "Live" : t.status}
                     </span>
                   </div>
                   <Trophy className="w-5 h-5 text-cyan-400/40" />
@@ -235,7 +300,7 @@ export function ClubTournaments() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Users className="w-3 h-3 text-cyan-500/60" />
-                    <span>{t.registeredCount} / {t.maxPlayers} registered</span>
+                    <span>{t.registeredCount} / {t.maxPlayers} {isComplete ? "players" : "registered"}</span>
                   </div>
                   {t.startAt && (
                     <div className="flex items-center gap-1.5">
@@ -243,86 +308,79 @@ export function ClubTournaments() {
                       <span>{new Date(t.startAt).toLocaleString()}</span>
                     </div>
                   )}
+                  {isComplete && (
+                    <div className="flex items-center gap-1.5">
+                      <Coins className="w-3 h-3 text-amber-500/60" />
+                      <span>Prize: <strong className="text-amber-400">{t.prizePool.toLocaleString()}</strong></span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Progress bar */}
-                <div className="mt-3 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all"
-                    style={{ width: `${Math.min(100, (t.registeredCount / t.maxPlayers) * 100)}%` }}
-                  />
-                </div>
+                {/* Progress bar (for upcoming / live) */}
+                {!isComplete && (
+                  <div className="mt-3 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        isLive ? "bg-gradient-to-r from-green-500 to-green-400" : "bg-gradient-to-r from-cyan-500 to-cyan-400"
+                      )}
+                      style={{ width: `${Math.min(100, (t.registeredCount / t.maxPlayers) * 100)}%` }}
+                    />
+                  </div>
+                )}
 
-                <div className="flex gap-2 mt-3">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleRegister(t.id)}
-                    className="flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-colors"
-                  >
-                    Register
-                  </motion.button>
-                  {isAdminOrOwner && t.registeredCount >= 2 && (
+                {/* Actions */}
+                {isUpcoming && (
+                  <div className="flex gap-2 mt-3">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => handleStart(t.id)}
-                      disabled={starting === t.id}
-                      className="flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-1"
-                      style={{
-                        background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
-                        boxShadow: "0 0 15px rgba(0,212,255,0.2)",
-                      }}
+                      onClick={() => handleRegister(t.id)}
+                      className="flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-colors"
                     >
-                      {starting === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trophy className="w-3 h-3" />}
-                      Start
+                      Register
                     </motion.button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
+                    {isAdminOrOwner && t.registeredCount >= 2 && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleStart(t.id)}
+                        disabled={starting === t.id}
+                        className="flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-1"
+                        style={{
+                          background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
+                          boxShadow: "0 0 15px rgba(0,212,255,0.2)",
+                        }}
+                      >
+                        {starting === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trophy className="w-3 h-3" />}
+                        Start
+                      </motion.button>
+                    )}
+                  </div>
+                )}
 
-      {/* Past Tournaments */}
-      {past.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Past</h4>
-          <div className="rounded-xl overflow-hidden glass">
-            {past.map((t, i) => (
-              <div
-                key={t.id}
-                className={`flex items-center justify-between px-4 py-3 ${i < past.length - 1 ? "border-b border-white/[0.04]" : ""}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                    <Trophy className="w-4 h-4 text-cyan-400/60" />
+                {isComplete && (
+                  <div className="mt-3 text-[0.625rem] text-gray-500">
+                    {new Date(t.createdAt).toLocaleDateString()}
                   </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">{t.name}</div>
-                    <div className="text-[0.5625rem] text-gray-600 flex items-center gap-2">
-                      <span>{t.registeredCount} players</span>
-                      <span>Prize: {t.prizePool.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-[0.625rem] text-gray-500">
-                  {new Date(t.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-            ))}
-          </div>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
       {/* Empty state */}
-      {clubTournaments.length === 0 && (
+      {filteredTournaments.length === 0 && (
         <div className="text-center py-12">
           <Trophy className="w-10 h-10 text-gray-700 mx-auto mb-3" />
-          <p className="text-sm text-gray-500 mb-1">No tournaments yet</p>
+          <p className="text-sm text-gray-500 mb-1">
+            {filter === "all" ? "No tournaments yet" : `No ${filter} tournaments`}
+          </p>
           <p className="text-[0.625rem] text-gray-600">
-            {isAdminOrOwner ? "Create a tournament to get started!" : "The club admin hasn't created any tournaments yet."}
+            {filter === "all" && isAdminOrOwner ? "Create a tournament to get started!" :
+             filter === "all" ? "The club admin hasn't created any tournaments yet." :
+             "Try a different filter to see other tournaments."}
           </p>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   Shield, Lock, Key, Smartphone, Wallet,
   Eye, EyeOff, Check, X, ChevronLeft,
-  Link2, ExternalLink, Loader2
+  Link2, ExternalLink, Loader2, Copy, CheckCircle
 } from "lucide-react";
 
 /* ────────────────────────────────────────────────────────────
@@ -35,6 +35,7 @@ function PasswordManagement() {
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       if (!res.ok) {
@@ -205,8 +206,151 @@ function PasswordManagement() {
    ──────────────────────────────────────────────────────────── */
 
 function TwoFactorAuth() {
-  const [enabled, setEnabled] = useState(false);
+  const { user, refreshUser } = useAuth();
+  const [enabled, setEnabled] = useState(user?.twoFactorEnabled ?? false);
   const [showSetup, setShowSetup] = useState(false);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [codeDigits, setCodeDigits] = useState(["", "", "", "", "", ""]);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [disableLoading, setDisableLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Sync with user object when it changes (e.g. after refreshUser)
+  useEffect(() => {
+    setEnabled(user?.twoFactorEnabled ?? false);
+  }, [user?.twoFactorEnabled]);
+
+  const handleCodeChange = (index: number, value: string) => {
+    // Allow only digits
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const newDigits = [...codeDigits];
+    newDigits[index] = digit;
+    setCodeDigits(newDigits);
+
+    // Auto-focus next input
+    if (digit && index < 5) {
+      const nextInput = document.getElementById(`2fa-code-${index + 1}`);
+      nextInput?.focus();
+    }
+  };
+
+  const handleCodeKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !codeDigits[index] && index > 0) {
+      const prevInput = document.getElementById(`2fa-code-${index - 1}`);
+      prevInput?.focus();
+    }
+  };
+
+  const handleCodePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted.length > 0) {
+      const newDigits = [...codeDigits];
+      for (let i = 0; i < 6; i++) {
+        newDigits[i] = pasted[i] || "";
+      }
+      setCodeDigits(newDigits);
+      // Focus the next empty input or last input
+      const focusIndex = Math.min(pasted.length, 5);
+      const input = document.getElementById(`2fa-code-${focusIndex}`);
+      input?.focus();
+    }
+  };
+
+  const fullCode = codeDigits.join("");
+  const canVerify = fullCode.length === 6 && !verifyLoading;
+
+  const handleEnableClick = async () => {
+    setFeedback(null);
+    setSetupLoading(true);
+    try {
+      const res = await fetch("/api/auth/2fa/setup", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Failed to start 2FA setup" }));
+        throw new Error(data.message || "Failed to start 2FA setup");
+      }
+      const data = await res.json();
+      setSecret(data.secret);
+      setCodeDigits(["", "", "", "", "", ""]);
+      setShowSetup(true);
+    } catch (err: any) {
+      setFeedback({ type: "error", message: err.message });
+    } finally {
+      setSetupLoading(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!canVerify) return;
+    setFeedback(null);
+    setVerifyLoading(true);
+    try {
+      const res = await fetch("/api/auth/2fa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code: fullCode }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Invalid verification code" }));
+        throw new Error(data.message || "Invalid verification code");
+      }
+      setEnabled(true);
+      setShowSetup(false);
+      setSecret(null);
+      setCodeDigits(["", "", "", "", "", ""]);
+      setFeedback({ type: "success", message: "Two-factor authentication enabled successfully" });
+      await refreshUser();
+    } catch (err: any) {
+      setFeedback({ type: "error", message: err.message });
+      setCodeDigits(["", "", "", "", "", ""]);
+      // Re-focus first input on error
+      const firstInput = document.getElementById("2fa-code-0");
+      firstInput?.focus();
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    setFeedback(null);
+    setDisableLoading(true);
+    try {
+      const res = await fetch("/api/auth/2fa/disable", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Failed to disable 2FA" }));
+        throw new Error(data.message || "Failed to disable 2FA");
+      }
+      setEnabled(false);
+      setShowSetup(false);
+      setSecret(null);
+      setFeedback({ type: "success", message: "Two-factor authentication disabled" });
+      await refreshUser();
+    } catch (err: any) {
+      setFeedback({ type: "error", message: err.message });
+    } finally {
+      setDisableLoading(false);
+    }
+  };
+
+  const handleCopySecret = async () => {
+    if (!secret) return;
+    try {
+      await navigator.clipboard.writeText(secret);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback: select the text for manual copy
+    }
+  };
 
   return (
     <motion.div
@@ -241,25 +385,43 @@ function TwoFactorAuth() {
 
         {/* Toggle button */}
         <button
+          disabled={setupLoading || disableLoading}
           onClick={() => {
             if (enabled) {
-              setEnabled(false);
-              setShowSetup(false);
+              handleDisable();
             } else {
-              setShowSetup(true);
+              handleEnableClick();
             }
           }}
           className={`relative w-11 h-6 rounded-full transition-all ${
             enabled ? "bg-green-500/30 border border-green-500/40" : "bg-white/10 border border-white/10"
-          }`}
+          } ${(setupLoading || disableLoading) ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${
-            enabled
-              ? "left-[22px] bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.4)]"
-              : "left-0.5 bg-gray-500"
-          }`} />
+          {(setupLoading || disableLoading) ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
+            </div>
+          ) : (
+            <div className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${
+              enabled
+                ? "left-[22px] bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.4)]"
+                : "left-0.5 bg-gray-500"
+            }`} />
+          )}
         </button>
       </div>
+
+      {/* Feedback message */}
+      {feedback && (
+        <div className={`mt-3 flex items-center gap-2 p-3 rounded-lg text-[0.625rem] font-medium ${
+          feedback.type === "success"
+            ? "bg-green-500/10 text-green-400 border border-green-500/20"
+            : "bg-red-500/10 text-red-400 border border-red-500/20"
+        }`}>
+          {feedback.type === "success" ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+          {feedback.message}
+        </div>
+      )}
 
       <AnimatePresence>
         {showSetup && !enabled && (
@@ -272,36 +434,64 @@ function TwoFactorAuth() {
           >
             <div className="mt-4 p-4 rounded-lg bg-primary/[0.04] border border-primary/10">
               <div className="text-center">
-                {/* Placeholder QR area */}
-                <div className="w-40 h-40 mx-auto rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-                  <div className="text-center">
-                    <Smartphone className="w-8 h-8 text-primary/40 mx-auto mb-2" />
-                    <span className="text-[0.5625rem] text-gray-500">QR Code Placeholder</span>
+                {/* Secret key display */}
+                <div className="mx-auto rounded-xl bg-white/5 border border-white/10 p-4 mb-4 max-w-xs">
+                  <div className="text-center mb-2">
+                    <Key className="w-6 h-6 text-primary/60 mx-auto mb-2" />
+                    <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-medium block">
+                      Secret Key
+                    </span>
                   </div>
+                  {secret ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <code className="text-sm font-mono font-bold text-white bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 select-all break-all">
+                        {secret}
+                      </code>
+                      <button
+                        onClick={handleCopySecret}
+                        className="p-1.5 rounded-md hover:bg-white/10 transition-colors text-gray-400 hover:text-white shrink-0"
+                        title="Copy secret"
+                      >
+                        {copied ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center py-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary/40" />
+                    </div>
+                  )}
                 </div>
                 <p className="text-[0.625rem] text-gray-400 mb-4 max-w-xs mx-auto">
-                  Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.) then enter the 6-digit code below.
+                  Enter this secret key in your authenticator app (Google Authenticator, Authy, etc.) then enter the 6-digit code below to verify.
                 </p>
-                <div className="flex items-center justify-center gap-2 mb-4">
+                <div className="flex items-center justify-center gap-2 mb-4" onPaste={handleCodePaste}>
                   {Array.from({ length: 6 }).map((_, i) => (
                     <input
                       key={i}
+                      id={`2fa-code-${i}`}
                       type="text"
+                      inputMode="numeric"
                       maxLength={1}
+                      value={codeDigits[i]}
+                      onChange={(e) => handleCodeChange(i, e.target.value)}
+                      onKeyDown={(e) => handleCodeKeyDown(i, e)}
                       className="w-9 h-11 text-center rounded-lg bg-surface-highest/50 border border-white/[0.06] text-lg font-bold text-white focus:outline-none focus:border-primary/40 transition-all"
-                      disabled
+                      disabled={verifyLoading}
                     />
                   ))}
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <button
-                    onClick={() => { setEnabled(true); setShowSetup(false); }}
-                    className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 transition-all"
+                    onClick={handleVerify}
+                    disabled={!canVerify}
+                    className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                   >
+                    {verifyLoading && <Loader2 className="w-3 h-3 animate-spin" />}
                     Verify & Enable
                   </button>
                   <button
-                    onClick={() => setShowSetup(false)}
+                    onClick={() => { setShowSetup(false); setSecret(null); setFeedback(null); setCodeDigits(["", "", "", "", "", ""]); }}
+                    disabled={verifyLoading}
                     className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition-all"
                   >
                     Cancel
@@ -357,21 +547,72 @@ const WALLET_PROVIDERS = [
 
 function ConnectedWallets() {
   const [connectedWallets, setConnectedWallets] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const handleConnect = (providerId: string) => {
-    // Placeholder: in production this would trigger the actual wallet connection flow
-    setConnectedWallets((prev) => ({
-      ...prev,
-      [providerId]: "0x" + Math.random().toString(16).slice(2, 10) + "..." + Math.random().toString(16).slice(2, 6),
-    }));
+  // Fetch connected wallets on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/wallets", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          const map: Record<string, string> = {};
+          for (const w of data.wallets ?? []) {
+            map[w.provider] = w.address;
+          }
+          setConnectedWallets(map);
+        }
+      } catch {
+        // ignore fetch errors
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleConnect = async (providerId: string) => {
+    // Generate a mock address since we can't do real Web3
+    const mockAddress = "0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+    setActionLoading(providerId);
+    try {
+      const res = await fetch("/api/auth/wallet/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ provider: providerId, address: mockAddress }),
+      });
+      if (res.ok) {
+        setConnectedWallets((prev) => ({ ...prev, [providerId]: mockAddress }));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const handleDisconnect = (providerId: string) => {
-    setConnectedWallets((prev) => {
-      const next = { ...prev };
-      delete next[providerId];
-      return next;
-    });
+  const handleDisconnect = async (providerId: string) => {
+    setActionLoading(providerId);
+    try {
+      const res = await fetch("/api/auth/wallet/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ provider: providerId }),
+      });
+      if (res.ok) {
+        setConnectedWallets((prev) => {
+          const next = { ...prev };
+          delete next[providerId];
+          return next;
+        });
+      }
+    } catch {
+      // ignore
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
@@ -386,10 +627,16 @@ function ConnectedWallets() {
         Connected Wallets
       </h3>
 
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary/40" />
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {WALLET_PROVIDERS.map((provider) => {
           const isConnected = !!connectedWallets[provider.id];
           const address = connectedWallets[provider.id];
+          const isBusy = actionLoading === provider.id;
 
           return (
             <div
@@ -405,7 +652,9 @@ function ConnectedWallets() {
                   <div className="text-[0.5625rem] text-gray-500">Not connected</div>
                 )}
               </div>
-              {isConnected ? (
+              {isBusy ? (
+                <Loader2 className="w-4 h-4 animate-spin text-primary/60 shrink-0" />
+              ) : isConnected ? (
                 <div className="flex items-center gap-1.5">
                   <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 text-green-400 text-[0.5625rem] font-bold border border-green-500/20">
                     <Check className="w-3 h-3" />
@@ -413,7 +662,8 @@ function ConnectedWallets() {
                   </span>
                   <button
                     onClick={() => handleDisconnect(provider.id)}
-                    className="p-1 rounded-md hover:bg-white/10 transition-colors text-gray-500 hover:text-red-400"
+                    disabled={!!actionLoading}
+                    className="p-1 rounded-md hover:bg-white/10 transition-colors text-gray-500 hover:text-red-400 disabled:opacity-40"
                     title="Disconnect"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -422,7 +672,8 @@ function ConnectedWallets() {
               ) : (
                 <button
                   onClick={() => handleConnect(provider.id)}
-                  className="px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 hover:text-white transition-all"
+                  disabled={!!actionLoading}
+                  className="px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 hover:text-white transition-all disabled:opacity-40"
                 >
                   Connect
                 </button>
@@ -431,6 +682,7 @@ function ConnectedWallets() {
           );
         })}
       </div>
+      )}
     </motion.div>
   );
 }

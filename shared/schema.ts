@@ -15,6 +15,9 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("guest"), // guest | member | admin
   provider: text("provider").notNull().default("local"), // local | google | discord
   providerId: text("provider_id"),
+  twoFactorSecret: text("two_factor_secret"),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  connectedWallets: jsonb("connected_wallets"), // [{provider, address}]
   lastDailyClaim: timestamp("last_daily_claim"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

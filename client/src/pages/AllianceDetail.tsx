@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
 import {
-  Swords, Shield, Crown, Users, ChevronLeft, Trash2,
+  Swords, Shield, Crown, Users, ArrowLeft, Trash2,
   Edit2, UserPlus, Loader2, X, Check, LogOut,
 } from "lucide-react";
 
@@ -196,12 +196,11 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
     <DashboardLayout title="Alliance Details">
       <div className="px-8 pb-8">
         {/* Back button */}
-        <button
-          onClick={() => navigate("/leagues")}
-          className="flex items-center gap-1.5 text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 hover:text-primary transition-colors mb-6"
-        >
-          <ChevronLeft className="w-3.5 h-3.5" /> Back to Leagues
-        </button>
+        <div className="mb-6">
+          <button onClick={() => navigate("/leagues")} className="p-2 rounded-lg hover:bg-white/5 transition-colors border border-white/[0.06]" aria-label="Back to leagues">
+            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -218,7 +217,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
               className="rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
             >
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-primary/20 flex items-center justify-center shrink-0">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-primary/20 border border-primary/20 flex items-center justify-center shrink-0">
                   <Swords className="w-7 h-7 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -228,7 +227,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="flex-1 bg-white/5 border border-primary/30 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-amber-500/20"
+                        className="flex-1 bg-white/5 border border-primary/30 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/20"
                         autoFocus
                       />
                       <button
@@ -268,7 +267,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                     <span>Created {new Date(alliance.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
                   alliance.clubs.length >= 2
                     ? "text-green-400 bg-green-500/10 border-green-500/20"
                     : "text-primary bg-primary/10 border-primary/20"
@@ -348,7 +347,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                   <select
                     value={selectedJoinClub}
                     onChange={(e) => setSelectedJoinClub(e.target.value)}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-amber-500/20 transition-all [color-scheme:dark]"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/20 transition-all [color-scheme:dark]"
                   >
                     <option value="">Select your club...</option>
                     {eligibleClubs.map(c => (

@@ -89,6 +89,7 @@ export default function Members() {
     myRole,
     isAdminOrOwner,
     loading,
+    reload,
     sendInvite,
     handleInvitation,
     changeRole,
@@ -160,6 +161,26 @@ export default function Members() {
     toast({ title: "Reminder Set", description: `You'll be reminded about "${eventName}"` });
   };
 
+  const claimMission = async (missionId: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/missions/${missionId}/claim`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Failed to claim mission" }));
+        throw new Error(data.message);
+      }
+      const data = await res.json();
+      toast({ title: "Reward Claimed!", description: `+${data.reward} chips added to your balance` });
+      await reload();
+      return true;
+    } catch (err: any) {
+      toast({ title: "Claim Failed", description: err.message || "Could not claim mission reward", variant: "destructive" });
+      return false;
+    }
+  };
+
   const sortedMembers = useMemo(() => {
     let filtered = [...members];
 
@@ -192,16 +213,18 @@ export default function Members() {
 
   return (
     <DashboardLayout title="Members">
-      <div className="px-8 pb-8">
+      <div className="px-4 md:px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : members.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Users className="w-12 h-12 text-gray-700 mb-4" />
-            <h3 data-testid="text-no-members" className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">No Members Yet</h3>
-            <p className="text-xs text-gray-600 max-w-xs">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+              <Users className="w-7 h-7 text-primary/40" />
+            </div>
+            <h3 data-testid="text-no-members" className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Members Yet</h3>
+            <p className="text-xs text-muted-foreground/60 max-w-xs">
               {club ? "This club doesn't have any members yet. Invite friends to join!" : "Join or create a club to see members here."}
             </p>
           </div>
@@ -233,6 +256,7 @@ export default function Members() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search members..."
+                    aria-label="Search members"
                     className="w-full bg-white/5 border border-white/10 rounded-full pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/15 transition-all"
                   />
                 </div>
@@ -282,7 +306,7 @@ export default function Members() {
               <div
                 className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
               >
-                <div className="grid grid-cols-12 gap-2 px-6 py-3.5 border-b border-primary/10">
+                <div className="hidden md:grid grid-cols-12 gap-2 px-6 py-3.5 border-b border-primary/10">
                   <span className="col-span-5 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Name / Role</span>
                   <span className="col-span-2 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Status</span>
                   <span className="col-span-3 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Stats</span>
@@ -290,9 +314,12 @@ export default function Members() {
                 </div>
 
                 {sortedMembers.length === 0 && (searchQuery || roleFilter !== "all" || statusFilter !== "all") && (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <Search className="w-6 h-6 text-gray-700 mb-2" />
-                    <p className="text-[0.6875rem] text-gray-600">No members match your filters</p>
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+                      <Users className="w-7 h-7 text-primary/40" />
+                    </div>
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Members Found</h3>
+                    <p className="text-xs text-muted-foreground/60 max-w-xs">No members match your current filters. Try adjusting your search or filter criteria.</p>
                   </div>
                 )}
 
@@ -315,7 +342,7 @@ export default function Members() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className={`grid grid-cols-12 gap-3 items-center px-6 py-6 border-b border-white/[0.04] hover:bg-primary/[0.06] transition-all duration-200 group ${
+                      className={`flex flex-col md:grid md:grid-cols-12 gap-3 items-start md:items-center px-4 md:px-6 py-4 md:py-6 border-b border-white/[0.04] hover:bg-primary/[0.06] transition-all duration-200 group ${
                         podiumStyle ? "relative" : ""
                       }`}
                       style={podiumStyle ? {
@@ -615,6 +642,9 @@ export default function Members() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                   className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Invite member"
                 >
                   <div
                     className="px-4 py-3.5 bg-primary/10 border-b border-primary/15"
@@ -697,7 +727,7 @@ export default function Members() {
               <span className="w-0.5 h-3.5 bg-primary/60 rounded-full" />
               Daily Missions
             </h3>
-            <MissionsGrid missions={missions} />
+            <MissionsGrid missions={missions} onClaim={claimMission} />
           </motion.div>
 
           <motion.div

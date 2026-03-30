@@ -6,7 +6,7 @@ import type { Player } from "@/lib/poker-types";
 import { TABLE_SEATS, DEALER_POSITIONS } from "@/lib/table-constants";
 import { useGameUI } from "@/lib/game-ui-context";
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
-import { DollarSign } from "lucide-react";
+
 
 interface ImageTableProps {
   communityCards: CardType[];
@@ -156,17 +156,18 @@ export function ImageTable({
         {/* Main felt surface — radial gradient green */}
         <div className="absolute inset-0 rounded-[50%]" style={{
           background: "radial-gradient(ellipse at 50% 40%, #1a3a2a 0%, #0f2a1c 30%, #0a1f15 50%, #071a10 70%, #040e08 100%)",
-          boxShadow: "inset 0 0 80px rgba(0,0,0,0.5), inset 0 -8px 30px rgba(0,0,0,0.3), 0 8px 40px rgba(0,0,0,0.7), 0 0 100px rgba(0,0,0,0.3)",
+          boxShadow: "inset 0 0 80px rgba(0,0,0,0.5), inset 0 -8px 30px rgba(0,0,0,0.3), 0 8px 40px rgba(0,0,0,0.7), 0 0 100px rgba(0,0,0,0.3), 0 0 60px rgba(212,175,55,0.12), 0 0 120px rgba(212,175,55,0.06)",
           border: "7px solid #18181e",
         }}>
           {/* Gold border ring */}
           <div className="absolute inset-[5px] rounded-[50%]" style={{
             border: "2.5px solid #d4af37",
-            boxShadow: "0 0 12px rgba(212,175,55,0.25), inset 0 0 12px rgba(212,175,55,0.08)",
+            boxShadow: "0 0 18px rgba(212,175,55,0.35), 0 0 40px rgba(212,175,55,0.10), inset 0 0 18px rgba(212,175,55,0.12)",
           }} />
           {/* Inner accent ring */}
           <div className="absolute inset-[14px] rounded-[50%]" style={{
-            border: "1px solid rgba(212,175,55,0.12)",
+            border: "1px solid rgba(212,175,55,0.18)",
+            boxShadow: "inset 0 0 30px rgba(212,175,55,0.04)",
           }} />
           {/* Shine reflection */}
           <div className="absolute inset-0 rounded-[50%]" style={{
@@ -336,28 +337,42 @@ export function ImageTable({
                   </motion.div>
                 )}
 
-                {/* Pot amount pill */}
+                {/* Pot amount pill — glass with gold accent */}
                 <motion.div
                   animate={potAnimating && !compactMode ? {
                     boxShadow: [
-                      "0 0 15px rgba(212,175,55,0.15)",
-                      "0 0 30px rgba(212,175,55,0.4)",
-                      "0 0 15px rgba(212,175,55,0.15)",
+                      "0 0 15px rgba(212,175,55,0.15), inset 0 0 12px rgba(212,175,55,0.05)",
+                      "0 0 30px rgba(212,175,55,0.4), inset 0 0 18px rgba(212,175,55,0.10)",
+                      "0 0 15px rgba(212,175,55,0.15), inset 0 0 12px rgba(212,175,55,0.05)",
                     ],
                     scale: [1, 1.06, 1],
                   } : {
-                    boxShadow: "0 0 15px rgba(212,175,55,0.15)",
+                    boxShadow: "0 0 15px rgba(212,175,55,0.15), inset 0 0 12px rgba(212,175,55,0.05)",
                     scale: 1,
                   }}
                   transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full"
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full backdrop-blur-md"
                   style={{
-                    background: "rgba(15,15,20,0.85)",
-                    border: "1px solid rgba(212,175,55,0.3)",
+                    background: "linear-gradient(135deg, rgba(15,15,20,0.80) 0%, rgba(30,25,15,0.75) 100%)",
+                    border: "1px solid rgba(212,175,55,0.35)",
                   }}
                 >
-                  <DollarSign className="w-3.5 h-3.5 text-[#d4af37]" />
-                  <span className="text-[#d4af37] font-display font-black text-sm tracking-wide">
+                  {/* Coin icon */}
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
+                    <circle cx="10" cy="10" r="9" fill="#d4af37" stroke="#b8860b" strokeWidth="1.5" />
+                    <circle cx="10" cy="10" r="5.5" fill="none" stroke="#f5e6a3" strokeWidth="0.8" opacity="0.5" />
+                    <text x="10" y="13.5" textAnchor="middle" fill="#8B6914" fontSize="9" fontWeight="bold">$</text>
+                  </svg>
+                  <span
+                    className="font-display font-black text-sm tracking-wide"
+                    style={{
+                      background: "linear-gradient(180deg, #f5e6a3 0%, #d4af37 60%, #c9a84c 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      filter: "drop-shadow(0 0 6px rgba(212,175,55,0.4))",
+                    }}
+                  >
                     {animatedPot.toLocaleString()}
                   </span>
                 </motion.div>

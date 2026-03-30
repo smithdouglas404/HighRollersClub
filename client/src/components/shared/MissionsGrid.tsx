@@ -1,4 +1,5 @@
-import { Target, Gamepad2, Coins, Zap, Trophy, Users, Clock, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { Target, Gamepad2, Coins, Zap, Trophy, Users, Clock, TrendingUp, Loader2 } from "lucide-react";
 import type { MissionData } from "@/lib/club-context";
 
 const MISSION_ICON_MAP: Record<string, any> = {
@@ -16,9 +17,11 @@ interface MissionsGridProps {
   maxVisible?: number;
   showHeader?: boolean;
   completedCount?: number;
+  onClaim?: (missionId: string) => Promise<boolean>;
 }
 
-export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCount }: MissionsGridProps) {
+export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCount, onClaim }: MissionsGridProps) {
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   if (missions.length === 0) {
     return (
       <div className="text-center py-4">
@@ -63,7 +66,24 @@ export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCo
                 {mission.completed
                   ? mission.claimed
                     ? <span className="text-gray-500 ml-1">Claimed</span>
-                    : <span className="text-green-400 ml-1">Done!</span>
+                    : onClaim
+                      ? (
+                        <button
+                          onClick={() => {
+                            if (claimingId) return;
+                            setClaimingId(mission.id);
+                            onClaim(mission.id).finally(() => setClaimingId(null));
+                          }}
+                          disabled={claimingId === mission.id}
+                          className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-bold uppercase tracking-wider hover:bg-green-500/30 transition-colors disabled:opacity-50"
+                        >
+                          {claimingId === mission.id
+                            ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                            : <>Claim +{mission.reward}</>
+                          }
+                        </button>
+                      )
+                      : <span className="text-green-400 ml-1">Done!</span>
                   : <span className="text-cyan-400 ml-1">+{mission.reward}</span>
                 }
               </div>

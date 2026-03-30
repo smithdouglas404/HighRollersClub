@@ -89,6 +89,9 @@ function TableCard({ table, onClick, featured }: { table: TableInfo; onClick: ()
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={onClick}
+      onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      role="button"
+      tabIndex={0}
       data-testid={`card-table-${table.id}`}
       className={cn(
         "group cursor-pointer rounded-md p-5 transition-all duration-300 relative overflow-hidden",
@@ -106,7 +109,7 @@ function TableCard({ table, onClick, featured }: { table: TableInfo; onClick: ()
       )}
 
       <div className="flex justify-between items-start mb-3">
-        <span className="px-2 py-0.5 rounded bg-surface-lowest/80 text-[10px] font-bold uppercase tracking-widest text-primary">
+        <span className="px-2 py-0.5 rounded-full bg-surface-lowest/80 text-[10px] font-bold uppercase tracking-widest text-primary">
           <FormatBadge format={table.gameFormat} />
         </span>
         <div className="flex items-center gap-2">
@@ -144,11 +147,19 @@ function TableCard({ table, onClick, featured }: { table: TableInfo; onClick: ()
 
       <div className="flex items-center justify-between pt-3 border-t border-white/[0.05]">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-primary" />
-          <span className="text-sm" data-testid={`text-players-${table.id}`}>
-            <span className="font-bold text-white">{table.playerCount}</span>
-            <span className="text-muted-foreground">/{table.maxPlayers}</span>
-          </span>
+          <div className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-bold",
+            isPlaying
+              ? "bg-secondary/10 border border-secondary/20"
+              : "bg-primary/10 border border-primary/20"
+          )}>
+            <Users className={cn("w-4 h-4", isPlaying ? "text-secondary" : "text-primary")} />
+            <span data-testid={`text-players-${table.id}`}>
+              <span className={cn("font-bold", isPlaying ? "text-secondary" : "text-white")}>{table.playerCount}</span>
+              <span className="text-muted-foreground">/{table.maxPlayers}</span>
+            </span>
+          </div>
+          {isFull && <span className="text-[10px] font-bold uppercase tracking-widest text-destructive">Full</span>}
         </div>
         <span className="text-primary text-xs font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           Join <ChevronRight className="w-3 h-3" />
@@ -242,6 +253,11 @@ export default function Lobby() {
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiHasKey, setAiHasKey] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
+  const [joinCodeOpen, setJoinCodeOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinCodeLoading, setJoinCodeLoading] = useState(false);
+  const [joinCodeError, setJoinCodeError] = useState("");
+  const tablesRef = useRef<HTMLDivElement>(null);
 
   // Kill any lingering game audio when returning to lobby
   useEffect(() => {
@@ -341,6 +357,28 @@ export default function Lobby() {
     }
   };
 
+  const handleJoinByCode = async () => {
+    if (joinCode.length < 6) return;
+    setJoinCodeLoading(true);
+    setJoinCodeError("");
+    try {
+      const res = await fetch(`/api/tables/invite/${encodeURIComponent(joinCode)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setJoinCodeOpen(false);
+        setJoinCode("");
+        navigate(`/game/${data.tableId}`);
+      } else {
+        const err = await res.json().catch(() => ({ message: "Invalid code" }));
+        setJoinCodeError(err.message || "Invalid invite code");
+      }
+    } catch {
+      setJoinCodeError("Network error. Please try again.");
+    } finally {
+      setJoinCodeLoading(false);
+    }
+  };
+
   return (
     <DashboardLayout title="Games & Tournaments">
       <div className="px-6 md:px-8 pb-8 relative">
@@ -367,8 +405,79 @@ export default function Lobby() {
         {/* Banner Carousel */}
         <LobbyBannerCarousel />
 
+        {/* Game Mode Selection Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          {[
+            {
+              icon: Lock,
+              title: "Private Game",
+              description: "Create a private table with invite code",
+              onClick: () => { setDefaultPrivate(true); setShowCreateTable(true); },
+              accent: "primary",
+            },
+            {
+              icon: Users,
+              title: "Public Game",
+              description: "Join open tables",
+              onClick: () => tablesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+              accent: "secondary",
+            },
+            {
+              icon: Trophy,
+              title: "Tournament",
+              description: "Compete in scheduled events",
+              onClick: () => navigate("/tournaments"),
+              accent: "tertiary",
+            },
+          ].map((mode, i) => {
+            const Icon = mode.icon;
+            return (
+              <motion.div
+                key={mode.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + i * 0.08, duration: 0.45 }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={mode.onClick}
+                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); mode.onClick(); } }}
+                role="button"
+                tabIndex={0}
+                data-testid={`card-mode-${mode.title.toLowerCase().replace(/\s+/g, "-")}`}
+                className={cn(
+                  "group cursor-pointer relative overflow-hidden rounded-md p-5 transition-all duration-300",
+                  "bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]",
+                  "hover:border-primary/30 hover:shadow-[0_0_25px_rgba(129,236,255,0.15)]"
+                )}
+              >
+                {/* Subtle gradient overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                <div className="relative flex items-start gap-4">
+                  <div className={cn(
+                    "w-11 h-11 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300",
+                    "bg-primary/10 border border-primary/20",
+                    "group-hover:bg-primary/15 group-hover:border-primary/30 group-hover:shadow-[0_0_12px_rgba(129,236,255,0.2)]"
+                  )}>
+                    <Icon className="w-5 h-5 text-primary transition-transform duration-300 group-hover:scale-110" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider group-hover:text-primary transition-colors duration-200">
+                      {mode.title}
+                    </h3>
+                    <p className="text-[0.6875rem] text-muted-foreground mt-0.5 leading-relaxed">
+                      {mode.description}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0 mt-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200" />
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
         {/* Active Tables header + actions */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+        <div ref={tablesRef} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-3xl font-display font-bold text-white flex items-center gap-3">
               <Zap className="w-7 h-7 text-primary" />
@@ -398,6 +507,16 @@ export default function Lobby() {
             >
               <Bot className="w-3.5 h-3.5" />
               PLAY OFFLINE
+            </NeonButton>
+
+            <NeonButton
+              variant="ghost"
+              size="sm"
+              onClick={() => { setJoinCodeOpen(true); setJoinCode(""); setJoinCodeError(""); }}
+              className="gap-1.5"
+            >
+              <Key className="w-3.5 h-3.5" />
+              JOIN BY CODE
             </NeonButton>
 
             <NeonButton
@@ -582,7 +701,7 @@ export default function Lobby() {
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5",
                   isActive
-                    ? "bg-primary/15 text-primary border border-primary/30"
+                    ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_12px_rgba(129,236,255,0.15)]"
                     : "bg-surface-high/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
                 )}
               >
@@ -602,7 +721,7 @@ export default function Lobby() {
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200",
                   isActive
-                    ? "bg-secondary/15 text-secondary border border-secondary/30"
+                    ? "bg-secondary/15 text-secondary border border-secondary/30 shadow-[0_0_12px_rgba(74,222,128,0.15)]"
                     : "bg-surface-high/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
                 )}
               >
@@ -731,13 +850,15 @@ export default function Lobby() {
             ))}
           </div>
         ) : filteredTables.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center bg-surface-low/30 backdrop-blur-xl rounded-md">
-            <LayoutGrid className="w-14 h-14 text-muted-foreground mb-4 opacity-30" />
-            <h3 className="text-xl font-display font-bold text-white mb-2" data-testid="text-empty-state">
-              {activeFormat === "all" ? "No tables found" : `No ${activeFormat.replace("_", " ")} tables`}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+              <Search className="w-7 h-7 text-primary/40" />
+            </div>
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1" data-testid="text-empty-state">
+              {activeFormat === "all" ? "No Tables Found" : `No ${activeFormat.replace("_", " ")} Tables`}
             </h3>
-            <p className="text-muted-foreground mb-6 text-sm">Try adjusting your filters or create a new table.</p>
-            <div className="flex items-center gap-3">
+            <p className="text-xs text-muted-foreground/60 max-w-xs">Try adjusting your filters or create a new table to get started.</p>
+            <div className="flex items-center gap-3 mt-6">
               <NeonButton variant="secondary" onClick={() => navigate("/game")} data-testid="button-play-bots-empty" className="gap-2">
                 <Bot className="w-4 h-4" />
                 Play vs Bots
@@ -820,6 +941,67 @@ export default function Lobby() {
                 </NeonButton>
                 <NeonButton onClick={handlePasswordSubmit} className="flex-1">
                   Join Table
+                </NeonButton>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Join by Code modal */}
+      <AnimatePresence>
+        {joinCodeOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setJoinCodeOpen(false)} />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-sm p-6 rounded-md bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <Key className="w-5 h-5 text-primary" />
+                <div>
+                  <h3 className="text-sm font-display font-bold text-white">Join Table by Code</h3>
+                  <p className="text-[0.625rem] text-muted-foreground">Enter a 6-8 character invite code</p>
+                </div>
+              </div>
+              <input
+                type="text"
+                value={joinCode}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8);
+                  setJoinCode(val);
+                  setJoinCodeError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && joinCode.length >= 6) handleJoinByCode();
+                }}
+                placeholder="e.g. ABC123"
+                autoFocus
+                maxLength={8}
+                className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-1 uppercase tracking-widest font-mono"
+              />
+              <div className="h-5 mb-3">
+                {joinCodeError && (
+                  <p className="text-[0.625rem] text-destructive">{joinCodeError}</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <NeonButton variant="ghost" onClick={() => setJoinCodeOpen(false)} className="flex-1" disabled={joinCodeLoading}>
+                  Cancel
+                </NeonButton>
+                <NeonButton
+                  onClick={handleJoinByCode}
+                  className="flex-1"
+                  disabled={joinCode.length < 6 || joinCodeLoading}
+                >
+                  {joinCodeLoading ? "Joining..." : "Join Table"}
                 </NeonButton>
               </div>
             </motion.div>

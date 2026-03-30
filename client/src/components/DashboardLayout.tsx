@@ -153,11 +153,11 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
       {/* Logo */}
       <div className="px-5 pt-6 pb-4 flex items-center gap-3">
         <div className="w-10 h-10 relative shrink-0">
-          <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full" />
+          <div className="absolute inset-0 bg-[#c9a84c]/20 blur-lg rounded-full" />
           <img
             src={lionLogo}
             alt="High Rollers"
-            className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_8px_hsl(189_100%_75%/0.4)]"
+            className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_8px_rgba(201,168,76,0.4)]"
           />
         </div>
         <div className="flex-1">

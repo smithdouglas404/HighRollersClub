@@ -48,9 +48,9 @@ function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: n
   return <>{display.toLocaleString()}</>;
 }
 
-function getRankTier(handsPlayed: number): { label: string; color: string; bgClass: string; borderColor: string; icon: typeof Crown } {
-  if (handsPlayed >= 1000) return { label: "Diamond", color: "text-cyan-300", bgClass: "from-cyan-500/20 to-blue-500/20", borderColor: "border-cyan-400/40", icon: Crown };
-  if (handsPlayed >= 500) return { label: "Platinum", color: "text-gray-200", bgClass: "from-gray-300/20 to-gray-500/20", borderColor: "border-gray-300/40", icon: Crown };
+function getRankTier(handsPlayed: number): { label: string; color: string; bgClass: string; borderColor: string; icon: typeof Crown; glowStyle?: { boxShadow: string } } {
+  if (handsPlayed >= 1000) return { label: "Diamond", color: "text-cyan-300", bgClass: "from-cyan-500/20 to-blue-500/20", borderColor: "border-[#c9a84c]/50", icon: Crown, glowStyle: { boxShadow: "0 0 12px rgba(201,168,76,0.35), 0 0 24px rgba(201,168,76,0.15)" } };
+  if (handsPlayed >= 500) return { label: "Platinum", color: "text-gray-200", bgClass: "from-gray-300/20 to-gray-500/20", borderColor: "border-[#c9a84c]/40", icon: Crown, glowStyle: { boxShadow: "0 0 10px rgba(201,168,76,0.25), 0 0 20px rgba(201,168,76,0.10)" } };
   if (handsPlayed >= 200) return { label: "Gold", color: "text-amber-400", bgClass: "from-amber-500/20 to-yellow-500/20", borderColor: "border-amber-400/40", icon: Star };
   if (handsPlayed >= 50) return { label: "Silver", color: "text-gray-400", bgClass: "from-gray-400/20 to-gray-500/20", borderColor: "border-gray-400/30", icon: Shield };
   return { label: "Bronze", color: "text-orange-400", bgClass: "from-orange-500/20 to-amber-600/20", borderColor: "border-orange-400/30", icon: Shield };
@@ -144,7 +144,7 @@ export default function Profile() {
 
           <img
             src={goldChips}
-            alt=""
+            alt="Gold chips"
             loading="lazy"
             className="absolute -top-6 -right-10 w-52 h-52 object-contain opacity-10 pointer-events-none rotate-12"
           />
@@ -154,7 +154,7 @@ export default function Profile() {
 
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 p-8 md:p-10">
             <div className="relative">
-              <div className="relative" data-testid="img-avatar">
+              <div className="relative ring-2 ring-[#c9a84c]/30 rounded-full shadow-[0_0_16px_rgba(201,168,76,0.15)]" data-testid="img-avatar">
                 <MemberAvatar
                   avatarId={user?.avatarId ?? null}
                   displayName={user?.displayName || user?.username || "Player"}
@@ -169,13 +169,16 @@ export default function Profile() {
                 <h2 className="text-2xl md:text-3xl font-display font-black text-white tracking-tight" data-testid="text-username">
                   {user?.displayName || user?.username || "Player"}
                 </h2>
-                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.625rem] font-bold uppercase tracking-wider bg-gradient-to-r ${rank.bgClass} ${rank.borderColor} border ${rank.color}`}>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.625rem] font-bold uppercase tracking-wider bg-gradient-to-r ${rank.bgClass} ${rank.borderColor} border ${rank.color}`}
+                  style={rank.glowStyle}
+                >
                   <RankIcon className="w-3 h-3" />
                   {rank.label}
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-[0.625rem] font-bold uppercase tracking-widest text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/15">
+                <span className="text-[0.625rem] font-bold uppercase tracking-widest text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/15">
                   Level {playerLevel} {playerTitle}
                 </span>
               </div>
@@ -185,7 +188,7 @@ export default function Profile() {
                   <Coins className="w-4 h-4" />
                   {(user?.chipBalance ?? 0).toLocaleString()} chips
                 </span>
-                <span className={`px-2.5 py-0.5 rounded text-[0.625rem] font-bold uppercase tracking-wider ${
+                <span className={`px-2.5 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wider ${
                   user?.role === "admin"
                     ? "bg-purple-500/15 text-purple-400 border border-purple-500/20"
                     : "bg-primary/15 text-primary border border-primary/20"
@@ -362,8 +365,8 @@ export default function Profile() {
             transition={{ delay: 0.17 }}
             className="glass rounded-xl p-6 border border-white/5 mb-6"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-primary/70" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/80 mb-4 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[#c9a84c]/70" />
               Recent Sessions
             </h3>
             <div className="space-y-2">
@@ -380,7 +383,7 @@ export default function Profile() {
                     <div className="text-xs font-semibold text-white">{session.time}</div>
                     <div className="text-[0.625rem] text-gray-500">{session.hands} hands played</div>
                   </div>
-                  <div className={`text-sm font-bold ${session.positive ? "text-green-400" : "text-red-400"}`}>
+                  <div className={`text-sm font-bold ${session.positive ? "text-secondary" : "text-destructive"}`}>
                     {session.result}
                   </div>
                 </div>

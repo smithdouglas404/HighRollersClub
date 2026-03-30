@@ -90,7 +90,7 @@ export default function ClubSettings() {
 
   return (
     <DashboardLayout title="Club Settings">
-      <div className="px-8 pb-8">
+      <div className="px-4 md:px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -150,13 +150,16 @@ export default function ClubSettings() {
               <div className="p-5 space-y-5">
                 {/* Club Name */}
                 <div className="space-y-1.5">
-                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
-                    Club Name
+                  <label htmlFor="settings-club-name" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                    Club Name<span className="text-destructive ml-0.5">*</span>
                   </label>
                   <input
+                    id="settings-club-name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    required
+                    minLength={2}
                     maxLength={50}
                     className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-surface-highest/50 border border-white/[0.06]"
                     placeholder="Enter club name..."
@@ -165,10 +168,11 @@ export default function ClubSettings() {
 
                 {/* Description */}
                 <div className="space-y-1.5">
-                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                  <label htmlFor="settings-club-description" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
                     Description
                   </label>
                   <textarea
+                    id="settings-club-description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     maxLength={300}
@@ -261,10 +265,11 @@ export default function ClubSettings() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+                    <label htmlFor="settings-new-owner" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
                       New Owner
                     </label>
                     <select
+                      id="settings-new-owner"
                       value={transferTarget}
                       onChange={(e) => setTransferTarget(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-white/[0.03] border border-white/[0.06]"

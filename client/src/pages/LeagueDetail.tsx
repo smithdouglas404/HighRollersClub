@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import {
-  Trophy, Calendar, ChevronLeft, Trash2, Edit2, Medal,
+  Trophy, Calendar, ArrowLeft, Trash2, Edit2, Medal,
   Loader2, X, Check, Plus, TrendingUp, Save, Flag,
 } from "lucide-react";
 
@@ -218,12 +218,11 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
   return (
     <DashboardLayout title="League Details">
       <div className="px-8 pb-8">
-        <button
-          onClick={() => navigate("/leagues")}
-          className="flex items-center gap-1.5 text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 hover:text-primary transition-colors mb-6"
-        >
-          <ChevronLeft className="w-3.5 h-3.5" /> Back to Leagues
-        </button>
+        <div className="mb-6">
+          <button onClick={() => navigate("/leagues")} className="p-2 rounded-lg hover:bg-white/5 transition-colors border border-white/[0.06]" aria-label="Back to leagues">
+            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -308,7 +307,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                   </div>
                   <div className="flex items-center gap-2">
                     {status && (
-                      <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${status.bg} ${status.color}`}>
+                      <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${status.bg} ${status.color}`}>
                         {status.label}
                       </span>
                     )}
@@ -417,7 +416,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                               type="number"
                               value={entry.losses}
                               onChange={(e) => updateStandingsEntry(entry.clubId, "losses", parseInt(e.target.value) || 0)}
-                              className="w-14 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-red-400 font-mono text-center focus:outline-none focus:border-primary/30"
+                              className="w-14 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-destructive font-mono text-center focus:outline-none focus:border-primary/30"
                             />
                             <button
                               onClick={() => handleRemoveFromStandings(entry.clubId)}
@@ -450,10 +449,19 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                       </div>
                       {sortedStandings.map((entry, rank) => {
                         const club = clubMap.get(entry.clubId);
+                        const podiumBorder = rank === 0
+                          ? "border-[#c9a84c]/50 bg-[#c9a84c]/[0.04]"
+                          : rank === 1
+                          ? "border-gray-300/30 bg-gray-300/[0.03]"
+                          : rank === 2
+                          ? "border-[#cd7f32]/30 bg-[#cd7f32]/[0.03]"
+                          : "border-white/[0.02]";
                         return (
                           <div
                             key={entry.clubId}
-                            className="flex items-center gap-4 px-3 py-2.5 hover:bg-white/[0.06] transition-colors border-b border-white/[0.02]"
+                            className={`flex items-center gap-4 px-3 py-2.5 hover:bg-white/[0.06] transition-colors rounded-lg ${
+                              rank < 3 ? `border ${podiumBorder}` : `border-b ${podiumBorder}`
+                            }`}
                           >
                             <span className="w-8 text-center">
                               {rank < 3 ? (
@@ -463,7 +471,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                               )}
                             </span>
                             <div className="flex-1 flex items-center gap-2.5 min-w-0">
-                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center shrink-0">
+                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500/20 to-primary/20 border border-white/10 flex items-center justify-center shrink-0">
                                 <span className="text-[0.625rem] font-bold text-white">
                                   {(entry.clubName || club?.name || "?").charAt(0).toUpperCase()}
                                 </span>
@@ -474,7 +482,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                             </div>
                             <span className="w-14 text-center text-xs font-bold text-primary">{entry.points}</span>
                             <span className="w-10 text-center text-xs font-medium text-green-400">{entry.wins}</span>
-                            <span className="w-10 text-center text-xs font-medium text-red-400">{entry.losses}</span>
+                            <span className="w-10 text-center text-xs font-medium text-destructive">{entry.losses}</span>
                           </div>
                         );
                       })}

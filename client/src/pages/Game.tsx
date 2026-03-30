@@ -504,7 +504,6 @@ function GameTable({
           background: "rgba(10,10,12,0.85)",
           backdropFilter: "blur(20px)",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
-          boxShadow: "0 2px 16px rgba(0,0,0,0.4)",
         }}
       >
         <div className="flex items-center gap-3">
@@ -539,7 +538,7 @@ function GameTable({
             className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-amber-500/30"
             style={{
               background: "linear-gradient(135deg, rgba(20,15,5,0.7) 0%, rgba(10,8,3,0.8) 100%)",
-              boxShadow: "0 0 16px rgba(255,215,0,0.12), inset 0 1px 0 rgba(255,255,255,0.05)",
+              boxShadow: "0 0 16px rgba(255,215,0,0.12)",
             }}
           >
             <span className="text-[0.625rem] font-bold text-amber-500/60 uppercase tracking-wider">POT</span>
@@ -624,7 +623,7 @@ function GameTable({
                       background: "rgba(15,23,35,0.97)",
                       border: "1px solid rgba(245,158,11,0.2)",
                       backdropFilter: "blur(16px)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(245,158,11,0.05)",
+                      boxShadow: "0 0 20px rgba(245,158,11,0.05)",
                     }}
                   >
                     {/* Pause / Resume Game */}
@@ -730,7 +729,6 @@ function GameTable({
                       background: "rgba(15,23,35,0.95)",
                       border: "1px solid rgba(255,255,255,0.12)",
                       backdropFilter: "blur(16px)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
                     }}
                   >
                     {/* AI Commentary Toggle — multiplayer only */}
@@ -866,7 +864,7 @@ function GameTable({
               <Music className={`w-3.5 h-3.5 ${bgmPlaying ? "text-green-400" : "text-gray-500"}`} />
             </button>
             {showBgmPanel && (
-              <div className="absolute right-0 top-full mt-1 z-50 w-80 rounded-lg p-3 space-y-2.5" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(0,212,255,0.15)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+              <div className="absolute right-0 top-full mt-1 z-50 w-80 rounded-lg p-3 space-y-2.5" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(0,212,255,0.15)", backdropFilter: "blur(12px)" }}>
                 <div className="flex items-center justify-between">
                   <span className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400">Music Library</span>
                   <button onClick={() => setShowBgmPanel(false)} className="p-0.5 hover:bg-white/10 rounded"><X className="w-3 h-3 text-gray-500" /></button>
@@ -974,7 +972,7 @@ function GameTable({
               <Palette className={`w-3.5 h-3.5 ${showThemePanel ? "text-purple-400" : "text-gray-500"}`} />
             </button>
             {showThemePanel && (
-              <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-lg p-3 space-y-3" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(168,85,247,0.15)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+              <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-lg p-3 space-y-3" style={{ background: "rgba(20,31,40,0.92)", border: "1px solid rgba(168,85,247,0.15)", backdropFilter: "blur(12px)" }}>
                 <div className="flex items-center justify-between">
                   <span className="text-[0.625rem] font-bold uppercase tracking-wider text-purple-400">Table Theme</span>
                   <button onClick={() => setShowThemePanel(false)} className="p-0.5 hover:bg-white/10 rounded"><X className="w-3 h-3 text-gray-500" /></button>
@@ -1414,7 +1412,7 @@ function GameTable({
                       <span className="text-gray-300 truncate flex-1">{p.name}</span>
                       {style && (
                         <span
-                          className="px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider"
+                          className="px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider"
                           style={{ color: style.color, background: `${style.color}15`, border: `1px solid ${style.color}30` }}
                           title={style.tooltip}
                         >
@@ -1623,8 +1621,7 @@ function GameTable({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[90] flex items-center justify-center"
-            style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-background/80 backdrop-blur-xl"
             data-testid="game-paused-overlay"
           >
             <motion.div
@@ -1632,52 +1629,23 @@ function GameTable({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.85, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="flex flex-col items-center"
+              className="text-center space-y-4"
             >
-              {/* Pulsing pause icon */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 rounded-full flex items-center justify-center border-2 border-amber-500/40"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(180,83,9,0.1) 100%)",
-                    boxShadow: "0 0 40px rgba(245,158,11,0.15), inset 0 0 20px rgba(245,158,11,0.05)",
-                  }}
-                >
-                  <Pause className="w-8 h-8 text-amber-400" />
-                </div>
-                <motion.div
-                  className="absolute inset-0 rounded-full border-2 border-amber-400/30"
-                  animate={{ scale: [1, 1.3, 1], opacity: [0.6, 0, 0.6] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                />
+              <div className="w-20 h-20 mx-auto rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Pause className="w-10 h-10 text-primary" />
               </div>
-
-              <h2
-                className="text-2xl font-black uppercase tracking-[0.25em] text-amber-400 mb-2"
-                style={{ textShadow: "0 0 30px rgba(245,158,11,0.4)" }}
-              >
+              <h2 className="text-2xl font-display font-bold text-primary tracking-wider uppercase neon-text-glow">
                 Game Paused
               </h2>
-              <p className="text-sm text-gray-400 mb-8 tracking-wide">
-                Waiting for admin to resume...
-              </p>
-
-              {/* Resume button (admin only) */}
+              <p className="text-sm text-muted-foreground">The game has been paused by an administrator</p>
               {isAdmin && onResumeGame && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
                   onClick={onResumeGame}
-                  className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold uppercase tracking-wider text-white transition-all"
-                  style={{
-                    background: "linear-gradient(180deg, #16a34a 0%, #15803d 100%)",
-                    border: "1px solid rgba(34,197,94,0.4)",
-                    boxShadow: "0 0 24px rgba(34,197,94,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
-                  }}
+                  className="mt-4 px-6 py-3 rounded-lg gradient-primary text-black font-bold text-sm uppercase tracking-wider"
                   data-testid="button-resume-overlay"
                 >
-                  <Play className="w-4 h-4" />
                   Resume Game
-                </motion.button>
+                </button>
               )}
             </motion.div>
           </motion.div>
@@ -1705,7 +1673,7 @@ function GameTable({
               style={{
                 background: "linear-gradient(180deg, rgba(12,20,35,0.98) 0%, rgba(8,14,24,0.99) 100%)",
                 border: "1px solid rgba(0,212,255,0.15)",
-                boxShadow: "0 0 40px rgba(0,212,255,0.08), 0 20px 60px rgba(0,0,0,0.5)",
+                boxShadow: "0 0 40px rgba(0,212,255,0.08)",
               }}
             >
               {/* Header */}
@@ -1810,7 +1778,7 @@ function GameTable({
                   style={{
                     background: "linear-gradient(180deg, #0891b2 0%, #0e7490 100%)",
                     border: "1px solid rgba(0,212,255,0.3)",
-                    boxShadow: "0 0 16px rgba(0,212,255,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
+                    boxShadow: "0 0 16px rgba(0,212,255,0.15)",
                   }}
                   data-testid="button-save-resume"
                 >
@@ -1845,7 +1813,7 @@ function GameTable({
               style={{
                 background: "linear-gradient(180deg, rgba(12,20,35,0.98) 0%, rgba(8,14,24,0.99) 100%)",
                 borderLeft: "1px solid rgba(168,85,247,0.15)",
-                boxShadow: "-8px 0 32px rgba(0,0,0,0.5), -2px 0 16px rgba(168,85,247,0.05)",
+                boxShadow: "-2px 0 16px rgba(168,85,247,0.05)",
               }}
               data-testid="waiting-list-panel"
             >

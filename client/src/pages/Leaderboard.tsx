@@ -51,12 +51,12 @@ export default function Leaderboard() {
 
   return (
     <DashboardLayout title="Leaderboard">
-      <div className="px-8 pb-8">
+      <div className="px-4 md:px-8 pb-8">
         {/* Header with gold chips accent */}
         <div className="relative mb-6 overflow-hidden rounded-xl glass border border-primary/10 p-5">
           <img
             src={goldChips}
-            alt=""
+            alt="Gold chips"
             loading="lazy"
             className="absolute -right-6 -top-2 w-36 h-36 object-contain opacity-20 pointer-events-none"
           />
@@ -98,7 +98,7 @@ export default function Leaderboard() {
           className="glass rounded-xl overflow-hidden border border-primary/10"
         >
           {/* Table header */}
-          <div className="grid grid-cols-12 gap-2 px-5 py-3 border-b border-white/5">
+          <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-3 border-b border-white/5">
             <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Rank</span>
             <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Avatar</span>
             <span className="col-span-4 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Player</span>
@@ -133,7 +133,7 @@ export default function Leaderboard() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  className="grid grid-cols-12 gap-2 items-center px-5 py-3 border-b border-white/[0.03] hover:bg-primary/[0.06] transition-all"
+                  className="flex flex-wrap sm:grid sm:grid-cols-12 gap-2 items-center px-5 py-3 border-b border-white/[0.03] hover:bg-primary/[0.06] transition-all"
                 >
                   {/* Rank */}
                   <div className="col-span-1">

@@ -219,7 +219,7 @@ export default function ClubDashboard() {
 
   return (
     <DashboardLayout title="Club Dashboard">
-      <div className="px-6 md:px-8 pb-8 relative">
+      <div className="px-4 md:px-8 pb-8 relative">
 
         <div className="relative z-10">
           {loading ? (
@@ -305,7 +305,7 @@ export default function ClubDashboard() {
                       >
                         <img
                           src={CLUB_LOGO_OPTIONS.find(l => l.id === selectedLogo)?.url}
-                          alt=""
+                          alt={`${CLUB_LOGO_OPTIONS.find(l => l.id === selectedLogo)?.label ?? "Selected"} club logo preview`}
                           className="w-12 h-12 rounded-lg object-cover"
                         />
                         <div>
@@ -334,7 +334,15 @@ export default function ClubDashboard() {
                 {createError && (
                   <div className="mt-4 flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                     <X className="w-3.5 h-3.5 shrink-0" />
-                    {createError}
+                    <span className="flex-1">{createError}</span>
+                    <button
+                      data-testid="button-retry-create-club"
+                      onClick={handleCreateClub}
+                      disabled={creatingClub}
+                      className="shrink-0 px-3 py-1 rounded-md text-[0.625rem] font-bold uppercase tracking-wider text-red-400 border border-red-500/30 hover:bg-red-500/15 transition-colors disabled:opacity-50"
+                    >
+                      Retry
+                    </button>
                   </div>
                 )}
 
@@ -575,45 +583,85 @@ export default function ClubDashboard() {
                                   initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   transition={{ delay: i * 0.06 }}
-                                  className="rounded-md p-4 border border-white/[0.06] hover:border-primary/20 transition-all group bg-surface-high/30"
+                                  className="rounded-md overflow-hidden border border-white/[0.06] hover:border-primary/20 transition-all group bg-surface-high/30"
                                 >
-                                  <div className="flex items-start justify-between mb-3">
-                                    <div className="min-w-0 flex-1">
-                                      <h4 className="text-sm font-bold text-white truncate mb-1">{table.name}</h4>
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span
-                                          className="px-2 py-0.5 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/20"
-                                        >
-                                          {table.gameFormat || "cash"}
-                                        </span>
-                                        <span className="text-[0.625rem] text-gray-500">
-                                          {table.smallBlind}/{table.bigBlind}
+                                  {/* Mini table felt preview */}
+                                  <div className="relative h-14 bg-gradient-to-b from-emerald-900/30 to-emerald-950/20 flex items-center justify-center overflow-hidden">
+                                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(5,46,22,0.4)_0%,transparent_70%)]" />
+                                    {/* Miniature table oval */}
+                                    <div className={cn(
+                                      "w-20 h-8 rounded-[50%] border-2 relative",
+                                      isLive
+                                        ? "bg-emerald-800/50 border-emerald-600/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+                                        : "bg-emerald-900/30 border-emerald-700/20"
+                                    )}>
+                                      <div className="absolute inset-1 rounded-[50%] border border-emerald-500/10" />
+                                    </div>
+                                    {/* Player dots around the table */}
+                                    {Array.from({ length: Math.min(table.playerCount ?? 0, table.maxPlayers ?? 6) }).map((_: unknown, pi: number) => {
+                                      const angle = (pi / (table.maxPlayers ?? 6)) * Math.PI * 2 - Math.PI / 2;
+                                      const rx = 44;
+                                      const ry = 16;
+                                      return (
+                                        <div
+                                          key={pi}
+                                          className="absolute w-2 h-2 rounded-full bg-primary/60 border border-primary/40"
+                                          style={{
+                                            left: `calc(50% + ${Math.cos(angle) * rx}px - 4px)`,
+                                            top: `calc(50% + ${Math.sin(angle) * ry}px - 4px)`,
+                                          }}
+                                        />
+                                      );
+                                    })}
+                                    {isLive && (
+                                      <div className="absolute top-1.5 right-2">
+                                        <span className="relative flex h-2 w-2">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
                                         </span>
                                       </div>
-                                    </div>
-                                    <span
-                                      className={`shrink-0 ml-2 px-2.5 py-1 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider border ${
-                                        isLive
-                                          ? "bg-green-500/15 text-green-400 border-green-500/20"
-                                          : "bg-gray-500/10 text-gray-500 border-gray-500/20"
-                                      }`}
-                                    >
-                                      {isLive ? "LIVE" : "WAITING"}
-                                    </span>
+                                    )}
                                   </div>
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 text-[0.625rem] text-gray-500">
-                                      <Users className="w-3.5 h-3.5" />
-                                      <span>{table.playerCount ?? 0}/{table.maxPlayers ?? 6} players</span>
+
+                                  <div className="p-4">
+                                    <div className="flex items-start justify-between mb-3">
+                                      <div className="min-w-0 flex-1">
+                                        <h4 className="text-sm font-bold text-white truncate mb-1">{table.name}</h4>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span
+                                            className="px-2 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/20"
+                                          >
+                                            {table.gameFormat || "cash"}
+                                          </span>
+                                          <span className="text-[0.625rem] text-gray-500">
+                                            {table.smallBlind}/{table.bigBlind}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <span
+                                        className={`shrink-0 ml-2 px-2.5 py-1 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider border ${
+                                          isLive
+                                            ? "bg-green-500/15 text-green-400 border-green-500/20"
+                                            : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                                        }`}
+                                      >
+                                        {isLive ? "LIVE" : "WAITING"}
+                                      </span>
                                     </div>
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      onClick={() => navigate(`/game/${table.id}`)}
-                                      className="px-4 py-1.5 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider text-primary border border-primary/25 hover:bg-primary/10 transition-colors"
-                                    >
-                                      Join
-                                    </motion.button>
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1.5 text-[0.625rem] text-gray-500">
+                                        <Users className="w-3.5 h-3.5" />
+                                        <span className="font-bold">{table.playerCount ?? 0}/{table.maxPlayers ?? 6} players</span>
+                                      </div>
+                                      <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => navigate(`/game/${table.id}`)}
+                                        className="px-4 py-1.5 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider text-primary border border-primary/25 hover:bg-primary/10 transition-colors"
+                                      >
+                                        Join
+                                      </motion.button>
+                                    </div>
                                   </div>
                                 </motion.div>
                               );
@@ -633,9 +681,12 @@ export default function ClubDashboard() {
                       <div className="bg-surface-high/50 backdrop-blur-xl rounded-md border border-white/[0.06] divide-y divide-white/[0.04]">
 
                       {clubActivity.length === 0 ? (
-                        <div className="py-10 text-center">
-                          <Activity className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                          <p className="text-[0.625rem] text-gray-600">No recent activity</p>
+                        <div className="py-10 px-4 text-center">
+                          <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-primary/[0.08] border border-primary/15">
+                            <Activity className="w-6 h-6 text-gray-600" />
+                          </div>
+                          <p className="text-sm font-bold text-gray-500 mb-1">No recent activity</p>
+                          <p className="text-[0.625rem] text-gray-600">Announcements, events, and member joins will appear here</p>
                         </div>
                       ) : (
                         <div className="divide-y divide-white/[0.04]">
@@ -708,7 +759,7 @@ export default function ClubDashboard() {
 
               {activeTab === "members" && <div>
                 <div className="bg-surface-high/40 backdrop-blur-xl rounded-md border border-white/[0.06] overflow-hidden">
-                    <div className="grid grid-cols-[1fr_100px_100px_80px] gap-4 px-4 py-2 border-b border-white/[0.04] text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                    <div className="hidden sm:grid grid-cols-[1fr_100px_100px_80px] gap-4 px-4 py-2 border-b border-white/[0.04] text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
                       <span>Player</span>
                       <span>Chips</span>
                       <span>Hands</span>
@@ -738,7 +789,7 @@ export default function ClubDashboard() {
                             animate={{ opacity: 1 }}
                             transition={{ delay: i * 0.03 }}
                             data-testid={`row-member-${member.userId}`}
-                            className="grid grid-cols-[1fr_100px_100px_80px] gap-4 px-4 py-3 items-center border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors"
+                            className="flex flex-col sm:grid sm:grid-cols-[1fr_100px_100px_80px] gap-2 sm:gap-4 px-4 py-3 items-start sm:items-center border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors"
                           >
                             <div className="flex items-center gap-3 min-w-0">
                               <MemberAvatar

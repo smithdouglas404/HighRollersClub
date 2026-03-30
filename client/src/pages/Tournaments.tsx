@@ -214,7 +214,7 @@ export default function Tournaments() {
                       <div className="flex items-center gap-2 mb-2">
                         {/* Game variant badge */}
                         <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-yellow-500/10 border border-yellow-500/20 text-yellow-300"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-yellow-500/10 border border-yellow-500/20 text-yellow-300"
                         >
                           <Gamepad2 className="w-3 h-3" />
                           {getVariantLabel(tournament.pokerVariant)}
@@ -222,14 +222,14 @@ export default function Tournaments() {
 
                         {/* Registration status badge */}
                         {isRegOpen && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
                             <Flame className="w-3 h-3" />
                             REG OPEN
                           </span>
                         )}
 
                         {!isRegOpen && tournament.status && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/[0.06]">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/[0.06]">
                             {tournament.status.replace(/_/g, " ")}
                           </span>
                         )}

@@ -395,8 +395,8 @@ function StepGameType({
                   ? `linear-gradient(135deg, rgba(20,31,40,0.6), rgba(16,24,36,0.95))`
                   : "linear-gradient(135deg, rgba(20,31,40,0.5), rgba(16,24,36,0.85))",
                 boxShadow: isSelected
-                  ? `0 0 30px ${variant.glow}, 0 4px 20px rgba(0,0,0,0.3)`
-                  : "0 2px 10px rgba(0,0,0,0.2)",
+                  ? `0 0 30px ${variant.glow}`
+                  : "none",
               }}
             >
               {/* Gradient overlay */}
@@ -426,7 +426,7 @@ function StepGameType({
                           {variant.name}
                         </span>
                         <span
-                          className={`text-[0.5rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                          className={`text-[0.5rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
                             isSelected
                               ? "bg-white/15 text-white"
                               : "bg-white/5 text-gray-500"
@@ -494,11 +494,12 @@ function StepStakes({
       <div className="space-y-5">
         {/* Table Name */}
         <div>
-          <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
+          <label htmlFor="table-name" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
             Table Name
             <span className="text-gray-600 font-normal ml-2">(optional)</span>
           </label>
           <input
+            id="table-name"
             type="text"
             value={config.name}
             onChange={(e) =>
@@ -516,11 +517,13 @@ function StepStakes({
         {/* Blinds */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Small Blind
+            <label htmlFor="small-blind" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
+              Small Blind<span className="text-destructive ml-0.5">*</span>
             </label>
             <input
+              id="small-blind"
               type="number"
+              required
               min={1}
               value={config.smallBlind}
               onChange={(e) => handleSBChange(e.target.value)}
@@ -532,12 +535,14 @@ function StepStakes({
             />
           </div>
           <div>
-            <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Big Blind
+            <label htmlFor="big-blind" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
+              Big Blind<span className="text-destructive ml-0.5">*</span>
             </label>
             <input
+              id="big-blind"
               type="number"
-              min={2}
+              required
+              min={config.smallBlind * 2}
               value={config.bigBlind}
               onChange={(e) => handleBBChange(e.target.value)}
               className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-cyan-500/40 tabular-nums"
@@ -552,11 +557,13 @@ function StepStakes({
         {/* Buy-in in BB multiples */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Min Buy-in (BB)
+            <label htmlFor="min-buyin" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
+              Min Buy-in (BB)<span className="text-destructive ml-0.5">*</span>
             </label>
             <input
+              id="min-buyin"
               type="number"
+              required
               min={1}
               value={config.minBuyIn}
               onChange={(e) =>
@@ -573,11 +580,13 @@ function StepStakes({
             />
           </div>
           <div>
-            <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Max Buy-in (BB)
+            <label htmlFor="max-buyin" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
+              Max Buy-in (BB)<span className="text-destructive ml-0.5">*</span>
             </label>
             <input
+              id="max-buyin"
               type="number"
+              required
               min={1}
               value={config.maxBuyIn}
               onChange={(e) =>
@@ -629,7 +638,7 @@ function StepPlayers({
         Choose the maximum number of players and preview the table layout.
       </SectionSubtitle>
 
-      <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-3">
+      <label id="max-players-label" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-3">
         Max Players
       </label>
       <div className="flex gap-2 mb-6">
@@ -690,7 +699,7 @@ function StepTimers({
       <div className="space-y-6">
         {/* Turn Timer */}
         <div>
-          <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-3">
+          <label id="turn-timer-label" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-3">
             Turn Timer
           </label>
           <div className="flex gap-2">
@@ -719,7 +728,7 @@ function StepTimers({
 
         {/* Time Bank */}
         <div>
-          <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-3">
+          <label id="time-bank-label" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-3">
             Time Bank
           </label>
           <div className="flex gap-2">
@@ -792,10 +801,11 @@ function StepRules({
       <div className="space-y-5">
         {/* Ante */}
         <div>
-          <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
+          <label htmlFor="ante-amount" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
             Ante Amount
           </label>
           <input
+            id="ante-amount"
             type="number"
             min={0}
             value={config.ante}
@@ -901,18 +911,45 @@ function StepTheme({
                   : "rgba(20,31,40,0.6)",
                 borderColor: isSelected ? theme.color : undefined,
                 boxShadow: isSelected
-                  ? `0 0 25px ${theme.color}30, 0 4px 15px rgba(0,0,0,0.3)`
-                  : "0 2px 8px rgba(0,0,0,0.15)",
+                  ? `0 0 25px ${theme.color}30`
+                  : "none",
               }}
             >
-              <div className="flex items-center gap-3 mb-2">
+              {/* Mini table preview */}
+              <div
+                className="w-full h-16 rounded-lg mb-3 relative overflow-hidden"
+                style={{
+                  background: `linear-gradient(180deg, rgba(15,20,25,0.95) 0%, rgba(15,20,25,0.85) 100%)`,
+                  border: `1px solid ${theme.color}20`,
+                }}
+              >
+                {/* Table felt (oval) */}
                 <div
-                  className="w-8 h-8 rounded-full shrink-0"
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[50%]"
+                  style={{
+                    width: "75%",
+                    height: "70%",
+                    background: `radial-gradient(ellipse at center, ${theme.color}35 0%, ${theme.color}18 60%, ${theme.color}08 100%)`,
+                    border: `1.5px solid ${theme.color}50`,
+                    boxShadow: `inset 0 0 12px ${theme.color}15, 0 0 8px ${theme.color}10`,
+                  }}
+                />
+                {/* Rail accent line */}
+                <div
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[50%]"
+                  style={{
+                    width: "85%",
+                    height: "82%",
+                    border: `1px solid ${theme.color}20`,
+                  }}
+                />
+              </div>
+              <div className="flex items-center gap-2 mb-1">
+                <div
+                  className="w-3 h-3 rounded-full shrink-0"
                   style={{
                     background: theme.color,
-                    boxShadow: isSelected
-                      ? `0 0 15px ${theme.color}60`
-                      : `0 0 5px ${theme.color}30`,
+                    boxShadow: `0 0 6px ${theme.color}60`,
                   }}
                 />
                 <div className="flex-1 min-w-0">
@@ -1005,8 +1042,8 @@ function StepPrivacy({
                   ? "linear-gradient(135deg, rgba(0,212,255,0.06), rgba(20,31,40,0.85))"
                   : "rgba(20,31,40,0.5)",
                 boxShadow: isSelected
-                  ? "0 0 25px rgba(0,212,255,0.15), 0 4px 15px rgba(0,0,0,0.3)"
-                  : "0 2px 8px rgba(0,0,0,0.15)",
+                  ? "0 0 25px rgba(0,212,255,0.15)"
+                  : "none",
               }}
             >
               <div className="flex items-start gap-3">
@@ -1062,12 +1099,13 @@ function StepPrivacy({
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <label className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
+            <label htmlFor="table-password" className="block text-[0.6875rem] font-bold text-gray-400 uppercase tracking-wider mb-2">
               Table Password
             </label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
+                id="table-password"
                 type={showPassword ? "text" : "password"}
                 value={config.password}
                 onChange={(e) =>
@@ -1277,7 +1315,6 @@ export default function TableSetup() {
             background:
               "linear-gradient(135deg, rgba(20,31,40,0.7), rgba(16,24,36,0.92))",
             border: "1px solid rgba(255,255,255,0.06)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.3)",
           }}
         >
           <AnimatePresence mode="wait" custom={direction}>

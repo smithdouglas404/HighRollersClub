@@ -291,12 +291,12 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-[#c9a84c]/15"
             >
-              <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between">
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-primary/70">Winnings Over Time</h3>
+                  <TrendingUp className="w-4 h-4 text-[#c9a84c]/80" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Winnings Over Time</h3>
                 </div>
                 {cumulativeWinnings.length > 0 && (
                   <span className={`text-xs font-bold ${
@@ -309,14 +309,16 @@ export default function Analytics() {
               </div>
               <div className="p-4">
                 {cumulativeWinnings.length >= 2 ? (
-                  <div className="h-[200px]">
+                  <div className="h-[200px] rounded-lg border border-white/[0.04] bg-white/[0.01] p-1">
                     <WinningsChart data={cumulativeWinnings} />
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <TrendingUp className="w-8 h-8 text-gray-700 mb-3" />
-                    <p className="text-xs text-gray-500 font-medium">Not enough hand data yet</p>
-                    <p className="text-[0.625rem] text-gray-600 mt-1">Play some hands to see your winnings chart</p>
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+                      <TrendingUp className="w-7 h-7 text-primary/40" />
+                    </div>
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Hand Data Yet</h3>
+                    <p className="text-xs text-muted-foreground/60 max-w-xs">Play some hands to see your winnings chart and track your progress over time.</p>
                   </div>
                 )}
               </div>

@@ -53,10 +53,10 @@ function SessionStats({ hands }: { hands: HandRecord[] }) {
   }).join(" ");
 
   return (
-    <div className="border-b border-white/5">
+    <div className="border-b border-white/[0.06]">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
       >
         <span className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
           <TrendingUp className="w-3 h-3" /> Session Stats
@@ -157,7 +157,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
-            className="fixed left-4 bottom-32 z-40 glass rounded-full p-3 border border-white/10 hover:border-cyan-500/30 transition-all shadow-lg"
+            className="fixed left-4 bottom-32 z-40 bg-surface-high/50 backdrop-blur-xl rounded-full p-3 border border-white/[0.06] hover:border-cyan-500/30 transition-all shadow-lg"
           >
             <History className="w-5 h-5 text-cyan-400" />
           </motion.button>
@@ -172,15 +172,10 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -320, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed left-0 top-0 bottom-0 w-72 z-40 flex flex-col"
-            style={{
-              background: "rgba(5, 10, 20, 0.95)",
-              borderRight: "1px solid rgba(255,255,255,0.05)",
-              backdropFilter: "blur(20px)",
-            }}
+            className="fixed left-0 top-0 bottom-0 w-72 z-40 flex flex-col bg-surface-high/50 backdrop-blur-xl border-r border-white/[0.06]"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
               <div className="flex items-center gap-2">
                 <History className="w-4 h-4 text-cyan-400" />
                 <span className="text-xs font-bold uppercase tracking-wider text-white">Hand History</span>
@@ -267,7 +262,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
 
             {/* Footer: Export + Refresh */}
             {hands.length > 0 && (
-              <div className="px-4 py-2 border-t border-white/5 space-y-1">
+              <div className="px-4 py-2 border-t border-white/[0.06] space-y-1">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {

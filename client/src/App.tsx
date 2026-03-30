@@ -27,6 +27,7 @@ import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/AdminDashboard";
 import Tournaments from "@/pages/Tournaments";
 import TournamentCreate from "@/pages/TournamentCreate";
+import TournamentDetail from "@/pages/TournamentDetail";
 import TableSetup from "@/pages/TableSetup";
 import ClubCreate from "@/pages/ClubCreate";
 import NotFound from "@/pages/not-found";
@@ -117,6 +118,10 @@ function LeagueDetailPage({ params }: { params: { id: string } }) {
   return <AuthGate><LeagueDetail seasonId={params.id} /></AuthGate>;
 }
 
+function TournamentDetailPage({ params }: { params: { id: string } }) {
+  return <AuthGate><TournamentDetail tournamentId={params.id} /></AuthGate>;
+}
+
 function InviteRedirect({ params }: { params: { code: string } }) {
   const [, setLocation] = useLocation();
   const [error, setError] = useState("");
@@ -160,6 +165,7 @@ function Router() {
       <Route path="/profile" component={ProtectedProfile} />
       <Route path="/tournaments" component={ProtectedTournaments} />
       <Route path="/tournaments/new" component={ProtectedTournamentCreate} />
+      <Route path="/tournaments/:id">{(params) => <TournamentDetailPage params={params} />}</Route>
       <Route path="/table/new" component={ProtectedTableSetup} />
       <Route path="/clubs/create" component={ProtectedClubCreate} />
       <Route path="/admin" component={ProtectedAdmin} />

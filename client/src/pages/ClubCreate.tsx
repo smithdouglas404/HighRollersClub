@@ -46,7 +46,6 @@ const slideVariants = {
 const cardStyle = {
   background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
   border: "1px solid rgba(0,212,255,0.1)",
-  boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
 };
 
 const inputStyle = {
@@ -241,13 +240,16 @@ export default function ClubCreate() {
 
       {/* Club Name */}
       <div className="space-y-1.5">
-        <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
-          Club Name *
+        <label htmlFor="club-name" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+          Club Name<span className="text-destructive ml-0.5">*</span>
         </label>
         <input
+          id="club-name"
           type="text"
           value={clubName}
           onChange={(e) => setClubName(e.target.value)}
+          required
+          minLength={2}
           maxLength={50}
           placeholder="Enter your club name..."
           className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40"
@@ -257,10 +259,11 @@ export default function ClubCreate() {
 
       {/* Description */}
       <div className="space-y-1.5">
-        <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+        <label htmlFor="club-description" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
           Description
         </label>
         <textarea
+          id="club-description"
           value={description}
           onChange={(e) => setDescription(e.target.value.slice(0, 300))}
           maxLength={300}
@@ -276,7 +279,7 @@ export default function ClubCreate() {
 
       {/* Logo Picker */}
       <div className="space-y-2">
-        <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+        <label id="club-logo-label" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
           Club Logo
         </label>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
@@ -291,13 +294,13 @@ export default function ClubCreate() {
                 className="relative rounded-xl overflow-hidden p-3 flex flex-col items-center gap-2 transition-all cursor-pointer"
                 style={{
                   background: isSelected
-                    ? "rgba(0,212,255,0.1)"
+                    ? "rgba(0,212,255,0.12)"
                     : "rgba(255,255,255,0.03)",
                   border: isSelected
-                    ? "2px solid rgba(0,212,255,0.5)"
+                    ? "2px solid rgba(0,212,255,0.6)"
                     : "2px solid rgba(255,255,255,0.08)",
                   boxShadow: isSelected
-                    ? "0 0 20px rgba(0,212,255,0.15)"
+                    ? "0 0 24px rgba(0,212,255,0.2), inset 0 0 12px rgba(0,212,255,0.05)"
                     : "none",
                 }}
               >
@@ -305,12 +308,17 @@ export default function ClubCreate() {
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-cyan-500 flex items-center justify-center"
+                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-cyan-500 flex items-center justify-center z-10"
+                    style={{ boxShadow: "0 0 8px rgba(0,212,255,0.5)" }}
                   >
                     <Check className="w-3 h-3 text-black" />
                   </motion.div>
                 )}
-                <div className="w-12 h-12 rounded-lg overflow-hidden">
+                <div
+                  className={`rounded-lg overflow-hidden transition-all ${
+                    isSelected ? "w-14 h-14 ring-2 ring-cyan-500/40" : "w-12 h-12"
+                  }`}
+                >
                   <img
                     src={logo.url}
                     alt={logo.label}
@@ -328,6 +336,28 @@ export default function ClubCreate() {
             );
           })}
         </div>
+        {selectedLogo && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 flex items-center gap-3 px-3 py-2 rounded-lg"
+            style={{
+              background: "rgba(0,212,255,0.06)",
+              border: "1px solid rgba(0,212,255,0.15)",
+            }}
+          >
+            <div className="w-8 h-8 rounded-md overflow-hidden ring-1 ring-cyan-500/30 shrink-0">
+              <img
+                src={LOGO_OPTIONS.find((l) => l.id === selectedLogo)?.url}
+                alt="Selected logo"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="text-[0.625rem] text-cyan-400 font-semibold">
+              {LOGO_OPTIONS.find((l) => l.id === selectedLogo)?.label} selected
+            </span>
+          </motion.div>
+        )}
       </div>
     </div>
   );
@@ -374,11 +404,12 @@ export default function ClubCreate() {
 
       {/* Standard Buy-in */}
       <div className="space-y-1.5">
-        <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+        <label htmlFor="club-buyin" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
           <Crown className="w-3.5 h-3.5" />
           Standard Buy-in (chips)
         </label>
         <input
+          id="club-buyin"
           type="number"
           value={chipBuyIn}
           onChange={(e) => setChipBuyIn(Math.max(0, parseInt(e.target.value) || 0))}
@@ -431,7 +462,7 @@ export default function ClubCreate() {
     <div className="space-y-6">
       {/* Public / Private radio cards */}
       <div className="space-y-2">
-        <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+        <label id="club-visibility-label" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
           Club Visibility
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

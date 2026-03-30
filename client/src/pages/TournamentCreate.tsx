@@ -273,11 +273,14 @@ export default function TournamentCreate() {
       <div className="space-y-6">
         {/* Tournament Name */}
         <div>
-          <label className={goldLabelClass}>Tournament Name</label>
+          <label htmlFor="tournament-name" className={goldLabelClass}>Tournament Name<span className="text-destructive ml-0.5">*</span></label>
           <input
+            id="tournament-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            required
+            minLength={2}
             placeholder="Friday Night Championship"
             className={goldInputClass}
             maxLength={80}
@@ -286,7 +289,7 @@ export default function TournamentCreate() {
 
         {/* Game Type Selector */}
         <div>
-          <label className={goldLabelClass}>Game Type</label>
+          <label id="tournament-game-type-label" className={goldLabelClass}>Game Type</label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {GAME_TYPES.map((gt) => {
               const Icon = gt.icon;
@@ -327,14 +330,16 @@ export default function TournamentCreate() {
 
         {/* Start Date & Time */}
         <div>
-          <label className={goldLabelClass}>
+          <label htmlFor="tournament-start-date" className={goldLabelClass}>
             <Calendar className="w-3 h-3 inline mr-1 -mt-0.5" />
-            Start Date & Time
+            Start Date & Time<span className="text-destructive ml-0.5">*</span>
           </label>
           <input
+            id="tournament-start-date"
             type="datetime-local"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            required
             className={goldInputClass}
           />
         </div>
@@ -342,24 +347,27 @@ export default function TournamentCreate() {
         {/* Buy-in + Registration Fee */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={goldLabelClass}>
+            <label htmlFor="tournament-buyin" className={goldLabelClass}>
               <Coins className="w-3 h-3 inline mr-1 -mt-0.5" />
-              Buy-in Amount
+              Buy-in Amount<span className="text-destructive ml-0.5">*</span>
             </label>
             <input
+              id="tournament-buyin"
               type="number"
               value={buyIn}
               onChange={(e) => setBuyIn(Math.max(0, parseInt(e.target.value) || 0))}
-              min={0}
+              required
+              min={1}
               className={goldInputClass}
             />
           </div>
           <div>
-            <label className={goldLabelClass}>
+            <label htmlFor="tournament-regfee" className={goldLabelClass}>
               <DollarSign className="w-3 h-3 inline mr-1 -mt-0.5" />
               Registration Fee
             </label>
             <input
+              id="tournament-regfee"
               type="number"
               value={regFee}
               onChange={(e) => setRegFee(Math.max(0, parseInt(e.target.value) || 0))}
@@ -372,11 +380,12 @@ export default function TournamentCreate() {
         {/* Registration Close Time + Late Registration */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={goldLabelClass}>
+            <label htmlFor="tournament-reg-close" className={goldLabelClass}>
               <Clock className="w-3 h-3 inline mr-1 -mt-0.5" />
               Registration Close Time
             </label>
             <select
+              id="tournament-reg-close"
               value={regCloseTime}
               onChange={(e) => setRegCloseTime(e.target.value as RegistrationCloseTime)}
               className={goldSelectClass}
@@ -389,11 +398,12 @@ export default function TournamentCreate() {
             </select>
           </div>
           <div>
-            <label className={goldLabelClass}>
+            <label htmlFor="tournament-levels" className={goldLabelClass}>
               <Layers className="w-3 h-3 inline mr-1 -mt-0.5" />
               Number of Levels
             </label>
             <select
+              id="tournament-levels"
               value={numberOfLevels}
               onChange={(e) => setNumberOfLevels(parseInt(e.target.value) as NumberOfLevels)}
               className={goldSelectClass}
@@ -433,11 +443,12 @@ export default function TournamentCreate() {
       <div className="space-y-6">
         {/* Starting Stack */}
         <div>
-          <label className={goldLabelClass}>
+          <label htmlFor="tournament-starting-stack" className={goldLabelClass}>
             <Coins className="w-3 h-3 inline mr-1 -mt-0.5" />
             Starting Stack
           </label>
           <input
+            id="tournament-starting-stack"
             type="number"
             value={startingStack}
             onChange={(e) => setStartingStack(Math.max(100, parseInt(e.target.value) || 100))}
@@ -451,7 +462,7 @@ export default function TournamentCreate() {
 
         {/* Blind Level Increase Interval */}
         <div>
-          <label className={goldLabelClass}>
+          <label id="tournament-blind-interval-label" className={goldLabelClass}>
             <Timer className="w-3 h-3 inline mr-1 -mt-0.5" />
             Blind Level Increase Interval
           </label>
@@ -588,7 +599,7 @@ export default function TournamentCreate() {
       <div className="space-y-6">
         {/* Payout Structure */}
         <div>
-          <label className={goldLabelClass}>
+          <label id="tournament-payout-label" className={goldLabelClass}>
             <Trophy className="w-3 h-3 inline mr-1 -mt-0.5" />
             Payout Structure
           </label>
@@ -630,11 +641,12 @@ export default function TournamentCreate() {
 
         {/* Guaranteed Prize */}
         <div>
-          <label className={goldLabelClass}>
+          <label htmlFor="tournament-guaranteed-prize" className={goldLabelClass}>
             <Coins className="w-3 h-3 inline mr-1 -mt-0.5" />
             Guaranteed Prize Pool
           </label>
           <input
+            id="tournament-guaranteed-prize"
             type="number"
             value={guaranteedPrize}
             onChange={(e) => setGuaranteedPrize(Math.max(0, parseInt(e.target.value) || 0))}
@@ -649,12 +661,13 @@ export default function TournamentCreate() {
 
         {/* Admin Fee */}
         <div>
-          <label className={goldLabelClass}>
+          <label htmlFor="tournament-admin-fee" className={goldLabelClass}>
             <DollarSign className="w-3 h-3 inline mr-1 -mt-0.5" />
             Admin Fee %
           </label>
           <div className="relative">
             <input
+              id="tournament-admin-fee"
               type="number"
               value={adminFee}
               onChange={(e) => setAdminFee(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
@@ -724,7 +737,7 @@ export default function TournamentCreate() {
 
         {/* Time Bank */}
         <div>
-          <label className={goldLabelClass}>
+          <label id="tournament-time-bank-label" className={goldLabelClass}>
             <Timer className="w-3 h-3 inline mr-1 -mt-0.5" />
             Time Bank
           </label>
@@ -765,11 +778,12 @@ export default function TournamentCreate() {
 
         {/* Max Players */}
         <div>
-          <label className={goldLabelClass}>
+          <label htmlFor="tournament-max-players" className={goldLabelClass}>
             <Users className="w-3 h-3 inline mr-1 -mt-0.5" />
             Maximum Players
           </label>
           <input
+            id="tournament-max-players"
             type="number"
             value={maxPlayers}
             onChange={(e) => setMaxPlayers(Math.max(2, Math.min(1000, parseInt(e.target.value) || 2)))}
@@ -1023,26 +1037,39 @@ export default function TournamentCreate() {
               {TABS.map((tab, i) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.key;
+                const isCompleted = i < currentTabIndex;
                 return (
                   <button
                     key={tab.key}
                     onClick={() => goToTab(tab.key)}
                     className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all flex-1 justify-center ${
                       isActive
-                        ? "text-amber-400"
-                        : "text-gray-500 hover:text-gray-300"
+                        ? "bg-yellow-500/15 border-yellow-500/25 text-yellow-300"
+                        : isCompleted
+                          ? "text-amber-500/70 hover:text-amber-400"
+                          : "text-gray-500 hover:text-gray-300"
                     }`}
                     style={
                       isActive
                         ? {
-                            background: "linear-gradient(135deg, rgba(154,123,44,0.15) 0%, rgba(212,175,55,0.08) 100%)",
-                            border: "1px solid rgba(212,175,55,0.25)",
-                            boxShadow: "0 0 12px rgba(212,175,55,0.08)",
+                            background: "rgba(234,179,8,0.15)",
+                            border: "1px solid rgba(234,179,8,0.25)",
+                            boxShadow: "0 0 12px rgba(234,179,8,0.08)",
                           }
                         : { border: "1px solid transparent" }
                     }
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <span
+                      className={`w-4 h-4 rounded-full flex items-center justify-center text-[0.5rem] font-black shrink-0 ${
+                        isActive
+                          ? "bg-yellow-500/25 text-yellow-300"
+                          : isCompleted
+                            ? "bg-amber-500/15 text-amber-500/70"
+                            : "bg-white/5 text-gray-600"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
                     {!isMobile && tab.label}
                     {isMobile && (
                       <span className="sr-only">{tab.label}</span>
@@ -1061,7 +1088,6 @@ export default function TournamentCreate() {
               style={{
                 background: "linear-gradient(180deg, rgba(10,10,6,0.9) 0%, rgba(22,27,34,0.8) 100%)",
                 border: "1px solid rgba(212,175,55,0.1)",
-                boxShadow: "0 0 30px rgba(0,0,0,0.3)",
               }}
             >
               <div className="p-6">

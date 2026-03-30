@@ -6,9 +6,9 @@ import { useHandReplayState } from "@/hooks/useHandReplayState";
 import { ReplayMiniTable } from "@/components/poker/ReplayMiniTable";
 import { ReplayTimeline } from "@/components/poker/ReplayTimeline";
 import {
-  ArrowLeft, ShieldCheck, Download, Copy, Check,
+  ArrowLeft, ShieldCheck, Shield, Download, Copy, Check,
   ChevronDown, ChevronUp, Clock, Coins, Trophy, User, Users, FileText,
-  Eye, List
+  Eye, List, Loader2, XCircle
 } from "lucide-react";
 
 interface CardType {
@@ -107,7 +107,7 @@ function ActionBadge({ action, amount }: { action: string; amount?: number }) {
   };
   const c = configs[action] || configs.check;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.625rem] font-bold uppercase tracking-wider ${c.text} ${c.bg} border`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wider ${c.text} ${c.bg} border`}>
       {action}
       {amount !== undefined && amount > 0 && <span>{amount.toLocaleString()}</span>}
     </span>
@@ -192,6 +192,14 @@ function PhaseSection({
   );
 }
 
+interface VerificationData {
+  serverSeed: string;
+  commitmentHash: string;
+  deckOrder: string;
+  handNumber: number;
+  tableId: string;
+}
+
 export default function HandReplay({ handId }: { handId: string }) {
   const [, navigate] = useLocation();
   const [hand, setHand] = useState<HandData | null>(null);
@@ -200,6 +208,12 @@ export default function HandReplay({ handId }: { handId: string }) {
   const [copiedHash, setCopiedHash] = useState(false);
   const [showProof, setShowProof] = useState(false);
   const [viewMode, setViewMode] = useState<"visual" | "text">("visual");
+
+  // Verification state
+  const [verifyExpanded, setVerifyExpanded] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyData, setVerifyData] = useState<VerificationData | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const {
     snapshot,
@@ -328,6 +342,33 @@ export default function HandReplay({ handId }: { handId: string }) {
     doc.save(`hand-${hand.handNumber || handId}.pdf`);
   };
 
+  const handleVerify = async () => {
+    if (verifyData) {
+      // Already verified, just toggle the panel
+      setVerifyExpanded(!verifyExpanded);
+      return;
+    }
+    setVerifyExpanded(true);
+    setVerifyLoading(true);
+    setVerifyError(null);
+    try {
+      const res = await fetch(`/api/hands/${handId}/verify`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Verification failed" }));
+        setVerifyError(err.message || "Verification failed");
+      } else {
+        const data: VerificationData = await res.json();
+        setVerifyData(data);
+      }
+    } catch {
+      setVerifyError("Network error — could not verify hand");
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
   const summary = hand?.summary;
   const players = summary?.players || [];
   const actions = summary?.actions || [];
@@ -355,7 +396,7 @@ export default function HandReplay({ handId }: { handId: string }) {
 
   return (
     <DashboardLayout title="Hand Replay">
-      <div className="px-8 pb-8">
+      <div className="px-4 md:px-8 pb-8">
         {/* Back button */}
         <motion.button
           initial={{ opacity: 0, x: -10 }}
@@ -369,21 +410,33 @@ export default function HandReplay({ handId }: { handId: string }) {
         </motion.button>
 
         {loading ? (
-          <div className="text-center py-20">
-            <div className="spinner spinner-lg mx-auto mb-4" />
-            <p className="text-sm text-gray-500">Loading hand...</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-xs text-muted-foreground tracking-wider uppercase">Loading hand...</p>
           </div>
         ) : error ? (
-          <div className="text-center py-20">
-            <p className="text-sm text-red-400">{error}</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+              <FileText className="w-7 h-7 text-primary/40" />
+            </div>
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">Hand Not Found</h3>
+            <p className="text-xs text-muted-foreground/60 max-w-xs">{error}</p>
           </div>
         ) : !hand ? (
-          <div className="text-center py-20">
-            <p className="text-sm text-red-400">Hand not found</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+              <FileText className="w-7 h-7 text-primary/40" />
+            </div>
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">Hand Not Found</h3>
+            <p className="text-xs text-muted-foreground/60 max-w-xs">The requested hand could not be found. It may have been removed or the link is invalid.</p>
           </div>
         ) : !hand.summary ? (
-          <div className="text-center py-20">
-            <p className="text-sm text-yellow-400">Hand data exists but the detailed summary is not available.</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+              <Eye className="w-7 h-7 text-primary/40" />
+            </div>
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Replay Data</h3>
+            <p className="text-xs text-muted-foreground/60 max-w-xs">Hand data exists but the detailed summary is not available for replay.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -606,6 +659,101 @@ export default function HandReplay({ handId }: { handId: string }) {
                   </div>
                 </motion.div>
               )}
+
+              {/* Verify Fairness Button + Collapsible Panel */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="glass rounded-xl border border-white/5 overflow-hidden"
+              >
+                <button
+                  onClick={handleVerify}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                      Verify Fairness
+                    </span>
+                  </div>
+                  {verifyLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 text-gray-500 animate-spin" />
+                  ) : verifyExpanded ? (
+                    <ChevronUp className="w-3.5 h-3.5 text-gray-600" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-600" />
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {verifyExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
+                        {verifyLoading && (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                            <span className="ml-2 text-xs text-gray-500">Verifying hand...</span>
+                          </div>
+                        )}
+
+                        {verifyError && (
+                          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                            <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+                            <span className="text-xs text-red-400">{verifyError}</span>
+                          </div>
+                        )}
+
+                        {verifyData && (
+                          <>
+                            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                              <Check className="w-4 h-4 text-green-400 shrink-0" />
+                              <span className="text-xs font-bold text-green-400">Verified Fair</span>
+                            </div>
+
+                            <div>
+                              <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider block mb-1">
+                                Commitment Hash
+                              </span>
+                              <code className="text-[0.625rem] text-primary font-mono break-all block bg-black/30 rounded px-2 py-1.5 border border-primary/10">
+                                {verifyData.commitmentHash}
+                              </code>
+                            </div>
+
+                            <div>
+                              <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider block mb-1">
+                                Server Seed
+                              </span>
+                              <code className="text-[0.5625rem] text-primary/80 font-mono break-all block bg-black/30 rounded px-2 py-1.5 border border-primary/10">
+                                {verifyData.serverSeed}
+                              </code>
+                            </div>
+
+                            <div>
+                              <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider block mb-1">
+                                Deck Order
+                              </span>
+                              <code className="text-[0.5625rem] text-purple-400/80 font-mono break-all block bg-black/30 rounded px-2 py-1.5 border border-primary/10 max-h-20 overflow-y-auto">
+                                {verifyData.deckOrder}
+                              </code>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[0.5625rem] text-gray-600">
+                              <span>Hand #{verifyData.handNumber}</span>
+                              <span>Table {verifyData.tableId.slice(0, 8)}...</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             </div>
 
             {/* Right panel - Players + Provably Fair */}

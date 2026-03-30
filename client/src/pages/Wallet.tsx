@@ -14,6 +14,7 @@ import {
   Wallet as WalletIcon, Gamepad2, ArrowRightLeft, Trophy,
   Send, ArrowDown, QrCode, Copy, Check, ExternalLink,
   ChevronDown, Lock, Unlock, AlertTriangle, ArrowRight,
+  History, Timer,
 } from "lucide-react";
 
 // ── Wallet Config ─────────────────────────────────────────────────────
@@ -125,7 +126,7 @@ function WalletBadge({ walletType }: { walletType: string }) {
   if (!config) return <span className="text-[0.5625rem] text-gray-600 uppercase">{walletType}</span>;
   const Icon = config.icon;
   return (
-    <span className={`inline-flex items-center gap-1 text-[0.5625rem] font-bold uppercase px-2 py-0.5 rounded-md ${config.bg} ${config.color} border ${config.border}`}>
+    <span className={`inline-flex items-center gap-1 text-[0.5625rem] font-bold uppercase px-2 py-0.5 rounded-full ${config.bg} ${config.color} border ${config.border}`}>
       <Icon className="w-2.5 h-2.5" />
       {config.shortLabel}
     </span>
@@ -332,9 +333,9 @@ function TransferPanel({ onComplete, initialFrom, initialTo }: { onComplete: () 
 
       {/* Amount */}
       <div>
-        <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Amount</label>
+        <label htmlFor="transfer-amount" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Amount</label>
         <div className="relative">
-          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min={1} max={maxAmount}
+          <input id="transfer-amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} required min={1} max={maxAmount}
             placeholder="Enter amount" className="w-full px-3 py-2.5 pr-20 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 outline-none focus:border-primary/30 transition-colors" />
           <button onClick={() => setAmount(String(maxAmount))} className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase text-primary bg-primary/10 hover:bg-primary/20 transition-colors">Max</button>
         </div>
@@ -359,6 +360,17 @@ function TransferPanel({ onComplete, initialFrom, initialTo }: { onComplete: () 
 }
 
 // ── Deposit Panel ─────────────────────────────────────────────────────
+
+// Map backend SupportedCurrency to the display shape used by the UI
+const CURRENCY_ICON_MAP: Record<string, { icon: string; color: string }> = {
+  BTC: { icon: "\u20BF", color: "text-orange-400" },
+  ETH: { icon: "\u039E", color: "text-blue-400" },
+  USDT: { icon: "$", color: "text-green-400" },
+  SOL: { icon: "\u25CE", color: "text-purple-400" },
+  LTC: { icon: "\u0141", color: "text-gray-400" },
+  DOGE: { icon: "\u00D0", color: "text-primary" },
+};
+
 function DepositPanel() {
   const { balances } = useWallet();
   const { toast } = useToast();
@@ -372,6 +384,60 @@ function DepositPanel() {
   const [depositResult, setDepositResult] = useState<{ payAddress: string; payAmount: string; currency: string; expiresAt: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [expirySeconds, setExpirySeconds] = useState(0);
+
+  // Dynamic currencies & gateways from backend
+  const [fetchedCurrencies, setFetchedCurrencies] = useState<typeof CRYPTO_CURRENCIES | null>(null);
+  const [fetchedGateways, setFetchedGateways] = useState<typeof GATEWAYS | null>(null);
+
+  useEffect(() => {
+    // Fetch supported currencies from backend
+    fetch("/api/payments/currencies", { credentials: "include" })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed");
+        return res.json();
+      })
+      .then((data: Array<{ id: string; name: string; symbol: string }>) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setFetchedCurrencies(
+            data.map(c => ({
+              id: c.id,
+              name: c.name,
+              icon: CURRENCY_ICON_MAP[c.id]?.icon || c.symbol || c.id.charAt(0),
+              color: CURRENCY_ICON_MAP[c.id]?.color || "text-gray-400",
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        // Fall back to hardcoded — fetchedCurrencies stays null
+      });
+
+    // Fetch available gateways from backend
+    fetch("/api/payments/gateways", { credentials: "include" })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed");
+        return res.json();
+      })
+      .then((data: Array<{ name: string; currencies: string[] }>) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setFetchedGateways(
+            data.map(g => ({
+              id: g.name,
+              name: g.name.charAt(0).toUpperCase() + g.name.slice(1),
+              desc: `Supports ${g.currencies.length} currencies`,
+              badge: g.currencies.length > 10 ? "Most Coins" : "Available",
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        // Fall back to hardcoded — fetchedGateways stays null
+      });
+  }, []);
+
+  // Use fetched data if available, otherwise fall back to hardcoded constants
+  const activeCurrencies = fetchedCurrencies || CRYPTO_CURRENCIES;
+  const activeGateways = fetchedGateways || GATEWAYS;
 
   const totalPercent = Object.values(allocation).reduce((s, v) => s + v, 0);
   const amountNum = parseInt(amount) || 0;
@@ -499,7 +565,7 @@ function DepositPanel() {
           <div className="px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] font-mono text-xs text-gray-300 break-all pr-12">
             {depositResult.payAddress}
           </div>
-          <button onClick={copyAddress} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+          <button onClick={copyAddress} aria-label="Copy deposit address" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
             {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-gray-400" />}
           </button>
         </div>
@@ -572,8 +638,8 @@ function DepositPanel() {
         {step === 1 && (
           <motion.div key="step1" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
             <div>
-              <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Amount (USD)</label>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min={1} placeholder="Enter amount in USD"
+              <label htmlFor="deposit-amount" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Amount (USD)</label>
+              <input id="deposit-amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} required min={1} placeholder="Enter amount in USD"
                 className="w-full px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 outline-none focus:border-primary/30 transition-colors" />
               <div className="flex gap-1.5 mt-2">
                 {[10, 25, 50, 100].map(v => (
@@ -597,9 +663,9 @@ function DepositPanel() {
           <motion.div key="step2" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
             {/* Currency */}
             <div>
-              <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Cryptocurrency</label>
+              <label id="deposit-crypto-label" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Cryptocurrency</label>
               <div className="grid grid-cols-3 gap-1.5">
-                {CRYPTO_CURRENCIES.map(c => (
+                {activeCurrencies.map(c => (
                   <button key={c.id} onClick={() => setCurrency(c.id)}
                     className={`px-2 py-2.5 rounded-lg text-[0.625rem] font-semibold border transition-all flex items-center gap-1.5 justify-center ${
                       currency === c.id ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
@@ -613,9 +679,9 @@ function DepositPanel() {
 
             {/* Gateway */}
             <div>
-              <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Payment Gateway</label>
+              <label id="deposit-gateway-label" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Payment Gateway</label>
               <div className="space-y-1.5">
-                {GATEWAYS.map(g => (
+                {activeGateways.map(g => (
                   <button key={g.id} onClick={() => setGateway(g.id)}
                     className={`w-full px-3 py-2.5 rounded-lg text-left border transition-all flex items-center justify-between ${
                       gateway === g.id ? "bg-primary/10 border-primary/20" : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]"
@@ -624,7 +690,7 @@ function DepositPanel() {
                       <p className={`text-xs font-medium ${gateway === g.id ? "text-primary" : "text-gray-300"}`}>{g.name}</p>
                       <p className="text-[0.5625rem] text-gray-600">{g.desc}</p>
                     </div>
-                    <span className={`text-[0.5rem] font-bold uppercase px-1.5 py-0.5 rounded ${gateway === g.id ? "bg-primary/20 text-primary" : "bg-white/[0.05] text-gray-600"}`}>
+                    <span className={`text-[0.5rem] font-bold uppercase px-1.5 py-0.5 rounded-full ${gateway === g.id ? "bg-primary/20 text-primary" : "bg-white/[0.05] text-gray-600"}`}>
                       {g.badge}
                     </span>
                   </button>
@@ -786,16 +852,16 @@ function WithdrawPanel() {
       </div>
 
       <div>
-        <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Amount (chips)</label>
+        <label htmlFor="withdraw-amount" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Amount (chips)</label>
         <div className="relative">
-          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min={1} max={mainBalance} placeholder="Chips to withdraw"
+          <input id="withdraw-amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} required min={1} max={mainBalance} placeholder="Chips to withdraw"
             className="w-full px-3 py-2.5 pr-20 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 outline-none focus:border-primary/30 transition-colors" />
           <button onClick={() => setAmount(String(mainBalance))} className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase text-primary bg-primary/10 hover:bg-primary/20 transition-colors">Max</button>
         </div>
       </div>
 
       <div>
-        <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Currency</label>
+        <label id="withdraw-currency-label" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Currency</label>
         <div className="flex gap-1.5">
           {["USDT", "BTC", "ETH", "SOL"].map(c => (
             <button key={c} onClick={() => setCurrency(c)}
@@ -808,8 +874,8 @@ function WithdrawPanel() {
       </div>
 
       <div>
-        <label className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">{currency} Address</label>
-        <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder={`Enter your ${currency} wallet address`}
+        <label htmlFor="withdraw-address" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">{currency} Address</label>
+        <input id="withdraw-address" type="text" value={address} onChange={e => setAddress(e.target.value)} required placeholder={`Enter your ${currency} wallet address`}
           className="w-full px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-sm text-gray-300 font-mono outline-none focus:border-primary/30 transition-colors" />
       </div>
 
@@ -856,7 +922,7 @@ function WithdrawPanel() {
           <p className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium">Recent Withdrawals</p>
           {withdrawals.slice(0, 5).map((w: any) => (
             <div key={w.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-              <span className={`text-[0.5rem] font-bold uppercase px-2 py-0.5 rounded border ${statusColors[w.status] || statusColors.pending}`}>{w.status}</span>
+              <span className={`text-[0.5rem] font-bold uppercase px-2 py-0.5 rounded-full border ${statusColors[w.status] || statusColors.pending}`}>{w.status}</span>
               <span className="text-xs font-bold text-gray-300 tabular-nums flex-1">{w.amount?.toLocaleString()} chips</span>
               <span className="text-[0.5625rem] text-gray-600">{w.currency}</span>
             </div>
@@ -918,7 +984,7 @@ function TransactionRow({ tx }: { tx: Transaction }) {
             <div className="px-4 pb-3 pt-1 space-y-2 border-t border-white/[0.04] ml-11">
               <div className="flex items-center justify-between">
                 <span className="text-[0.5625rem] text-gray-600">Transaction ID</span>
-                <button onClick={copyId} className="flex items-center gap-1 text-[0.5625rem] text-gray-400 font-mono hover:text-primary transition-colors">
+                <button onClick={copyId} aria-label="Copy transaction ID" className="flex items-center gap-1 text-[0.5625rem] text-gray-400 font-mono hover:text-primary transition-colors">
                   {tx.id.slice(0, 12)}...
                   {copiedId ? <Check className="w-2.5 h-2.5 text-green-400" /> : <Copy className="w-2.5 h-2.5" />}
                 </button>
@@ -981,6 +1047,157 @@ function WalletSkeleton() {
   );
 }
 
+// ── Session Summary Type ──────────────────────────────────────────────
+interface SessionSummary {
+  tableId: string;
+  netResult: number;
+  sessionStart: string;
+  sessionEnd: string;
+  handsPlayed: number;
+}
+
+function formatDuration(startStr: string, endStr: string): string {
+  const start = new Date(startStr).getTime();
+  const end = new Date(endStr).getTime();
+  const diffMs = Math.max(0, end - start);
+  const totalMin = Math.floor(diffMs / 60000);
+  if (totalMin < 1) return "<1m";
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
+
+// ── Session History Panel ────────────────────────────────────────────
+function SessionHistory() {
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const hasFetched = useRef(false);
+
+  useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    fetch("/api/wallet/sessions", { credentials: "include" })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to load sessions");
+        return res.json();
+      })
+      .then((data: SessionSummary[]) => {
+        setSessions(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message || "Failed to load sessions");
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-1">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-3 py-3">
+            <Skeleton className="w-8 h-8 rounded-lg bg-white/[0.05]" />
+            <div className="flex-1">
+              <Skeleton className="h-3 w-40 bg-white/[0.05] mb-1.5" />
+              <Skeleton className="h-2 w-24 bg-white/[0.03]" />
+            </div>
+            <Skeleton className="h-3 w-16 bg-white/[0.05]" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-gray-600">
+        <AlertTriangle className="w-10 h-10 mb-3 opacity-30" />
+        <p className="text-sm font-medium">Failed to load sessions</p>
+        <p className="text-xs text-gray-700 mt-1">{error}</p>
+      </div>
+    );
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-gray-600">
+        <Gamepad2 className="w-10 h-10 mb-3 opacity-30" />
+        <p className="text-sm font-medium">No sessions yet</p>
+        <p className="text-xs text-gray-700 mt-1">Play at a table to see session summaries here</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {sessions.map((s, i) => {
+        const isProfit = s.netResult > 0;
+        const isLoss = s.netResult < 0;
+        const shortId = s.tableId.length > 8 ? `${s.tableId.slice(0, 4)}...${s.tableId.slice(-4)}` : s.tableId;
+        const duration = formatDuration(s.sessionStart, s.sessionEnd);
+        return (
+          <motion.div
+            key={`${s.tableId}-${s.sessionStart}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.03 }}
+            className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl px-4 py-3"
+          >
+            <div className="flex items-center gap-3">
+              {/* Icon */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                isProfit ? "bg-green-500/10 border border-green-500/15" :
+                isLoss ? "bg-red-500/10 border border-red-500/15" :
+                "bg-white/[0.05] border border-white/[0.08]"
+              }`}>
+                <Gamepad2 className={`w-4 h-4 ${
+                  isProfit ? "text-green-400" :
+                  isLoss ? "text-red-400" :
+                  "text-gray-500"
+                }`} />
+              </div>
+
+              {/* Details */}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-primary truncate">
+                  Table {shortId}
+                </p>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="text-[0.625rem] text-gray-600">
+                    {new Date(s.sessionEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                  <span className="flex items-center gap-0.5 text-[0.625rem] text-gray-600">
+                    <Timer className="w-2.5 h-2.5" />
+                    {duration}
+                  </span>
+                  <span className="text-[0.625rem] text-gray-600">
+                    {s.handsPlayed} txn{s.handsPlayed !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              </div>
+
+              {/* Profit / Loss */}
+              <div className="text-right shrink-0">
+                <p className={`text-xs font-bold tabular-nums ${
+                  isProfit ? "text-secondary" :
+                  isLoss ? "text-destructive" :
+                  "text-gray-500"
+                }`}>
+                  {isProfit ? "+" : ""}{s.netResult.toLocaleString()}
+                </p>
+                <p className="text-[0.625rem] text-gray-600">chips</p>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────
 export default function Wallet() {
   const { refreshUser } = useAuth();
@@ -997,6 +1214,7 @@ export default function Wallet() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeTab, setActiveTab] = useState<"transfer" | "deposit" | "withdraw">("transfer");
+  const [historyTab, setHistoryTab] = useState<"transactions" | "sessions">("transactions");
   const [initialFrom, setInitialFrom] = useState<WalletType | undefined>();
   const [initialTo, setInitialTo] = useState<WalletType | undefined>();
   const actionRef = useRef<HTMLDivElement>(null);
@@ -1202,67 +1420,92 @@ export default function Wallet() {
           <div className="h-32 sm:h-40"><BalanceChart transactions={transactions} /></div>
         </motion.div>
 
-        {/* ── Transaction History ──────────────────────────────────────── */}
+        {/* ── History: Transactions / Sessions ──────────────────────────── */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.4 }}
           className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-            <h2 className="text-xs font-display font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Filter className="w-4 h-4 text-primary/70" /> Transactions
-              <button onClick={() => refreshTransactions()} className="p-1 rounded-md hover:bg-white/[0.05]"><RefreshCw className="w-3.5 h-3.5 text-gray-500" /></button>
-              <button onClick={exportCSV} className="p-1 rounded-md hover:bg-white/[0.05]"><Download className="w-3.5 h-3.5 text-gray-500" /></button>
-            </h2>
-            <div className="flex items-center gap-2">
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-primary/20" />
-              <span className="text-[0.5rem] text-gray-600">to</span>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-primary/20" />
-            </div>
-          </div>
 
-          {/* Filter chips */}
-          <div className="flex flex-wrap items-center gap-1 mb-4">
-            {FILTER_OPTIONS.map(opt => (
-              <button key={opt.key} onClick={() => setFilter(opt.key)}
-                className={`px-2.5 py-1 rounded-lg text-[0.5625rem] font-semibold uppercase tracking-wider border transition-all ${
-                  filter === opt.key ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:text-gray-300"
-                }`}>{opt.label}</button>
+          {/* Tab switcher */}
+          <div className="flex items-center gap-2 mb-5">
+            {[
+              { key: "transactions" as const, label: "Transactions", icon: Filter },
+              { key: "sessions" as const, label: "Sessions", icon: History },
+            ].map(tab => (
+              <button key={tab.key} onClick={() => setHistoryTab(tab.key)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all ${
+                  historyTab === tab.key ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
+                }`}>
+                <tab.icon className="w-3.5 h-3.5" /> {tab.label}
+              </button>
             ))}
           </div>
 
-          {loadingTx && transactions.length === 0 ? (
-            <div className="space-y-1">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-3 py-3">
-                  <Skeleton className="w-8 h-8 rounded-lg bg-white/[0.05]" />
-                  <div className="flex-1">
-                    <Skeleton className="h-3 w-40 bg-white/[0.05] mb-1.5" />
-                    <Skeleton className="h-2 w-24 bg-white/[0.03]" />
+          <AnimatePresence mode="wait">
+            {historyTab === "transactions" ? (
+              <motion.div key="transactions" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => refreshTransactions()} className="p-1 rounded-md hover:bg-white/[0.05]"><RefreshCw className="w-3.5 h-3.5 text-gray-500" /></button>
+                    <button onClick={exportCSV} className="p-1 rounded-md hover:bg-white/[0.05]"><Download className="w-3.5 h-3.5 text-gray-500" /></button>
                   </div>
-                  <Skeleton className="h-3 w-16 bg-white/[0.05]" />
+                  <div className="flex items-center gap-2">
+                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                      className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-primary/20" />
+                    <span className="text-[0.5rem] text-gray-600">to</span>
+                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                      className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[0.625rem] text-gray-400 outline-none focus:border-primary/20" />
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-600">
-              <Coins className="w-10 h-10 mb-3 opacity-30" />
-              <p className="text-sm font-medium">No transactions found</p>
-              <p className="text-xs text-gray-700 mt-1">Try adjusting your filters</p>
-            </div>
-          ) : (
-            <div className="space-y-0.5">
-              {filtered.map((tx) => (
-                <TransactionRow key={tx.id} tx={tx} />
-              ))}
-              {hasMore && (
-                <button onClick={loadMore} disabled={loadingTx}
-                  className="w-full py-3 text-[0.625rem] font-bold uppercase text-primary hover:text-white transition-colors flex items-center justify-center gap-2">
-                  {loadingTx ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                  Load More
-                </button>
-              )}
-            </div>
-          )}
+
+                {/* Filter chips */}
+                <div className="flex flex-wrap items-center gap-1 mb-4">
+                  {FILTER_OPTIONS.map(opt => (
+                    <button key={opt.key} onClick={() => setFilter(opt.key)}
+                      className={`px-2.5 py-1 rounded-lg text-[0.5625rem] font-semibold uppercase tracking-wider border transition-all ${
+                        filter === opt.key ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:text-gray-300"
+                      }`}>{opt.label}</button>
+                  ))}
+                </div>
+
+                {loadingTx && transactions.length === 0 ? (
+                  <div className="space-y-1">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-3 px-3 py-3">
+                        <Skeleton className="w-8 h-8 rounded-lg bg-white/[0.05]" />
+                        <div className="flex-1">
+                          <Skeleton className="h-3 w-40 bg-white/[0.05] mb-1.5" />
+                          <Skeleton className="h-2 w-24 bg-white/[0.03]" />
+                        </div>
+                        <Skeleton className="h-3 w-16 bg-white/[0.05]" />
+                      </div>
+                    ))}
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-gray-600">
+                    <Coins className="w-10 h-10 mb-3 opacity-30" />
+                    <p className="text-sm font-medium">No transactions found</p>
+                    <p className="text-xs text-gray-700 mt-1">Try adjusting your filters</p>
+                  </div>
+                ) : (
+                  <div className="space-y-0.5">
+                    {filtered.map((tx) => (
+                      <TransactionRow key={tx.id} tx={tx} />
+                    ))}
+                    {hasMore && (
+                      <button onClick={loadMore} disabled={loadingTx}
+                        className="w-full py-3 text-[0.625rem] font-bold uppercase text-primary hover:text-white transition-colors flex items-center justify-center gap-2">
+                        {loadingTx ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                        Load More
+                      </button>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div key="sessions" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+                <SessionHistory />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </DashboardLayout>

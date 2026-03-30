@@ -327,17 +327,19 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="px-6 md:px-12 lg:px-20 py-6 border-t border-white/[0.04]">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2 opacity-50">
-              <img src={lionLogo} alt="" className="w-5 h-5 object-contain" />
-              <span className="text-[0.65rem] text-gray-500 font-semibold tracking-wider">HIGH ROLLERS CLUB</span>
+        <footer className="border-t border-white/[0.06] bg-surface-lowest/80 py-8 px-4 md:px-8">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span className="font-display font-bold gold-text tracking-wider">HIGH ROLLERS</span>
+              <span>&copy; 2026</span>
             </div>
-            <div className="text-[0.6rem] text-gray-600 font-mono">
-              Provably Fair Texas Hold'em
+            <div className="flex items-center gap-6">
+              <a href="#" className="hover:text-primary transition-colors">Terms</a>
+              <a href="#" className="hover:text-primary transition-colors">Privacy</a>
+              <a href="#" className="hover:text-primary transition-colors">Support</a>
             </div>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   );

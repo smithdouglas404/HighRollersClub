@@ -138,15 +138,16 @@ export default function Leagues() {
 
   return (
     <DashboardLayout title="League & Alliances">
-      <div className="px-8 pb-8">
+      <div className="px-4 md:px-8 pb-8">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-xs text-muted-foreground tracking-wider uppercase">Loading leagues...</p>
           </div>
         ) : (
           <>
             {/* Tab Bar */}
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex flex-wrap items-center gap-2 mb-6">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -198,11 +199,11 @@ export default function Leagues() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-center justify-center py-16 text-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/15 flex items-center justify-center mb-4">
-                      <Swords className="w-8 h-8 text-primary/50" />
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+                      <Swords className="w-7 h-7 text-primary/40" />
                     </div>
-                    <h3 className="text-sm font-bold font-display text-primary uppercase tracking-wider mb-1">No Alliances Yet</h3>
-                    <p className="text-xs text-gray-600 max-w-xs">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Alliances Yet</h3>
+                    <p className="text-xs text-muted-foreground/60 max-w-xs">
                       Create an alliance to unite clubs and compete together in leagues.
                     </p>
                   </motion.div>
@@ -222,7 +223,7 @@ export default function Leagues() {
                         >
                           <div className="p-5">
                             <div className="flex items-start gap-3 mb-4">
-                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-primary/20 flex items-center justify-center shrink-0">
+                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-primary/20 border border-primary/20 flex items-center justify-center shrink-0">
                                 <Swords className="w-5 h-5 text-primary" />
                               </div>
                               <div className="flex-1 min-w-0">
@@ -236,7 +237,7 @@ export default function Leagues() {
                                   </span>
                                 </div>
                               </div>
-                              <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                              <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
                                 allianceClubs.length >= 2
                                   ? "text-green-400 bg-green-500/10 border-green-500/20"
                                   : "text-primary bg-primary/10 border-primary/20"
@@ -291,11 +292,11 @@ export default function Leagues() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-center justify-center py-16 text-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/15 flex items-center justify-center mb-4">
-                      <Trophy className="w-8 h-8 text-primary/50" />
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+                      <Trophy className="w-7 h-7 text-primary/40" />
                     </div>
-                    <h3 className="text-sm font-bold font-display text-primary uppercase tracking-wider mb-1">No League Seasons</h3>
-                    <p className="text-xs text-gray-600 max-w-xs">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No League Seasons Yet</h3>
+                    <p className="text-xs text-muted-foreground/60 max-w-xs">
                       Create a league season to track inter-club competition and rankings.
                     </p>
                   </motion.div>
@@ -326,7 +327,7 @@ export default function Leagues() {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${status.bg} ${status.color}`}>
+                          <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${status.bg} ${status.color}`}>
                             {status.label}
                           </span>
                         </div>
@@ -357,7 +358,7 @@ export default function Leagues() {
                                     )}
                                   </span>
                                   <div className="flex-1 flex items-center gap-2.5 min-w-0">
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center shrink-0">
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500/20 to-primary/20 border border-white/10 flex items-center justify-center shrink-0">
                                       <span className="text-[0.625rem] font-bold text-white">
                                         {(entry.clubName || club?.name || "?").charAt(0).toUpperCase()}
                                       </span>
@@ -368,7 +369,7 @@ export default function Leagues() {
                                   </div>
                                   <span className="w-14 text-center text-xs font-bold text-primary">{entry.points}</span>
                                   <span className="w-10 text-center text-xs font-medium text-green-400">{entry.wins}</span>
-                                  <span className="w-10 text-center text-xs font-medium text-red-400">{entry.losses}</span>
+                                  <span className="w-10 text-center text-xs font-medium text-destructive">{entry.losses}</span>
                                 </div>
                               );
                             })}

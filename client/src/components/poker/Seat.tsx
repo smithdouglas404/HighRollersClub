@@ -712,11 +712,12 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 border: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
                 borderBottom: "none",
                 boxShadow: isTurn
-                  ? `0 0 24px ${hexToRgba(glowColor, 0.7)}, 0 0 48px ${hexToRgba(glowColor, 0.3)}, inset 0 0 16px ${hexToRgba(glowColor, 0.2)}`
+                  ? `0 0 30px ${hexToRgba(glowColor, 0.8)}, 0 0 60px ${hexToRgba(glowColor, 0.4)}, 0 0 90px ${hexToRgba(glowColor, 0.15)}, inset 0 0 20px ${hexToRgba(glowColor, 0.25)}`
                   : isWinner
                   ? `0 0 25px rgba(212,175,55,0.5), 0 0 50px rgba(212,175,55,0.2)`
                   : `0 0 12px ${hexToRgba(glowColor, 0.4)}, 0 4px 20px rgba(0,0,0,0.6)`,
                 transition: "all 0.3s ease",
+                animation: isTurn ? "seatTurnPulse 2s ease-in-out infinite" : undefined,
               }}
             >
               {/* Top glow bar */}
@@ -787,7 +788,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <div
               className="relative z-30 w-full rounded-b-xl px-2.5 py-1.5"
               style={{
-                background: "rgba(15,15,20,0.92)",
+                background: isTurn ? `linear-gradient(180deg, rgba(15,15,20,0.92) 0%, ${hexToRgba(glowColor, 0.06)} 100%)` : "rgba(15,15,20,0.92)",
                 backdropFilter: "blur(12px)",
                 borderLeft: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
                 borderRight: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,

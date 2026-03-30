@@ -166,8 +166,18 @@
    ══════════════════════════════════════════════ */
 
 @layer components {
+  /* Ghost-style inputs with glowing bottom-border focus (G8) */
+  .input-ghost {
+    @apply bg-surface-highest/40 border border-white/[0.06] text-foreground rounded-md px-3 py-2 text-sm transition-all duration-200 placeholder:text-muted-foreground/40;
+    outline: none;
+  }
+  .input-ghost:focus {
+    @apply border-primary/40 bg-surface-highest/60;
+    box-shadow: 0 2px 12px rgba(129, 236, 255, 0.12), 0 0 0 1px rgba(129, 236, 255, 0.08);
+  }
+
   .input-gold-border {
-    @apply bg-[#161b22] border border-white/10 text-white transition-all duration-300;
+    @apply bg-surface-highest/40 border border-white/[0.06] text-white transition-all duration-300 rounded-md;
     background-clip: padding-box;
     position: relative;
   }
@@ -177,9 +187,17 @@
     box-shadow: 0 0 12px rgba(212, 175, 55, 0.2), inset 0 0 4px rgba(212, 175, 55, 0.1);
   }
   .label-luxury {
-    @apply text-[10px] uppercase font-bold text-gray-500 mb-1 block;
+    @apply text-[10px] uppercase font-bold text-muted-foreground mb-1 block;
     letter-spacing: 0.15em;
   }
+
+  /* Sharp button corners system (G7) */
+  .btn-sharp {
+    @apply rounded-md font-bold tracking-wider uppercase text-xs transition-all duration-200;
+  }
+  .btn-sharp-sm { @apply px-3 py-1.5 text-[0.625rem]; }
+  .btn-sharp-md { @apply px-5 py-2.5 text-xs; }
+  .btn-sharp-lg { @apply px-7 py-3 text-sm; }
 }
 
 /* ══════════════════════════════════════════════
@@ -303,6 +321,11 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes seatTurnPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.08); }
 }
 
 /* ══════════════════════════════════════════════
@@ -518,4 +541,13 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 .nameplate-responsive {
   min-width: clamp(60px, 17.5cqmin, 150px);
   max-width: clamp(100px, 29.4cqmin, 252px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

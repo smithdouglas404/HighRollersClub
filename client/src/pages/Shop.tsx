@@ -132,7 +132,7 @@ function PurchaseModal({
             <X className="w-4 h-4 text-white" />
           </button>
           <div className="absolute bottom-4 left-4 right-4">
-            <div className={`inline-block px-2 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-wider border mb-2 ${getRarityColor(item.rarity)}`}>
+            <div className={`inline-block px-2 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider border mb-2 ${getRarityColor(item.rarity)}`}>
               {item.rarity}
             </div>
             <h3 className="text-xl font-black text-white">{item.name}</h3>
@@ -178,6 +178,7 @@ function PurchaseModal({
               whileTap={canAfford ? { scale: 0.98 } : {}}
               onClick={onConfirm}
               disabled={!canAfford || purchasing}
+              aria-label={`Purchase ${item.name}`}
               className={`flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
                 canAfford ? "bg-primary text-black" : "bg-gray-600 text-gray-300"
               }`}
@@ -230,15 +231,17 @@ function ShopItemCard({
       whileHover={{ scale: 1.03, y: -4 }}
       className="glass rounded-xl overflow-hidden border border-white/5 hover:border-primary/20 transition-all cursor-pointer group"
       onClick={() => !owned && onPurchase(item)}
+      role="button"
+      aria-label={owned ? `${item.name} - owned` : `Purchase ${item.name}`}
     >
       <div className="aspect-square relative overflow-hidden">
         <ItemImage item={item} className="group-hover:scale-110 transition-transform duration-500" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
+        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
           {item.rarity}
         </div>
         {owned && (
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider border bg-green-500/15 border-green-500/30 text-green-400">
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider border bg-green-500/15 border-green-500/30 text-green-400">
             Owned
           </div>
         )}
@@ -311,11 +314,11 @@ function InventoryItemCard({
       <div className="aspect-square relative overflow-hidden">
         <ItemImage item={item} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
+        <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
           {item.rarity}
         </div>
         {isEquipped && (
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider bg-primary/15 border border-primary/30 text-primary flex items-center gap-1">
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-primary/15 border border-primary/30 text-primary flex items-center gap-1">
             <Shield className="w-2.5 h-2.5" /> Equipped
           </div>
         )}
@@ -618,18 +621,21 @@ export default function Shop() {
             {isInventoryTab && (
               <>
                 {loadingInventory ? (
-                  <div className="flex items-center justify-center py-16">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin mb-3" />
+                    <p className="text-xs text-muted-foreground tracking-wider uppercase">Loading inventory...</p>
                   </div>
                 ) : inventory.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="glass rounded-xl border border-white/5 py-16 text-center"
+                    className="flex flex-col items-center justify-center py-16 text-center"
                   >
-                    <Package className="w-10 h-10 text-gray-700 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-gray-500">Your inventory is empty</p>
-                    <p className="text-xs text-gray-600 mt-1">Purchase items from the shop to see them here.</p>
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+                      <Package className="w-7 h-7 text-primary/40" />
+                    </div>
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Items Yet</h3>
+                    <p className="text-xs text-muted-foreground/60 max-w-xs">Purchase items from the shop to see them here.</p>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -664,20 +670,23 @@ export default function Shop() {
             {!isInventoryTab && (
               <>
                 {loadingItems ? (
-                  <div className="flex items-center justify-center py-16">
-                    <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <div className="w-8 h-8 border-2 border-primary/40 border-t-transparent rounded-full animate-spin mb-3" />
+                    <p className="text-xs text-muted-foreground tracking-wider uppercase">Loading shop...</p>
                   </div>
                 ) : filteredItems.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="glass rounded-xl border border-white/5 py-16 text-center"
+                    className="flex flex-col items-center justify-center py-16 text-center"
                   >
                     {isWishlistTab ? (
                       <>
-                        <Heart className="w-10 h-10 text-gray-700 mx-auto mb-3" />
-                        <p className="text-sm font-bold text-gray-500">Your wishlist is empty</p>
-                        <p className="text-xs text-gray-600 mt-1">Browse the shop and tap the heart icon to save items you love.</p>
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+                          <Heart className="w-7 h-7 text-primary/40" />
+                        </div>
+                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Wishlist Items Yet</h3>
+                        <p className="text-xs text-muted-foreground/60 max-w-xs">Browse the shop and tap the heart icon to save items you love.</p>
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
@@ -689,9 +698,11 @@ export default function Shop() {
                       </>
                     ) : (
                       <>
-                        <Tag className="w-10 h-10 text-gray-700 mx-auto mb-3" />
-                        <p className="text-sm font-bold text-gray-500">No items available yet</p>
-                        <p className="text-xs text-gray-600 mt-1">Check back soon for new {activeTab.toLowerCase()}!</p>
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+                          <Package className="w-7 h-7 text-primary/40" />
+                        </div>
+                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Items Yet</h3>
+                        <p className="text-xs text-muted-foreground/60 max-w-xs">Check back soon for new {activeTab.toLowerCase()}!</p>
                       </>
                     )}
                   </motion.div>
@@ -704,7 +715,7 @@ export default function Shop() {
                           <Sparkles className="w-4 h-4 text-primary" />
                           Featured
                         </h3>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                           {filteredItems.slice(0, 3).map((item, i) => (
                             <motion.div
                               key={item.id}

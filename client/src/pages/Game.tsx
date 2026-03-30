@@ -2734,7 +2734,10 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
           </div>
 
           {!connected && (
-            <p className="text-center text-xs text-red-400 mt-3 animate-pulse">Connecting to server...</p>
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <div className="w-3.5 h-3.5 border-2 border-primary/40 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-gray-400 animate-pulse">Connecting to server...</p>
+            </div>
           )}
 
           {mpError && (

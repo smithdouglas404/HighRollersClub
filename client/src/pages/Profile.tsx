@@ -8,7 +8,8 @@ import { TAUNT_VOICE_OPTIONS, setTauntVoice } from "@/components/poker/TauntSyst
 import {
   User, Coins, Trophy, TrendingUp, Gamepad2,
   Zap, BookOpen, Wallet, Users, Loader2, Mic, Volume2, Check,
-  Star, Shield, Crown, Clock, ChevronRight, Award, Flame, Target
+  Star, Shield, Crown, Clock, ChevronRight, Award, Flame, Target,
+  StickyNote, Trash2
 } from "lucide-react";
 import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
@@ -394,6 +395,9 @@ export default function Profile() {
           {/* ── Taunt Voice ── */}
           <TauntVoicePicker currentVoice={user?.tauntVoice || "default"} />
 
+          {/* ── Player Notes ── */}
+          <PlayerNotesSection />
+
           {/* ── Quick Links ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -525,6 +529,115 @@ function TauntVoicePicker({ currentVoice }: { currentVoice: string }) {
           );
         })}
       </div>
+    </motion.div>
+  );
+}
+
+interface PlayerNote {
+  id: number;
+  targetPlayerId: string;
+  targetDisplayName?: string;
+  note: string;
+  color: string;
+  updatedAt: string;
+}
+
+const NOTE_COLOR_MAP: Record<string, string> = {
+  red: "border-red-500/30 bg-red-500/10",
+  yellow: "border-yellow-500/30 bg-yellow-500/10",
+  green: "border-green-500/30 bg-green-500/10",
+  blue: "border-blue-500/30 bg-blue-500/10",
+  purple: "border-purple-500/30 bg-purple-500/10",
+  gray: "border-white/10 bg-white/[0.03]",
+};
+
+function PlayerNotesSection() {
+  const [notes, setNotes] = useState<PlayerNote[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/player-notes", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setNotes(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoadingNotes(false));
+  }, []);
+
+  const handleDelete = async (targetPlayerId: string) => {
+    setDeletingId(targetPlayerId);
+    try {
+      const res = await fetch(`/api/player-notes/${targetPlayerId}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) {
+        setNotes(prev => prev.filter(n => n.targetPlayerId !== targetPlayerId));
+      }
+    } catch {}
+    setDeletingId(null);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.22 }}
+      className="glass rounded-xl p-6 border border-white/5 mb-6"
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
+        <StickyNote className="w-4 h-4 text-amber-500/70" />
+        Player Notes
+        {notes.length > 0 && (
+          <span className="ml-auto text-[0.625rem] text-gray-600 font-normal normal-case tracking-normal">
+            {notes.length} note{notes.length !== 1 ? "s" : ""}
+          </span>
+        )}
+      </h3>
+      {loadingNotes ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : notes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <StickyNote className="w-8 h-8 text-gray-600 mb-2" />
+          <p className="text-xs text-gray-500">No player notes yet.</p>
+          <p className="text-[0.625rem] text-gray-600 mt-1">Add notes on players from the game table to track their tendencies.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {notes.map((n) => {
+            const colorClass = NOTE_COLOR_MAP[n.color] || NOTE_COLOR_MAP.gray;
+            return (
+              <div
+                key={n.targetPlayerId}
+                className={`flex items-start gap-3 p-3.5 rounded-lg border transition-colors ${colorClass}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-xs font-bold text-white truncate">
+                      {n.targetDisplayName || n.targetPlayerId.slice(0, 12)}
+                    </span>
+                    <span className="text-[0.5rem] text-gray-500">
+                      {n.updatedAt ? new Date(n.updatedAt).toLocaleDateString() : ""}
+                    </span>
+                  </div>
+                  <p className="text-[0.6875rem] text-gray-400 leading-relaxed">{n.note}</p>
+                </div>
+                <button
+                  onClick={() => handleDelete(n.targetPlayerId)}
+                  disabled={deletingId === n.targetPlayerId}
+                  className="shrink-0 p-1.5 rounded-md hover:bg-red-500/15 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-40"
+                  title="Delete note"
+                >
+                  {deletingId === n.targetPlayerId ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </motion.div>
   );
 }

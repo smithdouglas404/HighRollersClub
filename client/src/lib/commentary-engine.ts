@@ -120,15 +120,17 @@ class CommentaryPlayer {
     this._aborted = false;
     const segment = this.queue.shift()!;
 
-    for (const line of segment.lines) {
+    for (let i = 0; i < segment.lines.length; i++) {
+      const line = segment.lines[i];
       if (this._aborted || !this._enabled) break;
 
       // Notify UI of current speaker
       this.onSpeakerChange?.(line.speaker, line.text, line.emphasis);
 
-      if (line.audioUrl) {
-        await this.playAudioUrl(line.audioUrl);
-      } else {
+      // Try explicit audioUrl first, then fall back to commentary-audio endpoint
+      const audioUrl = line.audioUrl || `/api/commentary-audio/${segment.id}/${i}`;
+      const played = await this.tryPlayAudio(audioUrl);
+      if (!played) {
         // Text-only fallback — show subtitle for estimated reading time
         const readTimeMs = Math.max(2000, line.text.length * 60);
         await this.delay(readTimeMs);
@@ -149,6 +151,29 @@ class CommentaryPlayer {
     }
 
     this.playNext();
+  }
+
+  /** Attempt to fetch and play audio from url. Returns true if played, false on failure. */
+  private async tryPlayAudio(url: string): Promise<boolean> {
+    try {
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) return false;
+      this.ensureContext();
+      if (!this.ctx || !this.gainNode) return false;
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+      return new Promise<boolean>((resolve) => {
+        if (this._aborted || !this.ctx || !this.gainNode) { resolve(false); return; }
+        const source = this.ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(this.gainNode!);
+        this._currentSource = source;
+        source.onended = () => { this._currentSource = null; resolve(true); };
+        source.start();
+      });
+    } catch {
+      return false;
+    }
   }
 
   private async playAudioUrl(url: string): Promise<void> {

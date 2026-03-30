@@ -10,7 +10,7 @@ import {
   Plus, Users, Coins, ChevronRight,
   Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search,
   Brain, Key, CheckCircle, XCircle, Flame, Diamond,
-  Spade, Heart, Club
+  Spade, Heart, Club, Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NeonButton } from "@/components/ui/neon";
@@ -35,6 +35,7 @@ interface TableInfo {
   pokerVariant?: string;
   buyInAmount: number;
   startingChips: number;
+  createdById?: string;
   createdAt: string;
   scheduledStartTime?: string | null;
   scheduledEndTime?: string | null;
@@ -77,7 +78,7 @@ function FormatBadge({ format }: { format: string }) {
 }
 
 
-function TableCard({ table, onClick, featured }: { table: TableInfo; onClick: () => void; featured?: boolean }) {
+function TableCard({ table, onClick, featured, currentUserId, onDelete }: { table: TableInfo; onClick: () => void; featured?: boolean; currentUserId?: string; onDelete?: (tableId: string) => void }) {
   const isFull = table.playerCount >= table.maxPlayers;
   const isPlaying = table.status === "playing";
   const blindsLabel = `${table.smallBlind}/${table.bigBlind}`;
@@ -113,6 +114,16 @@ function TableCard({ table, onClick, featured }: { table: TableInfo; onClick: ()
           <FormatBadge format={table.gameFormat} />
         </span>
         <div className="flex items-center gap-2">
+          {currentUserId && table.createdById === currentUserId && onDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(table.id); }}
+              className="p-1 rounded hover:bg-destructive/20 transition-colors opacity-0 group-hover:opacity-100"
+              title="Delete table"
+              aria-label="Delete table"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+            </button>
+          )}
           {table.isPrivate && <Lock className="w-3.5 h-3.5 text-destructive" />}
           <span className={cn(
             "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full",
@@ -322,6 +333,25 @@ export default function Lobby() {
 
     return matchesFormat && matchesSearch && matchesStake && matchesVariant;
   });
+
+  const handleDeleteTable = async (tableId: string) => {
+    if (!window.confirm("Are you sure you want to delete this table?")) return;
+    try {
+      const res = await fetch(`/api/tables/${tableId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setTables((prev) => prev.filter((t) => t.id !== tableId));
+        toast({ title: "Table deleted", description: "The table has been removed." });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({ title: "Error", description: data.message || "Failed to delete table", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to delete table", variant: "destructive" });
+    }
+  };
 
   const handleTableClick = (table: TableInfo) => {
     if (table.isPrivate) {
@@ -838,7 +868,7 @@ export default function Lobby() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {hotTables.map((table) => (
                   <div key={table.id} className="pt-2">
-                    <TableCard table={table} onClick={() => handleTableClick(table)} featured />
+                    <TableCard table={table} onClick={() => handleTableClick(table)} featured currentUserId={user?.id} onDelete={handleDeleteTable} />
                   </div>
                 ))}
               </div>
@@ -888,7 +918,7 @@ export default function Lobby() {
             >
               {filteredTables.map((table, i) => (
                 <motion.div key={table.id} transition={{ delay: i * 0.05 }}>
-                  <TableCard table={table} onClick={() => handleTableClick(table)} />
+                  <TableCard table={table} onClick={() => handleTableClick(table)} currentUserId={user?.id} onDelete={handleDeleteTable} />
                 </motion.div>
               ))}
             </motion.div>

@@ -211,6 +211,10 @@ export default function HandReplay({ handId }: { handId: string }) {
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingJSON, setExportingJSON] = useState(false);
 
+  // API-fetched hand participants and actions
+  const [apiPlayers, setApiPlayers] = useState<HandPlayer[] | null>(null);
+  const [apiActions, setApiActions] = useState<HandAction[] | null>(null);
+
   // Verification state
   const [verifyExpanded, setVerifyExpanded] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
@@ -229,13 +233,23 @@ export default function HandReplay({ handId }: { handId: string }) {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/hands/${handId}`);
-        if (!res.ok) {
+        const [handRes, playersRes, actionsRes] = await Promise.all([
+          fetch(`/api/hands/${handId}`),
+          fetch(`/api/hands/${handId}/players`).catch(() => null),
+          fetch(`/api/hands/${handId}/actions`).catch(() => null),
+        ]);
+        if (!handRes.ok) {
           setError("Hand not found");
           setLoading(false);
           return;
         }
-        setHand(await res.json());
+        setHand(await handRes.json());
+        if (playersRes?.ok) {
+          setApiPlayers(await playersRes.json());
+        }
+        if (actionsRes?.ok) {
+          setApiActions(await actionsRes.json());
+        }
       } catch {
         setError("Failed to load hand");
       } finally {
@@ -382,8 +396,8 @@ export default function HandReplay({ handId }: { handId: string }) {
   };
 
   const summary = hand?.summary;
-  const players = summary?.players || [];
-  const actions = summary?.actions || [];
+  const players = apiPlayers ?? summary?.players ?? [];
+  const actions = apiActions ?? summary?.actions ?? [];
   const communityCards = summary?.communityCards || hand?.communityCards || [];
   const winners = summary?.winners || [];
   const showdownResults = summary?.showdownResults;

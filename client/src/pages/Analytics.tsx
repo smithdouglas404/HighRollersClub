@@ -7,7 +7,7 @@ import {
   BarChart3, TrendingUp, Target, Gamepad2,
   Coins, Trophy, Loader2, Brain,
   ArrowUpRight, ArrowDownRight, Minus,
-  Users, Activity, PieChart, Clock
+  Users, Activity, PieChart, Clock, FileText
 } from "lucide-react";
 
 interface PlayerStats {
@@ -23,6 +23,13 @@ interface PlayerStats {
 
 interface HandEntry {
   netResult: number;
+}
+
+interface AnalysisEntry {
+  id: number;
+  handId: string;
+  result: string;
+  createdAt: string;
 }
 
 /* ── SVG Line Chart ───────────────────────────────────────────────────────── */
@@ -351,6 +358,7 @@ export default function Analytics() {
   const { balance } = useWallet();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [handHistory, setHandHistory] = useState<HandEntry[]>([]);
+  const [analyses, setAnalyses] = useState<AnalysisEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -358,9 +366,10 @@ export default function Analytics() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [statsRes, handsRes] = await Promise.all([
+        const [statsRes, handsRes, analysesRes] = await Promise.all([
           fetch("/api/stats/me"),
           user?.id ? fetch(`/api/players/${user.id}/hands?limit=200`) : Promise.resolve(null),
+          fetch("/api/analyses", { credentials: "include" }).catch(() => null),
         ]);
         if (statsRes.status === 401) {
           setLoadError("Session expired — please log in again");
@@ -369,6 +378,9 @@ export default function Analytics() {
         if (statsRes.ok) setStats(await statsRes.json());
         else setLoadError("Failed to load stats");
         if (handsRes?.ok) setHandHistory(await handsRes.json());
+        if (analysesRes?.ok) {
+          setAnalyses(await analysesRes.json());
+        }
       } catch (err: any) {
         setLoadError(err.message || "Failed to load analytics data");
       } finally {
@@ -802,6 +814,56 @@ export default function Analytics() {
                 </div>
               </motion.div>
             </div>
+
+            {/* ── Past AI Analyses ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.65 }}
+              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-purple-500/15"
+            >
+              <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-purple-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-purple-400/70">Past AI Analyses</h3>
+                </div>
+                {analyses.length > 0 && (
+                  <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{analyses.length} analyses</span>
+                )}
+              </div>
+              {analyses.length > 0 ? (
+                <div className="divide-y divide-white/[0.03]">
+                  {analyses.slice(0, 20).map((analysis) => (
+                    <div key={analysis.id} className="px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-3 h-3 text-purple-400/60" />
+                          <span className="text-xs font-bold text-white/80">
+                            Hand {analysis.handId?.slice(0, 8) ?? "—"}
+                          </span>
+                        </div>
+                        <span className="text-[0.5625rem] text-gray-500">
+                          {analysis.createdAt ? new Date(analysis.createdAt).toLocaleDateString() : "—"}
+                        </span>
+                      </div>
+                      <p className="text-[0.6875rem] text-gray-400 leading-relaxed line-clamp-2">
+                        {analysis.result || "No summary available"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 bg-purple-500/10 border border-purple-500/15">
+                    <Brain className="w-6 h-6 text-purple-400/40" />
+                  </div>
+                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No AI Analyses Yet</h3>
+                  <p className="text-xs text-muted-foreground/60 max-w-xs">
+                    Use the AI analysis feature during hand review to get strategic insights on your play.
+                  </p>
+                </div>
+              )}
+            </motion.div>
           </div>
         )}
       </div>

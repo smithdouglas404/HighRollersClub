@@ -1474,7 +1474,9 @@ export default function Wallet() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeTab, setActiveTab] = useState<"transfer" | "deposit" | "withdraw">("transfer");
-  const [historyTab, setHistoryTab] = useState<"transactions" | "sessions">("transactions");
+  const [historyTab, setHistoryTab] = useState<"transactions" | "sessions" | "crypto">("transactions");
+  const [cryptoPayments, setCryptoPayments] = useState<any[]>([]);
+  const [loadingCrypto, setLoadingCrypto] = useState(false);
   const [initialFrom, setInitialFrom] = useState<WalletType | undefined>();
   const [initialTo, setInitialTo] = useState<WalletType | undefined>();
   const actionRef = useRef<HTMLDivElement>(null);
@@ -1492,6 +1494,18 @@ export default function Wallet() {
       setTimeout(() => actionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
     }
   }, [location]);
+
+  // Fetch crypto payments when the tab is selected
+  useEffect(() => {
+    if (historyTab !== "crypto") return;
+    if (cryptoPayments.length > 0) return; // already loaded
+    setLoadingCrypto(true);
+    fetch("/api/payments", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setCryptoPayments(Array.isArray(data) ? data : []))
+      .catch(() => setCryptoPayments([]))
+      .finally(() => setLoadingCrypto(false));
+  }, [historyTab]);
 
   const exportCSV = () => {
     const header = "Date,Type,Wallet,Amount,Balance After,Description\n";
@@ -1691,6 +1705,7 @@ export default function Wallet() {
           <div className="flex items-center gap-2 mb-5">
             {[
               { key: "transactions" as const, label: "Transactions", icon: Filter },
+              { key: "crypto" as const, label: "Crypto Payments", icon: Link2 },
               { key: "sessions" as const, label: "Sessions", icon: History },
             ].map(tab => (
               <button key={tab.key} onClick={() => setHistoryTab(tab.key)}
@@ -1762,6 +1777,60 @@ export default function Wallet() {
                         Load More
                       </button>
                     )}
+                  </div>
+                )}
+              </motion.div>
+            ) : historyTab === "crypto" ? (
+              <motion.div key="crypto" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+                {loadingCrypto ? (
+                  <div className="space-y-1">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-3 px-3 py-3">
+                        <Skeleton className="w-8 h-8 rounded-lg bg-white/[0.05]" />
+                        <div className="flex-1">
+                          <Skeleton className="h-3 w-40 bg-white/[0.05] mb-1.5" />
+                          <Skeleton className="h-2 w-24 bg-white/[0.03]" />
+                        </div>
+                        <Skeleton className="h-3 w-16 bg-white/[0.05]" />
+                      </div>
+                    ))}
+                  </div>
+                ) : cryptoPayments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-gray-600">
+                    <Link2 className="w-10 h-10 mb-3 opacity-30" />
+                    <p className="text-sm font-medium">No crypto payments</p>
+                    <p className="text-xs text-gray-700 mt-1">Deposits made via crypto will appear here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-0.5">
+                    {cryptoPayments.map((p: any) => (
+                      <div key={p.id} className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-white/[0.02] transition-colors">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          p.status === "confirmed" ? "bg-green-500/10" : p.status === "failed" ? "bg-red-500/10" : "bg-yellow-500/10"
+                        }`}>
+                          <Link2 className={`w-4 h-4 ${
+                            p.status === "confirmed" ? "text-green-400" : p.status === "failed" ? "text-red-400" : "text-yellow-400"
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-white">{p.amount} {p.currency}</span>
+                            <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                              p.status === "confirmed" ? "bg-green-500/10 text-green-400" :
+                              p.status === "failed" ? "bg-red-500/10 text-red-400" :
+                              "bg-yellow-500/10 text-yellow-400"
+                            }`}>{p.status}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {p.gateway && <span className="text-[0.5625rem] text-gray-500">{p.gateway}</span>}
+                            <span className="text-[0.5625rem] text-gray-600">
+                              {new Date(p.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-sm font-bold text-white tabular-nums">{Number(p.chipAmount || p.amount).toLocaleString()}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </motion.div>

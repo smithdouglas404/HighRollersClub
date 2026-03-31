@@ -192,7 +192,16 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(grep:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(find /home/runner/workspace/client /home/runner/workspace/server /home/runner/workspace/shared -type f -name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js)",
+      "Bash(wc -l /home/runner/workspace/client/src/pages/*.tsx)",
+      "Bash(find /home/runner/workspace -name tier_1_poker_ui_blueprint.md -o -name *blueprint* -o -name *todo* -o -name *task*list*)",
+      "Bash(find /home/runner/.claude/projects -type f -name *.json -o -name *.md)",
+      "Bash(find /home/runner/workspace -maxdepth 2 -name *.md -type f)",
+      "Bash(find /home/runner/.claude -name *.md -type f)",
+      "Bash(ls:*)",
+      "Bash(find /home/runner/workspace/client/src -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))",
+      "Bash(find /home/runner/workspace/server /home/runner/workspace/shared -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))"
     ]
   }
 }

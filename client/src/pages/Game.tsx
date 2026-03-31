@@ -4,6 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Seat } from "../components/poker/Seat";
 import { Card } from "../components/poker/Card";
 import { CSSPokerTable } from "../components/poker/CSSPokerTable";
+import { PokerSceneCanvas } from "../scene/canvas/PokerSceneCanvas";
+
+// Feature flag: flip to true to use the 3D R3F table scene
+const USE_3D_TABLE = true;
 
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
@@ -1156,18 +1160,25 @@ function GameTable({
                 className="relative w-full poker-table-container"
                 style={{ aspectRatio: "16 / 9", maxHeight: screen.tableMaxHeight, maxWidth: screen.isUltrawide ? "min(90%, 180vh)" : "min(95%, 140vh)" }}
               >
-                <CSSPokerTable
-                  communityCards={gameState.communityCards}
-                  pot={gameState.pot}
-                  playerCount={players.length}
-                  maxSeats={10}
-                  players={players}
-                  dealerSeatIndex={players.findIndex(p => p.isDealer)}
-                  visibleCommunityCards={dealing.visibleCommunityCards}
-                  communityFlipped={dealing.communityFlipped}
-                  showBurnCard={dealing.showBurnCard}
-                  dealPhase={gameState.phase}
-                />
+                {USE_3D_TABLE ? (
+                  <PokerSceneCanvas
+                    quality="high"
+                    className="absolute inset-0"
+                  />
+                ) : (
+                  <CSSPokerTable
+                    communityCards={gameState.communityCards}
+                    pot={gameState.pot}
+                    playerCount={players.length}
+                    maxSeats={10}
+                    players={players}
+                    dealerSeatIndex={players.findIndex(p => p.isDealer)}
+                    visibleCommunityCards={dealing.visibleCommunityCards}
+                    communityFlipped={dealing.communityFlipped}
+                    showBurnCard={dealing.showBurnCard}
+                    dealPhase={gameState.phase}
+                  />
+                )}
 
                 {isMultiplayer && waiting && players.length < 2 && (
                   <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 30 }}>

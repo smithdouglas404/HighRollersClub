@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Seat } from "../components/poker/Seat";
 import { Card } from "../components/poker/Card";
-import { ImageTable } from "../components/poker/ImageTable";
+import { CSSPokerTable } from "../components/poker/CSSPokerTable";
 
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
@@ -1156,7 +1156,7 @@ function GameTable({
                 className="relative w-full poker-table-container"
                 style={{ aspectRatio: "16 / 9", maxHeight: screen.tableMaxHeight, maxWidth: screen.isUltrawide ? "min(90%, 180vh)" : "min(95%, 140vh)" }}
               >
-                <ImageTable
+                <CSSPokerTable
                   communityCards={gameState.communityCards}
                   pot={gameState.pot}
                   playerCount={players.length}

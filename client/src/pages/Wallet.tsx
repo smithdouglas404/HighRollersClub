@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet, type Transaction, type WalletType, type WalletBalances } from "@/lib/wallet-context";
@@ -1312,7 +1313,8 @@ function ConnectedWalletsSection() {
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.25 }}
-      className="rounded-2xl bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] overflow-hidden"
+      className="rounded-2xl overflow-hidden"
+      style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
     >
       {/* Collapsible header */}
       <button
@@ -1554,11 +1556,13 @@ export default function Wallet() {
 
   return (
     <DashboardLayout title="Wallet">
-      <div className="px-4 sm:px-8 pb-8 space-y-6 max-w-6xl mx-auto">
+      <PageBackground image="/images/generated/wallet-bg.png" />
+      <div className="px-4 sm:px-8 pb-8 space-y-6 max-w-6xl mx-auto relative z-10">
 
         {/* ── Total Balance Hero ─────────────────────────────────────── */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}
-          className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-6 sm:p-8 relative overflow-hidden">
+          className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"
+          style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}>
           {/* Animated glow blobs */}
           <motion.div
             animate={{ scale: [1, 1.15, 1], opacity: [0.08, 0.15, 0.08] }}
@@ -1573,14 +1577,14 @@ export default function Wallet() {
 
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div className="space-y-2">
-              <p className="text-xs text-gray-500 uppercase tracking-widest font-medium flex items-center gap-1.5">
-                <Coins className="w-3.5 h-3.5 text-primary" /> Total Balance
+              <p className="text-xs uppercase tracking-widest font-medium flex items-center gap-1.5" style={{ background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 50%, #f3e2ad 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                <Coins className="w-3.5 h-3.5" style={{ color: "#d4af37" }} /> Total Balance
               </p>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl sm:text-5xl font-display font-bold gold-text tabular-nums">
-                  <AnimatedChips value={balance} className="gold-text" />
+                <span className="text-5xl sm:text-6xl font-display font-bold tabular-nums" style={{ color: "#d4af37" }}>
+                  <AnimatedChips value={balance} className="" />
                 </span>
-                <span className="text-sm text-primary/70 font-semibold uppercase tracking-wider">chips</span>
+                <span className="text-sm font-semibold uppercase tracking-wider" style={{ color: "rgba(212,175,55,0.7)" }}>chips</span>
               </div>
               {/* Allocation bar */}
               <div className="w-full max-w-xs">
@@ -1598,7 +1602,8 @@ export default function Wallet() {
                 </div>
               ) : (
                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handleClaimDaily} disabled={claiming}
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 border border-green-500/20 hover:border-green-500/40 transition-all disabled:opacity-50">
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm uppercase tracking-wider text-black transition-all disabled:opacity-50 btn-gold"
+                  style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}>
                   {claiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
                   Claim Daily Bonus
                 </motion.button>
@@ -1623,7 +1628,8 @@ export default function Wallet() {
                   animate={{ y: 0, opacity: 1 }}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
                   transition={{ delay: 0.1 + i * 0.05 }}
-                  className={`rounded-xl bg-gradient-to-br ${w.gradient} border ${w.border} p-4 relative overflow-hidden group cursor-pointer transition-shadow duration-300`}
+                  className="rounded-xl p-4 relative overflow-hidden group cursor-pointer transition-shadow duration-300"
+                  style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px rgba(${w.rgb}, 0.15)`; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
                 >
@@ -1659,7 +1665,8 @@ export default function Wallet() {
 
         {/* ── Actions: Transfer / Deposit / Withdraw ──────────────────── */}
         <motion.div ref={actionRef} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}
-          className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 sm:p-6">
+          className="rounded-2xl p-5 sm:p-6"
+          style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}>
           <div className="flex items-center gap-2 mb-5">
             {[
               { key: "transfer" as const, label: "Transfer", icon: ArrowRightLeft },
@@ -1668,8 +1675,9 @@ export default function Wallet() {
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all ${
-                  activeTab === tab.key ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
-                }`}>
+                  activeTab === tab.key ? "" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
+                }`}
+                style={activeTab === tab.key ? { background: "rgba(212,175,55,0.15)", color: "#d4af37", borderColor: "rgba(212,175,55,0.25)" } : undefined}>
                 <tab.icon className="w-3.5 h-3.5" /> {tab.label}
               </button>
             ))}
@@ -1688,10 +1696,11 @@ export default function Wallet() {
 
         {/* ── Balance Chart ────────────────────────────────────────────── */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}
-          className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 sm:p-6">
+          className="rounded-2xl p-5 sm:p-6"
+          style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-display font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary/70" /> Balance History
+            <h2 className="text-xs font-display font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "#d4af37" }}>
+              <TrendingUp className="w-4 h-4" style={{ color: "rgba(212,175,55,0.7)" }} /> Balance History
             </h2>
           </div>
           <div className="h-32 sm:h-40"><BalanceChart transactions={transactions} /></div>
@@ -1699,7 +1708,8 @@ export default function Wallet() {
 
         {/* ── History: Transactions / Sessions ──────────────────────────── */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.4 }}
-          className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 sm:p-6">
+          className="rounded-2xl p-5 sm:p-6"
+          style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}>
 
           {/* Tab switcher */}
           <div className="flex items-center gap-2 mb-5">
@@ -1710,8 +1720,9 @@ export default function Wallet() {
             ].map(tab => (
               <button key={tab.key} onClick={() => setHistoryTab(tab.key)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all ${
-                  historyTab === tab.key ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
-                }`}>
+                  historyTab === tab.key ? "" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
+                }`}
+                style={historyTab === tab.key ? { background: "rgba(212,175,55,0.15)", color: "#d4af37", borderColor: "rgba(212,175,55,0.25)" } : undefined}>
                 <tab.icon className="w-3.5 h-3.5" /> {tab.label}
               </button>
             ))}

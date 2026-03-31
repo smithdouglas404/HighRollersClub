@@ -1146,7 +1146,7 @@ function GameTable({
           <div className="flex-1 relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 45%, #1a2744 0%, #131d30 40%, #0e1624 70%, #0a101c 100%)" }} />
-              {/* Atmospheric glow orbs (Stitch-style) */}
+              {/* Atmospheric glow orbs */}
               <div className="absolute top-[-15%] left-[10%] w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(0,243,255,0.045)" }} />
               <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(147,51,234,0.03)" }} />
               <div className="absolute top-[20%] right-[20%] w-[350px] h-[350px] rounded-full blur-[110px] pointer-events-none" style={{ background: "rgba(201,168,76,0.02)" }} />

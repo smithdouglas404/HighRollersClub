@@ -147,49 +147,34 @@ export function ImageTable({
 
   return (
     <>
-      {/* ══ CSS-Rendered Poker Table (Stitch style) ══ */}
+      {/* ══ Poker Table with Avatar Slots ══ */}
       <div className="absolute z-[1]" style={{
-        left: "50%", top: "48%",
+        left: "50%", top: "50%",
         transform: "translate(-50%, -50%)",
-        width: "62%", paddingBottom: "36%",
+        width: "min(75%, 75vh)",
+        aspectRatio: "1 / 1",
       }}>
-        {/* Main felt surface — image or radial gradient */}
-        <div className="absolute inset-0 rounded-[50%]" style={{
-          background: feltPreset.imageUrl
-            ? `url(${feltPreset.imageUrl})`
-            : feltPreset.gradient || "radial-gradient(ellipse at 50% 40%, #1a3a2a 0%, #0f2a1c 30%, #0a1f15 50%, #071a10 70%, #040e08 100%)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          boxShadow: "inset 0 0 80px rgba(0,0,0,0.5), inset 0 -8px 30px rgba(0,0,0,0.3), 0 8px 40px rgba(0,0,0,0.7), 0 0 100px rgba(0,0,0,0.3), 0 0 60px rgba(212,175,55,0.12), 0 0 120px rgba(212,175,55,0.06)",
-          border: "7px solid #18181e",
-        }}>
-          {/* Gold border ring */}
-          <div className="absolute inset-[5px] rounded-[50%]" style={{
-            border: "2.5px solid #d4af37",
-            boxShadow: "0 0 18px rgba(212,175,55,0.35), 0 0 40px rgba(212,175,55,0.10), inset 0 0 18px rgba(212,175,55,0.12)",
-          }} />
-          {/* Inner accent ring */}
-          <div className="absolute inset-[14px] rounded-[50%]" style={{
-            border: "1px solid rgba(212,175,55,0.18)",
-            boxShadow: "inset 0 0 30px rgba(212,175,55,0.04)",
-          }} />
-          {/* Shine reflection */}
-          <div className="absolute inset-0 rounded-[50%]" style={{
-            background: "radial-gradient(ellipse at 40% 30%, rgba(255,255,255,0.03) 0%, transparent 50%)",
-          }} />
-          {/* Subtle center watermark */}
-          <div className="absolute" style={{ left: "50%", top: "55%", transform: "translate(-50%, -50%)" }}>
-            <span className="text-[#d4af37]/[0.08] font-display font-black text-2xl tracking-[0.4em] uppercase select-none pointer-events-none" style={{ textShadow: "0 0 15px rgba(212,175,55,0.05)" }}>
-              POKER
-            </span>
-          </div>
+        <img
+          src="/images/poker-table-felt.png"
+          alt=""
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+          draggable={false}
+          style={{
+            filter: "drop-shadow(0 8px 40px rgba(0,0,0,0.7)) drop-shadow(0 0 60px rgba(212,175,55,0.06))",
+          }}
+        />
+        {/* Subtle center watermark overlay */}
+        <div className="absolute" style={{ left: "50%", top: "52%", transform: "translate(-50%, -50%)", zIndex: 2 }}>
+          <span className="text-[#d4af37]/[0.10] font-display font-black text-xl tracking-[0.4em] uppercase select-none pointer-events-none" style={{ textShadow: "0 0 15px rgba(212,175,55,0.08)" }}>
+            HIGH ROLLERS
+          </span>
         </div>
       </div>
 
       {/* ── Game elements overlay (z-index: 10) ── */}
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
 
-        {/* Empty seat indicators */}
+        {/* Empty seat slots — clickable to select seat */}
         {Array.from({ length: maxSeats }).map((_, i) => {
           if (i < occupiedCount) return null;
           const seat = TABLE_SEATS[i];
@@ -197,7 +182,7 @@ export function ImageTable({
           return (
             <div
               key={`empty-${i}`}
-              className="absolute"
+              className="absolute pointer-events-auto cursor-pointer group"
               style={{
                 left: `${seat.x}%`,
                 top: `${seat.y}%`,
@@ -205,14 +190,15 @@ export function ImageTable({
               }}
             >
               <div
-                className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all hover:border-white/30"
+                className="portrait-card rounded-lg border-2 border-dashed flex flex-col items-center justify-center transition-all group-hover:border-cyan-400/60 group-hover:scale-105"
                 style={{
-                  borderColor: "rgba(212,175,55,0.2)",
-                  background: "radial-gradient(circle, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 100%)",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.3), inset 0 1px 3px rgba(0,0,0,0.2)",
+                  borderColor: "rgba(0,243,255,0.25)",
+                  background: "rgba(0,243,255,0.05)",
+                  boxShadow: "0 0 12px rgba(0,243,255,0.08), inset 0 0 8px rgba(0,243,255,0.04)",
                 }}
               >
-                <span className="text-[0.5625rem] text-white/40 font-mono font-bold">{i + 1}</span>
+                <span className="text-[0.5rem] text-cyan-400/40 font-mono font-bold">#{i + 1}</span>
+                <span className="text-[0.4375rem] text-cyan-400/30 uppercase tracking-wider mt-0.5 group-hover:text-cyan-400/60 transition-colors">SIT</span>
               </div>
             </div>
           );
@@ -229,7 +215,7 @@ export function ImageTable({
               className="absolute"
               style={{
                 left: "42%",
-                top: "42%",
+                top: "32%",
                 transform: "translate(-50%, -50%) rotate(-5deg)",
                 zIndex: 11,
               }}
@@ -253,7 +239,7 @@ export function ImageTable({
             className="absolute pointer-events-none"
             style={{
               left: "50%",
-              top: "48%",
+              top: "38%",
               transform: "translate(-50%, -50%)",
               width: "420px",
               height: "180px",
@@ -278,7 +264,7 @@ export function ImageTable({
                 className="absolute flex gap-2.5"
                 style={{
                   left: "50%",
-                  top: "48%",
+                  top: "38%",
                   transform: "translate(-50%, -50%)",
                   filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.7))",
                 }}
@@ -309,7 +295,7 @@ export function ImageTable({
               exit={{ opacity: 0, scale: 0.85 }}
               transition={compactMode ? { duration: 0 } : undefined}
               className="absolute flex flex-col items-center gap-1"
-              style={{ left: "50%", top: "27%", transform: "translate(-50%, -50%)" }}
+              style={{ left: "50%", top: "22%", transform: "translate(-50%, -50%)" }}
             >
               {/* Phase label */}
               {dealPhase && (

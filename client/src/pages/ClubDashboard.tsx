@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
@@ -219,7 +220,8 @@ export default function ClubDashboard() {
 
   return (
     <DashboardLayout title="Club Dashboard">
-      <div className="px-4 md:px-8 pb-8 relative">
+      <PageBackground image="/images/generated/club-dashboard-bg.png" />
+      <div className="px-4 md:px-8 pb-8 relative z-10">
 
         <div className="relative z-10">
           {loading ? (
@@ -382,7 +384,8 @@ export default function ClubDashboard() {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative rounded-md p-6 mb-6 overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+                className="relative rounded-md p-6 mb-6 overflow-hidden"
+                style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}
               >
                 <div className="absolute top-0 left-0 right-0 h-1 gradient-primary opacity-60" />
 
@@ -408,7 +411,13 @@ export default function ClubDashboard() {
                     <div className="flex items-center gap-3 mb-1">
                       <h2
                         data-testid="text-club-name"
-                        className="text-2xl font-display font-bold tracking-wide text-white truncate"
+                        className="text-2xl font-display font-bold tracking-wide truncate"
+                        style={{
+                          background: "linear-gradient(180deg, #f5e6a3 0%, #d4af37 60%, #c9a84c 100%)",
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                          backgroundClip: "text",
+                        }}
                       >
                         {club.name}
                       </h2>
@@ -470,8 +479,15 @@ export default function ClubDashboard() {
                     <div
                       key={stat.label}
                       data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}
-                      className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-[#c9a84c]/20 hover:border-[#c9a84c]/40 hover:shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-all duration-200"
+                      className="stats-card rounded-md p-4 hover:border-[#c9a84c]/40 hover:shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-all duration-200 relative overflow-hidden"
+                      style={{
+                        background: "rgba(15,15,20,0.7)",
+                        backdropFilter: "blur(16px)",
+                        border: "1px solid rgba(212,175,55,0.12)",
+                      }}
                     >
+                      {/* Gold top-line accent */}
+                      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #d4af37, transparent)" }} />
                       <div className="flex items-center gap-2 mb-1">
                         <Icon className={cn("w-4 h-4", stat.color)} />
                         <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{stat.label}</span>
@@ -524,16 +540,17 @@ export default function ClubDashboard() {
                       className={cn(
                         "flex-1 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all capitalize flex items-center justify-center gap-2",
                         isActive
-                          ? "bg-primary/15 text-primary border border-primary/20"
+                          ? "border border-[#d4af37]/30"
                           : "text-muted-foreground hover:text-foreground"
                       )}
+                      style={isActive ? { background: "rgba(212,175,55,0.1)", color: "#d4af37", borderBottom: "2px solid #d4af37" } : undefined}
                     >
                       <Icon className="w-4 h-4" />
                       {tab.label}
                       {tab.count !== null && tab.count > 0 && (
                         <span className={cn(
                           "text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full",
-                          isActive ? "bg-primary/25 text-primary" : "bg-white/5 text-muted-foreground"
+                          isActive ? "bg-[#d4af37]/20 text-[#d4af37]" : "bg-white/5 text-muted-foreground"
                         )}>
                           {tab.count}
                         </span>
@@ -548,7 +565,7 @@ export default function ClubDashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left side: Club Tables (2/3 width) */}
                   <div className="lg:col-span-2">
-                    <div className="rounded-md overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]">
+                    <div className="rounded-md overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                       <div className="px-5 py-3 border-b border-white/[0.05] flex items-center justify-between">
                         <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
                           <Layers className="w-4 h-4 text-primary" /> Club Tables
@@ -679,7 +696,7 @@ export default function ClubDashboard() {
                       <h3 className="font-display font-bold text-white text-lg flex items-center gap-2 mb-3">
                         <TrendingUp className="w-4 h-4 text-primary" /> Quick Stats
                       </h3>
-                      <div className="bg-surface-high/50 backdrop-blur-xl rounded-md border border-white/[0.06] divide-y divide-white/[0.04]">
+                      <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                         {[
                           { label: "Most Active Table", value: "High Rollers VIP", icon: Layers },
                           { label: "Top Winner This Week", value: "Player_123 +5,400", icon: Trophy },
@@ -706,7 +723,7 @@ export default function ClubDashboard() {
                       <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
                         <Activity className="w-4 h-4 text-primary" /> Recent Activity
                       </h3>
-                      <div className="bg-surface-high/50 backdrop-blur-xl rounded-md border border-white/[0.06] divide-y divide-white/[0.04]">
+                      <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
 
                       {clubActivity.length === 0 ? (
                         <div className="py-10 px-4 text-center">
@@ -784,7 +801,7 @@ export default function ClubDashboard() {
                       <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
                         <Trophy className="w-4 h-4 text-amber-400" /> Tournament Alerts
                       </h3>
-                      <div className="bg-surface-high/50 backdrop-blur-xl rounded-md border border-white/[0.06] divide-y divide-white/[0.04]">
+                      <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                         {[
                           { id: 1, text: "Final Table starting in 5 min", time: "Just now", color: "text-red-400", bg: "bg-red-500/12 border-red-500/20", icon: Activity },
                           { id: 2, text: "New tournament registration open", time: "10 min ago", color: "text-green-400", bg: "bg-green-500/12 border-green-500/20", icon: Trophy },
@@ -820,7 +837,7 @@ export default function ClubDashboard() {
               {activeTab === "leaderboard" && club && <ClubLeaderboard clubId={club.id} />}
 
               {activeTab === "members" && <div>
-                <div className="bg-surface-high/40 backdrop-blur-xl rounded-md border border-white/[0.06] overflow-hidden">
+                <div className="rounded-md overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <div className="hidden sm:grid grid-cols-[1fr_100px_100px_80px] gap-4 px-4 py-2 border-b border-white/[0.04] text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
                       <span>Player</span>
                       <span>Chips</span>

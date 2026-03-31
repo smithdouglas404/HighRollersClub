@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
 import { useWallet, type Transaction } from "@/lib/wallet-context";
 import {
@@ -177,7 +178,7 @@ function PurchaseModal({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[0.625rem] text-gray-500 uppercase tracking-wider">Price</div>
-              <div className="text-lg font-black text-primary flex items-center gap-1.5">
+              <div className="text-lg font-black flex items-center gap-1.5" style={{ color: "#d4af37" }}>
                 <Coins className="w-4 h-4" />
                 {item.price.toLocaleString()} {item.currency}
               </div>
@@ -209,9 +210,10 @@ function PurchaseModal({
               onClick={onConfirm}
               disabled={!canAfford || purchasing}
               aria-label={`Purchase ${item.name}`}
-              className={`flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                canAfford ? "bg-primary text-black" : "bg-gray-600 text-gray-300"
+              className={`flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 btn-gold ${
+                canAfford ? "text-black" : "bg-gray-600 text-gray-300"
               }`}
+              style={canAfford ? { background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" } : undefined}
             >
               {purchasing ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -409,7 +411,8 @@ function ShopItemCard({
   return (
     <motion.div
       whileHover={{ scale: 1.03, y: -4 }}
-      className="glass rounded-xl overflow-hidden border border-white/5 hover:border-primary/20 transition-all cursor-pointer group"
+      className="rounded-xl overflow-hidden transition-all cursor-pointer group"
+      style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
       onClick={() => !owned && onPurchase(item)}
       role="button"
       aria-label={owned ? `${item.name} - owned` : `Purchase ${item.name}`}
@@ -458,7 +461,7 @@ function ShopItemCard({
               <Check className="w-3 h-3" /> Purchased
             </span>
           ) : (
-            <span className="text-xs font-bold text-primary flex items-center gap-1">
+            <span className="text-xs font-bold flex items-center gap-1" style={{ color: "#d4af37" }}>
               <Coins className="w-3 h-3" /> {item.price.toLocaleString()}
             </span>
           )}
@@ -487,9 +490,10 @@ function InventoryItemCard({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`glass rounded-xl overflow-hidden border transition-all ${
-        isEquipped ? "border-primary/30" : "border-white/5 hover:border-white/10"
+      className={`rounded-xl overflow-hidden transition-all ${
+        isEquipped ? "" : ""
       }`}
+      style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: isEquipped ? "1px solid rgba(212,175,55,0.3)" : "1px solid rgba(212,175,55,0.12)" }}
     >
       <div className="aspect-square relative overflow-hidden">
         <ItemImage item={item} />
@@ -723,7 +727,8 @@ export default function Shop() {
 
   return (
     <DashboardLayout>
-      <div className="px-8 pb-8 relative">
+      <PageBackground image="/images/generated/avatar-marketplace-bg.png" />
+      <div className="px-8 pb-8 relative z-10">
         {/* Shop banner with chip pile accent */}
         <div className="relative mb-6 overflow-hidden rounded-xl glass border border-primary/10 p-5">
           <img
@@ -734,8 +739,8 @@ export default function Shop() {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent pointer-events-none" />
           <div className="relative z-10">
-            <h2 className="text-lg font-black font-display tracking-[0.12em] uppercase gold-text flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-black font-display tracking-[0.12em] uppercase flex items-center gap-2" style={{ background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 50%, #f3e2ad 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+              <ShoppingCart className="w-5 h-5" style={{ color: "#d4af37" }} />
               Shop
             </h2>
             <p className="text-xs text-gray-400 mt-1">Premium avatars, table themes, emotes and more</p>
@@ -749,9 +754,10 @@ export default function Shop() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                 activeTab === tab
-                  ? "bg-primary/15 text-primary border border-primary/20"
+                  ? "border border-transparent"
                   : "text-gray-500 hover:text-gray-300 border border-transparent"
               }`}
+              style={activeTab === tab ? { background: "rgba(212,175,55,0.15)", color: "#d4af37", borderColor: "rgba(212,175,55,0.25)" } : undefined}
             >
               {tab === "Inventory" && <Package className="w-3.5 h-3.5" />}
               {tab === "Wishlist" && <Heart className={`w-3.5 h-3.5 ${activeTab === "Wishlist" ? "fill-pink-400 text-pink-400" : ""}`} />}
@@ -1066,7 +1072,7 @@ export default function Shop() {
                 <Coins className="w-4 h-4 text-primary" />
                 <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Your Balance</span>
               </div>
-              <div className="text-2xl font-black text-primary tabular-nums">
+              <div className="text-2xl font-black tabular-nums" style={{ color: "#d4af37" }}>
                 {displayBalance.toLocaleString()}
               </div>
               <div className="text-[0.5625rem] text-gray-600 uppercase">chips</div>
@@ -1102,8 +1108,9 @@ export default function Shop() {
                   onClick={handleClaimDaily}
                   disabled={claiming || !canClaim}
                   className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2 ${
-                    !canClaim ? "bg-white/[0.05] text-gray-400" : "bg-primary text-black"
+                    !canClaim ? "bg-white/[0.05] text-gray-400" : "text-black btn-gold"
                   }`}
+                  style={canClaim ? { background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" } : undefined}
                 >
                   {claiming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
                   {!canClaim ? "Already Claimed" : "Claim Daily Bonus"}
@@ -1166,7 +1173,8 @@ export default function Shop() {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => elitePass && setSelectedItem(elitePass)}
                         disabled={!elitePass}
-                        className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-primary text-black disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-1.5 btn-gold"
+                        style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
                         Buy Now — {elitePass?.price.toLocaleString() ?? "5,000"} Chips

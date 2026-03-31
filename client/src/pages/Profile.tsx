@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { TAUNT_VOICE_OPTIONS, setTauntVoice } from "@/components/poker/TauntSystem";
@@ -130,7 +131,8 @@ export default function Profile() {
 
   return (
     <DashboardLayout title="Profile">
-      <div className="pb-8 max-w-5xl mx-auto">
+      <PageBackground image="/images/generated/profile-bg.png" />
+      <div className="relative z-10 pb-8 max-w-5xl mx-auto">
         {/* ── Hero Banner ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -167,7 +169,7 @@ export default function Profile() {
 
             <div className="flex-1 text-center md:text-left">
               <div className="flex items-center gap-3 justify-center md:justify-start">
-                <h2 className="text-2xl md:text-3xl font-display font-black text-white tracking-tight" data-testid="text-username">
+                <h2 className="text-2xl md:text-3xl font-display font-black tracking-tight" data-testid="text-username" style={{ background: "linear-gradient(180deg, #f5e6a3 0%, #d4af37 60%, #c9a84c 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
                   {user?.displayName || user?.username || "Player"}
                 </h2>
                 <span
@@ -209,7 +211,7 @@ export default function Profile() {
             transition={{ delay: 0.1 }}
             className="mb-6"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
               <TrendingUp className="w-4 h-4 text-primary/70" />
               Your Statistics
             </h3>
@@ -233,12 +235,13 @@ export default function Profile() {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15 + i * 0.05 }}
-                        className={`relative text-center p-5 rounded-xl bg-gradient-to-br ${card.gradient} border ${card.borderColor} overflow-hidden group hover:scale-[1.02] transition-transform`}
+                        className={`relative text-center p-5 rounded-xl border overflow-hidden group hover:scale-[1.02] transition-transform`}
+                        style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
                         data-testid={`stat-card-${card.key}`}
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                         <Icon className={`w-7 h-7 ${card.textColor} mx-auto mb-3 opacity-80`} />
-                        <div className={`text-3xl font-black ${card.textColor} tabular-nums`}>
+                        <div className="text-3xl font-black tabular-nums" style={{ color: "#d4af37" }}>
                           <AnimatedNumber value={val} />
                           {card.suffix || ""}
                         </div>
@@ -250,14 +253,14 @@ export default function Profile() {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
                   {[
-                    { label: "Current Streak", value: stats!.currentWinStreak.toString(), color: "text-white", icon: Flame },
-                    { label: "Total Winnings", value: stats!.totalWinnings.toLocaleString(), color: "text-green-400", icon: Coins },
-                    { label: "VPIP", value: `${stats!.handsPlayed > 0 ? Math.round((stats!.vpip / stats!.handsPlayed) * 100) : 0}%`, color: "text-white", icon: Target },
-                    { label: "PFR", value: `${stats!.handsPlayed > 0 ? Math.round((stats!.pfr / stats!.handsPlayed) * 100) : 0}%`, color: "text-white", icon: TrendingUp },
+                    { label: "Current Streak", value: stats!.currentWinStreak.toString(), color: "text-[#d4af37]", icon: Flame },
+                    { label: "Total Winnings", value: stats!.totalWinnings.toLocaleString(), color: "text-[#d4af37]", icon: Coins },
+                    { label: "VPIP", value: `${stats!.handsPlayed > 0 ? Math.round((stats!.vpip / stats!.handsPlayed) * 100) : 0}%`, color: "text-[#d4af37]", icon: Target },
+                    { label: "PFR", value: `${stats!.handsPlayed > 0 ? Math.round((stats!.pfr / stats!.handsPlayed) * 100) : 0}%`, color: "text-[#d4af37]", icon: TrendingUp },
                   ].map((item) => {
                     const SubIcon = item.icon;
                     return (
-                      <div key={item.label} className="flex items-center gap-3 p-3.5 rounded-lg bg-white/[0.03] border border-white/5 hover:border-white/10 transition-colors">
+                      <div key={item.label} className="flex items-center gap-3 p-3.5 rounded-lg hover:border-white/10 transition-colors" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}>
                         <SubIcon className="w-4 h-4 text-gray-600 shrink-0" />
                         <div className="flex-1">
                           <span className="text-[0.625rem] text-gray-500 block">{item.label}</span>
@@ -276,9 +279,10 @@ export default function Profile() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="glass rounded-xl p-6 border border-white/5 mb-6"
+            className="rounded-xl p-6 mb-6"
+            style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-5 flex items-center gap-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-5 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
               <Award className="w-4 h-4 text-amber-500/70" />
               Achievements
               {stats && (
@@ -305,7 +309,7 @@ export default function Profile() {
                     <div
                       className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
                         unlocked
-                          ? "border-white/25 opacity-100 hover:scale-110"
+                          ? "border-[#d4af37]/40 opacity-100 hover:scale-110"
                           : "border-white/5 opacity-40 grayscale hover:opacity-60"
                       }`}
                       style={unlocked ? {
@@ -364,9 +368,10 @@ export default function Profile() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.17 }}
-            className="glass rounded-xl p-6 border border-white/5 mb-6"
+            className="rounded-xl p-6 mb-6"
+            style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/80 mb-4 flex items-center gap-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/80 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
               <Clock className="w-4 h-4 text-[#c9a84c]/70" />
               Recent Sessions
             </h3>
@@ -376,7 +381,7 @@ export default function Profile() {
                 { time: "Yesterday", hands: 18, result: "-320", positive: false },
                 { time: "2 days ago", hands: 42, result: "+3,800", positive: true },
               ].map((session, i) => (
-                <div key={i} className="flex items-center gap-4 p-3.5 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors" data-testid={`session-row-${i}`}>
+                <div key={i} className="flex items-center gap-4 p-3.5 rounded-lg hover:border-white/10 transition-colors" data-testid={`session-row-${i}`} style={{ background: "rgba(15,15,20,0.5)", border: "1px solid rgba(212,175,55,0.08)" }}>
                   <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center">
                     <Gamepad2 className="w-4 h-4 text-primary/60" />
                   </div>
@@ -422,7 +427,8 @@ export default function Profile() {
                   whileHover={{ scale: 1.03, y: -2 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => navigate(link.path)}
-                  className={`relative glass rounded-xl p-5 border border-white/5 ${link.border} transition-all text-left group overflow-hidden`}
+                  className={`relative rounded-xl p-5 ${link.border} transition-all text-left group overflow-hidden`}
+                  style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
                   data-testid={`link-${link.label.toLowerCase().replace(/\s/g, '-')}`}
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${link.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />

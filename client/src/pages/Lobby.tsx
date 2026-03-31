@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
 import { soundEngine } from "@/lib/sound-engine";
 import { useToast } from "@/hooks/use-toast";
@@ -96,11 +97,15 @@ function TableCard({ table, onClick, featured, currentUserId, onDelete }: { tabl
       data-testid={`card-table-${table.id}`}
       className={cn(
         "group cursor-pointer rounded-md p-5 transition-all duration-300 relative overflow-hidden",
-        "bg-surface-high/50 backdrop-blur-2xl border border-white/[0.06]",
-        "hover:border-primary/30 hover:shadow-[0_0_25px_rgba(129,236,255,0.12)]",
+        "hover:shadow-[0_0_25px_rgba(212,175,55,0.12)]",
         isPlaying && "border-l-2 border-l-secondary",
         isFull && "opacity-60"
       )}
+      style={{
+        background: "rgba(15,15,20,0.7)",
+        backdropFilter: "blur(12px)",
+        border: isPlaying ? undefined : "1px solid rgba(212,175,55,0.12)",
+      }}
     >
       {/* Subtle felt texture background */}
       <div
@@ -425,7 +430,8 @@ export default function Lobby() {
 
   return (
     <DashboardLayout title="Games & Tournaments">
-      <div className="px-6 md:px-8 pb-8 relative">
+      <PageBackground image="/images/generated/lobby-bg.png" />
+      <div className="px-6 md:px-8 pb-8 relative z-10">
         {/* Hero Banner with welcome image */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -440,9 +446,9 @@ export default function Lobby() {
                 <Flame className="w-3.5 h-3.5 text-destructive animate-pulse" />
                 <span>High Stakes. Zero Limits.</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-white mb-2 leading-none tracking-tighter">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold mb-2 leading-none tracking-tighter" style={{ background: "linear-gradient(135deg, #d4af37, #f5e6a3, #b8960c, #d4af37)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 SELECT YOUR <br />
-                <span className="text-transparent bg-clip-text gradient-primary neon-text-glow">GAME MODE</span>
+                <span className="text-transparent bg-clip-text" style={{ background: "linear-gradient(135deg, #f5e6a3, #d4af37, #b8960c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", filter: "drop-shadow(0 0 12px rgba(212,175,55,0.4))" }}>GAME MODE</span>
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base max-w-lg font-body">
                 Choose your variant. Find your table. Enter the vault.
@@ -463,7 +469,7 @@ export default function Lobby() {
               description: "Create a private table with invite code",
               onClick: () => { setDefaultPrivate(true); setShowCreateTable(true); },
               accent: "primary",
-              bgImage: "/splash/splash_high_stakes.webp",
+              bgImage: "/images/generated/card-private-table.png",
             },
             {
               icon: Users,
@@ -471,7 +477,7 @@ export default function Lobby() {
               description: "Join open tables",
               onClick: () => tablesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
               accent: "secondary",
-              bgImage: "/splash/splash_poker_cinematic.webp",
+              bgImage: "/images/generated/card-public-game.png",
             },
             {
               icon: Trophy,
@@ -479,7 +485,7 @@ export default function Lobby() {
               description: "Compete in scheduled events",
               onClick: () => navigate("/tournaments"),
               accent: "tertiary",
-              bgImage: "/banners/banner_tournament.webp",
+              bgImage: "/images/generated/card-tournament.png",
             },
           ].map((mode, i) => {
             const Icon = mode.icon;
@@ -498,25 +504,24 @@ export default function Lobby() {
                 data-testid={`card-mode-${mode.title.toLowerCase().replace(/\s+/g, "-")}`}
                 className={cn(
                   "group cursor-pointer relative overflow-hidden rounded-md p-5 transition-all duration-300",
-                  "bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]",
-                  "hover:border-primary/30 hover:shadow-[0_0_25px_rgba(129,236,255,0.15)]"
+                  "backdrop-blur-xl border border-white/[0.06]",
+                  "hover:border-[rgba(212,175,55,0.3)] hover:shadow-[0_0_25px_rgba(212,175,55,0.15)]"
                 )}
+                style={{
+                  backgroundImage: `url(${mode.bgImage})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
               >
-                {/* Background splash image */}
-                <img src={mode.bgImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity duration-500 pointer-events-none" />
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-surface-highest/90 via-surface-highest/70 to-surface-highest/50 pointer-events-none" />
+                {/* Dark gradient overlay for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/75 to-black/60 pointer-events-none" />
 
                 <div className="relative flex items-start gap-4">
-                  <div className={cn(
-                    "w-11 h-11 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300",
-                    "bg-primary/10 border border-primary/20",
-                    "group-hover:bg-primary/15 group-hover:border-primary/30 group-hover:shadow-[0_0_12px_rgba(129,236,255,0.2)]"
-                  )}>
-                    <Icon className="w-5 h-5 text-primary transition-transform duration-300 group-hover:scale-110" />
+                  <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.25)" }}>
+                    <Icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" style={{ color: "#d4af37" }} />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider group-hover:text-primary transition-colors duration-200">
+                    <h3 className="text-sm font-display font-bold uppercase tracking-wider transition-colors duration-200" style={{ color: "#f5e6a3" }}>
                       {mode.title}
                     </h3>
                     <p className="text-[0.6875rem] text-muted-foreground mt-0.5 leading-relaxed">
@@ -533,8 +538,8 @@ export default function Lobby() {
         {/* Active Tables header + actions */}
         <div ref={tablesRef} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-3xl font-display font-bold text-white flex items-center gap-3">
-              <Zap className="w-7 h-7 text-primary" />
+            <h2 className="text-3xl font-display font-bold flex items-center gap-3" style={{ background: "linear-gradient(135deg, #d4af37, #f5e6a3, #b8960c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              <Zap className="w-7 h-7" style={{ color: "#d4af37" }} />
               Active Tables
             </h2>
             <p className="text-muted-foreground mt-1">Jump right into the action.</p>
@@ -703,11 +708,15 @@ export default function Lobby() {
                   onClick={() => setActiveVariant(activeVariant === variant.key ? "all" : variant.key)}
                   className={cn(
                     "group cursor-pointer relative overflow-hidden rounded-md transition-all duration-300",
-                    "bg-surface-high/60 backdrop-blur-2xl",
                     isActive
-                      ? "ring-1 ring-primary shadow-[0_0_30px_rgba(129,236,255,0.25)]"
-                      : "border border-white/[0.06] hover:border-primary/30 hover:shadow-[0_0_20px_rgba(129,236,255,0.1)]"
+                      ? "shadow-[0_0_30px_rgba(212,175,55,0.25)]"
+                      : "hover:shadow-[0_0_20px_rgba(212,175,55,0.1)]"
                   )}
+                  style={{
+                    background: "rgba(15,15,20,0.7)",
+                    backdropFilter: "blur(12px)",
+                    border: isActive ? "1px solid rgba(212,175,55,0.5)" : "1px solid rgba(212,175,55,0.12)",
+                  }}
                 >
                   <div className="relative h-28 overflow-hidden bg-gradient-to-b from-surface-highest/80 to-surface-high/40 flex items-center justify-center">
                     <Icon className="w-16 h-16 text-primary/20 group-hover:text-primary/30 transition-colors duration-500 group-hover:scale-110" />

@@ -255,6 +255,71 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Gold luxury button */
+  .btn-gold {
+    background: linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%);
+    color: #0a0a0c;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: none;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+  }
+  .btn-gold:hover {
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+  }
+
+  /* Glass card - premium */
+  .glass-card-gold {
+    background: rgba(22, 27, 34, 0.75);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 1rem;
+    background-image: linear-gradient(180deg, rgba(212, 175, 55, 0.04) 0%, rgba(212, 175, 55, 0) 100%);
+  }
+
+  /* Gold text gradient */
+  .text-gold-gradient {
+    background: linear-gradient(180deg, #f5e6a3 0%, #d4af37 60%, #c9a84c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gold glow heading */
+  .heading-glow {
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.3), 0 0 40px rgba(212, 175, 55, 0.1);
+  }
+
+  /* Stats card - glass with gold accent */
+  .stats-card {
+    background: rgba(15, 15, 20, 0.7);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(212, 175, 55, 0.12);
+    border-radius: 0.75rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #d4af37, transparent);
+    opacity: 0.6;
+  }
+
+  /* Section divider - gold gradient line */
+  .divider-gold {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.3) 50%, transparent 100%);
+    border: none;
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -526,8 +591,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .portrait-card {
-  width: clamp(80px, 16cqmin, 140px);
-  height: clamp(100px, 20cqmin, 160px);
+  width: clamp(60px, 10cqmin, 90px);
+  height: clamp(60px, 10cqmin, 90px);
 }
 
 .sidebar-responsive {

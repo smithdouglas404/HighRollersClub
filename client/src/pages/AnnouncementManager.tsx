@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import {
   Shield, Megaphone, Send, AlertTriangle, Info, Bell,
-  Users, Radio, Clock, ChevronDown
+  Users, Radio, Clock, ChevronDown, Layers, Monitor, MessageSquare
 } from "lucide-react";
 
 type Priority = "normal" | "important" | "urgent";
 type Audience = "all" | "active" | "table";
+type DeliveryStyle = "stack-overlay" | "breaking-news" | "table-chat";
 
 interface Announcement {
   id: string;
@@ -31,6 +32,32 @@ const AUDIENCE_OPTIONS: { value: Audience; label: string; icon: typeof Users }[]
   { value: "all", label: "All Members", icon: Users },
   { value: "active", label: "Active Players", icon: Radio },
   { value: "table", label: "Specific Table", icon: Shield },
+];
+
+const DELIVERY_STYLE_OPTIONS: {
+  value: DeliveryStyle;
+  label: string;
+  description: string;
+  icon: typeof Layers;
+}[] = [
+  {
+    value: "stack-overlay",
+    label: "Stack Overlay",
+    description: "Toast notification that slides in and stacks at the corner of the screen",
+    icon: Layers,
+  },
+  {
+    value: "breaking-news",
+    label: "Breaking News Modal",
+    description: "Full-screen modal overlay that demands immediate attention",
+    icon: Monitor,
+  },
+  {
+    value: "table-chat",
+    label: "Table Chat Blast",
+    description: "Sends the announcement to all active table chat channels",
+    icon: MessageSquare,
+  },
 ];
 
 // Mock recent announcements for UI display
@@ -72,7 +99,26 @@ export default function AnnouncementManager() {
   const [message, setMessage] = useState("");
   const [audience, setAudience] = useState<Audience>("all");
   const [priority, setPriority] = useState<Priority>("normal");
+  const [deliveryStyle, setDeliveryStyle] = useState<DeliveryStyle>("stack-overlay");
   const [sending, setSending] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const wrapSelection = useCallback((marker: string) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = message.slice(start, end);
+    const wrapped = `${marker}${selected}${marker}`;
+    const newValue = message.slice(0, start) + wrapped + message.slice(end);
+    setMessage(newValue);
+    // Restore cursor position after React re-render
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.selectionStart = start + marker.length;
+      ta.selectionEnd = end + marker.length;
+    });
+  }, [message]);
   const [announcements, setAnnouncements] = useState<Announcement[]>(MOCK_ANNOUNCEMENTS);
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -93,7 +139,7 @@ export default function AnnouncementManager() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ title, message, audience, priority }),
+        body: JSON.stringify({ title, message, audience, priority, deliveryStyle }),
       });
 
       if (res.ok) {
@@ -111,6 +157,7 @@ export default function AnnouncementManager() {
         setMessage("");
         setAudience("all");
         setPriority("normal");
+        setDeliveryStyle("stack-overlay");
         setSuccessMessage("Announcement broadcast successfully!");
       } else {
         // If endpoint doesn't exist, still add to local list for demo
@@ -128,6 +175,7 @@ export default function AnnouncementManager() {
         setMessage("");
         setAudience("all");
         setPriority("normal");
+        setDeliveryStyle("stack-overlay");
         setSuccessMessage("Announcement added (endpoint unavailable, saved locally).");
       }
     } catch {
@@ -218,12 +266,18 @@ export default function AnnouncementManager() {
           {/* Message */}
           <div>
             <label className="label-luxury">Message</label>
+            <div className="flex items-center gap-1 px-2 py-1.5 rounded-t-lg" style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <button type="button" className="px-2 py-1 rounded text-xs font-bold text-white/50 hover:text-white hover:bg-white/10 transition-colors" onClick={() => wrapSelection("**")}>B</button>
+              <button type="button" className="px-2 py-1 rounded text-xs italic text-white/50 hover:text-white hover:bg-white/10 transition-colors" onClick={() => wrapSelection("*")}>I</button>
+              <button type="button" className="px-2 py-1 rounded text-xs underline text-white/50 hover:text-white hover:bg-white/10 transition-colors" onClick={() => wrapSelection("__")}>U</button>
+            </div>
             <textarea
+              ref={textareaRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Write your announcement message..."
               rows={4}
-              className="input-ghost w-full resize-none"
+              className="input-ghost w-full resize-none rounded-t-none"
             />
           </div>
 
@@ -272,6 +326,52 @@ export default function AnnouncementManager() {
                   );
                 })}
               </div>
+            </div>
+          </div>
+
+          {/* Delivery Style */}
+          <div>
+            <label className="label-luxury">Delivery Style</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-1.5">
+              {DELIVERY_STYLE_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isSelected = deliveryStyle === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setDeliveryStyle(opt.value)}
+                    className={`relative flex flex-col items-center text-center gap-2 px-4 py-4 rounded-xl border transition-all duration-200 cursor-pointer ${
+                      isSelected
+                        ? "border-primary bg-primary/10 shadow-[0_0_16px_rgba(234,179,8,0.15)]"
+                        : "border-white/[0.06] bg-surface-high/30 hover:border-white/[0.12] hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center border transition-colors ${
+                        isSelected
+                          ? "bg-primary/20 border-primary/40 text-primary"
+                          : "bg-white/5 border-white/[0.08] text-muted-foreground"
+                      }`}
+                    >
+                      <Icon className="w-4.5 h-4.5" />
+                    </div>
+                    <span
+                      className={`text-xs font-bold uppercase tracking-wider transition-colors ${
+                        isSelected ? "text-primary" : "text-white/70"
+                      }`}
+                    >
+                      {opt.label}
+                    </span>
+                    <span className="text-[0.625rem] leading-tight text-muted-foreground/60">
+                      {opt.description}
+                    </span>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_rgba(234,179,8,0.6)]" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

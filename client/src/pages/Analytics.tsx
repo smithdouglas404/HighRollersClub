@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
 import { useWallet } from "@/lib/wallet-context";
 import {
@@ -480,7 +481,8 @@ export default function Analytics() {
 
   return (
     <DashboardLayout title="Analytics">
-      <div className="px-8 pb-8">
+      <PageBackground image="/images/generated/analytics-bg.png" />
+      <div className="relative z-10 px-8 pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -501,14 +503,20 @@ export default function Analytics() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className={`rounded-xl p-4 border ${card.border} relative overflow-hidden bg-surface-high/50 backdrop-blur-xl border-white/[0.06]`}
+                    className="rounded-xl p-4 relative overflow-hidden"
+                    style={{
+                      background: "rgba(15,15,20,0.7)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)",
+                      border: "1px solid rgba(212,175,55,0.12)",
+                    }}
                   >
                     <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${card.gradient} blur-3xl rounded-full opacity-30`} />
                     <div className="relative">
                       <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${card.gradient} border ${card.border} flex items-center justify-center mb-3`}>
                         <Icon className={`w-5 h-5 ${card.textColor}`} />
                       </div>
-                      <div className={`text-2xl font-bold ${card.textColor} tracking-tight`}>
+                      <div className="text-2xl font-bold tracking-tight" style={{ color: "#d4af37" }}>
                         {card.value}
                       </div>
                       <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider mt-0.5">
@@ -525,7 +533,13 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-[#c9a84c]/15"
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "rgba(15,15,20,0.7)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
             >
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -563,11 +577,17 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "rgba(15,15,20,0.7)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
             >
-              <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-primary" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-primary/70">Detailed Statistics</h3>
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-[#c9a84c]/80" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Detailed Statistics</h3>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-white/[0.03]">
                 {advancedStats.map((stat, i) => (
@@ -584,7 +604,7 @@ export default function Analytics() {
                       </span>
                       {getTrendIcon(stat.trend)}
                     </div>
-                    <div className="text-xl font-bold text-white tracking-tight">
+                    <div className="text-xl font-bold tracking-tight" style={{ color: "#d4af37" }}>
                       {stat.value}
                     </div>
                     <div className="text-[0.5625rem] text-gray-500 mt-0.5">
@@ -600,11 +620,17 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="rounded-xl overflow-hidden bg-purple-500/[0.08] backdrop-blur-xl border border-purple-500/15"
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "rgba(15,15,20,0.7)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
             >
-              <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center gap-2">
-                <Brain className="w-4 h-4 text-purple-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-primary/70">Play Style Assessment</h3>
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                <Brain className="w-4 h-4 text-[#c9a84c]/80" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Play Style Assessment</h3>
               </div>
               <div className="p-5">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -665,7 +691,13 @@ export default function Analytics() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.45 }}
-                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-[#c9a84c]/15"
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: "rgba(15,15,20,0.7)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border: "1px solid rgba(212,175,55,0.12)",
+                }}
               >
                 <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -701,7 +733,13 @@ export default function Analytics() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-[#c9a84c]/15"
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: "rgba(15,15,20,0.7)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border: "1px solid rgba(212,175,55,0.12)",
+                }}
               >
                 <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -734,7 +772,13 @@ export default function Analytics() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.55 }}
-                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-[#c9a84c]/15"
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: "rgba(15,15,20,0.7)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border: "1px solid rgba(212,175,55,0.12)",
+                }}
               >
                 <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                   <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
@@ -762,9 +806,15 @@ export default function Analytics() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="lg:col-span-2 rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+                className="lg:col-span-2 rounded-xl overflow-hidden"
+                style={{
+                  background: "rgba(15,15,20,0.7)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border: "1px solid rgba(212,175,55,0.12)",
+                }}
               >
-                <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between">
+                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-[#c9a84c]/80" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Recent Activity</h3>
@@ -820,12 +870,18 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.65 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-purple-500/15"
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "rgba(15,15,20,0.7)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
             >
-              <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between">
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-purple-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-purple-400/70">Past AI Analyses</h3>
+                  <Brain className="w-4 h-4 text-[#c9a84c]/80" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Past AI Analyses</h3>
                 </div>
                 {analyses.length > 0 && (
                   <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{analyses.length} analyses</span>

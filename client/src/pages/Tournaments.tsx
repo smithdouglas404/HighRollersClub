@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageBackground } from "@/components/shared/PageBackground";
 import { Trophy, Clock, Users, Flame, Plus, Gamepad2 } from "lucide-react";
 
 interface Tournament {
@@ -93,7 +94,8 @@ export default function Tournaments() {
 
   return (
     <DashboardLayout title="Tournaments">
-      <div className="px-4 md:px-8 pb-8">
+      <PageBackground image="/images/generated/tournament-center-bg.png" />
+      <div className="relative z-10 px-4 md:px-8 pb-8">
         {/* ── Header ─────────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}
@@ -204,7 +206,13 @@ export default function Tournaments() {
                   key={tournament.id}
                   variants={cardVariants}
                   whileHover={{ scale: 1.005, y: -2 }}
-                  className="rounded-xl overflow-hidden transition-all cursor-pointer bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+                  className="rounded-xl overflow-hidden transition-all cursor-pointer"
+                  style={{
+                    background: "rgba(15,15,20,0.7)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    border: "1px solid rgba(212,175,55,0.12)",
+                  }}
                   onClick={() => navigate(`/tournaments/${tournament.id}`)}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5">
@@ -222,7 +230,7 @@ export default function Tournaments() {
 
                         {/* Registration status badge */}
                         {isRegOpen && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" style={{ boxShadow: "0 0 8px rgba(16,185,129,0.15)" }}>
                             <Flame className="w-3 h-3" />
                             REG OPEN
                           </span>

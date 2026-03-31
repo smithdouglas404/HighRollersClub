@@ -226,8 +226,8 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[0.5rem] text-muted-foreground uppercase tracking-wider font-medium">Total Balance</div>
-              <div className="text-xs font-bold text-primary tabular-nums group-hover:text-primary/80 transition-colors">
-                {(balance ?? 0).toLocaleString()} <span className="text-[0.5rem] text-primary/60">chips</span>
+              <div className="text-xs font-bold tabular-nums transition-colors" style={{ color: "#d4af37" }}>
+                {(balance ?? 0).toLocaleString()} <span className="text-[0.5rem]" style={{ color: "rgba(212,175,55,0.6)" }}>chips</span>
               </div>
             </div>
           </div>
@@ -284,7 +284,14 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
           className="relative z-10 w-[220px] min-h-screen flex flex-col shrink-0"
         >
           {/* Glass panel */}
-          <div className="absolute inset-0 bg-surface-lowest/90 backdrop-blur-xl border-r border-white/[0.06]" />
+          <div
+            className="absolute inset-0 border-r border-white/[0.06]"
+            style={{
+              background: "rgba(10,10,12,0.85)",
+              backdropFilter: "blur(20px)",
+              borderTop: "2px solid rgba(212,175,55,0.2)",
+            }}
+          />
           <div
             className="absolute inset-y-0 right-0 w-px"
             style={{
@@ -316,7 +323,14 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
               transition={{ duration: 0.25, ease: "easeOut" }}
               className="fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col"
             >
-              <div className="absolute inset-0 bg-surface-lowest/95 backdrop-blur-xl border-r border-white/[0.06]" />
+              <div
+                className="absolute inset-0 border-r border-white/[0.06]"
+                style={{
+                  background: "rgba(10,10,12,0.85)",
+                  backdropFilter: "blur(20px)",
+                  borderTop: "2px solid rgba(212,175,55,0.2)",
+                }}
+              />
               {sidebarContent}
             </motion.aside>
           </>
@@ -340,7 +354,13 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
               <motion.h1
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="text-base md:text-lg font-display font-bold tracking-wider text-white uppercase"
+                className="text-base md:text-lg font-display font-bold tracking-wider uppercase"
+                style={{
+                  background: "linear-gradient(180deg, #f5e6a3 0%, #d4af37 60%, #c9a84c 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
               >
                 {title}
               </motion.h1>

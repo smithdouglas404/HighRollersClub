@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageBackground } from "@/components/shared/PageBackground";
 import { useClub } from "@/lib/club-context";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -53,13 +54,15 @@ const slideVariants = {
 /* ── Card wrapper style helper ─────────────────────────────────────────────── */
 
 const cardStyle = {
-  background: "linear-gradient(135deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-  border: "1px solid rgba(0,212,255,0.1)",
+  background: "rgba(15,15,20,0.7)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  border: "1px solid rgba(212,175,55,0.12)",
 };
 
 const inputStyle = {
-  background: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(212,175,55,0.15)",
 };
 
 /* ── Main component ────────────────────────────────────────────────────────── */
@@ -178,7 +181,7 @@ export default function ClubCreate() {
                 className="w-8 h-px"
                 style={{
                   background: isCompleted
-                    ? "rgba(0,212,255,0.5)"
+                    ? "rgba(212,175,55,0.5)"
                     : "rgba(255,255,255,0.1)",
                 }}
               />
@@ -188,25 +191,25 @@ export default function ClubCreate() {
                 animate={{
                   scale: isCurrent ? 1.1 : 1,
                   borderColor: isCompleted
-                    ? "rgba(0,212,255,0.8)"
+                    ? "rgba(212,175,55,0.8)"
                     : isCurrent
-                      ? "rgba(0,212,255,0.5)"
+                      ? "rgba(212,175,55,0.5)"
                       : "rgba(255,255,255,0.15)",
                   background: isCompleted
-                    ? "rgba(0,212,255,0.15)"
+                    ? "rgba(212,175,55,0.15)"
                     : isCurrent
-                      ? "rgba(0,212,255,0.08)"
+                      ? "rgba(212,175,55,0.08)"
                       : "rgba(255,255,255,0.03)",
                 }}
                 transition={{ duration: 0.3 }}
                 className="w-9 h-9 rounded-full flex items-center justify-center border-2 shrink-0"
               >
                 {isCompleted ? (
-                  <Check className="w-4 h-4 text-primary" />
+                  <Check className="w-4 h-4 text-[#d4af37]" />
                 ) : (
                   <span
                     className={`text-xs font-bold ${
-                      isCurrent ? "text-primary" : "text-gray-500"
+                      isCurrent ? "text-[#d4af37]" : "text-gray-500"
                     }`}
                   >
                     {i + 1}
@@ -216,9 +219,9 @@ export default function ClubCreate() {
               <span
                 className={`text-[0.5625rem] font-medium tracking-wide hidden sm:block ${
                   isCurrent
-                    ? "text-primary"
+                    ? "text-[#d4af37]"
                     : isCompleted
-                      ? "text-cyan-500/70"
+                      ? "text-[#d4af37]/70"
                       : "text-gray-600"
                 }`}
               >
@@ -240,12 +243,12 @@ export default function ClubCreate() {
         className="relative rounded-xl overflow-hidden cursor-pointer group"
         style={{
           background: "rgba(255,255,255,0.03)",
-          border: "2px dashed rgba(0,212,255,0.2)",
+          border: "2px dashed rgba(212,175,55,0.2)",
           height: "140px",
         }}
       >
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 group-hover:bg-white/[0.02] transition-colors">
-          <Upload className="w-8 h-8 text-gray-500 group-hover:text-primary transition-colors" />
+          <Upload className="w-8 h-8 text-gray-500 group-hover:text-[#d4af37] transition-colors" />
           <span className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
             Upload Cover Image (1920x480 recommended)
           </span>
@@ -266,7 +269,7 @@ export default function ClubCreate() {
           minLength={2}
           maxLength={50}
           placeholder="Enter your club name..."
-          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40"
           style={inputStyle}
         />
       </div>
@@ -283,7 +286,7 @@ export default function ClubCreate() {
           maxLength={300}
           rows={3}
           placeholder="Describe your club..."
-          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none resize-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none resize-none transition-all focus:ring-1 focus:ring-[#d4af37]/40"
           style={inputStyle}
         />
         <div className="text-right text-[0.5625rem] text-gray-600">
@@ -308,13 +311,13 @@ export default function ClubCreate() {
                 className="relative rounded-xl overflow-hidden p-3 flex flex-col items-center gap-2 transition-all cursor-pointer"
                 style={{
                   background: isSelected
-                    ? "rgba(0,212,255,0.12)"
+                    ? "rgba(212,175,55,0.12)"
                     : "rgba(255,255,255,0.03)",
                   border: isSelected
-                    ? "2px solid rgba(0,212,255,0.6)"
+                    ? "2px solid rgba(212,175,55,0.6)"
                     : "2px solid rgba(255,255,255,0.08)",
                   boxShadow: isSelected
-                    ? "0 0 24px rgba(0,212,255,0.2), inset 0 0 12px rgba(0,212,255,0.05)"
+                    ? "0 0 24px rgba(212,175,55,0.2), inset 0 0 12px rgba(212,175,55,0.05)"
                     : "none",
                 }}
               >
@@ -323,14 +326,14 @@ export default function ClubCreate() {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center z-10"
-                    style={{ boxShadow: "0 0 8px rgba(0,212,255,0.5)" }}
+                    style={{ boxShadow: "0 0 8px rgba(212,175,55,0.5)" }}
                   >
                     <Check className="w-3 h-3 text-black" />
                   </motion.div>
                 )}
                 <div
                   className={`rounded-lg overflow-hidden transition-all ${
-                    isSelected ? "w-14 h-14 ring-2 ring-cyan-500/40" : "w-12 h-12"
+                    isSelected ? "w-14 h-14 ring-2 ring-[#d4af37]/40" : "w-12 h-12"
                   }`}
                 >
                   <img
@@ -341,7 +344,7 @@ export default function ClubCreate() {
                 </div>
                 <span
                   className={`text-[0.625rem] font-semibold ${
-                    isSelected ? "text-primary" : "text-gray-400"
+                    isSelected ? "text-[#d4af37]" : "text-gray-400"
                   }`}
                 >
                   {logo.label}
@@ -356,18 +359,18 @@ export default function ClubCreate() {
             animate={{ opacity: 1, y: 0 }}
             className="mt-3 flex items-center gap-3 px-3 py-2 rounded-lg"
             style={{
-              background: "rgba(0,212,255,0.06)",
-              border: "1px solid rgba(0,212,255,0.15)",
+              background: "rgba(212,175,55,0.06)",
+              border: "1px solid rgba(212,175,55,0.15)",
             }}
           >
-            <div className="w-8 h-8 rounded-md overflow-hidden ring-1 ring-cyan-500/30 shrink-0">
+            <div className="w-8 h-8 rounded-md overflow-hidden ring-1 ring-[#d4af37]/30 shrink-0">
               <img
                 src={LOGO_OPTIONS.find((l) => l.id === selectedLogo)?.url}
                 alt="Selected logo"
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-[0.625rem] text-primary font-semibold">
+            <span className="text-[0.625rem] text-[#d4af37] font-semibold">
               {LOGO_OPTIONS.find((l) => l.id === selectedLogo)?.label} selected
             </span>
           </motion.div>
@@ -442,14 +445,14 @@ export default function ClubCreate() {
                 className="py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
                 style={{
                   background: isSelected
-                    ? "linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,170,0.1))"
+                    ? "linear-gradient(135deg, rgba(154,123,44,0.15), rgba(212,175,55,0.1))"
                     : "rgba(255,255,255,0.04)",
                   border: isSelected
-                    ? "1px solid rgba(0,212,255,0.4)"
+                    ? "1px solid rgba(212,175,55,0.4)"
                     : "1px solid rgba(255,255,255,0.08)",
-                  color: isSelected ? "#00d4ff" : "rgba(255,255,255,0.5)",
+                  color: isSelected ? "#d4af37" : "rgba(255,255,255,0.5)",
                   boxShadow: isSelected
-                    ? "0 0 15px rgba(0,212,255,0.1)"
+                    ? "0 0 15px rgba(212,175,55,0.1)"
                     : "none",
                 }}
               >
@@ -473,7 +476,7 @@ export default function ClubCreate() {
           onChange={(e) => setChipBuyIn(Math.max(0, parseInt(e.target.value) || 0))}
           min={0}
           placeholder="1000"
-          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40"
           style={inputStyle}
         />
       </div>
@@ -491,7 +494,7 @@ export default function ClubCreate() {
           onChange={(e) => setCreditLimit(Math.max(0, parseInt(e.target.value) || 0))}
           min={0}
           placeholder="10000"
-          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40"
           style={inputStyle}
         />
         <p className="text-[0.5625rem] text-gray-500">Max chips a player can owe before being restricted</p>
@@ -501,12 +504,12 @@ export default function ClubCreate() {
       <div
         className="rounded-xl p-4"
         style={{
-          background: "rgba(0,212,255,0.04)",
-          border: "1px solid rgba(0,212,255,0.12)",
+          background: "rgba(212,175,55,0.04)",
+          border: "1px solid rgba(212,175,55,0.12)",
         }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <Shield className="w-4 h-4 text-primary" />
+          <Shield className="w-4 h-4 text-[#d4af37]" />
           <span className="text-xs font-bold text-white uppercase tracking-wider">
             Configuration Summary
           </span>
@@ -516,7 +519,7 @@ export default function ClubCreate() {
             <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">
               Capacity
             </span>
-            <span className="text-sm font-bold text-primary mt-0.5">
+            <span className="text-sm font-bold text-[#d4af37] mt-0.5">
               {maxMembers} members
             </span>
           </div>
@@ -524,7 +527,7 @@ export default function ClubCreate() {
             <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">
               Buy-in
             </span>
-            <span className="text-sm font-bold text-primary mt-0.5">
+            <span className="text-sm font-bold text-[#d4af37] mt-0.5">
               {chipBuyIn.toLocaleString()} chips
             </span>
           </div>
@@ -532,7 +535,7 @@ export default function ClubCreate() {
             <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">
               Credit Limit
             </span>
-            <span className="text-sm font-bold text-primary mt-0.5">
+            <span className="text-sm font-bold text-[#d4af37] mt-0.5">
               {creditLimit.toLocaleString()} chips
             </span>
           </div>
@@ -567,13 +570,13 @@ export default function ClubCreate() {
                 className="relative rounded-xl p-5 text-left transition-all cursor-pointer"
                 style={{
                   background: isSelected
-                    ? "rgba(0,212,255,0.08)"
+                    ? "rgba(212,175,55,0.08)"
                     : "rgba(255,255,255,0.03)",
                   border: isSelected
-                    ? "2px solid rgba(0,212,255,0.4)"
+                    ? "2px solid rgba(212,175,55,0.4)"
                     : "2px solid rgba(255,255,255,0.08)",
                   boxShadow: isSelected
-                    ? "0 0 25px rgba(0,212,255,0.08)"
+                    ? "0 0 25px rgba(212,175,55,0.08)"
                     : "none",
                 }}
               >
@@ -581,7 +584,8 @@ export default function ClubCreate() {
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
+                    className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{ background: "#d4af37" }}
                   >
                     <Check className="w-3 h-3 text-black" />
                   </motion.div>
@@ -590,16 +594,16 @@ export default function ClubCreate() {
                   className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
                   style={{
                     background: isSelected
-                      ? "rgba(0,212,255,0.15)"
+                      ? "rgba(212,175,55,0.15)"
                       : "rgba(255,255,255,0.06)",
                     border: `1px solid ${
-                      isSelected ? "rgba(0,212,255,0.3)" : "rgba(255,255,255,0.1)"
+                      isSelected ? "rgba(212,175,55,0.3)" : "rgba(255,255,255,0.1)"
                     }`,
                   }}
                 >
                   <Icon
                     className={`w-5 h-5 ${
-                      isSelected ? "text-primary" : "text-gray-500"
+                      isSelected ? "text-[#d4af37]" : "text-gray-500"
                     }`}
                   />
                 </div>
@@ -636,7 +640,7 @@ export default function ClubCreate() {
           className="relative w-10 h-5 rounded-full transition-colors shrink-0 mt-0.5"
           style={{
             background: requireApproval
-              ? "linear-gradient(135deg, #00d4ff, #00d4aa)"
+              ? "linear-gradient(135deg, #d4af37, #f3e2ad)"
               : "rgba(255,255,255,0.1)",
           }}
         >
@@ -670,15 +674,15 @@ export default function ClubCreate() {
       <div
         className="rounded-xl overflow-hidden"
         style={{
-          background: "rgba(0,212,255,0.04)",
-          border: "1px solid rgba(0,212,255,0.15)",
+          background: "rgba(212,175,55,0.04)",
+          border: "1px solid rgba(212,175,55,0.15)",
         }}
       >
         <div className="p-5 flex items-center gap-4">
           {selectedLogoOption ? (
             <div
-              className="w-16 h-16 rounded-xl overflow-hidden ring-2 ring-cyan-500/30 shrink-0"
-              style={{ boxShadow: "0 0 20px rgba(0,212,255,0.15)" }}
+              className="w-16 h-16 rounded-xl overflow-hidden ring-2 ring-[#d4af37]/30 shrink-0"
+              style={{ boxShadow: "0 0 20px rgba(212,175,55,0.15)" }}
             >
               <img
                 src={selectedLogoOption.url}
@@ -717,7 +721,7 @@ export default function ClubCreate() {
           className="px-5 py-3 flex items-center gap-2"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <Shield className="w-4 h-4 text-primary" />
+          <Shield className="w-4 h-4 text-[#d4af37]" />
           <span className="text-xs font-bold text-white uppercase tracking-wider">
             Club Summary
           </span>
@@ -747,8 +751,8 @@ export default function ClubCreate() {
         disabled={submitting}
         className="w-full py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider text-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         style={{
-          background: "linear-gradient(135deg, #00d4ff, #00d4aa)",
-          boxShadow: "0 0 30px rgba(0,212,255,0.2)",
+          background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)",
+          boxShadow: "0 0 30px rgba(212,175,55,0.3)",
         }}
       >
         {submitting ? (
@@ -775,7 +779,8 @@ export default function ClubCreate() {
 
   return (
     <DashboardLayout title="Create Club">
-      <div className="px-4 sm:px-8 pb-8">
+      <PageBackground image="/images/generated/club-setup-bg.png" />
+      <div className="relative z-10 px-4 sm:px-8 pb-8">
         <div className="max-w-2xl mx-auto">
           {/* Step Indicators */}
           {renderStepIndicator()}
@@ -790,11 +795,11 @@ export default function ClubCreate() {
               className="flex items-center gap-3 px-5 py-4"
               style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
             >
-              <div className="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center">
-                <Crown className="w-5 h-5 text-primary" />
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "rgba(212,175,55,0.12)", border: "1px solid rgba(212,175,55,0.25)" }}>
+                <Crown className="w-5 h-5 text-[#d4af37]" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                <h3 className="text-sm font-bold tracking-wider uppercase" style={{ background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 50%, #f3e2ad 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
                   {STEP_LABELS[step]}
                 </h3>
                 <p className="text-[0.5625rem] text-gray-500">
@@ -851,10 +856,10 @@ export default function ClubCreate() {
                   className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   style={{
                     background: canProceed()
-                      ? "linear-gradient(135deg, #00d4ff, #00d4aa)"
+                      ? "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)"
                       : "rgba(255,255,255,0.1)",
                     boxShadow: canProceed()
-                      ? "0 0 15px rgba(0,212,255,0.15)"
+                      ? "0 0 15px rgba(212,175,55,0.2)"
                       : "none",
                     color: canProceed() ? "#000" : "rgba(255,255,255,0.3)",
                   }}

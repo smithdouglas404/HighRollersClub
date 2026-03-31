@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageBackground } from "@/components/shared/PageBackground";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -1011,7 +1012,8 @@ export default function TournamentCreate() {
 
   return (
     <DashboardLayout title="Create Tournament">
-      <div className="px-4 md:px-8 pb-8">
+      <PageBackground image="/images/generated/tournament-center-bg.png" />
+      <div className="relative z-10 px-4 md:px-8 pb-8">
         {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

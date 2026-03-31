@@ -711,12 +711,11 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           )}
 
           <div className="relative" style={{ ...parallaxStyle, ...reactionStyle }}>
-            {/* Avatar section */}
+            {/* Avatar square — fits into table cyan slot */}
             <div
-              className="relative rounded-t-xl overflow-visible portrait-card"
+              className="relative rounded-lg overflow-hidden portrait-card"
               style={{
-                border: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderBottom: "none",
+                border: `2px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
                 boxShadow: isTurn
                   ? `0 0 30px ${hexToRgba(glowColor, 0.8)}, 0 0 60px ${hexToRgba(glowColor, 0.4)}, 0 0 90px ${hexToRgba(glowColor, 0.15)}, inset 0 0 20px ${hexToRgba(glowColor, 0.25)}`
                   : isWinner
@@ -728,27 +727,24 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             >
               {/* Top glow bar */}
               <div
-                className="absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-xl"
+                className="absolute top-0 left-0 right-0 h-[2px] z-20"
                 style={{
                   background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
                   boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.7)}`,
                 }}
               />
 
+              {/* Avatar image fills entire square */}
               {player.avatar ? (
                 <img
                   src={fullBodyImage || player.avatar}
                   alt={player.name}
-                  className="w-full h-full object-cover object-top relative z-[1] rounded-t-xl"
-                  style={fullBodyImage ? {
-                    // For full-body images (768x1408), show head and upper torso
-                    // by positioning from the top of the image
-                    objectPosition: "center 5%",
-                  } : undefined}
+                  className="absolute inset-0 w-full h-full object-cover object-top z-[1]"
+                  style={fullBodyImage ? { objectPosition: "center 5%" } : undefined}
                 />
               ) : (
                 <div
-                  className="w-full h-full flex items-center justify-center text-3xl font-black text-white/70 relative z-[1] rounded-t-xl"
+                  className="absolute inset-0 w-full h-full flex items-center justify-center text-2xl font-black text-white/70 z-[1]"
                   style={{
                     background: isHero
                       ? "linear-gradient(135deg, #0e7490, #164e63)"
@@ -759,35 +755,52 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 </div>
               )}
 
-              {/* Dark gradient overlay on avatar bottom */}
+              {/* Dark gradient overlay — name/chips readable at bottom */}
               <div
-                className="absolute inset-0 z-[2] pointer-events-none rounded-t-xl"
-                style={{ background: "linear-gradient(180deg, transparent 25%, rgba(10,10,12,0.85) 100%)" }}
+                className="absolute inset-0 z-[2] pointer-events-none"
+                style={{ background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.85) 100%)" }}
               />
 
-              {/* Face-down hole cards overlapping avatar bottom (Stitch style) */}
+              {/* Name + chips INSIDE the square at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 z-[3] px-1 pb-1">
+                <p
+                  className={cn(
+                    "text-[0.5rem] uppercase font-extrabold tracking-wide truncate leading-tight",
+                    isTurn ? "text-white" : "text-white/90"
+                  )}
+                  style={{ textShadow: isTurn ? `0 0 8px ${hexToRgba(glowColor, 0.5)}` : "0 1px 3px rgba(0,0,0,0.8)" }}
+                  onClick={(e) => { if (onPlayerClick) { e.stopPropagation(); onPlayerClick(player); } }}
+                >
+                  {player.name}
+                </p>
+                <div className="flex items-center gap-0.5 mt-0.5">
+                  <svg width="8" height="8" viewBox="0 0 10 10" className="flex-shrink-0">
+                    <circle cx="5" cy="5" r="4" fill="#d4af37" stroke="#b8860b" strokeWidth="1" />
+                  </svg>
+                  <span className="text-[0.5rem] font-mono font-bold text-[#ffd700]" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
+                    {formatChips(player.chips)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Face-down hole cards overlapping bottom edge */}
               {!hideCards && !isHero && player.cards && player.cards.length > 0 && !isFolded && (
-                <div className="absolute left-1/2 -translate-x-1/2 flex z-20" style={{ bottom: "-6px" }}>
+                <div className="absolute left-1/2 -translate-x-1/2 flex z-20" style={{ bottom: "-8px" }}>
                   {player.cards.filter((_, i) => dealCardCount === undefined || i < dealCardCount).map((_, i) => (
                     <div
                       key={`card-back-${i}`}
-                      className="rounded-md overflow-hidden"
+                      className="rounded-sm overflow-hidden"
                       style={{
-                        width: 36,
-                        height: 50,
-                        transform: i === 0 ? "rotate(-10deg) translateX(5px)" : "rotate(10deg) translateX(-5px)",
+                        width: 24,
+                        height: 34,
+                        transform: i === 0 ? "rotate(-8deg) translateX(3px)" : "rotate(8deg) translateX(-3px)",
                         background: "linear-gradient(135deg, #1e3a5f, #0d1b2a)",
-                        border: "2px solid rgba(0,243,255,0.3)",
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.8)",
+                        border: "1.5px solid rgba(0,243,255,0.3)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.8)",
                       }}
                     >
-                      <div
-                        className="w-full h-full flex items-center justify-center"
-                        style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,243,255,0.06) 3px, rgba(0,243,255,0.06) 6px)" }}
-                      >
-                        <div className="w-4 h-5 rounded border border-[#00f3ff]/30 bg-[#00f3ff]/10 flex items-center justify-center">
-                          <span className="text-[#00f3ff]/40 text-[9px] font-black">S</span>
-                        </div>
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,243,255,0.08) 3px, rgba(0,243,255,0.08) 6px)" }}>
+                        <span className="text-[#00f3ff]/40 text-[7px] font-black">H</span>
                       </div>
                     </div>
                   ))}
@@ -795,67 +808,23 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               )}
             </div>
 
-            {/* Glass info panel below avatar (Stitch style) */}
-            <div
-              className="relative z-30 w-full rounded-b-xl px-2.5 py-1.5"
-              style={{
-                background: isTurn ? `linear-gradient(180deg, rgba(15,15,20,0.92) 0%, ${hexToRgba(glowColor, 0.06)} 100%)` : "rgba(15,15,20,0.92)",
-                backdropFilter: "blur(12px)",
-                borderLeft: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderRight: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderBottom: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-              }}
-            >
-              <div className="flex items-center gap-1">
-                <span
-                  className={cn(
-                    "text-[0.6875rem] uppercase font-extrabold tracking-wide leading-tight truncate flex-1",
-                    isTurn ? "text-white" : "text-white/80",
-                    onPlayerClick && "pointer-events-auto cursor-pointer hover:text-cyan-300 transition-colors"
-                  )}
-                  style={{
-                    textShadow: isTurn ? `0 0 8px ${hexToRgba(glowColor, 0.5)}` : undefined,
-                  }}
-                  onClick={(e) => {
-                    if (onPlayerClick) {
-                      e.stopPropagation();
-                      onPlayerClick(player);
-                    }
-                  }}
-                >
-                  {player.name}
+            {/* Minimal info below square — bet amount and winner only */}
+            <div className="relative z-30 w-full flex items-center justify-center gap-1" style={{ marginTop: "2px" }}>
+              {player.currentBet > 0 && (
+                <span className="text-[#d4af37] text-[0.5rem] font-bold font-mono tabular-nums px-1.5 py-0.5 rounded"
+                  style={{ background: "rgba(10,10,12,0.8)", border: "1px solid rgba(212,175,55,0.25)" }}>
+                  {formatChips(player.currentBet)}
                 </span>
-                {!isHero && <PlayerNoteIcon playerId={player.id} />}
-              </div>
-
-              <div className="flex items-center justify-between mt-0.5">
-                <div className="flex items-center gap-0.5">
-                  <svg width="10" height="10" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
-                    <circle cx="10" cy="10" r="9" fill="#ffd700" stroke="#b8860b" strokeWidth="1.5" />
-                    <circle cx="10" cy="10" r="5.5" fill="none" stroke="#b8860b" strokeWidth="0.8" />
-                  </svg>
-                  <span
-                    className="text-[0.8125rem] font-mono font-black leading-tight tabular-nums"
-                    style={{
-                      color: chipsAnimating && chipsDelta < 0 ? "#ef4444" : chipsAnimating && chipsDelta > 0 ? "#22c55e" : "#ffd700",
-                      textShadow: chipsAnimating
-                        ? chipsDelta < 0 ? "0 0 10px rgba(239,68,68,0.6)" : "0 0 10px rgba(34,197,94,0.6)"
-                        : "0 0 6px rgba(255,215,0,0.3)",
-                      transition: "color 0.3s ease, text-shadow 0.3s ease",
-                    }}
-                  >
-                    {formatChips(animatedChips)}
-                  </span>
-                </div>
-                {player.currentBet > 0 && (
-                  <span className="text-[#d4af37] text-[0.625rem] font-bold font-mono tabular-nums">
-                    {formatChips(player.currentBet)}
-                  </span>
-                )}
-                {isFolded && (
-                  <span className="text-red-400 text-[0.5625rem] font-bold uppercase">Fold</span>
-                )}
-              </div>
+              )}
+              {isFolded && (
+                <span className="text-red-400 text-[0.5rem] font-bold uppercase px-1.5 py-0.5 rounded"
+                  style={{ background: "rgba(10,10,12,0.8)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                  FOLD
+                </span>
+              )}
+              {!isHero && <PlayerNoteIcon playerId={player.id} />}
+            </div>
+            <div className="w-full">
 
               {isWinner && (
                 <div className="mt-0.5 text-center">

@@ -197,11 +197,11 @@ export default function Landing() {
                 >
                   <Link href="/lobby">
                     <button
-                      className="group relative overflow-hidden rounded-xl px-10 py-4 font-bold text-base uppercase tracking-wider gradient-primary text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
+                      className="group relative overflow-hidden rounded-xl px-8 py-4 font-bold text-base uppercase tracking-wider gradient-primary text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
                       data-testid="button-play-now"
                     >
                       <div className="absolute inset-0 bg-white/0 group-hover:bg-white/15 transition-all duration-300" />
-                      <div className="relative flex items-center gap-2.5">
+                      <div className="relative flex items-center gap-2">
                         <Gamepad2 className="w-5 h-5" />
                         Play Now
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -211,7 +211,7 @@ export default function Landing() {
 
                   <Link href="/game">
                     <button
-                      className="rounded-xl px-7 py-4 text-sm font-semibold text-gray-300 hover:text-white transition-all bg-white/[0.03] border border-white/[0.06]"
+                      className="glass rounded-xl px-6 py-3.5 text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all border border-white/5"
                       data-testid="button-play-offline"
                     >
                       <div className="flex items-center gap-2">

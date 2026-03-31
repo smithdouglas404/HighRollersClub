@@ -1,4 +1,3 @@
-import { Environment } from "@react-three/drei";
 import { CameraRig } from "./CameraRig";
 import { TableBase } from "../table/TableBase";
 import { FeltSurface } from "../table/FeltSurface";
@@ -54,8 +53,8 @@ export function SceneRoot({ quality = "high", activeSeat, winnerSeat }: SceneRoo
       <pointLight position={[-4, 2, 0]} intensity={0.3} color="#58f1ff" distance={10} decay={2} />
       <pointLight position={[4, 2, 0]} intensity={0.3} color="#58f1ff" distance={10} decay={2} />
 
-      {/* Environment map for metallic reflections */}
-      <Environment preset="night" />
+      {/* Warm fill from below for metal underside reflections */}
+      <pointLight position={[0, -1, 0]} intensity={0.15} color="#1a1205" distance={8} />
 
       {/* ── Table Construction ── */}
       <group>

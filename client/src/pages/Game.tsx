@@ -1163,7 +1163,7 @@ function GameTable({
                 {USE_3D_TABLE ? (
                   <PokerSceneCanvas
                     quality="high"
-                    className="absolute inset-0"
+                    className="absolute inset-0 z-[1]"
                   />
                 ) : (
                   <CSSPokerTable

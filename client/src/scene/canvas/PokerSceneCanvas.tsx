@@ -1,12 +1,8 @@
 import { Canvas } from "@react-three/fiber";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+import * as THREE from "three";
 import { SceneRoot } from "./SceneRoot";
 
-/**
- * R3F Canvas wrapper — the rendered poker table scene.
- * Sized by parent container. Uses quality presets for DPR and performance.
- * Falls back gracefully on WebGL failure.
- */
 interface PokerSceneCanvasProps {
   quality?: "low" | "medium" | "high" | "cinematic";
   activeSeat?: number;
@@ -20,24 +16,33 @@ export function PokerSceneCanvas({
   winnerSeat,
   className,
 }: PokerSceneCanvasProps) {
+  const [error, setError] = useState(false);
   const dpr = quality === "cinematic" ? 2 : quality === "high" ? 1.5 : quality === "medium" ? 1.25 : 1;
 
+  if (error) {
+    return (
+      <div className={className} style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "#ff6e72" }}>
+        <p>3D rendering failed. Your browser may not support WebGL.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className={className} style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div className={className} style={{ width: "100%", height: "100%" }}>
       <Canvas
         dpr={dpr}
         shadows={quality !== "low"}
         gl={{
           antialias: quality !== "low",
-          alpha: true,
+          alpha: false,
           powerPreference: "high-performance",
-          toneMapping: 3, // ACESFilmicToneMapping
-          toneMappingExposure: 1.1,
         }}
-        style={{ background: "transparent" }}
         onCreated={({ gl }) => {
-          gl.setClearColor(0x000000, 0);
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.1;
+          gl.setClearColor(new THREE.Color("#070a10"), 1);
         }}
+        onError={() => setError(true)}
       >
         <Suspense fallback={null}>
           <SceneRoot

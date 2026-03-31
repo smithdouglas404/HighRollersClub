@@ -603,7 +603,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                       type="text"
                       value={playerName}
                       onChange={(e) => setPlayerName(e.target.value.slice(0, 16))}
-                      onKeyDown={(e) => e.key === "Enter" && handleNext()}
+                      onKeyDown={(e) => e.key === "Enter" && (mode === "offline" ? handlePracticeMode() : handleNext())}
                       placeholder="Enter your player name..."
                       maxLength={16}
                       className="w-full rounded-xl px-4 py-3.5 text-sm text-white placeholder-gray-600 outline-none transition-all bg-white/[0.03] backdrop-blur-sm focus:bg-white/[0.05]"
@@ -617,22 +617,42 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                     </div>
                   </div>
 
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleNext}
-                    disabled={!playerName.trim()}
-                    className={`rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all ${
-                      playerName.trim() ? "text-black" : "text-gray-600 bg-gray-800/50 cursor-not-allowed"
-                    }`}
-                    style={playerName.trim() ? {
-                      background: `linear-gradient(135deg, ${selectedAvatar.borderColor}, ${selectedAvatar.borderColor}cc)`,
-                      boxShadow: `0 0 25px ${selectedAvatar.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
-                    } : undefined}
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </motion.button>
+                  {mode === "offline" ? (
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handlePracticeMode}
+                      disabled={!playerName.trim()}
+                      className={`rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all ${
+                        playerName.trim() ? "text-black" : "text-gray-600 bg-gray-800/50 cursor-not-allowed"
+                      }`}
+                      style={playerName.trim() ? {
+                        background: `linear-gradient(135deg, ${selectedAvatar.borderColor}, ${selectedAvatar.borderColor}cc)`,
+                        boxShadow: `0 0 25px ${selectedAvatar.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
+                      } : undefined}
+                    >
+                      <Flame className="w-4 h-4" />
+                      Play Now
+                      <ChevronRight className="w-4 h-4" />
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleNext}
+                      disabled={!playerName.trim()}
+                      className={`rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all ${
+                        playerName.trim() ? "text-black" : "text-gray-600 bg-gray-800/50 cursor-not-allowed"
+                      }`}
+                      style={playerName.trim() ? {
+                        background: `linear-gradient(135deg, ${selectedAvatar.borderColor}, ${selectedAvatar.borderColor}cc)`,
+                        boxShadow: `0 0 25px ${selectedAvatar.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
+                      } : undefined}
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </motion.button>
+                  )}
                 </motion.div>
               </>
             ) : (

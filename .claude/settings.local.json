@@ -201,7 +201,8 @@
       "Bash(find /home/runner/.claude -name *.md -type f)",
       "Bash(ls:*)",
       "Bash(find /home/runner/workspace/client/src -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))",
-      "Bash(find /home/runner/workspace/server /home/runner/workspace/shared -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))"
+      "Bash(find /home/runner/workspace/server /home/runner/workspace/shared -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))",
+      "Bash(git checkout:*)"
     ]
   }
 }

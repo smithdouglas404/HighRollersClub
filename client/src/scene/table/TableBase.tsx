@@ -3,21 +3,22 @@ import * as THREE from "three";
 import { createUnderbodyMaterial } from "../materials/metalMaterial";
 
 /**
- * Table base — Layer 6.
- * Structural underbody that sits beneath all rings.
- * Largest ellipse, darkest material.
- * rx=2.55, rz=1.68, h=0.12.
+ * Elliptical table base — the structural underbody giving 3D thickness.
+ * Not a flat disc — has visible depth and a premium silhouette.
  */
 export function TableBase() {
-  const geometry = useMemo(() => {
+  const { geometry, material } = useMemo(() => {
+    // Elliptical cylinder: radiusTop, radiusBottom, height, radialSegments
     const geo = new THREE.CylinderGeometry(1, 1, 0.12, 64);
-    geo.scale(2.55, 1, 1.68);
-    return geo;
+    // Scale to ellipse: wider on X than Z
+    geo.scale(2.4, 1, 1.6);
+    const mat = createUnderbodyMaterial();
+    return { geometry: geo, material: mat };
   }, []);
 
-  const material = useMemo(() => createUnderbodyMaterial(), []);
-
   return (
-    <mesh geometry={geometry} material={material} position={[0, -0.06, 0]} receiveShadow />
+    <group position={[0, -0.06, 0]}>
+      <mesh geometry={geometry} material={material} receiveShadow />
+    </group>
   );
 }

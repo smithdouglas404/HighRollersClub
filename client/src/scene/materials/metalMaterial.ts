@@ -1,50 +1,48 @@
 import * as THREE from "three";
 
 /**
- * Dark gunmetal rail material — wide structural ring.
- * MeshPhysicalMaterial for environment map reflections.
- * Roughness 0.35 gives brushed-metal look, metalness 0.92 for full metal response.
+ * Dark gunmetal ring material — brushed dark metal with cyan reflective response.
  */
-export function createGunmetalMaterial(): THREE.MeshPhysicalMaterial {
-  return new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color("#141a23"),
+export function createGunmetalMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: new THREE.Color("#1a1d24"),
     roughness: 0.35,
     metalness: 0.92,
-    envMapIntensity: 0.8,
+    envMapIntensity: 0.6,
   });
 }
 
 /**
- * Premium gold outer ring — prestige accent.
- * High metalness + low roughness + clearcoat for sharp reflections.
+ * Premium gold/brass inner ring material — warm sheen, not flat yellow.
  */
-export function createGoldMaterial(): THREE.MeshPhysicalMaterial {
-  return new THREE.MeshPhysicalMaterial({
+export function createGoldMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
     color: new THREE.Color("#c9942e"),
-    roughness: 0.25,
+    roughness: 0.28,
     metalness: 0.95,
+    emissive: new THREE.Color("#3d2e0a"),
+    emissiveIntensity: 0.15,
     envMapIntensity: 1.2,
-    clearcoat: 0.3,
-    clearcoatRoughness: 0.1,
   });
 }
 
 /**
- * Cyan emissive material for seat rings and accent rings.
- * Self-illuminating — bloom picks this up above the luminance threshold.
+ * Cyan emissive material for seat ring accents.
  */
-export function createCyanEmissiveMaterial(intensity = 0.6): THREE.MeshStandardMaterial {
+export function createCyanEmissiveMaterial(intensity = 0.8): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: new THREE.Color("#1a3040"),
     emissive: new THREE.Color("#58f1ff"),
     emissiveIntensity: intensity,
-    roughness: 0.3,
-    metalness: 0.5,
+    roughness: 0.4,
+    metalness: 0.6,
+    transparent: true,
+    opacity: 0.95,
   });
 }
 
 /**
- * Dark structural underbody material — table base.
+ * Dark structural underbody material.
  */
 export function createUnderbodyMaterial(): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({

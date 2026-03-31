@@ -747,6 +747,108 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 </div>
               )}
             </div>
+
+            {/* ── Name + Chips tag — anchored OUTSIDE the table ── */}
+            {(() => {
+              // Position tag outward from table center based on seat index
+              // Top seats (3-6): tag goes below
+              // Bottom seats (0,1,9): tag goes above
+              // Left seat (2): tag goes right
+              // Right seat (8): tag goes left
+              const isTop = seatIndex >= 3 && seatIndex <= 6;
+              const isBottom = seatIndex === 0 || seatIndex === 1 || seatIndex === 9;
+              const isLeft = seatIndex === 2;
+              const isRight = seatIndex === 8;
+
+              const tagStyle: React.CSSProperties = {
+                position: "absolute",
+                zIndex: 35,
+                background: "rgba(8,8,12,0.88)",
+                backdropFilter: "blur(8px)",
+                border: `1px solid ${hexToRgba(glowColor, 0.3)}`,
+                borderRadius: "6px",
+                padding: "2px 6px",
+                whiteSpace: "nowrap" as const,
+                ...(isTop ? { top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: "4px" } : {}),
+                ...(isBottom ? { bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: "4px" } : {}),
+                ...(isLeft ? { left: "100%", top: "50%", transform: "translateY(-50%)", marginLeft: "4px" } : {}),
+                ...(isRight ? { right: "100%", top: "50%", transform: "translateY(-50%)", marginRight: "4px" } : {}),
+              };
+
+              return (
+                <div style={tagStyle}>
+                  <p className="text-[0.5rem] font-bold text-white/90 truncate max-w-[70px] leading-tight"
+                    style={{ textShadow: `0 0 6px ${hexToRgba(glowColor, 0.4)}` }}>
+                    {player.name}
+                  </p>
+                  <div className="flex items-center gap-0.5">
+                    <svg width="7" height="7" viewBox="0 0 10 10" className="flex-shrink-0">
+                      <circle cx="5" cy="5" r="4" fill="#d4af37" stroke="#b8860b" strokeWidth="1" />
+                    </svg>
+                    <span className="text-[0.5rem] font-mono font-bold text-[#ffd700] leading-tight">
+                      {formatChips(animatedChips)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Bet amount — floats between avatar and table center ── */}
+            {player.currentBet > 0 && !isFolded && (() => {
+              const isTop = seatIndex >= 3 && seatIndex <= 6;
+              const isLeft = seatIndex === 1 || seatIndex === 2 || seatIndex === 3;
+              const isRight = seatIndex === 7 || seatIndex === 8 || seatIndex === 9;
+              const betStyle: React.CSSProperties = {
+                position: "absolute",
+                zIndex: 25,
+                ...(seatIndex === 0 ? { top: "-20px", left: "50%", transform: "translateX(-50%)" } : {}),
+                ...(seatIndex === 5 ? { bottom: "-20px", left: "50%", transform: "translateX(-50%)" } : {}),
+                ...(isTop && seatIndex !== 5 ? { bottom: "-18px", left: "50%", transform: "translateX(-50%)" } : {}),
+                ...(!isTop && seatIndex !== 0 && isLeft ? { right: "-8px", top: "50%", transform: "translateY(-50%) translateX(100%)" } : {}),
+                ...(!isTop && seatIndex !== 0 && isRight ? { left: "-8px", top: "50%", transform: "translateY(-50%) translateX(-100%)" } : {}),
+              };
+              return (
+                <div style={betStyle} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                  style2-unused=""
+                >
+                  <span className="text-[#d4af37] text-[0.5rem] font-bold font-mono"
+                    style={{ background: "rgba(10,10,12,0.85)", border: "1px solid rgba(212,175,55,0.3)", borderRadius: "9999px", padding: "1px 6px" }}>
+                    {formatChips(player.currentBet)}
+                  </span>
+                </div>
+              );
+            })()}
+
+            {/* ── Face-down cards — between avatar and felt center ── */}
+            {!hideCards && !isHero && player.cards && player.cards.length > 0 && !isFolded && (() => {
+              const isTop = seatIndex >= 3 && seatIndex <= 6;
+              const cardStyle: React.CSSProperties = {
+                position: "absolute",
+                zIndex: 20,
+                display: "flex",
+                ...(isTop ? { bottom: "-16px", left: "50%", transform: "translateX(-50%)" } : {}),
+                ...(!isTop && seatIndex === 0 ? { top: "-16px", left: "50%", transform: "translateX(-50%)" } : {}),
+                ...(!isTop && seatIndex === 2 ? { right: "-16px", top: "50%", transform: "translateY(-50%)" } : {}),
+                ...(!isTop && seatIndex === 8 ? { left: "-16px", top: "50%", transform: "translateY(-50%)" } : {}),
+                ...(!isTop && (seatIndex === 1 || seatIndex === 3) ? { right: "-12px", bottom: "-4px" } : {}),
+                ...(!isTop && (seatIndex === 7 || seatIndex === 9) ? { left: "-12px", bottom: "-4px" } : {}),
+              };
+              return (
+                <div style={cardStyle}>
+                  {player.cards.filter((_, i) => dealCardCount === undefined || i < dealCardCount).map((_, i) => (
+                    <div key={`cb-${i}`} className="rounded-sm overflow-hidden"
+                      style={{
+                        width: 18, height: 26,
+                        transform: i === 0 ? "rotate(-6deg) translateX(2px)" : "rotate(6deg) translateX(-2px)",
+                        background: "linear-gradient(135deg, #1e3a5f, #0d1b2a)",
+                        border: "1px solid rgba(0,243,255,0.3)",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.7)",
+                      }}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {isTurn && (

@@ -174,34 +174,38 @@ export function ImageTable({
       {/* ── Game elements overlay (z-index: 10) ── */}
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
 
-        {/* Empty seat slots — clickable to select seat */}
+        {/* Seat slots — rendered as HTML squares (never misalign on resize) */}
         {Array.from({ length: maxSeats }).map((_, i) => {
-          if (i < occupiedCount) return null;
           const seat = TABLE_SEATS[i];
           if (!seat) return null;
-          return (
-            <div
-              key={`empty-${i}`}
-              className="absolute pointer-events-auto cursor-pointer group"
-              style={{
-                left: `${seat.x}%`,
-                top: `${seat.y}%`,
-                transform: `translate(-50%, -50%) scale(${seat.scale})`,
-              }}
-            >
+          const isOccupied = i < occupiedCount;
+          // Empty seats are clickable
+          if (!isOccupied) {
+            return (
               <div
-                className="portrait-card rounded-lg border-2 border-dashed flex flex-col items-center justify-center transition-all group-hover:border-cyan-400/60 group-hover:scale-105"
+                key={`empty-${i}`}
+                className="absolute pointer-events-auto cursor-pointer group"
                 style={{
-                  borderColor: "rgba(0,243,255,0.25)",
-                  background: "rgba(0,243,255,0.05)",
-                  boxShadow: "0 0 12px rgba(0,243,255,0.08), inset 0 0 8px rgba(0,243,255,0.04)",
+                  left: `${seat.x}%`,
+                  top: `${seat.y}%`,
+                  transform: `translate(-50%, -50%)`,
                 }}
               >
-                <span className="text-[0.5rem] text-cyan-400/40 font-mono font-bold">#{i + 1}</span>
-                <span className="text-[0.4375rem] text-cyan-400/30 uppercase tracking-wider mt-0.5 group-hover:text-cyan-400/60 transition-colors">SIT</span>
+                <div
+                  className="portrait-card rounded-lg border-2 border-dashed flex flex-col items-center justify-center transition-all group-hover:border-cyan-400/60 group-hover:scale-110"
+                  style={{
+                    borderColor: "rgba(0,243,255,0.3)",
+                    background: "rgba(0,243,255,0.06)",
+                    boxShadow: "0 0 15px rgba(0,243,255,0.1), inset 0 0 10px rgba(0,243,255,0.05)",
+                  }}
+                >
+                  <span className="text-[0.5625rem] text-cyan-400/50 font-mono font-bold">#{i + 1}</span>
+                  <span className="text-[0.4375rem] text-cyan-400/30 uppercase tracking-wider mt-0.5 group-hover:text-cyan-400/70 transition-colors">SIT</span>
+                </div>
               </div>
-            </div>
-          );
+            );
+          }
+          return null; // Occupied seats rendered by Seat component
         })}
 
         {/* ── Burn card visual ── */}

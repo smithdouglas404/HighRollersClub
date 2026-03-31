@@ -176,7 +176,23 @@
       "Bash(ls /home/runner/workspace/client/public/cyberpunk*)",
       "Bash(grep -r noise /home/runner/workspace/client/src --include=*.css --include=*.tsx --include=*.ts)",
       "Bash(grep -r \"plo\\\\|PLO\\\\|omaha\\\\|Omaha\\\\|short_deck\\\\|short-deck\" /home/runner/workspace/server --include=*.ts)",
-      "Bash(grep -r \"pokerVariant\\\\|poker_variant\\\\|gameVariant\" /home/runner/workspace --include=*.ts --include=*.tsx)"
+      "Bash(grep -r \"pokerVariant\\\\|poker_variant\\\\|gameVariant\" /home/runner/workspace --include=*.ts --include=*.tsx)",
+      "Bash(npx nano-banana:*)",
+      "Bash(pip show:*)",
+      "Read(//home/runner/.claude/**)",
+      "Bash(env)",
+      "Bash(printenv)",
+      "Bash(export OPENAI_API_KEY=\"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\")",
+      "Bash(node -e \":*)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npm ls:*)",
+      "Bash(node:*)",
+      "Bash(grep -r \"RichText\\\\|ContentEditable\\\\|text editor\" /home/runner/workspace/client/src --include=*.tsx)",
+      "Bash(ls vite.config*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(grep:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

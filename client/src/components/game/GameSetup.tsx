@@ -102,7 +102,7 @@ interface GameSetupProps {
 
 export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameSetupProps) {
   const { feltColor, setFeltColor, cardBack, setCardBack } = useGameUI();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
   const [isReady, setIsReady] = useState(false);
 
   // Step 1: Avatar + Name
@@ -185,27 +185,38 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
     : AVATAR_OPTIONS.filter(a => a.tier === tierFilter);
 
   const handleNext = () => {
-    if (!playerName.trim()) return;
-    if (mode === "offline" && onStartOffline) {
-      setIsReady(true);
-      const practiceConfig: GameSetupConfig = {
-        ...buildConfig(),
-        gameFormat: "cash",
-        maxPlayers: 4,
-        smallBlind: 1,
-        bigBlind: 2,
-        ante: 0,
-        timeBankSeconds: 60,
-        minBuyIn: 100,
-        maxBuyIn: 500,
-        allowBots: true,
-        rakePercent: 0,
-        rakeCap: 0,
-      };
-      setTimeout(() => onStartOffline(selectedAvatar, playerName.trim(), practiceConfig), 800);
-      return;
+    if (step === 1 && !playerName.trim()) return;
+    if (step < 6) {
+      setStep((step + 1) as 1 | 2 | 3 | 4 | 5 | 6);
     }
-    setStep(2);
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep((step - 1) as 1 | 2 | 3 | 4 | 5 | 6);
+    }
+  };
+
+  const handlePracticeMode = () => {
+    if (!playerName.trim()) return;
+    setIsReady(true);
+    const practiceConfig: GameSetupConfig = {
+      ...buildConfig(),
+      gameFormat: "cash",
+      maxPlayers: 4,
+      smallBlind: 1,
+      bigBlind: 2,
+      ante: 0,
+      timeBankSeconds: 60,
+      minBuyIn: 100,
+      maxBuyIn: 500,
+      allowBots: true,
+      rakePercent: 0,
+      rakeCap: 0,
+    };
+    if (onStartOffline) {
+      setTimeout(() => onStartOffline(selectedAvatar, playerName.trim(), practiceConfig), 800);
+    }
   };
 
   const buildConfig = (): GameSetupConfig => ({
@@ -310,51 +321,55 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
     );
   };
 
-  // ─── Progress Bar ─────────────────────────────────────────────────
+  const WIZARD_STEPS: { icon: any; label: string }[] = [
+    { icon: Gamepad2, label: "Avatar" },
+    { icon: Coins, label: "Format" },
+    { icon: DollarSign, label: "Stakes" },
+    { icon: Layers, label: "Rules" },
+    { icon: Timer, label: "Extras" },
+    { icon: Eye, label: "Review" },
+  ];
+
   const ProgressBar = () => (
-    <div className="flex items-center justify-center gap-0 max-w-xs mx-auto">
-      {/* Step 1 */}
-      <button
-        onClick={() => step === 2 && setStep(1)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
-          step === 1
-            ? "text-white"
-            : "text-gray-500 hover:text-gray-300 cursor-pointer"
-        }`}
-        style={step === 1 ? { color: selectedAvatar.borderColor } : {}}
-      >
-        <Gamepad2 className="w-3.5 h-3.5" />
-        Avatar
-      </button>
-
-      {/* Connector line */}
-      <div className="flex-1 h-px mx-1 relative">
-        <div className="absolute inset-0 bg-gray-700" />
-        <motion.div
-          className="absolute inset-y-0 left-0"
-          initial={false}
-          animate={{ width: step === 2 ? "100%" : "0%" }}
-          transition={{ duration: 0.4, ease: "easeInOut" }}
-          style={{ backgroundColor: selectedAvatar.borderColor }}
-        />
-      </div>
-
-      {/* Step 2 */}
-      <button
-        onClick={() => step === 1 && playerName.trim() && setStep(2)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
-          step === 2
-            ? "text-white"
-            : step === 1 && playerName.trim()
-              ? "text-gray-500 hover:text-gray-300 cursor-pointer"
-              : "text-gray-600 cursor-not-allowed"
-        }`}
-        style={step === 2 ? { color: selectedAvatar.borderColor } : {}}
-        disabled={step === 1 && !playerName.trim()}
-      >
-        <Settings2 className="w-3.5 h-3.5" />
-        Settings
-      </button>
+    <div className="flex items-center justify-center gap-0 max-w-xl mx-auto">
+      {WIZARD_STEPS.map((ws, i) => {
+        const stepNum = (i + 1) as 1 | 2 | 3 | 4 | 5 | 6;
+        const Icon = ws.icon;
+        const isActive = step === stepNum;
+        const isCompleted = step > stepNum;
+        const canClick = isCompleted || (stepNum === step + 1 && (step !== 1 || playerName.trim()));
+        return (
+          <div key={i} className="flex items-center">
+            {i > 0 && (
+              <div className="w-4 sm:w-6 h-px mx-0.5 relative">
+                <div className="absolute inset-0 bg-gray-700" />
+                <motion.div
+                  className="absolute inset-y-0 left-0"
+                  initial={false}
+                  animate={{ width: isCompleted || isActive ? "100%" : "0%" }}
+                  transition={{ duration: 0.4, ease: "easeInOut" }}
+                  style={{ backgroundColor: selectedAvatar.borderColor }}
+                />
+              </div>
+            )}
+            <button
+              onClick={() => canClick && setStep(stepNum)}
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[0.5rem] sm:text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
+                isActive
+                  ? "text-white"
+                  : isCompleted
+                  ? "text-gray-400 hover:text-gray-200 cursor-pointer"
+                  : "text-gray-600 cursor-not-allowed"
+              }`}
+              style={isActive ? { color: selectedAvatar.borderColor } : {}}
+              disabled={!canClick && !isActive}
+            >
+              <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden sm:inline">{ws.label}</span>
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 
@@ -491,7 +506,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                 <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(0,212,255,0.5)]" />
               </div>
               <h1 className="font-display text-lg font-bold tracking-[0.2em] gold-text">
-                {step === 1 ? "CHOOSE YOUR AVATAR" : "GAME SETTINGS"}
+                {step === 1 ? "CHOOSE YOUR AVATAR" : step === 2 ? "GAME FORMAT" : step === 3 ? "STAKES & PLAYERS" : step === 4 ? "TABLE RULES" : step === 5 ? "SPEED & EXTRAS" : "REVIEW"}
               </h1>
               <ProgressBar />
             </motion.div>
@@ -621,112 +636,98 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                 </motion.div>
               </>
             ) : (
-              /* ─── Step 2: Game Settings ─── */
               <motion.div
+                key={`wizard-step-${step}`}
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.05 }}
                 className="max-w-lg mx-auto space-y-4"
               >
-                {/* Avatar Preview Strip */}
                 <AvatarPreview />
 
-                {/* Quick Start — Beginner Practice Mode */}
-                <motion.button
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.08 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    setGameFormat("cash");
-                    setMaxPlayers(4);
-                    setSmallBlind(1);
-                    setBigBlind(2);
-                    setAnte(0);
-                    setTimeBankSeconds(60);
-                    setMinBuyIn(100);
-                    setMaxBuyIn(500);
-                    setAllowBots(true);
-                    handleStart();
-                  }}
-                  className="w-full rounded-xl px-5 py-4 text-left flex items-center gap-4 transition-all"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(52,211,153,0.08), rgba(0,212,255,0.05))",
-                    border: "1px solid rgba(52,211,153,0.2)",
-                    boxShadow: "0 0 20px rgba(52,211,153,0.08)",
-                  }}
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.25)" }}
-                  >
-                    <Gamepad2 className="w-5 h-5 text-emerald-400" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-bold text-emerald-300">Practice Mode</div>
-                    <div className="text-[0.625rem] text-gray-400 mt-0.5">Micro stakes, slow timer, 4 players — perfect for learning</div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-emerald-500/50" />
-                </motion.button>
+                {step === 2 && (
+                  <>
+                    {mode === "offline" && (
+                      <motion.button
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.08 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handlePracticeMode}
+                        className="w-full rounded-xl px-5 py-4 text-left flex items-center gap-4 transition-all"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(52,211,153,0.08), rgba(0,212,255,0.05))",
+                          border: "1px solid rgba(52,211,153,0.2)",
+                          boxShadow: "0 0 20px rgba(52,211,153,0.08)",
+                        }}
+                      >
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.25)" }}
+                        >
+                          <Gamepad2 className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-bold text-emerald-300">Practice Mode</div>
+                          <div className="text-[0.625rem] text-gray-400 mt-0.5">Micro stakes, slow timer, 4 players — perfect for learning</div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-emerald-500/50" />
+                      </motion.button>
+                    )}
 
-                {/* Divider */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-white/[0.06]" />
-                  <span className="text-[0.5625rem] text-gray-400 font-bold uppercase tracking-wider">or customize</span>
-                  <div className="flex-1 h-px bg-white/[0.06]" />
-                </div>
-
-                {/* Settings Card */}
-                <motion.div
-                  initial={{ y: 15, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.12 }}
-                  className="rounded-2xl backdrop-blur-md bg-white/[0.04] border border-white/[0.1] p-5 space-y-4"
-                  style={{ boxShadow: `0 0 40px ${selectedAvatar.glowColor.replace("0.3", "0.05")}` }}
-                >
-                  {/* Format Selector */}
-                  <div>
-                    <label className={labelClass}>Game Format</label>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {FORMAT_OPTIONS.map(opt => {
-                        const Icon = opt.icon;
-                        const isSelected = gameFormat === opt.key;
-                        return (
-                          <button
-                            key={opt.key}
-                            type="button"
-                            title={opt.tooltip}
-                            onClick={() => {
-                              setGameFormat(opt.key);
-                              if (opt.key === "heads_up") setMaxPlayers(2);
-                              else if (maxPlayers === 2) setMaxPlayers(6);
-                            }}
-                            className={`p-2 rounded-lg border text-center transition-all ${
-                              isSelected
-                                ? "border-transparent"
-                                : "bg-white/[0.04] border-white/[0.1] text-gray-300 hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
-                            }`}
-                            style={isSelected ? {
-                              backgroundColor: `rgba(${opt.rgb},0.1)`,
-                              borderColor: `rgba(${opt.rgb},0.3)`,
-                              boxShadow: `0 0 12px rgba(${opt.rgb},0.15)`,
-                              color: `rgb(${opt.rgb})`,
-                            } : {}}
-                          >
-                            <Icon className="w-5 h-5 mx-auto mb-1" />
-                            <div className="text-[8px] font-bold uppercase tracking-wider leading-tight">{opt.label}</div>
-                          </button>
-                        );
-                      })}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-white/[0.06]" />
+                      <span className="text-[0.5625rem] text-gray-400 font-bold uppercase tracking-wider">choose format</span>
+                      <div className="flex-1 h-px bg-white/[0.06]" />
                     </div>
-                    {/* Format description */}
-                    <div className="mt-1.5 text-[0.625rem] text-cyan-400/60 text-center italic">
-                      {selectedFormat.desc}
-                    </div>
-                  </div>
 
-                  {/* Table Name (multiplayer only) */}
+                    <motion.div
+                      initial={{ y: 15, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.12 }}
+                      className="rounded-2xl backdrop-blur-md bg-white/[0.04] border border-white/[0.1] p-5 space-y-4"
+                      style={{ boxShadow: `0 0 40px ${selectedAvatar.glowColor.replace("0.3", "0.05")}` }}
+                    >
+                      <div>
+                        <label className={labelClass}>Game Format</label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {FORMAT_OPTIONS.map(opt => {
+                            const Icon = opt.icon;
+                            const isSelected = gameFormat === opt.key;
+                            return (
+                              <button
+                                key={opt.key}
+                                type="button"
+                                title={opt.tooltip}
+                                onClick={() => {
+                                  setGameFormat(opt.key);
+                                  if (opt.key === "heads_up") setMaxPlayers(2);
+                                  else if (maxPlayers === 2) setMaxPlayers(6);
+                                }}
+                                className={`p-2 rounded-lg border text-center transition-all ${
+                                  isSelected
+                                    ? "border-transparent"
+                                    : "bg-white/[0.04] border-white/[0.1] text-gray-300 hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
+                                }`}
+                                style={isSelected ? {
+                                  backgroundColor: `rgba(${opt.rgb},0.1)`,
+                                  borderColor: `rgba(${opt.rgb},0.3)`,
+                                  boxShadow: `0 0 12px rgba(${opt.rgb},0.15)`,
+                                  color: `rgb(${opt.rgb})`,
+                                } : {}}
+                              >
+                                <Icon className="w-5 h-5 mx-auto mb-1" />
+                                <div className="text-[8px] font-bold uppercase tracking-wider leading-tight">{opt.label}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-1.5 text-[0.625rem] text-cyan-400/60 text-center italic">
+                          {selectedFormat.desc}
+                        </div>
+                      </div>
+
                   {mode === "multiplayer" && (
                     <div>
                       <label className={labelClass}>Table Name</label>
@@ -740,9 +741,18 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                       />
                     </div>
                   )}
+                    </motion.div>
+                  </>
+                )}
 
-                  {/* Divider */}
-                  <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+                {step === 3 && (
+                  <motion.div
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.12 }}
+                    className="rounded-2xl backdrop-blur-md bg-white/[0.04] border border-white/[0.1] p-5 space-y-4"
+                    style={{ boxShadow: `0 0 40px ${selectedAvatar.glowColor.replace("0.3", "0.05")}` }}
+                  >
 
                   {/* Players */}
                   <div className="grid grid-cols-1 gap-3">
@@ -1065,83 +1075,17 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                     </motion.div>
                   )}
 
-                  {/* Divider */}
-                  <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+                  </motion.div>
+                )}
 
-                  {/* ─── Table Theme ─── */}
-                  <SectionHeader label="Table Theme" icon={Palette} color="amber" />
-                  <div className="space-y-3">
-                    {/* Felt selector */}
-                    <div>
-                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">Table Felt</label>
-                      <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                        {FELT_PRESETS.map((fp) => (
-                          <button
-                            key={fp.id}
-                            onClick={() => setFeltColor(fp.id)}
-                            className={`group relative rounded-lg overflow-hidden border-2 transition-all ${
-                              feltColor === fp.id
-                                ? "border-[#d4af37] shadow-[0_0_10px_rgba(212,175,55,0.4)]"
-                                : "border-white/10 hover:border-white/25"
-                            }`}
-                            title={fp.label}
-                          >
-                            <div className="w-full aspect-square rounded-md overflow-hidden">
-                              {fp.imageUrl ? (
-                                <img src={fp.imageUrl} alt={fp.label} className="w-full h-full object-cover" draggable={false} />
-                              ) : (
-                                <div className="w-full h-full" style={{ background: fp.gradient }} />
-                              )}
-                            </div>
-                            {feltColor === fp.id && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
-                                <div className="w-2 h-2 rounded-full bg-[#d4af37]" />
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Card back selector */}
-                    <div>
-                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">Card Back</label>
-                      <div className="grid grid-cols-5 gap-2" style={{ maxWidth: "280px" }}>
-                        {CARD_BACK_PRESETS.map((cb) => (
-                          <button
-                            key={cb.id}
-                            onClick={() => setCardBack(cb.id)}
-                            className={`group relative rounded-lg overflow-hidden border-2 transition-all ${
-                              cardBack === cb.id
-                                ? "border-[#00d4ff] shadow-[0_0_10px_rgba(0,212,255,0.4)]"
-                                : "border-white/10 hover:border-white/25"
-                            }`}
-                            title={cb.label}
-                          >
-                            <div className="w-full aspect-[2/3] rounded-md overflow-hidden">
-                              {cb.imageUrl ? (
-                                <img src={cb.imageUrl} alt={cb.label} className="w-full h-full object-cover" draggable={false} />
-                              ) : (
-                                <div className="w-full h-full" style={{
-                                  background: "linear-gradient(135deg, #1a0e3e 0%, #0d0522 50%, #1a0e3e 100%)",
-                                  border: "1px solid rgba(0,212,255,0.3)",
-                                }} />
-                              )}
-                            </div>
-                            {cardBack === cb.id && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
-                                <div className="w-2 h-2 rounded-full bg-[#00d4ff]" />
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-
-                  {/* ─── Table Rules ─── */}
+                {step === 4 && (
+                  <motion.div
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.12 }}
+                    className="rounded-2xl backdrop-blur-md bg-white/[0.04] border border-white/[0.1] p-5 space-y-4"
+                    style={{ boxShadow: `0 0 40px ${selectedAvatar.glowColor.replace("0.3", "0.05")}` }}
+                  >
                   <SectionHeader label="Table Rules" icon={Layers} />
                   <div className="grid grid-cols-2 gap-x-4 gap-y-0">
                     <Toggle value={straddleEnabled} onChange={setStraddleEnabled} icon={DollarSign} label="Straddle" desc="UTG can post 2x BB blind pre-flop" />
@@ -1180,7 +1124,17 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                     </div>
                   </div>
 
-                  {/* ─── Speed & Timing ─── */}
+                  </motion.div>
+                )}
+
+                {step === 5 && (
+                  <motion.div
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.12 }}
+                    className="rounded-2xl backdrop-blur-md bg-white/[0.04] border border-white/[0.1] p-5 space-y-4"
+                    style={{ boxShadow: `0 0 40px ${selectedAvatar.glowColor.replace("0.3", "0.05")}` }}
+                  >
                   <SectionHeader label="Speed & Timing" icon={Timer} />
                   <div className="grid grid-cols-3 gap-3">
                     <div>
@@ -1322,7 +1276,6 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                     </>
                   )}
 
-                  {/* ─── Bots ─── */}
                   <SectionHeader label="Bots & AI" icon={Bot} />
                   <div className="grid grid-cols-2 gap-x-4 gap-y-0">
                     <Toggle value={allowBots} onChange={setAllowBots} icon={Bot} label="Allow Bots" desc="Fill empty seats with AI players" />
@@ -1330,50 +1283,186 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                       <Toggle value={replaceBots} onChange={setReplaceBots} icon={UserPlus} label="Replace Bots" desc="Swap bots out when humans join" />
                     )}
                   </div>
-                </motion.div>
 
-                {/* Back + Start buttons */}
-                <motion.div
-                  initial={{ y: 15, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex items-center gap-3 pt-1 max-w-lg mx-auto"
-                >
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setStep(1)}
-                    className="flex items-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold uppercase tracking-wider text-gray-400 bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                  <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+
+                  <SectionHeader label="Table Theme" icon={Palette} color="amber" />
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">Table Felt</label>
+                      <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                        {FELT_PRESETS.map((fp) => (
+                          <button
+                            key={fp.id}
+                            onClick={() => setFeltColor(fp.id)}
+                            className={`group relative rounded-lg overflow-hidden border-2 transition-all ${
+                              feltColor === fp.id
+                                ? "border-[#d4af37] shadow-[0_0_10px_rgba(212,175,55,0.4)]"
+                                : "border-white/10 hover:border-white/25"
+                            }`}
+                            title={fp.label}
+                          >
+                            <div className="w-full aspect-square rounded-md overflow-hidden">
+                              {fp.imageUrl ? (
+                                <img src={fp.imageUrl} alt={fp.label} className="w-full h-full object-cover" draggable={false} />
+                              ) : (
+                                <div className="w-full h-full" style={{ background: fp.gradient }} />
+                              )}
+                            </div>
+                            {feltColor === fp.id && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
+                                <div className="w-2 h-2 rounded-full bg-[#d4af37]" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">Card Back</label>
+                      <div className="grid grid-cols-5 gap-2" style={{ maxWidth: "280px" }}>
+                        {CARD_BACK_PRESETS.map((cb) => (
+                          <button
+                            key={cb.id}
+                            onClick={() => setCardBack(cb.id)}
+                            className={`group relative rounded-lg overflow-hidden border-2 transition-all ${
+                              cardBack === cb.id
+                                ? "border-[#00d4ff] shadow-[0_0_10px_rgba(0,212,255,0.4)]"
+                                : "border-white/10 hover:border-white/25"
+                            }`}
+                            title={cb.label}
+                          >
+                            <div className="w-full aspect-[2/3] rounded-md overflow-hidden">
+                              {cb.imageUrl ? (
+                                <img src={cb.imageUrl} alt={cb.label} className="w-full h-full object-cover" draggable={false} />
+                              ) : (
+                                <div className="w-full h-full" style={{
+                                  background: "linear-gradient(135deg, #1a0e3e 0%, #0d0522 50%, #1a0e3e 100%)",
+                                  border: "1px solid rgba(0,212,255,0.3)",
+                                }} />
+                              )}
+                            </div>
+                            {cardBack === cb.id && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
+                                <div className="w-2 h-2 rounded-full bg-[#00d4ff]" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  </motion.div>
+                )}
+
+                {step === 6 && (
+                  <motion.div
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.12 }}
+                    className="rounded-2xl backdrop-blur-md bg-white/[0.04] border border-white/[0.1] p-5 space-y-3"
+                    style={{ boxShadow: `0 0 40px ${selectedAvatar.glowColor.replace("0.3", "0.05")}` }}
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                    Back
-                  </motion.button>
-                  <motion.button
-                    whileHover={canAfford ? { scale: 1.03 } : undefined}
-                    whileTap={canAfford ? { scale: 0.97 } : undefined}
-                    onClick={handleStart}
-                    disabled={!canAfford}
-                    className={`flex-1 rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
-                      canAfford ? "text-black" : "text-gray-500 bg-gray-800/50 cursor-not-allowed border border-white/[0.06]"
-                    }`}
-                    style={canAfford ? {
-                      background: `linear-gradient(135deg, ${selectedAvatar.borderColor}, ${selectedAvatar.borderColor}cc)`,
-                      boxShadow: `0 0 25px ${selectedAvatar.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
-                    } : undefined}
+                    <SectionHeader label="Summary" icon={Eye} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <div className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">Format</div>
+                        <div className="text-xs text-white font-bold">{selectedFormat.label}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">Players</div>
+                        <div className="text-xs text-white font-bold">{gameFormat === "heads_up" ? 2 : maxPlayers}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">Blinds</div>
+                        <div className="text-xs text-white font-bold">${smallBlind} / ${bigBlind}{ante > 0 ? ` (ante $${ante})` : ""}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">Buy-in</div>
+                        <div className="text-xs text-white font-bold">
+                          {(gameFormat === "sng" || gameFormat === "tournament") ? `$${buyInAmount}` : `$${minBuyIn} – $${maxBuyIn}`}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">Timer</div>
+                        <div className="text-xs text-white font-bold">{actionTimerSeconds}s + {timeBankSeconds}s bank</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">Bots</div>
+                        <div className="text-xs text-white font-bold">{allowBots ? "Enabled" : "Disabled"}</div>
+                      </div>
+                    </div>
+                    <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+                    <div className="flex flex-wrap gap-1.5">
+                      {straddleEnabled && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Straddle</span>}
+                      {bigBlindAnte && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">BB Ante</span>}
+                      {rabbitHunting && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Rabbit Hunt</span>}
+                      {runItTwice !== "no" && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Run It Twice</span>}
+                      {showAllHands && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Show Hands</span>}
+                      {isPrivate && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20">Private</span>}
+                    </div>
+                  </motion.div>
+                )}
+
+                {step > 1 && (
+                  <motion.div
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="flex items-center gap-3 pt-1 max-w-lg mx-auto"
                   >
-                    {!canAfford ? (
-                      <>
-                        <AlertTriangle className="w-4 h-4" />
-                        INSUFFICIENT FUNDS
-                      </>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleBack}
+                      className="flex items-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold uppercase tracking-wider text-gray-400 bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Back
+                    </motion.button>
+                    {step < 6 ? (
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleNext}
+                        className="flex-1 rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 text-black transition-all"
+                        style={{
+                          background: `linear-gradient(135deg, ${selectedAvatar.borderColor}, ${selectedAvatar.borderColor}cc)`,
+                          boxShadow: `0 0 25px ${selectedAvatar.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
+                        }}
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </motion.button>
                     ) : (
-                      <>
-                        <Flame className="w-4 h-4" />
-                        {mode === "offline" ? "START GAME" : "CREATE TABLE"}
-                      </>
+                      <motion.button
+                        whileHover={canAfford ? { scale: 1.03 } : undefined}
+                        whileTap={canAfford ? { scale: 0.97 } : undefined}
+                        onClick={handleStart}
+                        disabled={!canAfford}
+                        className={`flex-1 rounded-xl px-7 py-3.5 font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                          canAfford ? "text-black" : "text-gray-500 bg-gray-800/50 cursor-not-allowed border border-white/[0.06]"
+                        }`}
+                        style={canAfford ? {
+                          background: `linear-gradient(135deg, ${selectedAvatar.borderColor}, ${selectedAvatar.borderColor}cc)`,
+                          boxShadow: `0 0 25px ${selectedAvatar.glowColor}, 0 4px 15px rgba(0,0,0,0.3)`,
+                        } : undefined}
+                      >
+                        {!canAfford ? (
+                          <>
+                            <AlertTriangle className="w-4 h-4" />
+                            INSUFFICIENT FUNDS
+                          </>
+                        ) : (
+                          <>
+                            <Flame className="w-4 h-4" />
+                            {mode === "offline" ? "START GAME" : "CREATE TABLE"}
+                          </>
+                        )}
+                      </motion.button>
                     )}
-                  </motion.button>
-                </motion.div>
+                  </motion.div>
+                )}
               </motion.div>
             )}
           </div>

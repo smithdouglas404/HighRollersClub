@@ -591,9 +591,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .portrait-card {
-  /* Matches the cyan square slots on the table image (~9.8% of table width) */
-  width: clamp(40px, 9.5cqmin, 72px);
-  height: clamp(40px, 9.5cqmin, 72px);
+  width: clamp(44px, 10cqmin, 78px);
+  height: clamp(62px, 14cqmin, 108px);
 }
 
 .sidebar-responsive {

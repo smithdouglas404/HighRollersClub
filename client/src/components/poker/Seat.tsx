@@ -711,87 +711,90 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           )}
 
           <div className="relative" style={{ ...parallaxStyle, ...reactionStyle }}>
-            {/* Avatar face ONLY — fills the cyan square slot on the table */}
             <div
-              className="relative rounded-lg overflow-hidden portrait-card"
+              className="relative rounded-t-xl overflow-visible portrait-card"
               style={{
-                border: `2px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.4)}`,
+                borderTop: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+                borderLeft: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+                borderRight: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+                borderBottom: "none",
+                borderRadius: "12px 12px 0 0",
                 boxShadow: isTurn
-                  ? `0 0 20px ${hexToRgba(glowColor, 0.8)}, 0 0 40px ${hexToRgba(glowColor, 0.3)}`
+                  ? `0 0 30px ${hexToRgba(glowColor, 0.8)}, 0 0 60px ${hexToRgba(glowColor, 0.4)}, 0 0 90px ${hexToRgba(glowColor, 0.15)}, inset 0 0 20px ${hexToRgba(glowColor, 0.25)}`
                   : isWinner
-                  ? `0 0 20px rgba(212,175,55,0.5)`
-                  : `0 0 8px ${hexToRgba(glowColor, 0.3)}`,
+                  ? `0 0 25px rgba(212,175,55,0.5), 0 0 50px rgba(212,175,55,0.2)`
+                  : `0 0 12px ${hexToRgba(glowColor, 0.4)}, 0 4px 20px rgba(0,0,0,0.6)`,
                 transition: "all 0.3s ease",
                 animation: isTurn ? "seatTurnPulse 2s ease-in-out infinite" : undefined,
-                opacity: isFolded ? 0.4 : 1,
-                filter: isFolded ? "grayscale(1)" : "none",
               }}
             >
+              <div
+                className="absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-xl"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
+                  boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.7)}`,
+                }}
+              />
+
               {player.avatar ? (
                 <img
                   src={fullBodyImage || player.avatar}
                   alt={player.name}
-                  className="absolute inset-0 w-full h-full object-cover z-[1]"
-                  style={{ objectPosition: "center 15%" }}
+                  className="absolute inset-0 w-full h-full object-cover z-[1] rounded-t-xl"
+                  style={{
+                    objectPosition: "center 15%",
+                    opacity: isFolded ? 0.35 : 1,
+                    filter: isFolded ? "grayscale(1)" : "none",
+                  }}
                 />
               ) : (
                 <div
-                  className="absolute inset-0 w-full h-full flex items-center justify-center text-xl font-black text-white/70 z-[1]"
+                  className="absolute inset-0 w-full h-full flex items-center justify-center text-xl font-black text-white/70 z-[1] rounded-t-xl"
                   style={{
                     background: isHero
                       ? "linear-gradient(135deg, #0e7490, #164e63)"
                       : "linear-gradient(135deg, #78716c, #44403c)",
+                    opacity: isFolded ? 0.35 : 1,
+                    filter: isFolded ? "grayscale(1)" : "none",
                   }}
                 >
                   {player.name.charAt(0).toUpperCase()}
                 </div>
               )}
+
+              <div className="absolute bottom-0 left-0 right-0 h-[60%] z-[2] pointer-events-none"
+                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)" }} />
             </div>
 
-            {/* ── Name + Chips tag — anchored OUTSIDE the table ── */}
-            {(() => {
-              // Position tag outward from table center based on seat index
-              // Top seats (3-6): tag goes below
-              // Bottom seats (0,1,9): tag goes above
-              // Left seat (2): tag goes right
-              // Right seat (8): tag goes left
-              const isTop = seatIndex >= 3 && seatIndex <= 6;
-              const isBottom = seatIndex === 0 || seatIndex === 1 || seatIndex === 9;
-              const isLeft = seatIndex === 2;
-              const isRight = seatIndex === 8;
-
-              const tagStyle: React.CSSProperties = {
-                position: "absolute",
-                zIndex: 35,
-                background: "rgba(8,8,12,0.88)",
+            <div
+              className="relative z-[3] rounded-b-lg overflow-hidden"
+              style={{
+                background: "rgba(8,8,12,0.92)",
                 backdropFilter: "blur(8px)",
-                border: `1px solid ${hexToRgba(glowColor, 0.3)}`,
-                borderRadius: "6px",
-                padding: "2px 6px",
-                whiteSpace: "nowrap" as const,
-                ...(isTop ? { top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: "4px" } : {}),
-                ...(isBottom ? { bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: "4px" } : {}),
-                ...(isLeft ? { left: "100%", top: "50%", transform: "translateY(-50%)", marginLeft: "4px" } : {}),
-                ...(isRight ? { right: "100%", top: "50%", transform: "translateY(-50%)", marginRight: "4px" } : {}),
-              };
-
-              return (
-                <div style={tagStyle}>
-                  <p className="text-[0.5rem] font-bold text-white/90 truncate max-w-[70px] leading-tight"
-                    style={{ textShadow: `0 0 6px ${hexToRgba(glowColor, 0.4)}` }}>
-                    {player.name}
-                  </p>
-                  <div className="flex items-center gap-0.5">
-                    <svg width="7" height="7" viewBox="0 0 10 10" className="flex-shrink-0">
-                      <circle cx="5" cy="5" r="4" fill="#d4af37" stroke="#b8860b" strokeWidth="1" />
-                    </svg>
-                    <span className="text-[0.5rem] font-mono font-bold text-[#ffd700] leading-tight">
-                      {formatChips(animatedChips)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })()}
+                borderLeft: `2.5px solid ${hexToRgba(glowColor, 0.3)}`,
+                borderRight: `2.5px solid ${hexToRgba(glowColor, 0.3)}`,
+                borderBottom: `2.5px solid ${hexToRgba(glowColor, 0.3)}`,
+                padding: "3px 6px 2px",
+              }}
+            >
+              <div className="absolute bottom-0 left-0 right-0 h-[3px] z-20"
+                style={{
+                  background: "linear-gradient(90deg, transparent, #d4af37, #ffd700, #d4af37, transparent)",
+                  boxShadow: "0 0 8px rgba(212,175,55,0.5)",
+                }} />
+              <p className="text-[0.5rem] font-bold text-white/90 truncate max-w-[70px] leading-tight text-center"
+                style={{ textShadow: `0 0 6px ${hexToRgba(glowColor, 0.4)}` }}>
+                {player.name}
+              </p>
+              <div className="flex items-center justify-center gap-0.5">
+                <svg width="7" height="7" viewBox="0 0 10 10" className="flex-shrink-0">
+                  <circle cx="5" cy="5" r="4" fill="#d4af37" stroke="#b8860b" strokeWidth="1" />
+                </svg>
+                <span className="text-[0.5rem] font-mono font-bold text-[#ffd700] leading-tight">
+                  {formatChips(animatedChips)}
+                </span>
+              </div>
+            </div>
 
             {/* ── Bet amount — floats between avatar and table center ── */}
             {player.currentBet > 0 && !isFolded && (() => {

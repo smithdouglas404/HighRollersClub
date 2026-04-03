@@ -2,23 +2,31 @@ import { useMemo } from "react";
 import * as THREE from "three";
 import { createUnderbodyMaterial } from "../materials/metalMaterial";
 
-/**
- * Elliptical table base — the structural underbody giving 3D thickness.
- * Not a flat disc — has visible depth and a premium silhouette.
- */
 export function TableBase() {
   const { geometry, material } = useMemo(() => {
-    // Elliptical cylinder: radiusTop, radiusBottom, height, radialSegments
-    const geo = new THREE.CylinderGeometry(1, 1, 0.12, 64);
-    // Scale to ellipse: wider on X than Z
-    geo.scale(2.4, 1, 1.6);
+    const shape = new THREE.Shape();
+    const rx = 2.5, rz = 1.65;
+    const segments = 64;
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = rx * Math.cos(angle);
+      const z = rz * Math.sin(angle);
+      if (i === 0) shape.moveTo(x, z);
+      else shape.lineTo(x, z);
+    }
+    const extrudeSettings = {
+      depth: 0.14,
+      bevelEnabled: true,
+      bevelThickness: 0.02,
+      bevelSize: 0.02,
+      bevelSegments: 3,
+    };
+    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geo.rotateX(-Math.PI / 2);
+    geo.translate(0, -0.14, 0);
     const mat = createUnderbodyMaterial();
     return { geometry: geo, material: mat };
   }, []);
 
-  return (
-    <group position={[0, -0.06, 0]}>
-      <mesh geometry={geometry} material={material} receiveShadow />
-    </group>
-  );
+  return <mesh geometry={geometry} material={material} receiveShadow castShadow />;
 }

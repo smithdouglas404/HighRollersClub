@@ -8,7 +8,7 @@ import { PokerSceneCanvas } from "../scene/canvas/PokerSceneCanvas";
 import { RANK_FRAMES } from "@/lib/game-constants";
 
 // Feature flag: flip to true to use the 3D R3F table scene
-const USE_3D_TABLE = false;
+const USE_3D_TABLE = true;
 
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";

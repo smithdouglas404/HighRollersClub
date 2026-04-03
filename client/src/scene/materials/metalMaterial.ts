@@ -1,53 +1,50 @@
 import * as THREE from "three";
 
-/**
- * Dark gunmetal ring material — brushed dark metal with cyan reflective response.
- */
-export function createGunmetalMaterial(): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
+export function createGunmetalMaterial(): THREE.MeshPhysicalMaterial {
+  return new THREE.MeshPhysicalMaterial({
     color: new THREE.Color("#1a1d24"),
-    roughness: 0.35,
-    metalness: 0.92,
-    envMapIntensity: 0.6,
-  });
-}
-
-/**
- * Premium gold/brass inner ring material — warm sheen, not flat yellow.
- */
-export function createGoldMaterial(): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
-    color: new THREE.Color("#c9942e"),
-    roughness: 0.28,
+    roughness: 0.32,
     metalness: 0.95,
-    emissive: new THREE.Color("#3d2e0a"),
-    emissiveIntensity: 0.15,
+    clearcoat: 0.3,
+    clearcoatRoughness: 0.4,
+    reflectivity: 0.8,
     envMapIntensity: 1.2,
   });
 }
 
-/**
- * Cyan emissive material for seat ring accents.
- */
+export function createGoldMaterial(): THREE.MeshPhysicalMaterial {
+  return new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color("#c9942e"),
+    roughness: 0.22,
+    metalness: 0.98,
+    emissive: new THREE.Color("#3d2e0a"),
+    emissiveIntensity: 0.12,
+    clearcoat: 0.5,
+    clearcoatRoughness: 0.2,
+    reflectivity: 1.0,
+    envMapIntensity: 1.8,
+  });
+}
+
 export function createCyanEmissiveMaterial(intensity = 0.8): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: new THREE.Color("#1a3040"),
     emissive: new THREE.Color("#58f1ff"),
     emissiveIntensity: intensity,
-    roughness: 0.4,
-    metalness: 0.6,
+    roughness: 0.35,
+    metalness: 0.5,
     transparent: true,
     opacity: 0.95,
   });
 }
 
-/**
- * Dark structural underbody material.
- */
-export function createUnderbodyMaterial(): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
-    color: new THREE.Color("#0a0c10"),
-    roughness: 0.7,
-    metalness: 0.3,
+export function createUnderbodyMaterial(): THREE.MeshPhysicalMaterial {
+  return new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color("#080a0f"),
+    roughness: 0.6,
+    metalness: 0.4,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.8,
+    envMapIntensity: 0.3,
   });
 }

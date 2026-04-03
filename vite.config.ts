@@ -1,8 +1,47 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin, type TransformResult } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+
+type TransformFn = (
+  this: unknown,
+  code: string,
+  id: string,
+  options?: { ssr?: boolean },
+) => TransformResult | Promise<TransformResult>;
+
+interface ObjectHook {
+  handler: TransformFn;
+  order?: "pre" | "post" | null;
+  enforce?: "pre" | "post";
+}
+
+function excludeFromPlugin(plugin: Plugin, excludePattern: RegExp): Plugin {
+  const originalTransform = plugin.transform;
+
+  if (typeof originalTransform === "function") {
+    const orig: TransformFn = originalTransform;
+    plugin.transform = function (code, id, options) {
+      if (excludePattern.test(id)) return null;
+      return orig.call(this, code, id, options);
+    };
+  } else if (
+    originalTransform &&
+    typeof originalTransform === "object" &&
+    "handler" in originalTransform &&
+    typeof (originalTransform as ObjectHook).handler === "function"
+  ) {
+    const hook = originalTransform as ObjectHook;
+    const origHandler = hook.handler;
+    hook.handler = function (code, id, options) {
+      if (excludePattern.test(id)) return null;
+      return origHandler.call(this, code, id, options);
+    };
+  }
+
+  return plugin;
+}
 
 export default defineConfig({
   plugins: [
@@ -13,7 +52,10 @@ export default defineConfig({
     process.env.REPL_ID !== undefined
       ? [
           await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
+            excludeFromPlugin(
+              m.cartographer(),
+              /[\\/]scene[\\/]/,
+            ),
           ),
           await import("@replit/vite-plugin-dev-banner").then((m) =>
             m.devBanner(),

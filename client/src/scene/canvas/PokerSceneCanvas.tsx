@@ -1,9 +1,8 @@
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useState, Component, type ReactNode } from "react";
+import { Suspense, useState, Component, type ReactNode, type ErrorInfo } from "react";
 import * as THREE from "three";
 import { SceneRoot } from "./SceneRoot";
 
-// Error boundary to catch R3F component crashes without killing the whole app
 class SceneErrorBoundary extends Component<
   { children: ReactNode; onError: (err: Error) => void },
   { hasError: boolean; errorMsg: string }
@@ -12,7 +11,7 @@ class SceneErrorBoundary extends Component<
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, errorMsg: error.message };
   }
-  componentDidCatch(error: Error, info: any) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[PokerScene] Render crash:", error, info?.componentStack);
     this.props.onError(error);
   }

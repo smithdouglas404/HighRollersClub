@@ -5,6 +5,7 @@ import { Seat } from "../components/poker/Seat";
 import { Card } from "../components/poker/Card";
 import { CSSPokerTable } from "../components/poker/CSSPokerTable";
 import { PokerSceneCanvas } from "../scene/canvas/PokerSceneCanvas";
+import { RANK_FRAMES } from "@/lib/game-constants";
 
 // Feature flag: flip to true to use the 3D R3F table scene
 const USE_3D_TABLE = true;
@@ -75,14 +76,6 @@ const EXTRA_AVATAR_URLS = [
   "/attached_assets/generated_images/avatars/avatar_iron_bull.webp",
 ];
 
-// Rank frame overlays
-export const RANK_FRAMES: Record<string, string> = {
-  bronze: "/attached_assets/generated_images/frames/frame_bronze.webp",
-  silver: "/attached_assets/generated_images/frames/frame_silver.webp",
-  gold: "/attached_assets/generated_images/frames/frame_gold.webp",
-  platinum: "/attached_assets/generated_images/frames/frame_platinum.webp",
-  diamond: "/attached_assets/generated_images/frames/frame_diamond.webp",
-};
 
 const HERO_ID = "player-1";
 

@@ -2,7 +2,6 @@ import { Canvas } from "@react-three/fiber";
 import { Suspense, useState, Component, type ReactNode, type ErrorInfo } from "react";
 import * as THREE from "three";
 import { SceneRoot } from "./SceneRoot";
-import { SeatProjection } from "./SeatProjection";
 
 class SceneErrorBoundary extends Component<
   { children: ReactNode; onError: (err: Error) => void },
@@ -27,7 +26,6 @@ interface PokerSceneCanvasProps {
   activeSeat?: number;
   winnerSeat?: number;
   className?: string;
-  onSeatPositions?: (positions: { x: number; y: number }[]) => void;
 }
 
 export function PokerSceneCanvas({
@@ -35,7 +33,6 @@ export function PokerSceneCanvas({
   activeSeat,
   winnerSeat,
   className,
-  onSeatPositions,
 }: PokerSceneCanvasProps) {
   const [error, setError] = useState<string | false>(false);
   const dpr = quality === "cinematic" ? 2 : quality === "high" ? 1.5 : quality === "medium" ? 1.25 : 1;
@@ -73,9 +70,6 @@ export function PokerSceneCanvas({
               activeSeat={activeSeat}
               winnerSeat={winnerSeat}
             />
-            {onSeatPositions && (
-              <SeatProjection onUpdate={onSeatPositions} />
-            )}
           </Suspense>
         </Canvas>
       </SceneErrorBoundary>

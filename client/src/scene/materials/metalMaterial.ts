@@ -1,8 +1,17 @@
 import * as THREE from "three";
 
+/**
+ * Blueprint Section 10 — Metal materials
+ * Colors from poker-table-ui.html box-shadow ring system:
+ *   Cyan ring: rgba(88,241,255,0.9)
+ *   Dark gap: rgba(20,26,35,0.96)
+ *   Gold ring: rgba(242,198,96,0.98)
+ */
+
+// Gunmetal outer ring — brushed dark metal, soft cyan edge reflections
 export function createGunmetalMaterial(): THREE.MeshPhysicalMaterial {
   return new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color("#1a1d24"),
+    color: new THREE.Color("#141a23"),   // rgba(20,26,35) from dark gap
     roughness: 0.32,
     metalness: 0.95,
     clearcoat: 0.3,
@@ -12,9 +21,10 @@ export function createGunmetalMaterial(): THREE.MeshPhysicalMaterial {
   });
 }
 
+// Gold inner ring — rgba(242,198,96,0.98) from HTML
 export function createGoldMaterial(): THREE.MeshPhysicalMaterial {
   return new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color("#c9942e"),
+    color: new THREE.Color("#f2c660"),   // exact gold from HTML
     roughness: 0.22,
     metalness: 0.98,
     emissive: new THREE.Color("#3d2e0a"),
@@ -26,10 +36,11 @@ export function createGoldMaterial(): THREE.MeshPhysicalMaterial {
   });
 }
 
+// Cyan emissive — rgba(88,241,255,0.9) from HTML for seat rings and accents
 export function createCyanEmissiveMaterial(intensity = 0.8): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: new THREE.Color("#1a3040"),
-    emissive: new THREE.Color("#58f1ff"),
+    emissive: new THREE.Color("#58f1ff"),   // exact cyan from HTML
     emissiveIntensity: intensity,
     roughness: 0.35,
     metalness: 0.5,
@@ -38,6 +49,7 @@ export function createCyanEmissiveMaterial(intensity = 0.8): THREE.MeshStandardM
   });
 }
 
+// Dark table underbody
 export function createUnderbodyMaterial(): THREE.MeshPhysicalMaterial {
   return new THREE.MeshPhysicalMaterial({
     color: new THREE.Color("#080a0f"),

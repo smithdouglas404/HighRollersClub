@@ -205,7 +205,9 @@
       "Bash(git checkout:*)",
       "Bash(curl -s http://localhost:5000)",
       "Bash(curl -s http://localhost:5000/api/user)",
-      "Bash(curl -s http://localhost:5000/src/pages/Game.tsx)"
+      "Bash(curl -s http://localhost:5000/src/pages/Game.tsx)",
+      "Bash(wc -l /home/runner/workspace/client/src/components/poker/*.tsx)",
+      "Bash(find:*)"
     ]
   }
 }

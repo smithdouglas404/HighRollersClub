@@ -3,6 +3,11 @@ import { Suspense, useState, Component, type ReactNode, type ErrorInfo } from "r
 import * as THREE from "three";
 import { SceneRoot } from "./SceneRoot";
 
+/**
+ * Blueprint Section 3 — Render Surface (React Three Fiber)
+ * Canvas wrapper with error boundary and quality settings.
+ */
+
 class SceneErrorBoundary extends Component<
   { children: ReactNode; onError: (err: Error) => void },
   { hasError: boolean; errorMsg: string }

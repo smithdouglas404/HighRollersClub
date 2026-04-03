@@ -16,7 +16,6 @@ import { StickyNote } from "lucide-react";
 import { AVATAR_OPTIONS, type AvatarOption } from "./AvatarSelect";
 import type { OpponentHudStats } from "@/lib/useOpponentStats";
 
-// ─── Player Note Popover ────────────────────────────────────────────────────
 const NOTE_COLORS = ["gray", "red", "yellow", "green", "blue", "purple"] as const;
 
 function PlayerNoteIcon({ playerId }: { playerId: string }) {
@@ -27,7 +26,6 @@ function PlayerNoteIcon({ playerId }: { playerId: string }) {
   const [saving, setSaving] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
 
-  // Load note on mount
   useEffect(() => {
     fetch(`/api/player-notes/${playerId}`)
       .then(r => r.ok ? r.json() : null)
@@ -41,7 +39,6 @@ function PlayerNoteIcon({ playerId }: { playerId: string }) {
       .catch(() => {});
   }, [playerId]);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -53,7 +50,6 @@ function PlayerNoteIcon({ playerId }: { playerId: string }) {
 
   const handleSave = async () => {
     if (!note.trim()) {
-      // Delete note
       await fetch(`/api/player-notes/${playerId}`, { method: "DELETE" }).catch(() => {});
       setHasNote(false);
       setOpen(false);
@@ -140,7 +136,6 @@ function PlayerNoteIcon({ playerId }: { playerId: string }) {
 }
 
 
-// ─── Winner Particle Burst System ────────────────────────────────────────────
 interface Particle {
   x: number;
   y: number;
@@ -162,14 +157,12 @@ function useWinnerParticles(isWinner: boolean) {
   const prevWinner = useRef(false);
 
   useEffect(() => {
-    // Only fire when isWinner transitions from false to true
     if (isWinner && !prevWinner.current) {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // Spawn 40-60 particles from the center of the canvas
       const count = 40 + Math.floor(Math.random() * 21);
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
@@ -178,233 +171,55 @@ function useWinnerParticles(isWinner: boolean) {
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 1.5 + Math.random() * 3;
-        const life = 1.5 + Math.random() * 0.7; // 1.5-2.2 seconds
+        const life = 1.5 + Math.random() * 0.7;
         particles.push({
-          x: cx,
-          y: cy,
+          x: cx, y: cy,
           vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 1.5, // slight upward bias
+          vy: Math.sin(angle) * speed - 1.5,
           size: 2 + Math.random() * 3,
           color: WINNER_PARTICLE_COLORS[Math.floor(Math.random() * WINNER_PARTICLE_COLORS.length)],
-          alpha: 1,
-          life,
-          maxLife: life,
+          alpha: 1, life, maxLife: life,
         });
       }
       particlesRef.current = particles;
 
       let lastTime = performance.now();
-
       const animate = (now: number) => {
-        const dt = Math.min((now - lastTime) / 1000, 0.05); // delta in seconds, capped
+        const dt = Math.min((now - lastTime) / 1000, 0.05);
         lastTime = now;
-
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         const alive: Particle[] = [];
         for (const p of particlesRef.current) {
           p.life -= dt;
           if (p.life <= 0) continue;
-
-          // Gravity
           p.vy += 2.5 * dt;
           p.x += p.vx * 60 * dt;
           p.y += p.vy * 60 * dt;
-
-          // Fade out based on remaining life
           p.alpha = Math.max(0, p.life / p.maxLife);
-
           ctx.globalAlpha = p.alpha;
           ctx.fillStyle = p.color;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
           ctx.fill();
-
           alive.push(p);
         }
         ctx.globalAlpha = 1;
         particlesRef.current = alive;
-
         if (alive.length > 0) {
           animFrameRef.current = requestAnimationFrame(animate);
         }
       };
-
       animFrameRef.current = requestAnimationFrame(animate);
     }
-
     prevWinner.current = isWinner;
-
     return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
   }, [isWinner]);
 
   return canvasRef;
 }
 
-// ─── Player Chip Stack Visualization ──────────────────────────────────────────
-interface StackChip {
-  color: string;
-  border: string;
-  stripe: string;
-  inner: string;
-}
-
-const CHIP_DENOMS: { threshold: number; chip: StackChip }[] = [
-  { threshold: 1000, chip: { color: "#ffd700", border: "#b8860b", stripe: "#ffffff", inner: "#f59e0b" } },
-  { threshold: 500,  chip: { color: "#111827", border: "#374151", stripe: "#f8fafc", inner: "#1f2937" } },
-  { threshold: 100,  chip: { color: "#dc2626", border: "#991b1b", stripe: "#fecaca", inner: "#b91c1c" } },
-  { threshold: 25,   chip: { color: "#16a34a", border: "#166534", stripe: "#bbf7d0", inner: "#15803d" } },
-  { threshold: 5,    chip: { color: "#2563eb", border: "#1e40af", stripe: "#bfdbfe", inner: "#1d4ed8" } },
-  { threshold: 1,    chip: { color: "#f5f5f4", border: "#a8a29e", stripe: "#d6d3d1", inner: "#e7e5e4" } },
-];
-
-function getPlayerChipStacks(chips: number): { chip: StackChip; count: number }[] {
-  const stacks: { chip: StackChip; count: number }[] = [];
-  let remaining = chips;
-  for (const { threshold, chip } of CHIP_DENOMS) {
-    if (remaining >= threshold) {
-      const count = Math.min(8, Math.floor(remaining / threshold));
-      stacks.push({ chip, count });
-      remaining -= count * threshold;
-    }
-    if (stacks.length >= 3) break;
-  }
-  if (stacks.length === 0 && chips > 0) {
-    stacks.push({ chip: CHIP_DENOMS[CHIP_DENOMS.length - 1].chip, count: 1 });
-  }
-  return stacks;
-}
-
-function MiniChip({ chip, yOffset }: { chip: StackChip; yOffset: number }) {
-  return (
-    <svg
-      width="22" height="22" viewBox="0 0 22 22" fill="none"
-      style={{
-        position: "absolute",
-        bottom: yOffset,
-        left: 0,
-        filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.5))",
-      }}
-    >
-      <circle cx="11" cy="11" r="10" fill={chip.color} stroke={chip.border} strokeWidth="1" />
-      {[0, 60, 120, 180, 240, 300].map(angle => {
-        const rad = (angle * Math.PI) / 180;
-        const x1 = 11 + Math.cos(rad) * 8;
-        const y1 = 11 + Math.sin(rad) * 8;
-        const x2 = 11 + Math.cos(rad) * 10;
-        const y2 = 11 + Math.sin(rad) * 10;
-        return (
-          <line key={angle} x1={x1} y1={y1} x2={x2} y2={y2}
-            stroke={chip.stripe} strokeWidth="2" strokeLinecap="round" opacity="0.5"
-          />
-        );
-      })}
-      <circle cx="11" cy="11" r="6" fill="none" stroke={chip.stripe} strokeWidth="0.6" opacity="0.25" />
-      <circle cx="11" cy="11" r="3" fill={chip.inner} opacity="0.3" />
-      <ellipse cx="9" cy="7" rx="4" ry="3" fill="white" opacity="0.08" />
-    </svg>
-  );
-}
-
-function getBetChipDenom(amount: number): StackChip {
-  if (amount >= 500) return CHIP_DENOMS[0].chip; // gold
-  if (amount >= 100) return CHIP_DENOMS[1].chip; // black
-  if (amount >= 25)  return CHIP_DENOMS[2].chip; // red
-  if (amount >= 5)   return CHIP_DENOMS[3].chip; // green
-  return CHIP_DENOMS[4].chip; // blue
-}
-
-function BetChipStack({ amount }: { amount: number }) {
-  const chipCount = Math.min(6, Math.max(1, Math.ceil(amount / 50)));
-  const chip = getBetChipDenom(amount);
-  return (
-    <div
-      className="relative"
-      style={{
-        width: 24,
-        height: 24 + chipCount * 3,
-        transform: "rotateX(50deg)",
-        transformOrigin: "bottom center",
-      }}
-    >
-      {Array.from({ length: chipCount }).map((_, i) => (
-        <svg
-          key={i}
-          width="24" height="24" viewBox="0 0 22 22" fill="none"
-          style={{
-            position: "absolute",
-            bottom: i * 3,
-            left: 0,
-            filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.5))",
-          }}
-        >
-          <circle cx="11" cy="11" r="10" fill={chip.color} stroke={chip.border} strokeWidth="1" />
-          {[0, 60, 120, 180, 240, 300].map(angle => {
-            const rad = (angle * Math.PI) / 180;
-            return (
-              <line key={angle}
-                x1={11 + Math.cos(rad) * 8} y1={11 + Math.sin(rad) * 8}
-                x2={11 + Math.cos(rad) * 10} y2={11 + Math.sin(rad) * 10}
-                stroke={chip.stripe} strokeWidth="2" strokeLinecap="round" opacity="0.5"
-              />
-            );
-          })}
-          <circle cx="11" cy="11" r="6" fill="none" stroke={chip.stripe} strokeWidth="0.6" opacity="0.25" />
-          <circle cx="11" cy="11" r="3" fill={chip.inner} opacity="0.3" />
-        </svg>
-      ))}
-    </div>
-  );
-}
-
-function PlayerChipStack({ chips, side }: { chips: number; side: "left" | "right" }) {
-  const stacks = getPlayerChipStacks(chips);
-  if (stacks.length === 0) return null;
-  return (
-    <div
-      className="flex pointer-events-none"
-      style={{
-        justifyContent: side === "left" ? "flex-end" : "flex-start",
-        gap: 2,
-        transform: "rotateX(45deg)",
-        transformOrigin: "bottom center",
-        marginTop: -4,
-      }}
-    >
-      {stacks.map((stack, si) => (
-        <div key={si} className="relative" style={{ width: 22, height: 22 + stack.count * 3 }}>
-          {Array.from({ length: stack.count }).map((_, ci) => (
-            <MiniChip key={ci} chip={stack.chip} yOffset={ci * 3} />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Seat glow color palette — restrained: cyan for hero, muted teal/gray tones for opponents
-const SEAT_COLORS = [
-  "#00d4ff", // cyan (hero)
-  "#5eead4", // teal
-  "#94a3b8", // slate
-  "#25a065", // emerald
-  "#67e8f9", // light cyan
-  "#a1a1aa", // gray
-  "#38bdf8", // sky blue
-  "#34d399", // green
-  "#7dd3fc", // soft blue
-];
-
-function getSeatColor(seatIndex: number, isHero: boolean): string {
-  if (isHero) return "#00d4ff";
-  return SEAT_COLORS[seatIndex % SEAT_COLORS.length];
-}
-
-// Action badge styling map — standardized opacities: bg /30, border /50, glow 0.20
 const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: string; glow?: string }> = {
   folded:  { bg: "bg-red-500/30",    text: "text-red-400",    border: "border-red-500/50",   glow: "rgba(239,68,68,0.20)" },
   called:  { bg: "bg-green-500/30",  text: "text-green-400",  border: "border-green-500/50", glow: "rgba(34,197,94,0.20)" },
@@ -413,6 +228,11 @@ const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: st
   "all-in":{ bg: "bg-amber-500/30",  text: "text-amber-400",  border: "border-amber-500/50", glow: "rgba(245,158,11,0.20)" },
 };
 
+function formatChips(amount: number): string {
+  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
+  if (amount >= 1_000) return `${(amount / 1_000).toFixed(1)}k`;
+  return `$${amount.toLocaleString()}`;
+}
 
 interface SeatProps {
   player: Player;
@@ -420,22 +240,15 @@ interface SeatProps {
   isHero?: boolean;
   isWinner?: boolean;
   seatIndex?: number;
-  /** Perspective scale: 1.0 = full size (near you), 0.5 = half size (far away) */
   perspectiveScale?: number;
-  /** Hide face-down cards (used in 3D mode where cards are rendered in the 3D scene) */
   hideCards?: boolean;
   hudStats?: OpponentHudStats;
   avatarTier?: AvatarOption["tier"];
   winStreak?: number;
-  /** Whether to show video thumbnail for this player */
   showVideo?: boolean;
-  /** Number of cards to visually show (0, 1, or 2) during dealing animation */
   dealCardCount?: number;
-  /** Server turn deadline for timer (multiplayer) */
   turnDeadline?: number;
-  /** Server turn timer duration in seconds */
   turnTimerDuration?: number;
-  /** Callback when player name/avatar is clicked */
   onPlayerClick?: (player: Player) => void;
 }
 
@@ -443,22 +256,18 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
   const { compactMode } = useGameUI();
   const winnerCanvasRef = useWinnerParticles(isWinner && !compactMode);
 
-  // Look up full-body avatar image if available
   const avatarOption = player.avatar ? AVATAR_OPTIONS.find(a => a.image === player.avatar) : undefined;
   const fullBodyImage = avatarOption?.fullBodyImage;
 
   const isTurn = player.status === "thinking";
   const isFolded = player.status === "folded";
   const sound = useSoundEngine();
-  // Start at 0 so the first bet (blind posting) also triggers the animation
   const prevBetRef = useRef(0);
   const timerTickRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const seatRef = useRef<HTMLDivElement>(null);
 
-  // Animated chip count — smooth count-up/down when chips change
   const { value: animatedChips, animating: chipsAnimating, delta: chipsDelta } = useAnimatedCounter(player.chips, 400);
 
-  // Smooth timer countdown
   const timer = useTimerCountdown(
     turnDeadline,
     turnTimerDuration,
@@ -467,7 +276,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
     player.timeLeft,
   );
 
-  // Avatar expression reactions
   const prevStatusRef = useRef(player.status);
   const [reactionStyle, setReactionStyle] = useState<React.CSSProperties | undefined>(undefined);
 
@@ -493,7 +301,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
     }
   }, [player.status, player.currentBet]);
 
-  // Winner glow reaction
   useEffect(() => {
     if (isWinner) {
       setReactionStyle({ filter: "brightness(1.3) saturate(1.5)", boxShadow: "0 0 20px rgba(255,215,0,0.5)", transition: "all 0.5s ease" });
@@ -501,9 +308,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
       return () => clearTimeout(t);
     }
   }, [isWinner]);
-
-  // Each seat gets a unique neon glow color
-  const glowColor = getSeatColor(seatIndex, isHero);
 
   const statusLabel: Record<string, string> = {
     folded: "FOLD",
@@ -513,10 +317,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
     "all-in": "ALL-IN",
   };
 
-  // Format chip count as $X,XXX
-  const formatChips = (amount: number) => `$${amount.toLocaleString()}`;
-
-  // Play chip sound and trigger chip flight when bet increases
   useEffect(() => {
     if (player.currentBet > prevBetRef.current && player.currentBet > 0) {
       sound.playChipClinkAt(position.x, perspectiveScale);
@@ -524,7 +324,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         const rect = seatRef.current.getBoundingClientRect();
         const fromX = rect.left + rect.width / 2;
         const fromY = rect.top + rect.height / 2;
-        // Target the pot container ref (exposed by ImageTable) for accurate targeting
         const potRef = (window as any).__potRef?.current as HTMLDivElement | null;
         let toX: number, toY: number;
         if (potRef) {
@@ -532,7 +331,6 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           toX = potRect.left + potRect.width / 2;
           toY = potRect.top + potRect.height / 2;
         } else {
-          // Fallback to center of viewport
           toX = window.innerWidth / 2;
           toY = window.innerHeight * 0.38;
         }
@@ -542,22 +340,18 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
     prevBetRef.current = player.currentBet;
   }, [player.currentBet, sound]);
 
-  // Timer tick sound — only plays when running low (≤50%), rate intensifies as time runs out
-  // >50%: silent, 25-50%: every 2s, 10-25%: every 1s, <10%: every 500ms
   useEffect(() => {
     if (!isTurn || !isHero || timer.percent > 50) {
       if (timerTickRef.current) clearInterval(timerTickRef.current);
       timerTickRef.current = undefined;
       return;
     }
-
     const getInterval = () => {
       const pct = timer.percent;
       if (pct > 25) return 2000;
       if (pct > 10) return 1000;
       return 500;
     };
-
     let currentInterval = getInterval();
     const tick = () => {
       const urgency = 1 - timer.percent / 100;
@@ -569,18 +363,14 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         timerTickRef.current = setInterval(tick, currentInterval);
       }
     };
-
-    // Play first tick immediately when crossing the 50% threshold
     sound.playTimerTick(1 - timer.percent / 100);
     timerTickRef.current = setInterval(tick, currentInterval);
-
     return () => {
       if (timerTickRef.current) clearInterval(timerTickRef.current);
       timerTickRef.current = undefined;
     };
   }, [isTurn, isHero, timer.percent > 50, timer.percent > 25, timer.percent > 10, sound]);
 
-  // Parallax depth effect for hero avatar only
   const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
   const avatarRef = useRef<HTMLDivElement>(null);
 
@@ -606,27 +396,8 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [isHero, isFolded, handleMouseMove, compactMode]);
 
-  const parallaxStyle = isHero && !isFolded
-    ? {
-        transform: `perspective(200px) translate(${mouseOffset.x}px, ${mouseOffset.y}px) rotateY(${mouseOffset.x * 1.67}deg) rotateX(${-mouseOffset.y * 1.67}deg)`,
-        transition: "transform 0.15s ease-out",
-      }
-    : undefined;
-
-  // Compute bet chip offset — push the bet badge toward the table center
-  const betOffsetX = (50 - position.x) * 0.4; // positive = toward center
-  const betOffsetY = (50 - position.y) * 0.35;
-
-  // Chip stack side — place chips on the side closest to the table edge (away from center)
-  const chipStackSide: "left" | "right" = position.x < 50 ? "left" : "right";
-
-  // Build hex-to-rgba helper for glowColor
-  const hexToRgba = (hex: string, alpha: number) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  };
+  const hasCards = !hideCards && player.cards && player.cards.length > 0 && !isFolded;
+  const showFaceDown = hasCards && !isHero;
 
   return (
     <div
@@ -647,28 +418,17 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
           (player.isSittingOut || player.status === "sitting-out") && !isFolded && "opacity-50"
         )}
       >
-        {/* Taunt bubble (above emotes) */}
         <TauntBubble playerId={player.id} />
-        {/* Emote bubble */}
         <EmoteBubble playerId={player.id} />
 
-        {/* Winner particle burst canvas */}
         <canvas
           ref={winnerCanvasRef}
           width={200}
           height={200}
           className="absolute pointer-events-none"
-          style={{
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 200,
-            height: 200,
-            zIndex: 50,
-          }}
+          style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 200, height: 200, zIndex: 50 }}
         />
 
-        {/* ── Action status badge (positioned ABOVE avatar) ── */}
         <AnimatePresence>
           {statusLabel[player.status] && player.status !== "waiting" && player.status !== "thinking" && (
             <motion.div
@@ -689,15 +449,14 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               }}
             >
               {statusLabel[player.status]}
-              {/* Show bet amount next to CALL/RAISE */}
               {(player.status === "called" || player.status === "raised") && player.currentBet > 0 && (
-                <span className="ml-1.5 font-mono text-[0.625rem]">{formatChips(player.currentBet)}</span>
+                <span className="ml-1.5 font-mono text-[0.625rem]">${player.currentBet.toLocaleString()}</span>
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── Portrait-style player card ── */}
+        {/* ── Stitch-poker portrait card ── */}
         <div ref={avatarRef} className="relative z-10">
           {showVideo && <VideoThumbnail userId={player.id} isLocal={isHero} size={48} />}
           {avatarTier && avatarTier !== "common" && (
@@ -705,204 +464,150 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               tier={avatarTier}
               winStreak={winStreak}
               vpipPercent={hudStats ? Math.round((hudStats.vpipCount / Math.max(1, hudStats.handsPlayed)) * 100) : undefined}
-              size={130}
+              size={160}
               isActive={isTurn}
             />
           )}
 
-          <div className="relative" style={{ ...parallaxStyle, ...reactionStyle }}>
-            <div
-              className="relative rounded-t-xl overflow-visible portrait-card"
-              style={{
-                borderTop: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderLeft: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderRight: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderBottom: "none",
-                borderRadius: "12px 12px 0 0",
-                boxShadow: isTurn
-                  ? `0 0 30px ${hexToRgba(glowColor, 0.8)}, 0 0 60px ${hexToRgba(glowColor, 0.4)}, 0 0 90px ${hexToRgba(glowColor, 0.15)}, inset 0 0 20px ${hexToRgba(glowColor, 0.25)}`
-                  : isWinner
-                  ? `0 0 25px rgba(212,175,55,0.5), 0 0 50px rgba(212,175,55,0.2)`
-                  : `0 0 12px ${hexToRgba(glowColor, 0.4)}, 0 4px 20px rgba(0,0,0,0.6)`,
-                transition: "all 0.3s ease",
-                animation: isTurn ? "seatTurnPulse 2s ease-in-out infinite" : undefined,
-              }}
-            >
-              <div
-                className="absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-xl"
-                style={{
-                  background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
-                  boxShadow: `0 0 10px ${hexToRgba(glowColor, 0.7)}`,
-                }}
-              />
+          <div
+            className={cn("relative w-[150px]", isWinner && "ring-2 ring-[#d4af37] rounded-xl")}
+            style={isWinner ? { boxShadow: "0 0 25px rgba(212,175,55,0.5)" } : {}}
+          >
+            {player.isDealer && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-2 -right-2 z-40 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg"
+                style={{ border: "2px solid #d4af37" }}
+              >
+                <span className="text-[10px] font-black text-gray-900">D</span>
+              </motion.div>
+            )}
 
+            <div className="relative w-full h-[140px] overflow-visible" style={{ ...reactionStyle }}>
               {player.avatar ? (
                 <img
                   src={fullBodyImage || player.avatar}
                   alt={player.name}
-                  className="absolute inset-0 w-full h-full object-cover z-[1] rounded-t-xl"
-                  style={{
-                    objectPosition: "center 15%",
-                    opacity: isFolded ? 0.35 : 1,
-                    filter: isFolded ? "grayscale(1)" : "none",
-                  }}
+                  className={cn(
+                    "absolute inset-0 w-full h-full object-cover object-top rounded-t-xl",
+                    isFolded && "opacity-40 grayscale"
+                  )}
                 />
               ) : (
                 <div
-                  className="absolute inset-0 w-full h-full flex items-center justify-center text-xl font-black text-white/70 z-[1] rounded-t-xl"
+                  className={cn(
+                    "absolute inset-0 w-full h-full flex items-center justify-center text-2xl font-black text-white/70 rounded-t-xl",
+                    isFolded && "opacity-40 grayscale"
+                  )}
                   style={{
                     background: isHero
                       ? "linear-gradient(135deg, #0e7490, #164e63)"
                       : "linear-gradient(135deg, #78716c, #44403c)",
-                    opacity: isFolded ? 0.35 : 1,
-                    filter: isFolded ? "grayscale(1)" : "none",
                   }}
                 >
                   {player.name.charAt(0).toUpperCase()}
                 </div>
               )}
+              <div className="absolute inset-0 rounded-t-xl" style={{
+                background: "linear-gradient(180deg, transparent 30%, rgba(10,10,12,0.8) 100%)",
+              }} />
 
-              <div className="absolute bottom-0 left-0 right-0 h-[60%] z-[2] pointer-events-none"
-                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)" }} />
-            </div>
-
-            <div
-              className="relative z-[3] rounded-b-lg overflow-hidden"
-              style={{
-                background: "rgba(8,8,12,0.92)",
-                backdropFilter: "blur(8px)",
-                borderLeft: `2.5px solid ${hexToRgba(glowColor, 0.3)}`,
-                borderRight: `2.5px solid ${hexToRgba(glowColor, 0.3)}`,
-                borderBottom: `2.5px solid ${hexToRgba(glowColor, 0.3)}`,
-                padding: "3px 6px 2px",
-              }}
-            >
-              <div className="absolute bottom-0 left-0 right-0 h-[3px] z-20"
-                style={{
-                  background: "linear-gradient(90deg, transparent, #d4af37, #ffd700, #d4af37, transparent)",
-                  boxShadow: "0 0 8px rgba(212,175,55,0.5)",
+              {isTurn && (
+                <div className="absolute inset-0 rounded-t-xl pointer-events-none" style={{
+                  boxShadow: "inset 0 0 20px rgba(0,243,255,0.3), 0 0 20px rgba(0,243,255,0.3)",
+                  border: "2px solid rgba(0,243,255,0.5)",
+                  animation: "seatTurnPulse 2s ease-in-out infinite",
                 }} />
-              <p className="text-[0.5rem] font-bold text-white/90 truncate max-w-[70px] leading-tight text-center"
-                style={{ textShadow: `0 0 6px ${hexToRgba(glowColor, 0.4)}` }}>
-                {player.name}
-              </p>
-              <div className="flex items-center justify-center gap-0.5">
-                <svg width="7" height="7" viewBox="0 0 10 10" className="flex-shrink-0">
-                  <circle cx="5" cy="5" r="4" fill="#d4af37" stroke="#b8860b" strokeWidth="1" />
-                </svg>
-                <span className="text-[0.5rem] font-mono font-bold text-[#ffd700] leading-tight">
-                  {formatChips(animatedChips)}
-                </span>
-              </div>
-            </div>
+              )}
 
-            {/* ── Bet amount — floats between avatar and table center ── */}
-            {player.currentBet > 0 && !isFolded && (() => {
-              const isTop = seatIndex >= 3 && seatIndex <= 6;
-              const isLeft = seatIndex === 1 || seatIndex === 2 || seatIndex === 3;
-              const isRight = seatIndex === 7 || seatIndex === 8 || seatIndex === 9;
-              const betStyle: React.CSSProperties = {
-                position: "absolute",
-                zIndex: 25,
-                ...(seatIndex === 0 ? { top: "-20px", left: "50%", transform: "translateX(-50%)" } : {}),
-                ...(seatIndex === 5 ? { bottom: "-20px", left: "50%", transform: "translateX(-50%)" } : {}),
-                ...(isTop && seatIndex !== 5 ? { bottom: "-18px", left: "50%", transform: "translateX(-50%)" } : {}),
-                ...(!isTop && seatIndex !== 0 && isLeft ? { right: "-8px", top: "50%", transform: "translateY(-50%) translateX(100%)" } : {}),
-                ...(!isTop && seatIndex !== 0 && isRight ? { left: "-8px", top: "50%", transform: "translateY(-50%) translateX(-100%)" } : {}),
-              };
-              return (
-                <div style={betStyle} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
-                  style2-unused=""
-                >
-                  <span className="text-[#d4af37] text-[0.5rem] font-bold font-mono"
-                    style={{ background: "rgba(10,10,12,0.85)", border: "1px solid rgba(212,175,55,0.3)", borderRadius: "9999px", padding: "1px 6px" }}>
-                    {formatChips(player.currentBet)}
-                  </span>
-                </div>
-              );
-            })()}
-
-            {/* ── Face-down cards — between avatar and felt center ── */}
-            {!hideCards && !isHero && player.cards && player.cards.length > 0 && !isFolded && (() => {
-              const isTop = seatIndex >= 3 && seatIndex <= 6;
-              const cardStyle: React.CSSProperties = {
-                position: "absolute",
-                zIndex: 20,
-                display: "flex",
-                ...(isTop ? { bottom: "-16px", left: "50%", transform: "translateX(-50%)" } : {}),
-                ...(!isTop && seatIndex === 0 ? { top: "-16px", left: "50%", transform: "translateX(-50%)" } : {}),
-                ...(!isTop && seatIndex === 2 ? { right: "-16px", top: "50%", transform: "translateY(-50%)" } : {}),
-                ...(!isTop && seatIndex === 8 ? { left: "-16px", top: "50%", transform: "translateY(-50%)" } : {}),
-                ...(!isTop && (seatIndex === 1 || seatIndex === 3) ? { right: "-12px", bottom: "-4px" } : {}),
-                ...(!isTop && (seatIndex === 7 || seatIndex === 9) ? { left: "-12px", bottom: "-4px" } : {}),
-              };
-              return (
-                <div style={cardStyle}>
-                  {player.cards.filter((_, i) => dealCardCount === undefined || i < dealCardCount).map((_, i) => (
-                    <div key={`cb-${i}`} className="rounded-sm overflow-hidden"
-                      style={{
-                        width: 18, height: 26,
-                        transform: i === 0 ? "rotate(-6deg) translateX(2px)" : "rotate(6deg) translateX(-2px)",
-                        background: "linear-gradient(135deg, #1e3a5f, #0d1b2a)",
-                        border: "1px solid rgba(0,243,255,0.3)",
-                        boxShadow: "0 2px 6px rgba(0,0,0,0.7)",
-                      }}
-                    />
+              {showFaceDown && (
+                <div className="absolute left-1/2 -translate-x-1/2 flex z-20" style={{ bottom: "-4px" }}>
+                  {player.cards!.filter((_, i) => dealCardCount === undefined || i < dealCardCount).map((_, ci) => (
+                    <div key={ci} className="w-[46px] h-[64px] rounded-md" style={{
+                      background: "linear-gradient(135deg, #1e3a5f, #0d1b2a)",
+                      border: "2px solid rgba(0,243,255,0.3)",
+                      transform: ci === 0 ? "rotate(-10deg) translateX(6px)" : "rotate(10deg) translateX(-6px)",
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.8)",
+                    }}>
+                      <div className="w-full h-full rounded-md flex items-center justify-center" style={{
+                        background: "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0,243,255,0.08) 4px, rgba(0,243,255,0.08) 8px)",
+                      }}>
+                        <div className="w-7 h-9 rounded border-2 border-[#00f3ff]/30 bg-[#00f3ff]/10 flex items-center justify-center">
+                          <span className="text-[#00f3ff]/40 text-[14px] font-black">H</span>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
-              );
-            })()}
+              )}
+            </div>
+
+            <div className="relative z-30 w-full rounded-b-xl px-3 py-2 mt-0" style={{
+              background: "rgba(15,15,20,0.92)",
+              backdropFilter: "blur(12px)",
+            }}>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-white/60 text-[12px] whitespace-nowrap" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                  {seatIndex + 1}:
+                </span>
+                <span className="text-white font-extrabold text-[12px] uppercase truncate" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                  {player.name}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-white/80 text-[12px]" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                  STACK: <span className="text-white font-bold">${animatedChips.toLocaleString()}</span>
+                </span>
+                {player.currentBet > 0 && !isFolded && (
+                  <span className="text-[#d4af37] text-[12px] font-bold" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                    ${player.currentBet.toLocaleString()}
+                  </span>
+                )}
+                {isFolded && (
+                  <span className="text-red-400 text-[10px] font-bold uppercase">Fold</span>
+                )}
+              </div>
+              {isWinner && (
+                <div className="mt-1 text-center">
+                  <span className="text-[#d4af37] text-[10px] font-black uppercase tracking-wider animate-pulse">WINNER</span>
+                </div>
+              )}
+            </div>
+
+            {player.currentBet > 0 && !isFolded && (
+              <div className="absolute z-40" style={{ left: "50%", bottom: "-12px", transform: "translateX(-50%)" }}>
+                <div className="flex items-center gap-0.5">
+                  <div className="w-4 h-4 rounded-full border-2 border-[#d4af37] bg-[#1a1a12]" style={{ boxShadow: "0 0 6px rgba(212,175,55,0.4)" }} />
+                  <div className="w-4 h-4 rounded-full border-2 border-[#d4af37] bg-[#1a1a12] -ml-1.5" style={{ boxShadow: "0 0 6px rgba(212,175,55,0.4)" }} />
+                </div>
+              </div>
+            )}
+
+            {(player.isSittingOut || player.status === "sitting-out") && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-40 px-2 py-0.5 rounded text-[0.625rem] font-black uppercase tracking-wider text-orange-300 bg-black/80 border border-orange-500/50"
+                style={{ boxShadow: "0 0 12px rgba(249,115,22,0.3)" }}
+              >
+                AWAY
+              </motion.div>
+            )}
           </div>
 
           {isTurn && (
             <TimerRing
               percent={timer.percent}
               secondsLeft={timer.secondsLeft}
-              size={140}
+              size={170}
               strokeWidth={4}
               inTimeBank={timer.inTimeBank}
               timeBankRemaining={timer.timeBankRemaining}
               isHero={isHero}
             />
           )}
-
-          {player.isDealer && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -right-2 -top-2 z-40 w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-lg"
-              style={{ border: "2.5px solid #d4af37", boxShadow: "0 0 10px rgba(212,175,55,0.4)" }}
-            >
-              <span className="text-[11px] font-black text-gray-900">D</span>
-            </motion.div>
-          )}
-
-          {(player.isSittingOut || player.status === "sitting-out") && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-40 px-2 py-0.5 rounded text-[0.625rem] font-black uppercase tracking-wider text-orange-300 bg-black/80 border border-orange-500/50"
-              style={{ boxShadow: "0 0 12px rgba(249,115,22,0.3)" }}
-            >
-              AWAY
-            </motion.div>
-          )}
-
-          <div
-            className="absolute -left-1 -bottom-1 z-30 w-5 h-5 rounded-md flex items-center justify-center text-[0.5625rem] font-bold"
-            style={{
-              background: hexToRgba(glowColor, 0.25),
-              border: `1px solid ${hexToRgba(glowColor, 0.5)}`,
-              color: glowColor,
-            }}
-          >
-            {seatIndex + 1}
-          </div>
         </div>
-
-        {player.chips > 0 && !isFolded && (
-          <PlayerChipStack chips={player.chips} side={chipStackSide} />
-        )}
 
         {hudStats && hudStats.handsPlayed > 0 && (
           <div
@@ -911,9 +616,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
               background: "rgba(0,0,0,0.70)",
               border: "1px solid rgba(255,255,255,0.06)",
               borderTop: "none",
-              fontSize: perspectiveScale < 0.7 ? "0.6875rem" : "0.625rem",
-              transform: perspectiveScale < 0.7 ? `scale(${1 / perspectiveScale * 0.8})` : undefined,
-              transformOrigin: "top center",
+              fontSize: "0.625rem",
             }}
           >
             <HudStat
@@ -939,46 +642,14 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <span className="text-gray-600 font-mono">({hudStats.handsPlayed})</span>
           </div>
         )}
-
-        {/* ── Current bet chips + label (offset toward table center) ── */}
-        <AnimatePresence>
-          {player.currentBet > 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.7 }}
-              className="absolute z-40 flex flex-col items-center gap-0.5"
-              style={{
-                left: `calc(50% + ${betOffsetX}px)`,
-                top: `calc(50% + ${betOffsetY}px)`,
-                transform: "translate(-50%, -50%)",
-              }}
-            >
-              <BetChipStack amount={player.currentBet} />
-              <span
-                className="text-[0.75rem] font-mono font-black tabular-nums px-1.5 py-px rounded-md"
-                style={{
-                  color: "#ffd700",
-                  textShadow: "0 0 8px rgba(255,215,0,0.4)",
-                  background: "rgba(0,0,0,0.55)",
-                }}
-              >
-                {formatChips(player.currentBet)}
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
-
-      {/* Face-down cards are now rendered inside the avatar section above */}
     </div>
   );
 }
 
-// Color-coded HUD stat value
 function HudStat({ label, value, good, isFloat }: { label: string; value: number; good: [number, number]; isFloat?: boolean }) {
   const display = isFloat ? value.toFixed(1) : `${value}`;
-  let color = "text-yellow-400"; // default: outside range
+  let color = "text-yellow-400";
   if (value >= good[0] && value <= good[1]) {
     color = "text-green-400";
   } else if (value > good[1]) {

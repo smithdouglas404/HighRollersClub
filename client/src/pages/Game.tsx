@@ -5,10 +5,11 @@ import { Seat } from "../components/poker/Seat";
 import { Card } from "../components/poker/Card";
 import { CSSPokerTable } from "../components/poker/CSSPokerTable";
 import { PokerSceneCanvas } from "../scene/canvas/PokerSceneCanvas";
+import { useWebSocketBridge } from "@/hooks/useWebSocketBridge";
 import { RANK_FRAMES } from "@/lib/game-constants";
 
 // Feature flag: flip to true to use the 3D R3F table scene
-const USE_3D_TABLE = true;
+const USE_3D_TABLE = false;
 
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
@@ -289,6 +290,9 @@ function GameTable({
   onDeclinePlayer?: (playerId: string) => void;
   onUpdateTableSettings?: (settings: { walletLimit?: number; smallBlind?: number; bigBlind?: number }) => void;
 }) {
+  // Bridge game state → Zustand for 3D scene (works for both single-player and multiplayer)
+  useWebSocketBridge({ players, gameState, showdown });
+
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showAddChips, setShowAddChips] = useState(false);
   const [addChipsAmount, setAddChipsAmount] = useState(maxBuyIn || 300);
@@ -1142,11 +1146,9 @@ function GameTable({
           {/* Table area */}
           <div className="flex-1 relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 45%, #1a2744 0%, #131d30 40%, #0e1624 70%, #0a101c 100%)" }} />
-              {/* Atmospheric glow orbs */}
-              <div className="absolute top-[-15%] left-[10%] w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(0,243,255,0.045)" }} />
-              <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(147,51,234,0.03)" }} />
-              <div className="absolute top-[20%] right-[20%] w-[350px] h-[350px] rounded-full blur-[110px] pointer-events-none" style={{ background: "rgba(201,168,76,0.02)" }} />
+              <div className="absolute inset-0 bg-[#0a0a0c]" />
+              <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] bg-[#00f3ff]/[0.03] rounded-full blur-[150px] pointer-events-none" />
+              <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-purple-600/[0.02] rounded-full blur-[120px] pointer-events-none" />
 
               <div
                 ref={tableRef}
@@ -1157,6 +1159,21 @@ function GameTable({
                   <PokerSceneCanvas
                     quality="high"
                     className="absolute inset-0 z-[1]"
+                    activeSeat={(() => {
+                      const heroIdx = players.findIndex(p => p.id === heroId);
+                      const turnIdx = players.findIndex(p => p.status === "thinking");
+                      if (turnIdx < 0 || heroIdx < 0) return undefined;
+                      return (turnIdx - heroIdx + players.length) % players.length;
+                    })()}
+                    winnerSeat={(() => {
+                      if (!showdown?.results) return undefined;
+                      const heroIdx = players.findIndex(p => p.id === heroId);
+                      const winnerResult = showdown.results.find((r: any) => r.isWinner);
+                      if (!winnerResult || heroIdx < 0) return undefined;
+                      const winIdx = players.findIndex((p: any) => p.id === winnerResult.playerId);
+                      if (winIdx < 0) return undefined;
+                      return (winIdx - heroIdx + players.length) % players.length;
+                    })()}
                   />
                 ) : (
                   <CSSPokerTable

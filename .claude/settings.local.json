@@ -204,7 +204,8 @@
       "Bash(find /home/runner/workspace/server /home/runner/workspace/shared -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))",
       "Bash(git checkout:*)",
       "Bash(curl -s http://localhost:5000)",
-      "Bash(curl -s http://localhost:5000/api/user)"
+      "Bash(curl -s http://localhost:5000/api/user)",
+      "Bash(curl -s http://localhost:5000/src/pages/Game.tsx)"
     ]
   }
 }

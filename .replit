@@ -53,3 +53,7 @@ NOWPAYMENTS_SANDBOX = "false"
 NOWPAYMENTS_WEBHOOK_SECRET = "hrc_webhook_x44xo6gmx5o3fldmnukjl"
 DIRECT_WALLET_ENABLED = "true"
 DIRECT_WALLET_WEBHOOK_SECRET = "hrc_dw_v1qsczpkeurdl3ejhnxuvc"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000

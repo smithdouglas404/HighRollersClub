@@ -2,7 +2,7 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { registerAuthRoutes, requireAuth } from "./auth";
-import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema, users, gameHands } from "@shared/schema";
+import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema, users, gameHands, handPlayers, playerStats, tables } from "@shared/schema";
 import { sql } from "drizzle-orm";
 import { setupWebSocket, sendGameStateToTable, getClients } from "./websocket";
 import { getBlindPreset } from "./game/blind-presets";
@@ -46,6 +46,36 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     const clients = getClients();
     const onlineIds = Array.from(clients.keys());
     res.json(onlineIds);
+  });
+
+  // ─── Notification Routes ──────────────────────────────────────────────────
+  app.get("/api/notifications", requireAuth, async (req, res, next) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+      const items = await storage.getNotifications(req.user!.id, limit);
+      res.json(items);
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/notifications/unread-count", requireAuth, async (req, res, next) => {
+    try {
+      const count = await storage.getUnreadNotificationCount(req.user!.id);
+      res.json({ count });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/notifications/:id/read", requireAuth, async (req, res, next) => {
+    try {
+      await storage.markNotificationRead(req.params.id);
+      res.json({ ok: true });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/notifications/read-all", requireAuth, async (req, res, next) => {
+    try {
+      await storage.markAllNotificationsRead(req.user!.id);
+      res.json({ ok: true });
+    } catch (err) { next(err); }
   });
 
   // ─── Table Routes ────────────────────────────────────────────────────────
@@ -250,11 +280,217 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // ─── Club Rankings (public) ──────────────────────────────────────────────
+  app.get("/api/clubs/rankings", async (_req, res, next) => {
+    try {
+      const allClubs = await storage.getClubs();
+      if (allClubs.length === 0) return res.json([]);
+
+      // Gather all tournaments and registrations once
+      const allTournaments = await storage.getTournaments();
+      const completeTournaments = allTournaments.filter(t => t.status === "complete" && t.clubId);
+
+      // Build club-level tournament win counts
+      const clubTournamentWins = new Map<string, number>();
+      for (const t of completeTournaments) {
+        const regs = await storage.getTournamentRegistrations(t.id);
+        const winner = regs.find(r => r.finishPlace === 1);
+        if (winner && t.clubId) {
+          clubTournamentWins.set(t.clubId, (clubTournamentWins.get(t.clubId) || 0) + 1);
+        }
+      }
+
+      // 7 days ago cutoff for active players
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      const rankings = await Promise.all(allClubs.map(async (club) => {
+        const members = await storage.getClubMembers(club.id);
+        const userIds = members.map(m => m.userId);
+        if (userIds.length === 0) {
+          return {
+            clubId: club.id,
+            clubName: club.name,
+            memberCount: 0,
+            activePlayers7d: 0,
+            totalHandsPlayed: 0,
+            combinedWinRate: 0,
+            totalChipsWon: 0,
+            tournamentWins: clubTournamentWins.get(club.id) || 0,
+            rank: 0,
+          };
+        }
+
+        const statsMap = await storage.getPlayerStatsBatch(userIds);
+        const userData = await Promise.all(userIds.map(id => storage.getUser(id)));
+
+        let totalHands = 0;
+        let totalPots = 0;
+        let totalChips = 0;
+
+        for (const uid of userIds) {
+          const stats = statsMap.get(uid);
+          const user = userData.find(u => u?.id === uid);
+          totalHands += stats?.handsPlayed ?? 0;
+          totalPots += stats?.potsWon ?? 0;
+          totalChips += stats?.totalWinnings ?? 0;
+          if (!totalChips && user) {
+            // fallback: use chipBalance above starting amount
+            totalChips += Math.max(0, (user.chipBalance ?? 0) - 1000);
+          }
+        }
+
+        // Approximate active players in last 7 days using playerStats.updatedAt
+        let activePlayers7d = 0;
+        for (const uid of userIds) {
+          const stats = statsMap.get(uid);
+          if (stats && stats.updatedAt && new Date(stats.updatedAt) >= weekAgo && stats.handsPlayed > 0) {
+            activePlayers7d++;
+          }
+        }
+
+        const combinedWinRate = totalHands > 0
+          ? Math.round((totalPots / totalHands) * 1000) / 10
+          : 0;
+
+        return {
+          clubId: club.id,
+          clubName: club.name,
+          memberCount: userIds.length,
+          activePlayers7d,
+          totalHandsPlayed: totalHands,
+          combinedWinRate,
+          totalChipsWon: totalChips,
+          tournamentWins: clubTournamentWins.get(club.id) || 0,
+          rank: 0,
+        };
+      }));
+
+      // Sort by total hands played (primary ranking)
+      rankings.sort((a, b) => b.totalHandsPlayed - a.totalHandsPlayed);
+
+      // Assign ranks and limit to top 50
+      const top50 = rankings.slice(0, 50).map((r, i) => ({ ...r, rank: i + 1 }));
+
+      res.json(top50);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // User's pending club join requests (must be before /api/clubs/:id)
   app.get("/api/clubs/my-pending-requests", requireAuth, async (req, res, next) => {
     try {
       const requests = await storage.getUserPendingRequests(req.user!.id);
       res.json(requests);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Club Social Feed ────────────────────────────────────────────────────
+  app.get("/api/clubs/my-feed", requireAuth, async (req, res, next) => {
+    try {
+      const userClubs = await storage.getUserClubs(req.user!.id);
+      if (userClubs.length === 0) return res.json([]);
+
+      type FeedItem = {
+        type: "big_pot" | "tournament_win" | "member_join" | "announcement" | "table_started";
+        clubId: string;
+        clubName: string;
+        playerName: string;
+        description: string;
+        timestamp: string;
+        amount?: number;
+      };
+
+      const feed: FeedItem[] = [];
+
+      for (const club of userClubs) {
+        // Fetch announcements
+        const announcements = await storage.getClubAnnouncements(club.id);
+        for (const a of announcements.slice(0, 5)) {
+          const author = await storage.getUser(a.authorId);
+          feed.push({
+            type: "announcement",
+            clubId: club.id,
+            clubName: club.name,
+            playerName: author?.displayName || author?.username || "Unknown",
+            description: a.title,
+            timestamp: a.createdAt.toISOString(),
+          });
+        }
+
+        // Fetch club events
+        const events = await storage.getClubEvents(club.id);
+        for (const ev of events.slice(0, 5)) {
+          const evType = ev.eventType === "tournament" ? "tournament_win" as const : "table_started" as const;
+          feed.push({
+            type: evType,
+            clubId: club.id,
+            clubName: club.name,
+            playerName: "",
+            description: ev.name + (ev.description ? ` - ${ev.description}` : ""),
+            timestamp: (ev.startTime || ev.createdAt).toISOString(),
+          });
+        }
+
+        // Fetch recent member joins
+        const members = await storage.getClubMembers(club.id);
+        const recentMembers = members
+          .filter(m => m.joinedAt)
+          .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime())
+          .slice(0, 3);
+        for (const m of recentMembers) {
+          const memberUser = await storage.getUser(m.userId);
+          feed.push({
+            type: "member_join",
+            clubId: club.id,
+            clubName: club.name,
+            playerName: memberUser?.displayName || memberUser?.username || "Unknown",
+            description: `${memberUser?.displayName || memberUser?.username || "Someone"} joined the club`,
+            timestamp: new Date(m.joinedAt).toISOString(),
+          });
+        }
+      }
+
+      // Sort newest first, return top 20
+      feed.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      res.json(feed.slice(0, 20));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Active clubs with online member counts
+  app.get("/api/clubs/my-active", requireAuth, async (req, res, next) => {
+    try {
+      const userClubs = await storage.getUserClubs(req.user!.id);
+      if (userClubs.length === 0) return res.json([]);
+
+      // Gather all active table player user IDs
+      const allTables = await storage.getTables();
+      const activePlayerIds = new Set<string>();
+      for (const table of allTables) {
+        const players = await storage.getTablePlayers(table.id);
+        for (const p of players) {
+          activePlayerIds.add(p.userId);
+        }
+      }
+
+      const result = await Promise.all(
+        userClubs.map(async (club) => {
+          const members = await storage.getClubMembers(club.id);
+          const onlineCount = members.filter(m => activePlayerIds.has(m.userId)).length;
+          return {
+            id: club.id,
+            name: club.name,
+            memberCount: members.length,
+            onlineCount,
+          };
+        })
+      );
+
+      res.json(result);
     } catch (err) {
       next(err);
     }
@@ -610,6 +846,22 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         content,
         pinned: pinned || false,
       });
+
+      // Notify all club members about the announcement
+      try {
+        for (const m of members) {
+          if (m.userId !== req.user!.id) {
+            await storage.createNotification(
+              m.userId,
+              "club_announcement",
+              `${club.name}: ${title}`,
+              content.length > 120 ? content.slice(0, 120) + "..." : content,
+              { clubId: club.id, announcementId: ann.id },
+            );
+          }
+        }
+      } catch (_) { /* non-critical */ }
+
       res.status(201).json(ann);
     } catch (err) {
       next(err);
@@ -649,6 +901,65 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) {
       next(err);
     }
+  });
+
+  // ─── Club Challenges ────────────────────────────────────────────────────
+  app.get("/api/clubs/:id/challenges", requireAuth, async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+      const challenges = await storage.getClubChallenges(club.id);
+      const now = new Date();
+      // Return active (not expired or recently completed within 7 days) challenges
+      const relevant = challenges.filter(c => {
+        if (c.completedAt) {
+          const completedAgo = now.getTime() - new Date(c.completedAt).getTime();
+          return completedAgo < 7 * 24 * 60 * 60 * 1000;
+        }
+        return new Date(c.expiresAt).getTime() > now.getTime();
+      });
+      res.json(relevant);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/clubs/:id/challenges/generate", requireAuth, async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+      const members = await storage.getClubMembers(club.id);
+      const requester = members.find(m => m.userId === req.user!.id);
+      if (!requester || (requester.role !== "owner" && requester.role !== "admin")) {
+        return res.status(403).json({ message: "Only club admins can generate challenges" });
+      }
+      const challengeTemplates = [
+        { title: "Play 500 Hands", description: "Play 500 hands as a club this week", type: "hands_played", targetValue: 500 },
+        { title: "Win 10 Tournaments", description: "Club members win 10 tournaments combined", type: "tournaments_won", targetValue: 10 },
+        { title: "5 Active Members", description: "Have 5 different members play today", type: "members_active", targetValue: 5 },
+        { title: "Win 50 Pots", description: "Win 50 pots as a club this week", type: "pots_won", targetValue: 50 },
+      ];
+      const shuffled = challengeTemplates.sort(() => Math.random() - 0.5);
+      const count = 3 + Math.floor(Math.random() * 2);
+      const selected = shuffled.slice(0, count);
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const created = [];
+      for (const tmpl of selected) {
+        const rewardChips = 1000 + Math.floor(Math.random() * 4001);
+        const challenge = await storage.createClubChallenge({
+          clubId: club.id,
+          title: tmpl.title,
+          description: tmpl.description,
+          targetValue: tmpl.targetValue,
+          currentValue: 0,
+          rewardChips,
+          rewardDescription: `${rewardChips.toLocaleString()} chips`,
+          type: tmpl.type,
+          expiresAt,
+          completedAt: null,
+        });
+        created.push(challenge);
+      }
+      res.status(201).json(created);
+    } catch (err) { next(err); }
   });
 
   // ─── Club Tournaments ───────────────────────────────────────────────────
@@ -721,6 +1032,90 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       entries.sort((a: any, b: any) => b.value - a.value);
       res.json(entries);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Club Quick Stats ─────────────────────────────────────────────────
+  app.get("/api/clubs/:id/quick-stats", requireAuth, async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+
+      let mostActiveTable: { name: string; playerCount: number } | null = null;
+      let topWinnerThisWeek: { displayName: string; amount: number } | null = null;
+      let biggestPotToday: { amount: number; winnerName: string } | null = null;
+
+      if (hasDatabase()) {
+        const db = getDb();
+
+        // 1. Most Active Table: table with most current players
+        const activeRows = await db.execute(sql`
+          SELECT t.name, COUNT(tp.id)::int AS player_count
+          FROM tables t
+          INNER JOIN table_players tp ON tp.table_id = t.id
+          WHERE t.club_id = ${club.id}
+          GROUP BY t.id, t.name
+          ORDER BY player_count DESC
+          LIMIT 1
+        `);
+        const activeResult = (activeRows as any).rows ?? activeRows;
+        if (activeResult.length > 0 && Number(activeResult[0].player_count) > 0) {
+          mostActiveTable = {
+            name: activeResult[0].name as string,
+            playerCount: Number(activeResult[0].player_count),
+          };
+        }
+
+        // 2. Top Winner This Week: highest net_result sum in last 7 days among club members
+        const winnerRows = await db.execute(sql`
+          SELECT u.display_name, u.username, SUM(hp.net_result)::int AS total_won
+          FROM hand_players hp
+          INNER JOIN game_hands gh ON gh.id = hp.hand_id
+          INNER JOIN tables t ON t.id = gh.table_id
+          INNER JOIN club_members cm ON cm.club_id = t.club_id AND cm.user_id = hp.user_id
+          INNER JOIN users u ON u.id = hp.user_id
+          WHERE t.club_id = ${club.id}
+            AND gh.created_at >= NOW() - INTERVAL '7 days'
+          GROUP BY hp.user_id, u.display_name, u.username
+          ORDER BY total_won DESC
+          LIMIT 1
+        `);
+        const winnerResult = (winnerRows as any).rows ?? winnerRows;
+        if (winnerResult.length > 0 && Number(winnerResult[0].total_won) > 0) {
+          topWinnerThisWeek = {
+            displayName: (winnerResult[0].display_name || winnerResult[0].username) as string,
+            amount: Number(winnerResult[0].total_won),
+          };
+        }
+
+        // 3. Biggest Pot Today: largest pot in last 24 hours for this club's tables
+        const potRows = await db.execute(sql`
+          SELECT gh.pot_total, u.display_name, u.username
+          FROM game_hands gh
+          INNER JOIN tables t ON t.id = gh.table_id
+          LEFT JOIN LATERAL (
+            SELECT hp2.user_id
+            FROM hand_players hp2
+            WHERE hp2.hand_id = gh.id AND hp2.is_winner = true
+            LIMIT 1
+          ) w ON true
+          LEFT JOIN users u ON u.id = w.user_id
+          WHERE t.club_id = ${club.id}
+            AND gh.created_at >= NOW() - INTERVAL '1 day'
+            AND gh.pot_total > 0
+          ORDER BY gh.pot_total DESC
+          LIMIT 1
+        `);
+        const potResult = (potRows as any).rows ?? potRows;
+        if (potResult.length > 0 && Number(potResult[0].pot_total) > 0) {
+          biggestPotToday = {
+            amount: Number(potResult[0].pot_total),
+            winnerName: (potResult[0].display_name || potResult[0].username || "Unknown") as string,
+          };
+        }
+      }
+
+      res.json({ mostActiveTable, topWinnerThisWeek, biggestPotToday });
     } catch (err) { next(err); }
   });
 
@@ -893,6 +1288,113 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 20, 1), 50);
       const sessions = await storage.getSessionSummaries(req.user!.id, limit);
       res.json(sessions);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Session History (stack-over-time) ─────────────────────────────────────
+  app.get("/api/sessions/history", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 10, 1), 50);
+
+      if (!hasDatabase()) {
+        return res.json([]);
+      }
+
+      const db = getDb();
+
+      // Fetch all hands for this user, joined with game_hands and tables
+      const rows = await db.execute(sql`
+        SELECT
+          gh.id AS hand_id,
+          gh.table_id,
+          gh.hand_number,
+          gh.created_at,
+          t.name AS table_name,
+          hp.start_stack,
+          hp.end_stack,
+          hp.net_result
+        FROM hand_players hp
+        INNER JOIN game_hands gh ON gh.id = hp.hand_id
+        INNER JOIN tables t ON t.id = gh.table_id
+        WHERE hp.user_id = ${userId}
+        ORDER BY gh.created_at ASC
+      `);
+
+      const allHands = (rows as any).rows ?? rows;
+      if (!allHands || allHands.length === 0) {
+        return res.json([]);
+      }
+
+      // Group hands into sessions: same table, gap <= 30 min
+      const SESSION_GAP_MS = 30 * 60 * 1000;
+      interface HandRow {
+        hand_id: string;
+        table_id: string;
+        hand_number: number;
+        created_at: string | Date;
+        table_name: string;
+        start_stack: number;
+        end_stack: number;
+        net_result: number;
+      }
+
+      interface Session {
+        tableId: string;
+        tableName: string;
+        hands: HandRow[];
+      }
+
+      const sessions: Session[] = [];
+      let current: Session | null = null;
+      let lastTime = 0;
+
+      for (const row of allHands as HandRow[]) {
+        const t = new Date(row.created_at).getTime();
+        const sameTable = current && row.table_id === current.tableId;
+        const withinGap = current && (t - lastTime) <= SESSION_GAP_MS;
+
+        if (sameTable && withinGap) {
+          current!.hands.push(row);
+        } else {
+          current = {
+            tableId: row.table_id,
+            tableName: row.table_name,
+            hands: [row],
+          };
+          sessions.push(current);
+        }
+        lastTime = t;
+      }
+
+      // Build response: newest sessions first, limited
+      const result = sessions
+        .slice(-limit)
+        .reverse()
+        .map((s) => {
+          const firstHand = s.hands[0];
+          const lastHand = s.hands[s.hands.length - 1];
+          const startingStack = Number(firstHand.start_stack);
+          const endingStack = Number(lastHand.end_stack);
+          return {
+            sessionId: `${s.tableId}-${new Date(firstHand.created_at).getTime()}`,
+            tableName: s.tableName,
+            startTime: new Date(firstHand.created_at).toISOString(),
+            endTime: new Date(lastHand.created_at).toISOString(),
+            handsPlayed: s.hands.length,
+            startingStack,
+            endingStack,
+            netResult: endingStack - startingStack,
+            stackHistory: s.hands.map(h => ({
+              handNumber: Number(h.hand_number),
+              chips: Number(h.end_stack),
+            })),
+          };
+        });
+
+      res.json(result);
     } catch (err) {
       next(err);
     }
@@ -1162,6 +1664,385 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         pfr: stats.pfr,
         showdownCount: stats.showdownCount,
         sngWins: stats.sngWins,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Stats Breakdown by Variant / Format ───────────────────────────────
+  app.get("/api/stats/me/breakdown", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+
+      if (!hasDatabase()) {
+        // In-memory fallback: return empty breakdown
+        const emptyGroup = { handsPlayed: 0, potsWon: 0, winRate: 0, totalChipsWon: 0, totalChipsLost: 0, netResult: 0 };
+        return res.json({
+          byVariant: { nlhe: { ...emptyGroup }, plo: { ...emptyGroup }, plo5: { ...emptyGroup }, short_deck: { ...emptyGroup } },
+          byFormat: { cash: { ...emptyGroup }, sng: { ...emptyGroup }, tournament: { ...emptyGroup } },
+        });
+      }
+
+      const db = getDb();
+
+      // Query hand_players joined with game_hands joined with tables to get variant and format
+      const rows = await db.execute(sql`
+        SELECT
+          t.poker_variant AS variant,
+          t.game_format AS format,
+          hp.net_result,
+          hp.is_winner
+        FROM hand_players hp
+        INNER JOIN game_hands gh ON gh.id = hp.hand_id
+        INNER JOIN tables t ON t.id = gh.table_id
+        WHERE hp.user_id = ${userId}
+      `);
+
+      const byVariant: Record<string, { handsPlayed: number; potsWon: number; totalChipsWon: number; totalChipsLost: number; netResult: number }> = {};
+      const byFormat: Record<string, { handsPlayed: number; potsWon: number; totalChipsWon: number; totalChipsLost: number; netResult: number }> = {};
+
+      const ensureGroup = (map: typeof byVariant, key: string) => {
+        if (!map[key]) map[key] = { handsPlayed: 0, potsWon: 0, totalChipsWon: 0, totalChipsLost: 0, netResult: 0 };
+        return map[key];
+      };
+
+      // Ensure all known variants/formats exist
+      for (const v of ["nlhe", "plo", "plo5", "short_deck"]) ensureGroup(byVariant, v);
+      for (const f of ["cash", "sng", "tournament"]) ensureGroup(byFormat, f);
+
+      const resultRows = (rows as any).rows ?? rows;
+      for (const row of resultRows) {
+        const variant = (row.variant as string) || "nlhe";
+        const rawFormat = (row.format as string) || "cash";
+        // Normalize format: heads_up and bomb_pot count as cash, sng stays sng, tournament stays tournament
+        const format = rawFormat === "tournament" ? "tournament" : rawFormat === "sng" ? "sng" : "cash";
+        const net = Number(row.net_result) || 0;
+        const won = row.is_winner === true || row.is_winner === "true";
+
+        const vg = ensureGroup(byVariant, variant);
+        vg.handsPlayed++;
+        if (won) vg.potsWon++;
+        if (net > 0) vg.totalChipsWon += net;
+        else vg.totalChipsLost += Math.abs(net);
+        vg.netResult += net;
+
+        const fg = ensureGroup(byFormat, format);
+        fg.handsPlayed++;
+        if (won) fg.potsWon++;
+        if (net > 0) fg.totalChipsWon += net;
+        else fg.totalChipsLost += Math.abs(net);
+        fg.netResult += net;
+      }
+
+      // Add winRate to each group
+      const addWinRate = (map: typeof byVariant) => {
+        const result: Record<string, any> = {};
+        for (const [key, g] of Object.entries(map)) {
+          result[key] = {
+            ...g,
+            winRate: g.handsPlayed > 0 ? Math.round((g.potsWon / g.handsPlayed) * 10000) / 100 : 0,
+          };
+        }
+        return result;
+      };
+
+      res.json({
+        byVariant: addWinRate(byVariant),
+        byFormat: addWinRate(byFormat),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Head-to-Head Stats ────────────────────────────────────────────────
+  app.get("/api/stats/head-to-head/top", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+
+      if (!hasDatabase()) {
+        return res.json([]);
+      }
+
+      const db = getDb();
+
+      const rows = await db.execute(sql`
+        SELECT
+          opp.user_id AS opponent_id,
+          u.display_name AS opponent_name,
+          u.username AS opponent_username,
+          COUNT(*) AS hands_played,
+          SUM(CASE WHEN me.is_winner THEN 1 ELSE 0 END) AS user_wins,
+          SUM(CASE WHEN opp.is_winner THEN 1 ELSE 0 END) AS opponent_wins,
+          SUM(CASE WHEN me.is_winner AND opp.is_winner THEN 1 ELSE 0 END) AS split_pots,
+          SUM(me.net_result) AS user_net_chips,
+          MAX(gh.created_at) AS last_played
+        FROM hand_players me
+        INNER JOIN hand_players opp ON opp.hand_id = me.hand_id AND opp.user_id != me.user_id
+        INNER JOIN game_hands gh ON gh.id = me.hand_id
+        INNER JOIN users u ON u.id = opp.user_id
+        WHERE me.user_id = ${userId}
+        GROUP BY opp.user_id, u.display_name, u.username
+        ORDER BY COUNT(*) DESC
+        LIMIT 5
+      `);
+
+      const resultRows = (rows as any).rows ?? rows;
+      const results = resultRows.map((row: any) => ({
+        opponentId: row.opponent_id,
+        opponentName: row.opponent_name || row.opponent_username || "Unknown",
+        handsPlayedTogether: Number(row.hands_played) || 0,
+        userWins: Number(row.user_wins) || 0,
+        opponentWins: Number(row.opponent_wins) - Number(row.split_pots) || 0,
+        splitPots: Number(row.split_pots) || 0,
+        userNetChips: Number(row.user_net_chips) || 0,
+        lastPlayed: row.last_played || null,
+      }));
+
+      res.json(results);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/stats/head-to-head/:opponentId", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const opponentId = req.params.opponentId;
+
+      if (!hasDatabase()) {
+        return res.json({
+          opponentId,
+          opponentName: "Unknown",
+          handsPlayedTogether: 0,
+          userWins: 0,
+          opponentWins: 0,
+          splitPots: 0,
+          userNetChips: 0,
+          lastPlayed: null,
+        });
+      }
+
+      const db = getDb();
+
+      const oppRows = await db.execute(sql`
+        SELECT display_name, username FROM users WHERE id = ${opponentId}
+      `);
+      const oppResultRows = (oppRows as any).rows ?? oppRows;
+      const opponent = oppResultRows[0];
+      if (!opponent) {
+        return res.status(404).json({ message: "Opponent not found" });
+      }
+
+      const rows = await db.execute(sql`
+        SELECT
+          me.is_winner AS me_won,
+          opp.is_winner AS opp_won,
+          me.net_result AS my_net,
+          gh.created_at
+        FROM hand_players me
+        INNER JOIN hand_players opp ON opp.hand_id = me.hand_id AND opp.user_id = ${opponentId}
+        INNER JOIN game_hands gh ON gh.id = me.hand_id
+        WHERE me.user_id = ${userId}
+        ORDER BY gh.created_at DESC
+      `);
+
+      const resultRows = (rows as any).rows ?? rows;
+
+      let userWins = 0;
+      let opponentWins = 0;
+      let splitPots = 0;
+      let userNetChips = 0;
+      let lastPlayed: string | null = null;
+
+      for (const row of resultRows) {
+        const meWon = row.me_won === true || row.me_won === "true";
+        const oppWon = row.opp_won === true || row.opp_won === "true";
+        const net = Number(row.my_net) || 0;
+
+        if (meWon && oppWon) {
+          splitPots++;
+          userWins++;
+        } else if (meWon) {
+          userWins++;
+        } else if (oppWon) {
+          opponentWins++;
+        }
+
+        userNetChips += net;
+
+        if (!lastPlayed && row.created_at) {
+          lastPlayed = new Date(row.created_at).toISOString();
+        }
+      }
+
+      res.json({
+        opponentId,
+        opponentName: opponent.display_name || opponent.username || "Unknown",
+        handsPlayedTogether: resultRows.length,
+        userWins,
+        opponentWins,
+        splitPots,
+        userNetChips,
+        lastPlayed,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Play Style Coach ─────────────────────────────────────────────────
+  app.get("/api/coaching/recommendations", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const stats = await storage.getPlayerStats(userId);
+
+      const handsPlayed = stats?.handsPlayed ?? 0;
+      const potsWon = stats?.potsWon ?? 0;
+      const vpipCount = stats?.vpip ?? 0;
+      const pfrCount = stats?.pfr ?? 0;
+      const showdownCount = stats?.showdownCount ?? 0;
+
+      const vpipPct = handsPlayed > 0 ? Math.round((vpipCount / handsPlayed) * 100) : 0;
+      const pfrPct = handsPlayed > 0 ? Math.round((pfrCount / handsPlayed) * 100) : 0;
+      const showdownPct = handsPlayed > 0 ? Math.round((showdownCount / handsPlayed) * 100) : 0;
+      const winRate = handsPlayed > 0 ? Math.round((potsWon / handsPlayed) * 100) : 0;
+
+      // Try to get additional data from handPlayers if DB is available
+      let additionalHands = 0;
+      if (hasDatabase()) {
+        try {
+          const db = getDb();
+          const rows = await db.select({ count: sql<number>`count(*)` }).from(handPlayers).where(sql`${handPlayers.userId} = ${userId}`);
+          additionalHands = Number(rows[0]?.count ?? 0);
+        } catch (_) { /* ignore — use playerStats only */ }
+      }
+
+      const totalAnalyzed = Math.max(handsPlayed, additionalHands);
+
+      const recommendations: { category: string; severity: string; title: string; detail: string }[] = [];
+
+      // Minimum hands gate
+      if (totalAnalyzed < 100) {
+        recommendations.push({
+          category: "General",
+          severity: "warning",
+          title: "Need More Data",
+          detail: `Play more hands to get meaningful recommendations. We need at least 100 hands. You've played ${totalAnalyzed} so far.`,
+        });
+      }
+
+      // VPIP analysis
+      if (vpipPct > 35) {
+        recommendations.push({
+          category: "Preflop",
+          severity: "critical",
+          title: "Too Loose Preflop",
+          detail: `Your VPIP is ${vpipPct}% — you're playing too many hands. Optimal range is 18-25% for full ring. Tighten up, especially from early position.`,
+        });
+      } else if (vpipPct < 15 && handsPlayed >= 100) {
+        recommendations.push({
+          category: "Preflop",
+          severity: "warning",
+          title: "Too Tight Preflop",
+          detail: `Your VPIP is ${vpipPct}% — you're playing too tight. You're missing profitable spots. Open your range from late position.`,
+        });
+      } else if (vpipPct >= 18 && vpipPct <= 25) {
+        recommendations.push({
+          category: "Preflop",
+          severity: "good",
+          title: "Optimal VPIP",
+          detail: `Your VPIP of ${vpipPct}% is in the optimal range. Keep it up.`,
+        });
+      }
+
+      // PFR analysis
+      if (handsPlayed >= 100 && pfrPct < vpipPct / 2) {
+        recommendations.push({
+          category: "Preflop",
+          severity: "warning",
+          title: "Too Much Calling",
+          detail: `Your PFR is ${pfrPct}% vs VPIP of ${vpipPct}% — you're calling too much preflop instead of raising. Raise or fold more, call less.`,
+        });
+      } else if (handsPlayed >= 100 && pfrPct > vpipPct * 0.8) {
+        recommendations.push({
+          category: "Preflop",
+          severity: "warning",
+          title: "Raising Too Often",
+          detail: `You're raising nearly every hand you play. Consider flatting more in position.`,
+        });
+      }
+
+      // Showdown analysis
+      if (showdownPct > 40) {
+        recommendations.push({
+          category: "Postflop",
+          severity: "warning",
+          title: "Too Many Showdowns",
+          detail: `You're going to showdown ${showdownPct}% of the time — you might be calling too many rivers. Consider folding weak hands on the river.`,
+        });
+      } else if (showdownPct < 15 && handsPlayed >= 100) {
+        recommendations.push({
+          category: "Postflop",
+          severity: "warning",
+          title: "Folding Too Often",
+          detail: `You rarely go to showdown (${showdownPct}%) — opponents may be pushing you off hands. Stand your ground with medium-strength hands.`,
+        });
+      }
+
+      // Win rate
+      if (winRate < 15 && handsPlayed >= 100) {
+        recommendations.push({
+          category: "Overall",
+          severity: "critical",
+          title: "Low Win Rate",
+          detail: `Your win rate of ${winRate}% is below average. Focus on hand selection and position.`,
+        });
+      } else if (winRate > 40) {
+        recommendations.push({
+          category: "Overall",
+          severity: "good",
+          title: "Excellent Win Rate",
+          detail: `Excellent win rate of ${winRate}%! You're playing well above average.`,
+        });
+      }
+
+      // Determine play style
+      const isLoose = vpipPct > 25;
+      const isAggressive = pfrPct > 15;
+      let overallRating: string;
+      if (isLoose && isAggressive) overallRating = "Loose-Aggressive";
+      else if (isLoose && !isAggressive) overallRating = "Loose-Passive";
+      else if (!isLoose && isAggressive) overallRating = "Tight-Aggressive";
+      else overallRating = "Tight-Passive";
+
+      // Calculate a score (0-100)
+      let score = 50;
+      if (vpipPct >= 18 && vpipPct <= 25) score += 15;
+      else if (vpipPct > 35 || vpipPct < 10) score -= 15;
+      else score -= 5;
+      if (pfrPct >= vpipPct * 0.5 && pfrPct <= vpipPct * 0.8) score += 10;
+      else score -= 5;
+      if (showdownPct >= 20 && showdownPct <= 35) score += 10;
+      else if (showdownPct > 40 || showdownPct < 15) score -= 10;
+      if (winRate > 40) score += 15;
+      else if (winRate > 25) score += 5;
+      else if (winRate < 15) score -= 10;
+      score = Math.max(0, Math.min(100, score));
+
+      res.json({
+        handsAnalyzed: totalAnalyzed,
+        overallRating,
+        score,
+        recommendations,
+        stats: {
+          vpip: vpipPct,
+          pfr: pfrPct,
+          showdownPct,
+          winRate,
+          handsPlayed: totalAnalyzed,
+        },
       });
     } catch (err) {
       next(err);
@@ -1673,6 +2554,17 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       await storage.updateTournament(tourney.id, {
         prizePool: tourney.prizePool + tourney.buyIn,
       });
+
+      // Notify user of successful registration
+      try {
+        await storage.createNotification(
+          req.user!.id,
+          "tournament_starting",
+          `Registered: ${tourney.name}`,
+          `You are registered for ${tourney.name}. Buy-in: ${tourney.buyIn} chips.`,
+          { tournamentId: tourney.id },
+        );
+      } catch (_) { /* non-critical */ }
 
       res.status(201).json(reg);
     } catch (err) {

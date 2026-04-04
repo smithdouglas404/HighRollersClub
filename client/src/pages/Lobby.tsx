@@ -11,7 +11,7 @@ import {
   Plus, Users, Coins, ChevronRight,
   Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search,
   Brain, Key, CheckCircle, XCircle, Flame, Diamond,
-  Spade, Heart, Club, Trash2
+  Spade, Heart, Club, Trash2, Megaphone, CircleDot
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NeonButton } from "@/components/ui/neon";
@@ -256,6 +256,212 @@ function LobbyBannerCarousel() {
         ))}
       </div>
     </div>
+  );
+}
+
+// ─── Club Activity Feed ─────────────────────────────────────────────────────
+
+interface ClubFeedItem {
+  type: "big_pot" | "tournament_win" | "member_join" | "announcement" | "table_started";
+  clubId: string;
+  clubName: string;
+  playerName: string;
+  description: string;
+  timestamp: string;
+  amount?: number;
+}
+
+interface ActiveClub {
+  id: string;
+  name: string;
+  memberCount: number;
+  onlineCount: number;
+}
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+const FEED_ICONS: Record<ClubFeedItem["type"], { icon: any; gold: boolean }> = {
+  tournament_win: { icon: Trophy, gold: true },
+  big_pot: { icon: Coins, gold: true },
+  member_join: { icon: Users, gold: false },
+  announcement: { icon: Megaphone, gold: false },
+  table_started: { icon: Zap, gold: false },
+};
+
+function ClubActivityFeed() {
+  const [feed, setFeed] = useState<ClubFeedItem[]>([]);
+  const [activeClubs, setActiveClubs] = useState<ActiveClub[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasClubs, setHasClubs] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [feedRes, activeRes] = await Promise.all([
+          fetch("/api/clubs/my-feed"),
+          fetch("/api/clubs/my-active"),
+        ]);
+        if (cancelled) return;
+        if (feedRes.ok && activeRes.ok) {
+          const feedData = await feedRes.json();
+          const activeData = await activeRes.json();
+          setFeed(feedData);
+          setActiveClubs(activeData);
+          setHasClubs(activeData.length > 0 || feedData.length > 0);
+        } else if (feedRes.status === 401) {
+          setHasClubs(false);
+        }
+      } catch {
+        // Silently fail — this is supplementary content
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mt-8 rounded-md p-4 bg-surface-high/30 backdrop-blur-xl border border-white/[0.06] animate-pulse h-32" />
+    );
+  }
+
+  if (!hasClubs) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mt-8 rounded-md p-5 bg-surface-high/30 backdrop-blur-xl border border-white/[0.06]"
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Club className="w-4 h-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-primary">Club Activity</span>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">Join a club to see activity here.</p>
+        <button
+          onClick={() => navigate("/clubs")}
+          className="text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+        >
+          Browse Clubs <ChevronRight className="w-3 h-3" />
+        </button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-8 rounded-md bg-surface-high/30 backdrop-blur-xl border border-white/[0.06] overflow-hidden"
+    >
+      {/* Header */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Club className="w-4 h-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-primary">Club Activity</span>
+          {feed.length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+              {feed.length}
+            </span>
+          )}
+        </div>
+        <ChevronRight className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", !collapsed && "rotate-90")} />
+      </button>
+
+      <AnimatePresence>
+        {!collapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            {/* Online members row */}
+            {activeClubs.length > 0 && (
+              <div className="px-5 pb-3 flex flex-wrap gap-2">
+                {activeClubs.map(club => (
+                  <button
+                    key={club.id}
+                    onClick={() => navigate(`/clubs/${club.id}`)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-lowest/60 border border-white/[0.06] hover:border-primary/20 transition-all text-[11px]"
+                  >
+                    <span className="font-bold text-white truncate max-w-[100px]">{club.name}</span>
+                    <span className="flex items-center gap-0.5 text-muted-foreground">
+                      <CircleDot className={cn("w-2.5 h-2.5", club.onlineCount > 0 ? "text-green-400" : "text-muted-foreground/40")} />
+                      {club.onlineCount}/{club.memberCount}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Feed items */}
+            <div className="max-h-64 overflow-y-auto px-5 pb-4 space-y-1.5 scrollbar-thin">
+              {feed.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-3 text-center">No recent activity in your clubs.</p>
+              ) : (
+                feed.map((item, i) => {
+                  const config = FEED_ICONS[item.type];
+                  const Icon = config.icon;
+                  return (
+                    <div
+                      key={`${item.clubId}-${item.type}-${i}`}
+                      className="flex items-start gap-3 py-2 group"
+                    >
+                      <div className={cn(
+                        "w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5",
+                        config.gold
+                          ? "bg-amber-500/10 border border-amber-500/20"
+                          : "bg-white/[0.04] border border-white/[0.06]"
+                      )}>
+                        <Icon className={cn("w-3.5 h-3.5", config.gold ? "text-amber-400" : "text-muted-foreground")} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-primary/70 truncate max-w-[120px]">
+                            {item.clubName}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground/50 shrink-0">
+                            {relativeTime(item.timestamp)}
+                          </span>
+                        </div>
+                        <p className={cn(
+                          "text-xs leading-relaxed truncate",
+                          config.gold ? "text-amber-200/90" : "text-foreground/80"
+                        )}>
+                          {item.description}
+                          {item.amount != null && (
+                            <span className="text-amber-400 font-bold ml-1">
+                              {item.amount.toLocaleString()} chips
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -534,6 +740,32 @@ export default function Lobby() {
             );
           })}
         </div>
+
+        {/* Club Rankings Link Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.4 }}
+          onClick={() => navigate("/club-rankings")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/club-rankings"); } }}
+          className="group cursor-pointer rounded-md p-4 mb-8 flex items-center gap-4 transition-all duration-300 backdrop-blur-xl border border-white/[0.06] hover:border-[rgba(212,175,55,0.3)] hover:shadow-[0_0_25px_rgba(212,175,55,0.12)]"
+          style={{ background: "rgba(15,15,20,0.5)" }}
+        >
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-primary/10 border border-primary/20">
+            <Trophy className="w-5 h-5 text-primary transition-transform duration-300 group-hover:scale-110" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-display font-bold uppercase tracking-wider" style={{ color: "#f5e6a3" }}>
+              Club Rankings
+            </h3>
+            <p className="text-[0.6875rem] text-muted-foreground mt-0.5">
+              See how clubs compete -- hands played, win rates, and tournament victories.
+            </p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200" />
+        </motion.div>
 
         {/* Active Tables header + actions */}
         <div ref={tablesRef} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
@@ -954,6 +1186,9 @@ export default function Lobby() {
             </motion.div>
           </>
         )}
+
+        {/* My Clubs Social Feed */}
+        <ClubActivityFeed />
       </div>
 
       {/* Create table modal */}

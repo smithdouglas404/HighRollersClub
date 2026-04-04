@@ -11,7 +11,8 @@ import {
   Users, Coins, Plus, Loader2,
   Settings, Search, Check, X,
   Shield, Medal, Gamepad2, Activity,
-  Layers, Wifi, Image, Megaphone, LayoutDashboard
+  Layers, Wifi, Image, Megaphone, LayoutDashboard,
+  Target, Clock, CheckCircle2, Sparkles
 } from "lucide-react";
 import { ClubTournaments } from "@/components/club/ClubTournaments";
 import { ClubChatSidebar } from "@/components/shared/ClubChatSidebar";
@@ -70,6 +71,35 @@ export default function ClubDashboard() {
   const [clubActivity, setClubActivity] = useState<any[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [alliance, setAlliance] = useState<{ id: string; name: string; clubIds: string[] } | null>(null);
+  const [clubChallenges, setClubChallenges] = useState<any[]>([]);
+  const [challengesLoading, setChallengesLoading] = useState(false);
+  const [generatingChallenges, setGeneratingChallenges] = useState(false);
+
+  // Quick Stats state
+  interface QuickStats {
+    mostActiveTable: { name: string; playerCount: number } | null;
+    topWinnerThisWeek: { displayName: string; amount: number } | null;
+    biggestPotToday: { amount: number; winnerName: string } | null;
+  }
+  const [quickStats, setQuickStats] = useState<QuickStats | null>(null);
+  const [quickStatsLoading, setQuickStatsLoading] = useState(false);
+
+  // Fetch quick stats on mount and auto-refresh every 60s
+  useEffect(() => {
+    if (!club) return;
+    let cancelled = false;
+    const fetchQuickStats = () => {
+      setQuickStatsLoading((prev) => quickStats === null ? true : prev);
+      fetch(`/api/clubs/${club.id}/quick-stats`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then((data) => { if (!cancelled && data) setQuickStats(data); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setQuickStatsLoading(false); });
+    };
+    fetchQuickStats();
+    const interval = setInterval(fetchQuickStats, 60_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [club]);
 
   useEffect(() => {
     if (!club) return;
@@ -137,6 +167,34 @@ export default function ClubDashboard() {
       setClubActivity(items.slice(0, 15));
     });
   }, [club, members]);
+
+  // Fetch club challenges
+  useEffect(() => {
+    if (!club) return;
+    setChallengesLoading(true);
+    fetch(`/api/clubs/${club.id}/challenges`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(setClubChallenges)
+      .catch(() => setClubChallenges([]))
+      .finally(() => setChallengesLoading(false));
+  }, [club]);
+
+  const handleGenerateChallenges = async () => {
+    if (generatingChallenges || !club) return;
+    setGeneratingChallenges(true);
+    try {
+      const res = await fetch(`/api/clubs/${club.id}/challenges/generate`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const newChallenges = await res.json();
+        setClubChallenges(prev => [...newChallenges, ...prev]);
+      }
+    } catch {} finally {
+      setGeneratingChallenges(false);
+    }
+  };
 
   const [newClubName, setNewClubName] = useState("");
   const [newClubDescription, setNewClubDescription] = useState("");
@@ -700,24 +758,56 @@ export default function ClubDashboard() {
                         <TrendingUp className="w-4 h-4 text-primary" /> Quick Stats
                       </h3>
                       <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                        {[
-                          { label: "Most Active Table", value: "High Rollers VIP", icon: Layers },
-                          { label: "Top Winner This Week", value: "Player_123 +5,400", icon: Trophy },
-                          { label: "Biggest Pot Today", value: "12,500 chips", icon: Coins },
-                        ].map((stat) => {
-                          const Icon = stat.icon;
-                          return (
-                            <div key={stat.label} className="flex items-center gap-3 px-4 py-3">
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary/[0.08] border border-primary/15">
-                                <Icon className="w-4 h-4 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-bold">{stat.label}</p>
-                                <p className="text-xs font-bold text-white truncate">{stat.value}</p>
+                        {quickStatsLoading ? (
+                          [0, 1, 2].map((i) => (
+                            <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                              <div className="w-8 h-8 rounded-lg bg-white/[0.06]" />
+                              <div className="flex-1 space-y-1.5">
+                                <div className="h-2 w-20 rounded bg-white/[0.06]" />
+                                <div className="h-3 w-28 rounded bg-white/[0.08]" />
                               </div>
                             </div>
-                          );
-                        })}
+                          ))
+                        ) : (
+                          [
+                            {
+                              label: "Most Active Table",
+                              value: quickStats?.mostActiveTable
+                                ? `${quickStats.mostActiveTable.name} (${quickStats.mostActiveTable.playerCount} players)`
+                                : null,
+                              icon: Layers,
+                            },
+                            {
+                              label: "Top Winner This Week",
+                              value: quickStats?.topWinnerThisWeek
+                                ? `${quickStats.topWinnerThisWeek.displayName} +${quickStats.topWinnerThisWeek.amount.toLocaleString()}`
+                                : null,
+                              icon: Trophy,
+                            },
+                            {
+                              label: "Biggest Pot Today",
+                              value: quickStats?.biggestPotToday
+                                ? `${quickStats.biggestPotToday.amount.toLocaleString()} chips (${quickStats.biggestPotToday.winnerName})`
+                                : null,
+                              icon: Coins,
+                            },
+                          ].map((stat) => {
+                            const Icon = stat.icon;
+                            return (
+                              <div key={stat.label} className="flex items-center gap-3 px-4 py-3">
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary/[0.08] border border-primary/15">
+                                  <Icon className="w-4 h-4 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-bold">{stat.label}</p>
+                                  <p className={cn("text-xs font-bold truncate", stat.value ? "text-white" : "text-gray-600")}>
+                                    {stat.value ?? "No activity yet"}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
 
@@ -830,6 +920,108 @@ export default function ClubDashboard() {
                           );
                         })}
                       </div>
+                    </div>
+
+                    {/* Club Challenges */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+                          <Target className="w-4 h-4 text-purple-400" /> Club Challenges
+                        </h3>
+                        {isAdminOrOwner && (
+                          <button
+                            onClick={handleGenerateChallenges}
+                            disabled={generatingChallenges}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 border border-purple-500/25 text-purple-300 hover:bg-purple-500/25 transition-colors disabled:opacity-50"
+                          >
+                            {generatingChallenges ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                            Generate New
+                          </button>
+                        )}
+                      </div>
+                      {challengesLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+                        </div>
+                      ) : clubChallenges.length === 0 ? (
+                        <div className="rounded-md py-8 text-center" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <Target className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                          <p className="text-xs text-gray-500 font-medium">No active challenges</p>
+                          <p className="text-[0.5625rem] text-gray-600 mt-0.5">
+                            {isAdminOrOwner ? "Click \"Generate New\" to create weekly challenges" : "Admin can generate new challenges"}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {clubChallenges.map((ch: any, i: number) => {
+                            const isCompleted = !!ch.completedAt;
+                            const progress = Math.min(ch.currentValue / ch.targetValue, 1);
+                            const pct = Math.round(progress * 100);
+                            // Time remaining
+                            const expiresMs = new Date(ch.expiresAt).getTime() - Date.now();
+                            const days = Math.floor(expiresMs / (1000 * 60 * 60 * 24));
+                            const hours = Math.floor((expiresMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            const timeLeft = expiresMs > 0 ? `${days}d ${hours}h left` : "Expired";
+
+                            return (
+                              <motion.div
+                                key={ch.id}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.06 }}
+                                className="rounded-md px-4 py-3"
+                                style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: isCompleted ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(255,255,255,0.06)" }}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-bold text-white truncate">{ch.title}</p>
+                                      {isCompleted && (
+                                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-500/15 border border-green-500/25 text-[9px] font-bold uppercase tracking-wider text-green-400">
+                                          <CheckCircle2 className="w-2.5 h-2.5" /> Claimed
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[0.5625rem] text-gray-500 mt-0.5">{ch.description}</p>
+                                  </div>
+                                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shrink-0">
+                                    <Coins className="w-3 h-3 text-amber-400" />
+                                    <span className="text-[10px] font-bold text-amber-400">{ch.rewardChips.toLocaleString()}</span>
+                                  </div>
+                                </div>
+                                <div className="mt-2.5">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] text-gray-400 font-medium">
+                                      {ch.currentValue.toLocaleString()} / {ch.targetValue.toLocaleString()}
+                                    </span>
+                                    <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                                      {isCompleted ? (
+                                        <span className="text-green-400 font-bold">Complete</span>
+                                      ) : (
+                                        <><Clock className="w-2.5 h-2.5" /> {timeLeft}</>
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                                    <motion.div
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${pct}%` }}
+                                      transition={{ duration: 0.8, ease: "easeOut", delay: i * 0.1 }}
+                                      className={cn(
+                                        "h-full rounded-full",
+                                        isCompleted ? "bg-green-500" : "bg-gradient-to-r from-purple-500 to-purple-400"
+                                      )}
+                                    />
+                                  </div>
+                                  <div className="text-right mt-0.5">
+                                    <span className="text-[9px] font-bold text-gray-500">{pct}%</span>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     {/* Club Chat */}

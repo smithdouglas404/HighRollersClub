@@ -349,6 +349,24 @@ class TableManager {
         }
       }
 
+      // Update club challenges if this table belongs to a club
+      if (tableRow.clubId) {
+        const clubId = tableRow.clubId;
+        storage.getClubChallenges(clubId).then(challenges => {
+          const now = new Date();
+          const active = challenges.filter(c => !c.completedAt && new Date(c.expiresAt).getTime() > now.getTime());
+          const humanPlayerCount = summary.players.filter(p => !p.id.startsWith("bot-")).length;
+          const humanWinnerCount = summary.winners.filter(w => !w.playerId.startsWith("bot-")).length;
+          for (const ch of active) {
+            if (ch.type === "hands_played" && humanPlayerCount > 0) {
+              storage.updateChallengeProgress(ch.id, 1).catch(() => {});
+            } else if (ch.type === "pots_won" && humanWinnerCount > 0) {
+              storage.updateChallengeProgress(ch.id, humanWinnerCount).catch(() => {});
+            }
+          }
+        }).catch(() => {});
+      }
+
       // Feed hand to collusion detector
       this.collusionDetector.recordHand(summary);
       this.handsTracked++;

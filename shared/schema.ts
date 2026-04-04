@@ -749,3 +749,40 @@ export const playerNotes = pgTable("player_notes", {
 ]);
 
 export type PlayerNote = typeof playerNotes.$inferSelect;
+
+// ─── Club Challenges ──────────────────────────────────────────────────────
+export const clubChallenges = pgTable("club_challenges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clubId: varchar("club_id").notNull().references(() => clubs.id),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  targetValue: integer("target_value").notNull(),
+  currentValue: integer("current_value").notNull().default(0),
+  rewardChips: integer("reward_chips").notNull().default(0),
+  rewardDescription: text("reward_description"),
+  type: text("type").notNull(), // hands_played, tournaments_won, members_active, pots_won, total_chips_won
+  expiresAt: timestamp("expires_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("club_challenges_club_idx").on(table.clubId),
+]);
+
+export type ClubChallenge = typeof clubChallenges.$inferSelect;
+
+// ─── Notifications ────────────────────────────────────────────────────────
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(), // tournament_starting, leaderboard_change, club_announcement, friend_playing, challenge_complete
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  read: boolean("read").notNull().default(false),
+  metadata: jsonb("metadata"), // optional extra data (clubId, tournamentId, etc.)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("notifications_user_idx").on(table.userId),
+  index("notifications_user_read_idx").on(table.userId, table.read),
+]);
+
+export type Notification = typeof notifications.$inferSelect;

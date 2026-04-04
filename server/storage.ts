@@ -11,6 +11,7 @@ import {
   type HandPlayer, type HandAction, type TournamentRegistration,
   type Wallet, type WalletType, type Payment, type WithdrawalRequest, type SupportedCurrency,
   type ChatMessage, type CollusionAlert, type PlayerNote,
+  type Notification, type ClubChallenge,
   walletTypeEnum,
   users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, tournamentRegistrations, playerStats,
   clubInvitations, clubAnnouncements, clubEvents,
@@ -20,6 +21,7 @@ import {
   handPlayers, handActions,
   wallets, payments, withdrawalRequests, supportedCurrencies,
   chatMessages, collusionAlerts, playerNotes, wishlists,
+  notifications, clubChallenges,
 } from "@shared/schema";
 import { eq, and, desc, sql, inArray, gte } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -219,6 +221,19 @@ export interface IStorage {
 
   // Table Player Chips (atomicity)
   updateTablePlayerChips(tableId: string, odId: string, newChips: number): Promise<void>;
+
+  // Notifications
+  getNotifications(userId: string, limit?: number): Promise<Notification[]>;
+  createNotification(userId: string, type: string, title: string, message: string, metadata?: any): Promise<Notification>;
+  markNotificationRead(id: string): Promise<void>;
+  markAllNotificationsRead(userId: string): Promise<void>;
+  getUnreadNotificationCount(userId: string): Promise<number>;
+
+  // Club Challenges
+  getClubChallenges(clubId: string): Promise<ClubChallenge[]>;
+  createClubChallenge(data: Omit<ClubChallenge, "id" | "createdAt">): Promise<ClubChallenge>;
+  updateChallengeProgress(id: string, increment: number): Promise<ClubChallenge | undefined>;
+  completeChallenge(id: string): Promise<ClubChallenge | undefined>;
 
   // OAuth
   getUserByProvider(provider: string, providerId: string): Promise<User | undefined>;
@@ -1113,6 +1128,70 @@ export class MemStorage implements IStorage {
   }
   async removeFromWishlist(userId: string, itemId: string) {
     this.wishlistMap.get(userId)?.delete(itemId);
+  }
+
+  // ── Notifications ──────────────────────────────────────────────────────
+  private notificationsList: Notification[] = [];
+
+  async getNotifications(userId: string, limit = 20) {
+    return this.notificationsList
+      .filter(n => n.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+  async createNotification(userId: string, type: string, title: string, message: string, metadata?: any): Promise<Notification> {
+    const n: Notification = {
+      id: randomUUID(),
+      userId,
+      type,
+      title,
+      message,
+      read: false,
+      metadata: metadata ?? null,
+      createdAt: new Date(),
+    };
+    this.notificationsList.push(n);
+    return n;
+  }
+  async markNotificationRead(id: string) {
+    const n = this.notificationsList.find(n => n.id === id);
+    if (n) n.read = true;
+  }
+  async markAllNotificationsRead(userId: string) {
+    this.notificationsList.filter(n => n.userId === userId).forEach(n => { n.read = true; });
+  }
+  async getUnreadNotificationCount(userId: string) {
+    return this.notificationsList.filter(n => n.userId === userId && !n.read).length;
+  }
+
+  // ── Club Challenges ────────────────────────────────────────────────────
+  private clubChallengesList: ClubChallenge[] = [];
+  async getClubChallenges(clubId: string) {
+    return this.clubChallengesList.filter(c => c.clubId === clubId);
+  }
+  async createClubChallenge(data: Omit<ClubChallenge, "id" | "createdAt">) {
+    const challenge: ClubChallenge = {
+      ...data,
+      id: randomUUID(),
+      createdAt: new Date(),
+    };
+    this.clubChallengesList.push(challenge);
+    return challenge;
+  }
+  async updateChallengeProgress(id: string, increment: number) {
+    const c = this.clubChallengesList.find(ch => ch.id === id);
+    if (!c) return undefined;
+    c.currentValue = c.currentValue + increment;
+    if (c.currentValue >= c.targetValue && !c.completedAt) {
+      c.completedAt = new Date();
+    }
+    return c;
+  }
+  async completeChallenge(id: string) {
+    const c = this.clubChallengesList.find(ch => ch.id === id);
+    if (!c) return undefined;
+    c.completedAt = new Date();
+    return c;
   }
 
   // ── OAuth ──────────────────────────────────────────────────────────────
@@ -2104,6 +2183,76 @@ export class DatabaseStorage implements IStorage {
   async removeFromWishlist(userId: string, itemId: string) {
     await this.db.delete(wishlists)
       .where(and(eq(wishlists.userId, userId), eq(wishlists.itemId, itemId)));
+  }
+
+  // ── Notifications ──────────────────────────────────────────────────────
+  async getNotifications(userId: string, limit = 20) {
+    return this.db.select().from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+  }
+  async createNotification(userId: string, type: string, title: string, message: string, metadata?: any): Promise<Notification> {
+    const [n] = await this.db.insert(notifications).values({
+      userId,
+      type,
+      title,
+      message,
+      metadata: metadata ?? null,
+    }).returning();
+    return n;
+  }
+  async markNotificationRead(id: string) {
+    await this.db.update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.id, id));
+  }
+  async markAllNotificationsRead(userId: string) {
+    await this.db.update(notifications)
+      .set({ read: true })
+      .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+  }
+  async getUnreadNotificationCount(userId: string) {
+    const [result] = await this.db.select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+    return result?.count ?? 0;
+  }
+
+  // ── Club Challenges ────────────────────────────────────────────────────
+  async getClubChallenges(clubId: string) {
+    return this.db.select().from(clubChallenges)
+      .where(eq(clubChallenges.clubId, clubId))
+      .orderBy(desc(clubChallenges.createdAt));
+  }
+  async createClubChallenge(data: Omit<ClubChallenge, "id" | "createdAt">) {
+    const [challenge] = await this.db.insert(clubChallenges)
+      .values(data)
+      .returning();
+    return challenge;
+  }
+  async updateChallengeProgress(id: string, increment: number) {
+    const [updated] = await this.db.update(clubChallenges)
+      .set({
+        currentValue: sql`${clubChallenges.currentValue} + ${increment}`,
+      })
+      .where(eq(clubChallenges.id, id))
+      .returning();
+    if (updated && updated.currentValue >= updated.targetValue && !updated.completedAt) {
+      const [completed] = await this.db.update(clubChallenges)
+        .set({ completedAt: new Date() })
+        .where(eq(clubChallenges.id, id))
+        .returning();
+      return completed;
+    }
+    return updated;
+  }
+  async completeChallenge(id: string) {
+    const [challenge] = await this.db.update(clubChallenges)
+      .set({ completedAt: new Date() })
+      .where(eq(clubChallenges.id, id))
+      .returning();
+    return challenge;
   }
 
   // ── OAuth ──────────────────────────────────────────────────────────────

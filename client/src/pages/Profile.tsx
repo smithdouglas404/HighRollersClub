@@ -10,7 +10,7 @@ import {
   User, Coins, Trophy, TrendingUp, Gamepad2,
   Zap, BookOpen, Wallet, Users, Loader2, Mic, Volume2, Check,
   Star, Shield, Crown, Clock, ChevronRight, Award, Flame, Target,
-  StickyNote, Trash2, ShoppingBag
+  StickyNote, Trash2, ShoppingBag, Swords
 } from "lucide-react";
 import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
@@ -380,6 +380,9 @@ export default function Profile() {
             </div>
           </motion.div>
 
+          {/* ── Head-to-Head Records ── */}
+          <HeadToHeadSection />
+
           {/* ── View Analytics Link ── */}
           <Link href="/analytics">
             <div className="glass rounded-xl p-4 border border-white/5 hover:border-primary/20 transition-all cursor-pointer flex items-center gap-3 mb-6">
@@ -446,6 +449,101 @@ export default function Profile() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+interface H2HRecord {
+  opponentId: string;
+  opponentName: string;
+  handsPlayedTogether: number;
+  userWins: number;
+  opponentWins: number;
+  splitPots: number;
+  userNetChips: number;
+  lastPlayed: string | null;
+}
+
+function HeadToHeadSection() {
+  const [records, setRecords] = useState<H2HRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/stats/head-to-head/top", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setRecords(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.18 }}
+      className="rounded-xl p-6 mb-6"
+      style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+        <Swords className="w-4 h-4 text-primary/70" />
+        Head-to-Head Records
+        {records.length > 0 && (
+          <span className="ml-auto text-[0.625rem] text-gray-600 font-normal normal-case tracking-normal">
+            Top {records.length} opponents
+          </span>
+        )}
+      </h3>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : records.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <Swords className="w-8 h-8 text-gray-600 mb-2" />
+          <p className="text-xs text-gray-500">No head-to-head records yet.</p>
+          <p className="text-[0.625rem] text-gray-600 mt-1">Play hands with other players to build rivalry stats.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {records.map((rec) => {
+            const totalDecided = rec.userWins + rec.opponentWins;
+            const userPct = totalDecided > 0 ? Math.round((rec.userWins / totalDecided) * 100) : 50;
+            const oppPct = 100 - userPct;
+            return (
+              <div
+                key={rec.opponentId}
+                className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold text-white">vs {rec.opponentName}</span>
+                  <span className={`text-sm font-bold ${rec.userNetChips >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    {rec.userNetChips >= 0 ? "+" : ""}{rec.userNetChips.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <div className="flex justify-between text-[0.5625rem] font-bold mb-1">
+                    <span className="text-green-400">{rec.userWins}W</span>
+                    {rec.splitPots > 0 && <span className="text-gray-500">{rec.splitPots} splits</span>}
+                    <span className="text-red-400">{rec.opponentWins}W</span>
+                  </div>
+                  <div className="flex h-2 rounded-full overflow-hidden bg-white/5">
+                    <div className="bg-green-500 transition-all" style={{ width: `${userPct}%` }} />
+                    <div className="bg-red-500 transition-all" style={{ width: `${oppPct}%` }} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-2 text-[0.625rem] text-gray-500">
+                  <span>{rec.handsPlayedTogether} hands</span>
+                  {rec.lastPlayed && (
+                    <span className="ml-auto text-gray-600">
+                      Last: {new Date(rec.lastPlayed).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
   );
 }
 

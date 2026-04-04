@@ -9,7 +9,8 @@ import {
   Coins, Trophy, Loader2, Brain,
   ArrowUpRight, ArrowDownRight, Minus,
   Users, Activity, PieChart, Clock, FileText,
-  AlertCircle, Calendar
+  AlertCircle, Calendar, CheckCircle2, AlertTriangle, XCircle,
+  ChevronDown, ChevronUp, Zap
 } from "lucide-react";
 
 interface PlayerStats {
@@ -21,6 +22,20 @@ interface PlayerStats {
   vpip: number;
   pfr: number;
   showdownCount: number;
+}
+
+interface BreakdownGroup {
+  handsPlayed: number;
+  potsWon: number;
+  winRate: number;
+  totalChipsWon: number;
+  totalChipsLost: number;
+  netResult: number;
+}
+
+interface StatsBreakdown {
+  byVariant: Record<string, BreakdownGroup>;
+  byFormat: Record<string, BreakdownGroup>;
 }
 
 interface HandEntry {
@@ -59,6 +74,138 @@ interface RetentionData {
   active30d: number;
   total: number;
   newThisWeek: number;
+}
+
+interface CoachingRecommendation {
+  category: string;
+  severity: "warning" | "good" | "critical";
+  title: string;
+  detail: string;
+}
+
+interface CoachingData {
+  handsAnalyzed: number;
+  overallRating: "Tight-Aggressive" | "Loose-Aggressive" | "Tight-Passive" | "Loose-Passive";
+  score: number;
+  recommendations: CoachingRecommendation[];
+  stats: { vpip: number; pfr: number; showdownPct: number; winRate: number; handsPlayed: number };
+}
+
+interface SessionHistoryEntry {
+  sessionId: string;
+  tableName: string;
+  startTime: string;
+  endTime: string;
+  handsPlayed: number;
+  startingStack: number;
+  endingStack: number;
+  netResult: number;
+  stackHistory: { handNumber: number; chips: number }[];
+}
+
+/* ── Mini Session Chart ──────────────────────────────────────────────────── */
+
+function SessionStackChart({ stackHistory, startingStack, netResult }: {
+  stackHistory: { handNumber: number; chips: number }[];
+  startingStack: number;
+  netResult: number;
+}) {
+  const W = 300;
+  const H = 100;
+  const PAD_X = 8;
+  const PAD_Y = 8;
+
+  const chartW = W - PAD_X * 2;
+  const chartH = H - PAD_Y * 2;
+
+  const chips = stackHistory.map(h => h.chips);
+  const allValues = [...chips, startingStack];
+  const min = Math.min(...allValues);
+  const max = Math.max(...allValues);
+  const range = max - min || 1;
+
+  const points = chips.map((v, i) => {
+    const x = PAD_X + (i / Math.max(chips.length - 1, 1)) * chartW;
+    const y = PAD_Y + chartH - ((v - min) / range) * chartH;
+    return { x, y };
+  });
+
+  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+
+  // Area fill
+  const areaD = points.length > 1
+    ? pathD +
+      ` L ${points[points.length - 1].x.toFixed(1)} ${(PAD_Y + chartH).toFixed(1)}` +
+      ` L ${points[0].x.toFixed(1)} ${(PAD_Y + chartH).toFixed(1)} Z`
+    : "";
+
+  const isProfit = netResult >= 0;
+  const color = isProfit ? "#22c55e" : "#ef4444";
+  const gradId = `sess-grad-${isProfit ? "g" : "r"}`;
+
+  // Starting stack reference line Y
+  const refY = PAD_Y + chartH - ((startingStack - min) / range) * chartH;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxWidth: 300, height: 100 }} preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+
+      {/* Starting stack reference line */}
+      <line
+        x1={PAD_X} y1={refY} x2={W - PAD_X} y2={refY}
+        stroke="rgba(255,255,255,0.25)"
+        strokeWidth="1"
+        strokeDasharray="4 3"
+      />
+      <text x={W - PAD_X - 2} y={refY - 3} textAnchor="end" fill="rgba(255,255,255,0.35)" fontSize="7" fontFamily="monospace">
+        start: {startingStack.toLocaleString()}
+      </text>
+
+      {/* Area fill */}
+      {points.length > 1 && <path d={areaD} fill={`url(#${gradId})`} />}
+
+      {/* Line */}
+      {points.length > 1 && (
+        <path
+          d={pathD}
+          fill="none"
+          stroke={color}
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      )}
+
+      {/* End dot */}
+      {points.length > 0 && (
+        <circle
+          cx={points[points.length - 1].x}
+          cy={points[points.length - 1].y}
+          r="3"
+          fill={color}
+          stroke="rgba(0,0,0,0.5)"
+          strokeWidth="1"
+        />
+      )}
+
+      {/* X labels */}
+      {stackHistory.length > 1 && (
+        <>
+          <text x={PAD_X} y={H - 1} fill="rgba(255,255,255,0.3)" fontSize="7" fontFamily="monospace">
+            #{stackHistory[0].handNumber}
+          </text>
+          <text x={W - PAD_X} y={H - 1} fill="rgba(255,255,255,0.3)" fontSize="7" fontFamily="monospace" textAnchor="end">
+            #{stackHistory[stackHistory.length - 1].handNumber}
+          </text>
+        </>
+      )}
+    </svg>
+  );
 }
 
 /* ── SVG Line Chart ───────────────────────────────────────────────────────── */
@@ -211,6 +358,31 @@ export default function Analytics() {
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
 
+  const [coaching, setCoaching] = useState<CoachingData | null>(null);
+  const [coachingLoading, setCoachingLoading] = useState(true);
+  const [expandedRec, setExpandedRec] = useState<number | null>(null);
+
+  const [breakdown, setBreakdown] = useState<StatsBreakdown | null>(null);
+  const [breakdownLoading, setBreakdownLoading] = useState(true);
+
+  const [sessionHistory, setSessionHistory] = useState<SessionHistoryEntry[]>([]);
+  const [sessionHistoryLoading, setSessionHistoryLoading] = useState(true);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadSessionHistory() {
+      try {
+        const res = await fetch("/api/sessions/history?limit=10", { credentials: "include" });
+        if (res.ok) setSessionHistory(await res.json());
+      } catch {
+        // silently ignore
+      } finally {
+        setSessionHistoryLoading(false);
+      }
+    }
+    loadSessionHistory();
+  }, []);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -258,6 +430,34 @@ export default function Analytics() {
       }
     }
     loadAnalytics();
+  }, []);
+
+  useEffect(() => {
+    async function loadBreakdown() {
+      try {
+        const res = await fetch("/api/stats/me/breakdown", { credentials: "include" });
+        if (res.ok) setBreakdown(await res.json());
+      } catch {
+        // silently ignore
+      } finally {
+        setBreakdownLoading(false);
+      }
+    }
+    loadBreakdown();
+  }, []);
+
+  useEffect(() => {
+    async function loadCoaching() {
+      try {
+        const res = await fetch("/api/coaching/recommendations", { credentials: "include" });
+        if (res.ok) setCoaching(await res.json());
+      } catch {
+        // silently ignore
+      } finally {
+        setCoachingLoading(false);
+      }
+    }
+    loadCoaching();
   }, []);
 
   const winRate = stats && stats.handsPlayed > 0
@@ -395,6 +595,157 @@ export default function Analytics() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Play Style Coach */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.02 }}
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "rgba(15,15,20,0.7)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
+            >
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#c9a84c]/80" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Play Style Coach</h3>
+              </div>
+              <div className="p-5">
+                {coachingLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary/60" />
+                    <span className="ml-2 text-xs text-gray-500">Analyzing your play style...</span>
+                  </div>
+                ) : !coaching ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Brain className="w-7 h-7 text-gray-500/40 mb-2" />
+                    <p className="text-xs text-gray-500">Could not load coaching data.</p>
+                  </div>
+                ) : coaching.stats.handsPlayed < 100 ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-amber-500/10 border border-amber-500/15">
+                      <Gamepad2 className="w-7 h-7 text-amber-400/60" />
+                    </div>
+                    <h4 className="text-sm font-bold text-white/80 mb-1">Play More Hands</h4>
+                    <p className="text-xs text-gray-500 max-w-xs mb-4">
+                      We need at least 100 hands for meaningful recommendations. You have played {coaching.stats.handsPlayed} so far.
+                    </p>
+                    <div className="w-full max-w-xs">
+                      <div className="flex justify-between text-[0.5625rem] text-gray-500 mb-1">
+                        <span>{coaching.stats.handsPlayed} hands</span>
+                        <span>100 needed</span>
+                      </div>
+                      <div className="h-2.5 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-[#d4af37] transition-all duration-500"
+                          style={{ width: `${Math.min((coaching.stats.handsPlayed / 100) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    <div className="flex flex-col sm:flex-row items-center gap-5">
+                      <div className={`px-5 py-3 rounded-xl text-center border ${
+                        coaching.overallRating === "Tight-Aggressive"
+                          ? "bg-green-500/10 border-green-500/25 text-green-400"
+                          : coaching.overallRating === "Loose-Aggressive"
+                          ? "bg-amber-500/10 border-amber-500/25 text-amber-400"
+                          : coaching.overallRating === "Loose-Passive"
+                          ? "bg-red-500/10 border-red-500/25 text-red-400"
+                          : "bg-blue-500/10 border-blue-500/25 text-blue-400"
+                      }`}>
+                        <div className="text-[0.5625rem] uppercase tracking-wider opacity-70 mb-1">Play Style</div>
+                        <div className="text-lg font-bold tracking-tight">{coaching.overallRating}</div>
+                        <div className="text-[0.5625rem] opacity-60 mt-0.5">{coaching.handsAnalyzed} hands analyzed</div>
+                      </div>
+
+                      <div className="flex-1 flex flex-col items-center">
+                        <div className="relative w-24 h-24">
+                          <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                            <circle
+                              cx="50" cy="50" r="42" fill="none"
+                              stroke={coaching.score >= 70 ? "#22c55e" : coaching.score >= 40 ? "#d4af37" : "#ef4444"}
+                              strokeWidth="8"
+                              strokeLinecap="round"
+                              strokeDasharray={`${(coaching.score / 100) * 264} 264`}
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-2xl font-bold" style={{ color: coaching.score >= 70 ? "#22c55e" : coaching.score >= 40 ? "#d4af37" : "#ef4444" }}>
+                              {coaching.score}
+                            </span>
+                            <span className="text-[0.5rem] text-gray-500 uppercase tracking-wider">Score</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-center">
+                        {[
+                          { label: "VPIP", value: `${coaching.stats.vpip}%` },
+                          { label: "PFR", value: `${coaching.stats.pfr}%` },
+                          { label: "SD%", value: `${coaching.stats.showdownPct}%` },
+                          { label: "Win%", value: `${coaching.stats.winRate}%` },
+                        ].map((s) => (
+                          <div key={s.label} className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                            <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{s.label}</div>
+                            <div className="text-sm font-bold text-[#d4af37]">{s.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {coaching.recommendations.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-2">Recommendations</h4>
+                        {coaching.recommendations.map((rec, i) => {
+                          const isExpanded = expandedRec === i;
+                          const severityConfig = rec.severity === "good"
+                            ? { icon: CheckCircle2, bg: "bg-green-500/10", border: "border-green-500/20", text: "text-green-400", iconColor: "text-green-400" }
+                            : rec.severity === "critical"
+                            ? { icon: XCircle, bg: "bg-red-500/10", border: "border-red-500/20", text: "text-red-400", iconColor: "text-red-400" }
+                            : { icon: AlertTriangle, bg: "bg-amber-500/10", border: "border-amber-500/20", text: "text-amber-400", iconColor: "text-amber-400" };
+                          const SeverityIcon = severityConfig.icon;
+                          return (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.05 * i }}
+                              className={`rounded-lg border ${severityConfig.border} ${severityConfig.bg} overflow-hidden cursor-pointer`}
+                              onClick={() => setExpandedRec(isExpanded ? null : i)}
+                            >
+                              <div className="flex items-center justify-between px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <SeverityIcon className={`w-4 h-4 ${severityConfig.iconColor}`} />
+                                  <div>
+                                    <span className="text-xs font-bold text-white/80">{rec.title}</span>
+                                    <span className="ml-2 text-[0.5625rem] text-gray-500 uppercase tracking-wider">{rec.category}</span>
+                                  </div>
+                                </div>
+                                {isExpanded
+                                  ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" />
+                                  : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                }
+                              </div>
+                              {isExpanded && (
+                                <div className="px-4 pb-3 pt-0">
+                                  <p className={`text-xs leading-relaxed ${severityConfig.text} opacity-80`}>{rec.detail}</p>
+                                </div>
+                              )}
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
             {/* Top Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {statCards.map((card, i) => {
@@ -487,6 +838,132 @@ export default function Analytics() {
                     </div>
                     <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Hand Data Yet</h3>
                     <p className="text-xs text-muted-foreground/60 max-w-xs">Play some hands to see your winnings chart and track your progress over time.</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Performance by Game Type */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.17 }}
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "rgba(15,15,20,0.7)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
+            >
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Performance by Game Type</h3>
+              </div>
+              <div className="p-5 space-y-5">
+                {breakdownLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary/60" />
+                    <span className="ml-2 text-xs text-gray-500">Loading breakdown...</span>
+                  </div>
+                ) : breakdown ? (
+                  <>
+                    {/* By Variant */}
+                    <div>
+                      <div className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-3">By Variant</div>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        {(() => {
+                          const variantLabels: Record<string, string> = { nlhe: "NLHE", plo: "PLO", plo5: "PLO-5", short_deck: "Short Deck" };
+                          const entries = Object.entries(breakdown.byVariant);
+                          const maxHands = Math.max(...entries.map(([, g]) => g.handsPlayed), 1);
+                          return entries.map(([key, g]) => {
+                            const isEmpty = g.handsPlayed === 0;
+                            return (
+                              <div
+                                key={key}
+                                className={`p-3 rounded-lg border transition-colors ${
+                                  isEmpty
+                                    ? "bg-white/[0.02] border-white/[0.05] opacity-50"
+                                    : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.06]"
+                                }`}
+                              >
+                                <div className="text-xs font-bold text-white/90 mb-2">{variantLabels[key] || key.toUpperCase()}</div>
+                                {isEmpty ? (
+                                  <div className="text-[0.5625rem] text-gray-500 italic">No hands yet</div>
+                                ) : (
+                                  <>
+                                    <div className="text-[0.5625rem] text-gray-400 mb-1">{g.handsPlayed} hands played</div>
+                                    <div className={`text-sm font-bold ${g.winRate >= 25 ? "text-green-400" : g.winRate >= 15 ? "text-amber-400" : "text-red-400"}`}>
+                                      {g.winRate}% win rate
+                                    </div>
+                                    <div className={`text-xs font-bold mt-1 ${g.netResult >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                      {g.netResult >= 0 ? "+" : ""}{g.netResult.toLocaleString()} chips
+                                    </div>
+                                    <div className="mt-2 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full rounded-full bg-gradient-to-r from-[#c9a84c] to-[#d4af37]"
+                                        style={{ width: `${(g.handsPlayed / maxHands) * 100}%` }}
+                                      />
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* By Format */}
+                    <div>
+                      <div className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-3">By Format</div>
+                      <div className="grid grid-cols-3 gap-3">
+                        {(() => {
+                          const formatLabels: Record<string, string> = { cash: "Cash Game", sng: "SNG", tournament: "Tournament" };
+                          const entries = Object.entries(breakdown.byFormat);
+                          const maxHands = Math.max(...entries.map(([, g]) => g.handsPlayed), 1);
+                          return entries.map(([key, g]) => {
+                            const isEmpty = g.handsPlayed === 0;
+                            return (
+                              <div
+                                key={key}
+                                className={`p-3 rounded-lg border transition-colors ${
+                                  isEmpty
+                                    ? "bg-white/[0.02] border-white/[0.05] opacity-50"
+                                    : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.06]"
+                                }`}
+                              >
+                                <div className="text-xs font-bold text-white/90 mb-2">{formatLabels[key] || key}</div>
+                                {isEmpty ? (
+                                  <div className="text-[0.5625rem] text-gray-500 italic">No hands yet</div>
+                                ) : (
+                                  <>
+                                    <div className="text-[0.5625rem] text-gray-400 mb-1">{g.handsPlayed} hands played</div>
+                                    <div className={`text-sm font-bold ${g.winRate >= 25 ? "text-green-400" : g.winRate >= 15 ? "text-amber-400" : "text-red-400"}`}>
+                                      {g.winRate}% win rate
+                                    </div>
+                                    <div className={`text-xs font-bold mt-1 ${g.netResult >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                      {g.netResult >= 0 ? "+" : ""}{g.netResult.toLocaleString()} chips
+                                    </div>
+                                    <div className="mt-2 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full rounded-full bg-gradient-to-r from-[#c9a84c] to-[#d4af37]"
+                                        style={{ width: `${(g.handsPlayed / maxHands) * 100}%` }}
+                                      />
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <PieChart className="w-7 h-7 text-gray-500/40 mb-2" />
+                    <p className="text-xs text-gray-500">Could not load game type breakdown</p>
                   </div>
                 )}
               </div>
@@ -807,6 +1284,128 @@ export default function Analytics() {
                   <p className="text-xs text-muted-foreground/60 max-w-xs">
                     Use the AI analysis feature during hand review to get strategic insights on your play.
                   </p>
+                </div>
+              )}
+            </motion.div>
+
+            {/* ── Session History ──────────────────────────────────────────── */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="rounded-2xl overflow-hidden"
+              style={{
+                background: "rgba(15,15,20,0.7)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
+            >
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[#c9a84c]/80" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Session History</h3>
+              </div>
+
+              {sessionHistoryLoading ? (
+                <div className="p-6 space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="animate-pulse flex items-center gap-4">
+                      <div className="h-10 w-full rounded-lg bg-white/[0.04]" />
+                    </div>
+                  ))}
+                </div>
+              ) : sessionHistory.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 bg-blue-500/10 border border-blue-500/15">
+                    <Activity className="w-6 h-6 text-blue-400/40" />
+                  </div>
+                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Sessions Yet</h3>
+                  <p className="text-xs text-muted-foreground/60 max-w-xs">
+                    Play some hands to see your session history
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/[0.03]">
+                  {sessionHistory.map((session) => {
+                    const isExpanded = expandedSession === session.sessionId;
+                    const isProfit = session.netResult >= 0;
+                    const startDate = new Date(session.startTime);
+                    const endDate = new Date(session.endTime);
+                    const durationMs = endDate.getTime() - startDate.getTime();
+                    const durationMin = Math.round(durationMs / 60000);
+                    const durationStr = durationMin < 60
+                      ? `${durationMin}m`
+                      : `${Math.floor(durationMin / 60)}h ${durationMin % 60}m`;
+
+                    return (
+                      <div key={session.sessionId}>
+                        <button
+                          onClick={() => setExpandedSession(isExpanded ? null : session.sessionId)}
+                          className="w-full px-5 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                              style={{
+                                background: isProfit ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                                border: `1px solid ${isProfit ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+                              }}
+                            >
+                              {isProfit ? (
+                                <ArrowUpRight className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <ArrowDownRight className="w-4 h-4 text-red-400" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-white/80 truncate">
+                                {session.tableName}
+                              </div>
+                              <div className="text-[0.5625rem] text-gray-500 flex items-center gap-2">
+                                <span>{startDate.toLocaleDateString()}</span>
+                                <span className="text-gray-600">|</span>
+                                <span>{durationStr}</span>
+                                <span className="text-gray-600">|</span>
+                                <span>{session.handsPlayed} hands</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span
+                              className="text-sm font-bold tabular-nums"
+                              style={{ color: isProfit ? "#22c55e" : "#ef4444" }}
+                            >
+                              {isProfit ? "+" : ""}{session.netResult.toLocaleString()}
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-3.5 h-3.5 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                            )}
+                          </div>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="px-5 pb-4">
+                            <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">Stack over time</span>
+                                <div className="flex items-center gap-3 text-[0.5625rem] text-gray-500">
+                                  <span>Start: {session.startingStack.toLocaleString()}</span>
+                                  <span>End: {session.endingStack.toLocaleString()}</span>
+                                </div>
+                              </div>
+                              <SessionStackChart
+                                stackHistory={session.stackHistory}
+                                startingStack={session.startingStack}
+                                netResult={session.netResult}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>

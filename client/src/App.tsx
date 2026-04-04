@@ -22,6 +22,7 @@ import LeagueDetail from "@/pages/LeagueDetail";
 import Analytics from "@/pages/Analytics";
 import HandReplay from "@/pages/HandReplay";
 import BrowseClubs from "@/pages/BrowseClubs";
+import ClubRankings from "@/pages/ClubRankings";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
 import Security from "@/pages/Security";
@@ -80,6 +81,10 @@ function ProtectedWallet() {
 
 function ProtectedBrowseClubs() {
   return <AuthGate><BrowseClubs /></AuthGate>;
+}
+
+function ProtectedClubRankings() {
+  return <AuthGate><ClubRankings /></AuthGate>;
 }
 
 function ProtectedLeaderboard() {
@@ -185,6 +190,7 @@ function Router() {
       <Route path="/analytics" component={ProtectedAnalytics} />
       <Route path="/wallet" component={ProtectedWallet} />
       <Route path="/clubs/browse" component={ProtectedBrowseClubs} />
+      <Route path="/club-rankings" component={ProtectedClubRankings} />
       <Route path="/leaderboard" component={ProtectedLeaderboard} />
       <Route path="/profile" component={ProtectedProfile} />
       <Route path="/security" component={ProtectedSecurity} />

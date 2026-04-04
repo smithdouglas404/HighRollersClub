@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
@@ -13,8 +13,90 @@ import {
   UserX, Check, X, Send, Search,
   AlertCircle, Filter, Bell, CalendarDays,
   TrendingUp, TrendingDown, Trophy, Wifi,
-  MoreVertical, ShieldPlus, ShieldMinus
+  MoreVertical, ShieldPlus, ShieldMinus,
+  Swords
 } from "lucide-react";
+
+interface H2HData {
+  opponentId: string;
+  opponentName: string;
+  handsPlayedTogether: number;
+  userWins: number;
+  opponentWins: number;
+  splitPots: number;
+  userNetChips: number;
+  lastPlayed: string | null;
+}
+
+function H2HPanel({ data, loading }: { data: H2HData | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (!data) return null;
+
+  const totalDecided = data.userWins + data.opponentWins;
+  const userPct = totalDecided > 0 ? Math.round((data.userWins / totalDecided) * 100) : 50;
+  const oppPct = 100 - userPct;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.2 }}
+      className="overflow-hidden"
+    >
+      <div className="px-4 md:px-6 py-3 bg-white/[0.02] border-t border-white/[0.04]">
+        <div className="text-[0.6875rem] font-bold text-gray-300 mb-2">
+          You vs {data.opponentName}
+        </div>
+
+        {data.handsPlayedTogether === 0 ? (
+          <p className="text-[0.625rem] text-gray-500">No shared hands yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {/* Win/loss bar */}
+            <div>
+              <div className="flex justify-between text-[0.5625rem] font-bold mb-1">
+                <span className="text-green-400">{data.userWins}W</span>
+                {data.splitPots > 0 && <span className="text-gray-500">{data.splitPots} splits</span>}
+                <span className="text-red-400">{data.opponentWins}W</span>
+              </div>
+              <div className="flex h-2 rounded-full overflow-hidden bg-white/5">
+                <div
+                  className="bg-green-500 transition-all"
+                  style={{ width: `${userPct}%` }}
+                />
+                <div
+                  className="bg-red-500 transition-all"
+                  style={{ width: `${oppPct}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 text-[0.625rem]">
+              <span className="text-gray-500">
+                {data.handsPlayedTogether} hands together
+              </span>
+              <span className={`font-bold ${data.userNetChips >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {data.userNetChips >= 0 ? "+" : ""}{data.userNetChips.toLocaleString()} chips
+              </span>
+              {data.lastPlayed && (
+                <span className="text-gray-600 ml-auto">
+                  Last: {new Date(data.lastPlayed).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 function RoleLabel({ role }: { role: string }) {
   const colorMap: Record<string, string> = {
@@ -107,6 +189,27 @@ export default function Members() {
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [h2hOpenId, setH2hOpenId] = useState<string | null>(null);
+  const [h2hData, setH2hData] = useState<Record<string, H2HData>>({});
+  const [h2hLoading, setH2hLoading] = useState<string | null>(null);
+
+  const toggleH2H = useCallback(async (memberId: string) => {
+    if (h2hOpenId === memberId) {
+      setH2hOpenId(null);
+      return;
+    }
+    setH2hOpenId(memberId);
+    if (h2hData[memberId]) return;
+    setH2hLoading(memberId);
+    try {
+      const res = await fetch(`/api/stats/head-to-head/${memberId}`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setH2hData(prev => ({ ...prev, [memberId]: data }));
+      }
+    } catch {}
+    setH2hLoading(null);
+  }, [h2hOpenId, h2hData]);
 
   const pendingInvitations = invitations.filter(inv => inv.status === "pending");
 
@@ -505,12 +608,38 @@ export default function Members() {
                           </div>
                         )}
                         {!canManage && !isMe && (
-                          <span className="text-[0.5625rem] text-gray-600 font-bold uppercase tracking-wider">--</span>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => toggleH2H(member.userId)}
+                            className={`px-2.5 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all border ${
+                              h2hOpenId === member.userId
+                                ? "bg-primary/20 border-primary/30 text-primary"
+                                : "bg-white/5 border-white/10 text-gray-400 hover:text-primary hover:border-primary/20"
+                            }`}
+                            title="Head-to-Head"
+                          >
+                            <span className="flex items-center gap-1">
+                              <Swords className="w-3 h-3" />
+                              H2H
+                            </span>
+                          </motion.button>
                         )}
                         {isMe && (
                           <span className="text-[0.5625rem] text-primary/60 font-bold uppercase tracking-wider">--</span>
                         )}
                       </div>
+
+                      {/* H2H expandable panel */}
+                      {!isMe && (
+                        <AnimatePresence>
+                          {h2hOpenId === member.userId && (
+                            <div className="col-span-12">
+                              <H2HPanel data={h2hData[member.userId] ?? null} loading={h2hLoading === member.userId} />
+                            </div>
+                          )}
+                        </AnimatePresence>
+                      )}
                     </motion.div>
                   );
                 })}

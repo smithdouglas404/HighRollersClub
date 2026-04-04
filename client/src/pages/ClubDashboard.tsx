@@ -14,6 +14,7 @@ import {
   Layers, Wifi, Image, Megaphone, LayoutDashboard
 } from "lucide-react";
 import { ClubTournaments } from "@/components/club/ClubTournaments";
+import { ClubChatSidebar } from "@/components/shared/ClubChatSidebar";
 import { ClubLeaderboard } from "@/components/club/ClubLeaderboard";
 import { cn } from "@/lib/utils";
 import { NeonButton } from "@/components/ui/neon";
@@ -828,6 +829,9 @@ export default function ClubDashboard() {
                         })}
                       </div>
                     </div>
+
+                    {/* Club Chat */}
+                    <ClubChatSidebar clubName={club?.name} className="mt-4" />
                   </div>
                 </div>
               )}

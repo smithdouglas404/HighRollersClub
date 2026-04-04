@@ -1,204 +1,138 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { AVATAR_OPTIONS, type AvatarOption } from "@/components/poker/AvatarSelect";
+import { useAuth } from "@/lib/auth-context";
 import {
-  User, Crown, Shirt, Sparkles,
-  Check, Save, Wand2, Palette
+  User, Crown, Check, Save, ShoppingBag,
+  Sparkles, Lock, ChevronRight
 } from "lucide-react";
 
-/* ── Types & Mock Data ──────────────────────────────────────── */
-
-type SlotType = "head" | "body" | "accessory";
-
-interface WardrobeItem {
-  id: string;
-  name: string;
-  slot: SlotType;
-  rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
-  emoji: string;
-}
-
-const OWNED_ITEMS: WardrobeItem[] = [
-  { id: "h1", name: "Gold Crown",        slot: "head",      rarity: "legendary", emoji: "\uD83D\uDC51" },
-  { id: "h2", name: "Neon Visor",        slot: "head",      rarity: "rare",      emoji: "\uD83D\uDD76\uFE0F" },
-  { id: "h3", name: "Top Hat",           slot: "head",      rarity: "epic",      emoji: "\uD83C\uDFA9" },
-  { id: "h4", name: "Headband",          slot: "head",      rarity: "common",    emoji: "\uD83E\uDD49" },
-  { id: "b1", name: "Royal Suit",        slot: "body",      rarity: "legendary", emoji: "\uD83E\uDD35" },
-  { id: "b2", name: "Cyberpunk Jacket",  slot: "body",      rarity: "epic",      emoji: "\uD83E\uDDE5" },
-  { id: "b3", name: "Classic Tux",       slot: "body",      rarity: "rare",      emoji: "\uD83D\uDC54" },
-  { id: "b4", name: "Hoodie",            slot: "body",      rarity: "uncommon",  emoji: "\uD83E\uDDE3" },
-  { id: "a1", name: "Diamond Chain",     slot: "accessory", rarity: "legendary", emoji: "\uD83D\uDC8E" },
-  { id: "a2", name: "Lucky Chip",        slot: "accessory", rarity: "rare",      emoji: "\uD83C\uDFB0" },
-  { id: "a3", name: "Cigar",             slot: "accessory", rarity: "epic",      emoji: "\uD83D\uDEAC" },
-  { id: "a4", name: "Watch",             slot: "accessory", rarity: "uncommon",  emoji: "\u231A" },
-];
-
-const RARITY_STYLES: Record<string, { border: string; text: string; bg: string }> = {
-  legendary: { border: "border-amber-500/30",  text: "text-amber-400",  bg: "bg-amber-500/10" },
-  epic:      { border: "border-purple-500/30", text: "text-purple-400", bg: "bg-purple-500/10" },
-  rare:      { border: "border-amber-500/30",   text: "text-primary",   bg: "bg-amber-500/10" },
-  uncommon:  { border: "border-green-500/30",  text: "text-green-400",  bg: "bg-green-500/10" },
-  common:    { border: "border-gray-500/30",   text: "text-gray-400",   bg: "bg-gray-500/10" },
+/* ── Tier styling ── */
+const TIER_STYLES: Record<AvatarOption["tier"], { border: string; text: string; bg: string; glow: string; label: string }> = {
+  legendary: { border: "border-amber-500/40", text: "text-amber-400", bg: "bg-amber-500/10", glow: "rgba(212,175,55,0.35)", label: "Legendary" },
+  epic:      { border: "border-purple-500/40", text: "text-purple-400", bg: "bg-purple-500/10", glow: "rgba(168,85,247,0.3)", label: "Epic" },
+  rare:      { border: "border-blue-500/40", text: "text-blue-400", bg: "bg-blue-500/10", glow: "rgba(59,130,246,0.25)", label: "Rare" },
+  common:    { border: "border-gray-500/30", text: "text-gray-400", bg: "bg-gray-500/10", glow: "rgba(148,163,184,0.15)", label: "Common" },
 };
 
-const SLOT_META: Record<SlotType, { label: string; icon: any }> = {
-  head:      { label: "Head",      icon: Crown },
-  body:      { label: "Body",      icon: Shirt },
-  accessory: { label: "Accessory", icon: Sparkles },
-};
+const TIER_ORDER: AvatarOption["tier"][] = ["legendary", "epic", "rare", "common"];
 
-/* ── Equipped Slot Display ──────────────────────────────────── */
-
-function EquippedSlot({
-  slot,
-  item,
-  onClear,
-}: {
-  slot: SlotType;
-  item: WardrobeItem | null;
-  onClear: () => void;
-}) {
-  const meta = SLOT_META[slot];
-  const Icon = meta.icon;
-  const style = item ? RARITY_STYLES[item.rarity] : null;
-
-  return (
-    <div
-      className={`relative rounded-xl p-4 border transition-all ${
-        item
-          ? `${style!.border} bg-surface-high/60`
-          : "border-white/[0.06] bg-surface-high/30 border-dashed"
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-          item ? style!.bg : "bg-white/5"
-        }`}>
-          {item ? (
-            <span className="text-xl">{item.emoji}</span>
-          ) : (
-            <Icon className="w-5 h-5 text-gray-600" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-medium">
-            {meta.label}
-          </div>
-          {item ? (
-            <div className="text-xs font-bold text-white truncate">{item.name}</div>
-          ) : (
-            <div className="text-xs text-gray-600 italic">Empty</div>
-          )}
-        </div>
-        {item && (
-          <button
-            onClick={onClear}
-            className="text-[0.5625rem] text-gray-500 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-white/5"
-          >
-            Remove
-          </button>
-        )}
-      </div>
-      {item && (
-        <span className={`absolute top-2 right-2 px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase tracking-wider ${style!.bg} ${style!.text} border ${style!.border}`}>
-          {item.rarity}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/* ── Item Grid Card ─────────────────────────────────────────── */
-
-function ItemCard({
-  item,
+/* ── Avatar Card ── */
+function AvatarCard({
+  avatar,
+  isSelected,
   isEquipped,
   onClick,
   index,
 }: {
-  item: WardrobeItem;
+  avatar: AvatarOption;
+  isSelected: boolean;
   isEquipped: boolean;
   onClick: () => void;
   index: number;
 }) {
-  const style = RARITY_STYLES[item.rarity];
+  const style = TIER_STYLES[avatar.tier];
 
   return (
     <motion.button
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.1 + index * 0.03 }}
+      transition={{ delay: 0.05 + index * 0.02 }}
       onClick={onClick}
-      className={`relative rounded-xl p-4 border text-left transition-all hover:scale-[1.03] ${
-        isEquipped
-          ? `${style.border} bg-surface-highest/60 ring-1 ring-primary/30`
-          : `border-white/[0.06] bg-surface-high/40 hover:border-white/15`
+      className={`relative rounded-xl overflow-hidden border transition-all hover:scale-[1.04] ${
+        isSelected
+          ? `${style.border} ring-2 ring-amber-400/30`
+          : isEquipped
+          ? `${style.border} bg-surface-highest/60`
+          : "border-white/[0.06] bg-surface-high/40 hover:border-white/15"
       }`}
+      style={{
+        boxShadow: isSelected ? `0 0 24px ${style.glow}` : undefined,
+      }}
     >
-      {/* Emoji avatar */}
-      <div className={`w-12 h-12 rounded-lg ${style.bg} flex items-center justify-center mb-3 mx-auto`}>
-        <span className="text-2xl">{item.emoji}</span>
-      </div>
+      {/* Avatar image */}
+      <div className="aspect-[3/4] relative overflow-hidden">
+        <img
+          src={avatar.image}
+          alt={avatar.name}
+          className="w-full h-full object-cover"
+          draggable={false}
+        />
+        {/* Gradient overlay at bottom */}
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
 
-      {/* Item info */}
-      <div className="text-xs font-bold text-white text-center truncate">{item.name}</div>
-      <div className="flex items-center justify-center gap-1.5 mt-1">
-        <span className={`text-[0.5rem] font-bold uppercase tracking-wider ${style.text}`}>
-          {item.rarity}
-        </span>
-        <span className="text-[0.5rem] text-gray-600">|</span>
-        <span className="text-[0.5rem] text-gray-500 uppercase tracking-wider">
-          {SLOT_META[item.slot].label}
-        </span>
-      </div>
+        {/* 3D badge */}
+        {avatar.fullBodyImage && (
+          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[0.4375rem] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 backdrop-blur-sm">
+            3D
+          </div>
+        )}
 
-      {/* Equipped badge */}
-      {isEquipped && (
-        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
-          <Check className="w-3 h-3 text-primary" />
+        {/* Tier badge */}
+        <div className={`absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[0.4375rem] font-bold uppercase tracking-wider ${style.bg} ${style.text} border ${style.border} backdrop-blur-sm`}>
+          {style.label}
         </div>
-      )}
+
+        {/* Equipped checkmark */}
+        {isEquipped && (
+          <div className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full bg-green-500/80 flex items-center justify-center">
+            <Check className="w-3 h-3 text-white" />
+          </div>
+        )}
+      </div>
+
+      {/* Name */}
+      <div className="px-2 py-2 text-center">
+        <div className="text-[0.6875rem] font-bold text-white truncate">{avatar.name}</div>
+      </div>
     </motion.button>
   );
 }
 
-/* ── Main Component ─────────────────────────────────────────── */
-
+/* ── Main Component ── */
 export default function AvatarWardrobe() {
-  const [equipped, setEquipped] = useState<Record<SlotType, string | null>>({
-    head: "h1",
-    body: "b1",
-    accessory: "a1",
-  });
+  const { user } = useAuth();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [equippedId, setEquippedId] = useState<string>(user?.avatar || AVATAR_OPTIONS[0].id);
+  const [filterTier, setFilterTier] = useState<AvatarOption["tier"] | "all">("all");
+  const [saved, setSaved] = useState(false);
 
-  const [filterSlot, setFilterSlot] = useState<SlotType | "all">("all");
+  // Set initial equipped from user's current avatar
+  useEffect(() => {
+    if (user?.avatar) {
+      const match = AVATAR_OPTIONS.find(a => a.image === user.avatar || a.id === user.avatar);
+      if (match) setEquippedId(match.id);
+    }
+  }, [user?.avatar]);
 
-  const getEquippedItem = (slot: SlotType): WardrobeItem | null => {
-    const id = equipped[slot];
-    return id ? OWNED_ITEMS.find((i) => i.id === id) ?? null : null;
+  const selected = AVATAR_OPTIONS.find(a => a.id === selectedId);
+  const equipped = AVATAR_OPTIONS.find(a => a.id === equippedId) || AVATAR_OPTIONS[0];
+
+  const filteredAvatars = filterTier === "all"
+    ? AVATAR_OPTIONS
+    : AVATAR_OPTIONS.filter(a => a.tier === filterTier);
+
+  const handleEquip = () => {
+    if (selectedId) {
+      setEquippedId(selectedId);
+      setSaved(false);
+    }
   };
 
-  const handleEquip = (item: WardrobeItem) => {
-    setEquipped((prev) => ({
-      ...prev,
-      [item.slot]: prev[item.slot] === item.id ? null : item.id,
-    }));
-  };
-
-  const handleClearSlot = (slot: SlotType) => {
-    setEquipped((prev) => ({ ...prev, [slot]: null }));
-  };
-
-  const isEquipped = (item: WardrobeItem) => equipped[item.slot] === item.id;
-
-  const filteredItems =
-    filterSlot === "all"
-      ? OWNED_ITEMS
-      : OWNED_ITEMS.filter((i) => i.slot === filterSlot);
-
-  const handleSavePreset = () => {
-    // UI-only placeholder
+  const handleSave = async () => {
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar: equipped.image }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // silent fail
+    }
   };
 
   return (
@@ -211,156 +145,182 @@ export default function AvatarWardrobe() {
           className="flex items-center justify-between flex-wrap gap-4"
         >
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-purple-500/15 border border-primary/20 flex items-center justify-center">
-              <User className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/15 to-purple-500/15 border border-amber-500/20 flex items-center justify-center">
+              <User className="w-6 h-6 text-amber-400" />
             </div>
             <div>
-              <h2 className="text-lg font-display font-bold text-white tracking-tight">
-                Wardrobe
-              </h2>
-              <p className="text-[0.625rem] text-muted-foreground">
-                Equip items and customize your avatar appearance.
-              </p>
+              <h2 className="text-lg font-display font-bold text-white tracking-tight">Avatar Wardrobe</h2>
+              <p className="text-[0.625rem] text-muted-foreground">Choose and equip your avatar. Premium tiers have full-body 3D renders.</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Create New Avatar button */}
-            <Link href="/avatar-customizer">
-              <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/25 hover:bg-primary/20 transition-all">
-                <Wand2 className="w-3.5 h-3.5" />
-                Create New Avatar
+          <div className="flex items-center gap-3">
+            <Link href="/shop">
+              <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/25 hover:bg-purple-500/20 transition-all">
+                <ShoppingBag className="w-3.5 h-3.5" />
+                Shop
               </button>
             </Link>
-
-            {/* Dye Shop button */}
-            <Link href="/dye-shop">
-              <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/25 hover:bg-purple-500/20 transition-all">
-                <Palette className="w-3.5 h-3.5" />
-                Dye Shop
-              </button>
-            </Link>
-
-            {/* Save Preset button */}
             <button
-              onClick={handleSavePreset}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider gradient-gold text-black border border-[#c9a84c]/40 hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,168,67,0.2)]"
+              onClick={handleSave}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-black border border-amber-400/40 hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
             >
-              <Save className="w-3.5 h-3.5" />
-              Save Preset
+              {saved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+              {saved ? "Saved!" : "Save"}
             </button>
           </div>
         </motion.div>
 
-        {/* Main avatar preview + equipped slots */}
+        {/* Top section: Preview + Selected detail */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Large Avatar Preview */}
+          {/* Large avatar preview */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-8 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+            className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
           >
-            <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/20 flex items-center justify-center mb-4 relative">
-              {/* Composite display of equipped items */}
-              <div className="text-center">
-                <span className="text-5xl block mb-1">
-                  {getEquippedItem("head")?.emoji || "\uD83D\uDC64"}
-                </span>
-              </div>
-              {/* Ambient glow */}
-              <div className="absolute inset-0 rounded-2xl bg-primary/5 blur-xl -z-10" />
+            <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-medium mb-3">Currently Equipped</div>
+            <div
+              className="w-44 h-56 rounded-2xl overflow-hidden border-2 mb-4 relative"
+              style={{
+                borderColor: equipped.borderColor,
+                boxShadow: `0 0 40px ${equipped.glowColor}, 0 8px 32px rgba(0,0,0,0.5)`,
+              }}
+            >
+              <img
+                src={equipped.fullBodyImage || equipped.image}
+                alt={equipped.name}
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
+              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent" />
             </div>
-            <div className="text-sm font-bold text-white mb-1">Your Avatar</div>
-            <div className="text-[0.5625rem] text-gray-500">
-              {Object.values(equipped).filter(Boolean).length} / 3 slots equipped
+            <div className="text-sm font-bold text-white">{equipped.name}</div>
+            <div className={`text-[0.625rem] font-bold uppercase tracking-wider mt-1 ${TIER_STYLES[equipped.tier].text}`}>
+              {TIER_STYLES[equipped.tier].label}
             </div>
           </motion.div>
 
-          {/* Equipped Gear Slots */}
+          {/* Selected avatar detail / comparison */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="lg:col-span-2 space-y-3"
+            className="lg:col-span-2 rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
-              <Crown className="w-4 h-4 text-[#c9a84c]/70" />
-              Equipped Gear
-            </h3>
-            <EquippedSlot
-              slot="head"
-              item={getEquippedItem("head")}
-              onClear={() => handleClearSlot("head")}
-            />
-            <EquippedSlot
-              slot="body"
-              item={getEquippedItem("body")}
-              onClear={() => handleClearSlot("body")}
-            />
-            <EquippedSlot
-              slot="accessory"
-              item={getEquippedItem("accessory")}
-              onClear={() => handleClearSlot("accessory")}
-            />
+            <AnimatePresence mode="wait">
+              {selected ? (
+                <motion.div
+                  key={selected.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="flex flex-col sm:flex-row gap-6 items-center"
+                >
+                  {/* Large preview */}
+                  <div
+                    className="w-40 h-52 rounded-2xl overflow-hidden border-2 shrink-0 relative"
+                    style={{
+                      borderColor: selected.borderColor,
+                      boxShadow: `0 0 30px ${selected.glowColor}`,
+                    }}
+                  >
+                    <img
+                      src={selected.fullBodyImage || selected.image}
+                      alt={selected.name}
+                      className="w-full h-full object-cover"
+                      draggable={false}
+                    />
+                  </div>
+
+                  {/* Info + equip button */}
+                  <div className="flex-1 text-center sm:text-left">
+                    <h3 className="text-xl font-display font-bold text-white mb-1">{selected.name}</h3>
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider ${TIER_STYLES[selected.tier].bg} ${TIER_STYLES[selected.tier].text} border ${TIER_STYLES[selected.tier].border} mb-4`}>
+                      {selected.tier === "legendary" && <Crown className="w-3 h-3" />}
+                      {selected.tier === "epic" && <Sparkles className="w-3 h-3" />}
+                      {TIER_STYLES[selected.tier].label}
+                    </div>
+                    {selected.fullBodyImage && (
+                      <p className="text-[0.6875rem] text-gray-400 mb-4">Full-body 3D render available — shown in-game as your portrait card.</p>
+                    )}
+                    {selectedId !== equippedId ? (
+                      <button
+                        onClick={handleEquip}
+                        className="px-6 py-2.5 rounded-lg text-[0.6875rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-black hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+                      >
+                        Equip This Avatar
+                      </button>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[0.6875rem] font-bold text-green-400 bg-green-500/10 border border-green-500/20">
+                        <Check className="w-3.5 h-3.5" /> Currently Equipped
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-12 text-center"
+                >
+                  <User className="w-12 h-12 text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-500">Select an avatar below to preview</p>
+                  <p className="text-[0.625rem] text-gray-600 mt-1">Click any avatar to see details and equip it</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
 
-        {/* Owned Items Grid */}
+        {/* Avatar grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
         >
+          {/* Filter bar */}
           <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-primary/70">
-                Owned Items
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">
+                All Avatars
               </h3>
-              <span className="text-[0.5625rem] text-gray-500 ml-1">
-                ({OWNED_ITEMS.length} items)
-              </span>
+              <span className="text-[0.5625rem] text-gray-500 ml-1">({AVATAR_OPTIONS.length})</span>
             </div>
-
-            {/* Slot filter pills */}
             <div className="flex items-center gap-1.5">
-              {(["all", "head", "body", "accessory"] as const).map((s) => (
+              {(["all", ...TIER_ORDER] as const).map((t) => (
                 <button
-                  key={s}
-                  onClick={() => setFilterSlot(s)}
+                  key={t}
+                  onClick={() => setFilterTier(t)}
                   className={`px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
-                    filterSlot === s
-                      ? "bg-primary/15 text-primary border border-primary/25"
+                    filterTier === t
+                      ? "bg-amber-500/15 text-amber-400 border border-amber-500/25"
                       : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
                   }`}
                 >
-                  {s === "all" ? "All" : SLOT_META[s].label}
+                  {t === "all" ? "All" : TIER_STYLES[t].label}
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Grid */}
           <div className="p-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {filteredItems.map((item, i) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  isEquipped={isEquipped(item)}
-                  onClick={() => handleEquip(item)}
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+              {filteredAvatars.map((avatar, i) => (
+                <AvatarCard
+                  key={avatar.id}
+                  avatar={avatar}
+                  isSelected={selectedId === avatar.id}
+                  isEquipped={equippedId === avatar.id}
+                  onClick={() => setSelectedId(avatar.id)}
                   index={i}
                 />
               ))}
             </div>
-
-            {filteredItems.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Sparkles className="w-8 h-8 text-gray-600 mb-3" />
-                <p className="text-xs text-gray-500">No items in this category.</p>
-              </div>
-            )}
           </div>
         </motion.div>
       </div>

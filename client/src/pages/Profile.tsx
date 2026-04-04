@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
@@ -10,7 +10,7 @@ import {
   User, Coins, Trophy, TrendingUp, Gamepad2,
   Zap, BookOpen, Wallet, Users, Loader2, Mic, Volume2, Check,
   Star, Shield, Crown, Clock, ChevronRight, Award, Flame, Target,
-  StickyNote, Trash2
+  StickyNote, Trash2, ShoppingBag
 } from "lucide-react";
 import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
@@ -198,6 +198,19 @@ export default function Profile() {
                 }`} data-testid="text-role">
                   {user?.role || "member"}
                 </span>
+              {/* Action buttons */}
+              <div className="flex items-center gap-2 mt-4 justify-center md:justify-start">
+                <Link href="/avatar-wardrobe">
+                  <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all">
+                    <User className="w-3 h-3" /> Change Avatar
+                  </button>
+                </Link>
+                <Link href="/shop">
+                  <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all">
+                    <ShoppingBag className="w-3 h-3" /> Shop
+                  </button>
+                </Link>
+              </div>
               </div>
             </div>
           </div>

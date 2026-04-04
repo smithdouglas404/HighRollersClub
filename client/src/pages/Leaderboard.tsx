@@ -2,10 +2,18 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
-import { Trophy, Coins, Target, TrendingUp, Loader2, Medal } from "lucide-react";
+import { Trophy, Coins, Target, TrendingUp, Loader2, Medal, Crown, Clock } from "lucide-react";
 import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
 type MetricKey = "chips" | "wins" | "winRate";
+type PeriodKey = "all" | "month" | "week" | "today";
+
+const PERIODS: { key: PeriodKey; label: string }[] = [
+  { key: "all", label: "All Time" },
+  { key: "month", label: "This Month" },
+  { key: "week", label: "This Week" },
+  { key: "today", label: "Today" },
+];
 
 interface LeaderboardEntry {
   userId: string;
@@ -30,6 +38,7 @@ function getRankStyle(rank: number) {
 
 export default function Leaderboard() {
   const [metric, setMetric] = useState<MetricKey>("chips");
+  const [period, setPeriod] = useState<PeriodKey>("all");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +47,7 @@ export default function Leaderboard() {
   useEffect(() => {
     setLoading(true);
     setFetchError(null);
-    fetch(`/api/leaderboard?metric=${metric}`)
+    fetch(`/api/leaderboard?metric=${metric}&period=${period}`)
       .then(r => {
         if (r.status === 401) throw new Error("Session expired — please log in again");
         if (!r.ok) throw new Error("Failed to load leaderboard");
@@ -47,7 +56,7 @@ export default function Leaderboard() {
       .then(data => setEntries(data))
       .catch((err) => { setEntries([]); setFetchError(err.message || "Failed to load leaderboard"); })
       .finally(() => setLoading(false));
-  }, [metric]);
+  }, [metric, period]);
 
   return (
     <DashboardLayout title="Leaderboard">
@@ -90,6 +99,66 @@ export default function Leaderboard() {
             );
           })}
         </div>
+
+        {/* Period filter */}
+        <div className="flex items-center gap-1 mb-6">
+          <Clock className="w-3.5 h-3.5 text-gray-500 mr-1" />
+          {PERIODS.map(p => (
+            <button
+              key={p.key}
+              onClick={() => setPeriod(p.key)}
+              className={`px-3 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
+                period === p.key
+                  ? "bg-white/10 text-white border border-white/15"
+                  : "text-gray-600 hover:text-gray-400 border border-transparent"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Podium — top 3 */}
+        {!loading && entries.length >= 3 && (
+          <div className="flex items-end justify-center gap-4 mb-8">
+            {[1, 0, 2].map(idx => {
+              const entry = entries[idx];
+              const rank = idx + 1;
+              const isFirst = rank === 1;
+              const tab = TABS.find(t => t.key === metric)!;
+              const ringColor = rank === 1 ? "#d4af37" : rank === 2 ? "#94a3b8" : "#cd7f32";
+              return (
+                <motion.div
+                  key={entry.userId}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + idx * 0.1, type: "spring" }}
+                  className={`flex flex-col items-center ${isFirst ? "mb-4" : ""}`}
+                >
+                  {isFirst && <Crown className="w-8 h-8 text-amber-400 mb-2 drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]" />}
+                  <div
+                    className="rounded-full overflow-hidden border-2 mb-2"
+                    style={{
+                      width: isFirst ? 80 : 64,
+                      height: isFirst ? 80 : 64,
+                      borderColor: ringColor,
+                      boxShadow: `0 0 20px ${ringColor}40`,
+                    }}
+                  >
+                    <MemberAvatar avatarId={entry.avatarId} displayName={entry.displayName || entry.username} size={isFirst ? "lg" : "md"} />
+                  </div>
+                  <span className="text-xs font-bold text-white truncate max-w-[100px] text-center">{entry.displayName || entry.username}</span>
+                  <span className="text-sm font-black mt-0.5" style={{ color: ringColor }}>
+                    {metric === "chips" ? entry.value.toLocaleString() : entry.value}{tab.unit}
+                  </span>
+                  <span className={`mt-1 w-6 h-6 rounded-full flex items-center justify-center text-[0.625rem] font-bold border ${getRankStyle(rank)}`}>
+                    {rank}
+                  </span>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Leaderboard Table */}
         <motion.div

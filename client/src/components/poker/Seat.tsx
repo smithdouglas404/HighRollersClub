@@ -411,8 +411,8 @@ const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: st
   folded:  { bg: "bg-red-500/30",    text: "text-red-400",    border: "border-red-500/50",   glow: "rgba(239,68,68,0.20)" },
   called:  { bg: "bg-green-500/30",  text: "text-green-400",  border: "border-green-500/50", glow: "rgba(34,197,94,0.20)" },
   checked: { bg: "bg-gray-500/30",   text: "text-gray-300",   border: "border-gray-500/50",  glow: "rgba(156,163,175,0.20)" },
-  raised:  { bg: "bg-amber-500/30",   text: "text-amber-400",   border: "border-amber-500/50",  glow: "rgba(212,175,55,0.20)" },
-  "all-in":{ bg: "bg-amber-500/30",  text: "text-amber-400",  border: "border-amber-500/50", glow: "rgba(245,158,11,0.20)" },
+  raised:  { bg: "bg-cyan-500/30",   text: "text-cyan-400",   border: "border-cyan-500/50",  glow: "rgba(0,212,255,0.20)" },
+  "all-in":{ bg: "bg-rose-500/30",  text: "text-rose-400",  border: "border-rose-500/50", glow: "rgba(244,63,94,0.20)" },
 };
 
 
@@ -789,14 +789,11 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                   boxShadow: "0 0 8px rgba(212,175,55,0.5)",
                 }} />
               <p className="font-bold text-white/90 truncate leading-tight text-center"
-                style={{ fontSize: "0.5625em", maxWidth: `calc(70px * var(--seat-scale, 1))`, textShadow: `0 0 6px ${hexToRgba(glowColor, 0.4)}` }}>
+                style={{ fontSize: "0.6875em", maxWidth: `calc(90px * var(--seat-scale, 1))`, textShadow: `0 0 6px ${hexToRgba(glowColor, 0.4)}` }}>
                 {player.name}
               </p>
               <div className="flex items-center justify-center gap-0.5">
-                <svg width="7" height="7" viewBox="0 0 10 10" className="flex-shrink-0">
-                  <circle cx="5" cy="5" r="4" fill="#d4af37" stroke="#b8860b" strokeWidth="1" />
-                </svg>
-                <span className="font-mono font-bold text-[#ffd700] leading-tight" style={{ fontSize: "0.5625em" }}>
+                <span className="font-mono font-bold text-[#ffd700] leading-tight" style={{ fontSize: "0.6875em" }}>
                   {formatChips(animatedChips)}
                 </span>
               </div>

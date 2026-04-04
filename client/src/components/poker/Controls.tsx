@@ -243,7 +243,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
       <div
         className="px-4 pb-3 pt-1.5 border-t border-white/[0.06]"
         style={{
-          background: "rgba(15, 15, 20, 0.60)",
+          background: "rgba(15, 15, 20, 0.92)",
           backdropFilter: "blur(40px)",
           WebkitBackdropFilter: "blur(40px)",
           boxShadow: "0 -4px 30px rgba(0,0,0,0.3)",
@@ -561,7 +561,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                   <span className="relative flex flex-col items-center justify-center gap-0.5">
                     <span className="flex items-center gap-2">
                       <span className="text-[0.8rem] font-black tracking-[0.15em]">
-                        {isAllIn ? "ALL-IN" : "RAISE"}
+                        {isAllIn ? "ALL-IN" : needsToCall ? "RAISE" : "BET"}
                       </span>
                       <kbd className="text-[0.5rem] font-mono opacity-40 bg-black/20 px-1.5 py-0.5 rounded-md border border-white/10">R</kbd>
                     </span>

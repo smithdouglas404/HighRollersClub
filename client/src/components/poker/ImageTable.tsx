@@ -23,6 +23,10 @@ interface ImageTableProps {
   showBurnCard?: boolean;
   /** Current deal phase — triggers flash on change */
   dealPhase?: string;
+  /** Hand number for display */
+  handNumber?: number;
+  /** Blind levels for display */
+  blinds?: { small: number; big: number };
 }
 
 // Premium chip denomination config
@@ -110,6 +114,8 @@ export function ImageTable({
   communityFlipped = true,
   showBurnCard = false,
   dealPhase,
+  handNumber,
+  blinds,
 }: ImageTableProps) {
   const { compactMode, feltPreset } = useGameUI();
   const occupiedCount = players?.length || playerCount;
@@ -302,7 +308,7 @@ export function ImageTable({
               exit={{ opacity: 0, scale: 0.85 }}
               transition={compactMode ? { duration: 0 } : undefined}
               className="absolute flex flex-col items-center gap-1"
-              style={{ left: "50%", top: "28%", transform: "translate(-50%, -50%)" }}
+              style={{ left: "50%", top: "33%", transform: "translate(-50%, -50%)" }}
             >
               {/* Phase label */}
               {dealPhase && (
@@ -446,6 +452,27 @@ export function ImageTable({
             />
           )}
         </AnimatePresence>
+
+        {/* ── Hand/Blind info strip — bottom of felt ── */}
+        {(handNumber || blinds) && (
+          <div className="absolute pointer-events-none" style={{
+            left: "50%", bottom: "6%",
+            transform: "translateX(-50%)",
+            zIndex: 5,
+            display: "flex", gap: "12px", alignItems: "center",
+            padding: "2px 12px",
+            borderRadius: "10px",
+            background: "rgba(0,0,0,0.45)",
+            border: "1px solid rgba(212,175,55,0.12)",
+            fontSize: "0.625rem",
+            fontFamily: "var(--font-mono, monospace)",
+            color: "rgba(212,175,55,0.6)",
+            letterSpacing: "0.05em",
+          }}>
+            {handNumber && <span>Hand #{handNumber}</span>}
+            {blinds && <span>${blinds.small}/${blinds.big}</span>}
+          </div>
+        )}
       </div>
     </>
   );

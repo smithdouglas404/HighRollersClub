@@ -11,6 +11,8 @@ interface ShowdownOverlayProps {
   results: PlayerResult[];
   players: Player[];
   pot: number;
+  onDismiss?: () => void;
+  autoDismissMs?: number;
 }
 
 // Enhanced confetti with multiple burst waves and shimmer particles
@@ -155,13 +157,22 @@ function Confetti({ active }: { active: boolean }) {
   return <canvas ref={canvasRef} className="absolute inset-0 z-50 pointer-events-none" />;
 }
 
-export function ShowdownOverlay({ visible, results, players, pot }: ShowdownOverlayProps) {
+export function ShowdownOverlay({ visible, results, players, pot, onDismiss, autoDismissMs = 5000 }: ShowdownOverlayProps) {
   const winners = results.filter(r => r.isWinner);
   const losers = results.filter(r => !r.isWinner);
   const winnerIds = winners.map(w => w.playerId);
   const sound = useSoundEngine();
   const soundPlayedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const dismissRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Auto-dismiss after timeout
+  useEffect(() => {
+    if (visible && onDismiss) {
+      dismissRef.current = setTimeout(onDismiss, autoDismissMs);
+    }
+    return () => { if (dismissRef.current) clearTimeout(dismissRef.current); };
+  }, [visible, onDismiss, autoDismissMs]);
 
   // Play showdown sequence: phase reveal → fanfare → chip slide → win celebration
   useEffect(() => {
@@ -194,16 +205,17 @@ export function ShowdownOverlay({ visible, results, players, pot }: ShowdownOver
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center overflow-auto"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-auto cursor-pointer"
+          onClick={() => onDismiss?.()}
         >
-          {/* Backdrop with dramatic vignette */}
+          {/* Backdrop — solid dark overlay (no blur for performance) */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
-            className="absolute inset-0 backdrop-blur-md"
+            className="absolute inset-0"
             style={{
-              background: "radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.88) 60%, rgba(0,0,0,0.96) 100%)",
+              background: "radial-gradient(ellipse at center, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.90) 60%, rgba(0,0,0,0.97) 100%)",
             }}
           />
 
@@ -406,6 +418,27 @@ export function ShowdownOverlay({ visible, results, players, pot }: ShowdownOver
                   })}
                 </div>
               </motion.div>
+            )}
+
+            {/* ── Dismiss button — visible at bottom ── */}
+            {onDismiss && (
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2 }}
+                onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+                data-testid="button-dismiss-showdown"
+                className="mt-6 mx-auto block px-8 py-3 rounded-xl font-black uppercase tracking-widest text-sm"
+                style={{
+                  background: "linear-gradient(180deg, rgba(212,175,55,0.25) 0%, rgba(212,175,55,0.10) 100%)",
+                  border: "1px solid rgba(212,175,55,0.4)",
+                  color: "#ffd700",
+                  boxShadow: "0 0 20px rgba(212,175,55,0.15)",
+                  textShadow: "0 0 8px rgba(255,215,0,0.4)",
+                }}
+              >
+                Continue
+              </motion.button>
             )}
           </motion.div>
         </motion.div>

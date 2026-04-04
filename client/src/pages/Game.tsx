@@ -357,6 +357,14 @@ function GameTable({
   // Speech-to-text for chat
   const speech = useSpeechToChat(sendChat, isMultiplayer);
 
+  // Showdown dismiss — resets when a new showdown appears
+  const [showdownDismissed, setShowdownDismissed] = useState(false);
+  const prevShowdownRef = useRef(showdown);
+  useEffect(() => {
+    if (showdown && showdown !== prevShowdownRef.current) setShowdownDismissed(false);
+    prevShowdownRef.current = showdown;
+  }, [showdown]);
+
   // Fetch real player stats for analytics panel (debounced to avoid rapid re-fetches)
   const [playerStats, setPlayerStats] = useState({ handsPlayed: 0, potsWon: 0, vpip: 0, pfr: 0, showdownCount: 0 });
   useEffect(() => {
@@ -497,8 +505,8 @@ function GameTable({
 
       <ChipAnimation containerRef={tableRef} />
 
-      {showdown && (
-        <ShowdownOverlay visible={!!showdown} results={showdown.results} players={players} pot={showdown.pot} />
+      {showdown && !showdownDismissed && (
+        <ShowdownOverlay visible results={showdown.results} players={players} pot={showdown.pot} onDismiss={() => setShowdownDismissed(true)} />
       )}
 
       {/* ═══ TOP BAR ═══ */}
@@ -1143,10 +1151,8 @@ function GameTable({
           <div className="flex-1 relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 45%, #1a2235 0%, #131a28 40%, #0e1420 70%, #0a0e18 100%)" }} />
-              {/* Atmospheric glow — warm casino lighting */}
+              {/* Atmospheric glow — warm casino lighting (single layer) */}
               <div className="absolute top-[-15%] left-[10%] w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(212,175,55,0.03)" }} />
-              <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(139,105,20,0.025)" }} />
-              <div className="absolute top-[20%] right-[20%] w-[350px] h-[350px] rounded-full blur-[110px] pointer-events-none" style={{ background: "rgba(201,168,76,0.025)" }} />
 
               <div
                 ref={tableRef}
@@ -1175,6 +1181,8 @@ function GameTable({
                     communityFlipped={dealing.communityFlipped}
                     showBurnCard={dealing.showBurnCard}
                     dealPhase={gameState.phase}
+                    handNumber={(gameState as any).handNumber}
+                    blinds={formatInfo?.smallBlind && formatInfo?.bigBlind ? { small: formatInfo.smallBlind, big: formatInfo.bigBlind } : undefined}
                   />
                 )}
 

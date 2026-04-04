@@ -1,0 +1,19 @@
+Showdown overlay has no dismiss — blocks gameplay after every hand │ Critical │                                                                                                                                     
+  ├─────┼────────────────────────────────────────────────────────────────────┼──────────┤                                                                                                                                     
+  │ 2   │ "RAISE" should say "BET" when opening the betting                  │ Critical │                                                                                                                                     
+  ├─────┼────────────────────────────────────────────────────────────────────┼──────────┤                                                                                                                                     
+  │ 3   │ Pot and community cards 17% apart — need to tighten                │ High     │                                                                                                                                     
+  ├─────┼────────────────────────────────────────────────────────────────────┼──────────┤                                                                                                                                     
+  │ 4   │ Seat name/stack font (9px) too small — needs 11px                  │ High     │                                                                                                                                   
+  ├─────┼────────────────────────────────────────────────────────────────────┼──────────┤                                                                                                                                     
+  │ 5   │ No hand number or blind level displayed persistently               │ High     │                                                                                                                                     
+  ├─────┼────────────────────────────────────────────────────────────────────┼──────────┤                                                                                                                                   
+  │ 6   │ All-in and Raise badges look identical (both amber)                │ Medium   │                                                                                                                                     
+  ├─────┼────────────────────────────────────────────────────────────────────┼──────────┤
+  │ 7   │ Showdown backdrop blur hurts performance — use solid overlay       │ Medium   │                                                                                                                                     
+  ├─────┼────────────────────────────────────────────────────────────────────┼──────────┤                                                                                                                                   
+  │ 8   │ 6 duplicate background glow layers — remove half                   │ Medium   │                                                                                                                                     
+  ├─────┼────────────────────────────────────────────────────────────────────┼──────────┤                                                                                                                                   
+  │ 9   │ Name truncation at 59px cuts off short names — widen to 90px       │ Medium   │                                                                                                                                     
+  ├─────┼────────────────────────────────────────────────────────────────────┼──────────┤                                                                                                                                   
+  │ 10  │ Controls glass panel at 60% opacity — increase to 92%              │ Medium   │       

@@ -170,6 +170,7 @@ export default function ClubCreate() {
   /* ── Step indicator ──────────────────────────────────────────────────────── */
 
   const renderStepIndicator = () => (
+    <>
     <div className="flex items-center justify-center gap-2 mb-8">
       {STEP_LABELS.map((label, i) => {
         const isCompleted = i < step;
@@ -232,6 +233,8 @@ export default function ClubCreate() {
         );
       })}
     </div>
+    <div className="sm:hidden text-center text-xs text-primary font-bold mt-2">{STEP_LABELS[step] || `Step ${step + 1}`}</div>
+    </>
   );
 
   /* ── Step 1: Club Identity ───────────────────────────────────────────────── */

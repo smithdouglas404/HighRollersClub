@@ -75,6 +75,7 @@ export default function Tournaments() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "upcoming" | "running" | "completed">("all");
 
   useEffect(() => {
     setLoading(true);
@@ -138,6 +139,23 @@ export default function Tournaments() {
           </div>
         </motion.div>
 
+        {/* ── Status Filter Tabs ─────────────────────────────────── */}
+        <div className="flex items-center gap-2 mb-6">
+          {(["all", "upcoming", "running", "completed"] as const).map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-1.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
+                statusFilter === status
+                  ? "bg-yellow-500/15 text-yellow-300 border border-yellow-500/30 shadow-[0_0_10px_rgba(212,175,55,0.15)]"
+                  : "text-gray-500 border border-white/[0.06] hover:text-gray-300 hover:border-white/15"
+              }`}
+            >
+              {status === "all" ? "All" : status.charAt(0).toUpperCase() + status.slice(1)}
+            </button>
+          ))}
+        </div>
+
         {/* ── Loading State ──────────────────────────────────────── */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-20">
@@ -196,7 +214,13 @@ export default function Tournaments() {
             animate="visible"
             className="flex flex-col gap-4"
           >
-            {tournaments.map((tournament) => {
+            {tournaments.filter((t) => {
+              if (statusFilter === "all") return true;
+              if (statusFilter === "upcoming") return t.status === "registration" || t.status === "upcoming";
+              if (statusFilter === "running") return t.status === "running" || t.status === "in_progress";
+              if (statusFilter === "completed") return t.status === "completed" || t.status === "finished";
+              return true;
+            }).map((tournament) => {
               const prizePool = calculatePrizePool(tournament);
               const isRegOpen = tournament.status === "registration";
               const registered = tournament.registeredPlayers ?? 0;
@@ -297,6 +321,19 @@ export default function Tournaments() {
                       >
                         Register
                       </motion.button>
+                    </div>
+                  </div>
+
+                  {/* Registration progress bar */}
+                  <div className="mx-5 mb-3">
+                    <div className="h-1 rounded-full bg-white/5">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.min((registered / tournament.maxPlayers) * 100, 100)}%`,
+                          background: "linear-gradient(90deg, rgba(212,175,55,0.6), rgba(212,175,55,0.9))",
+                        }}
+                      />
                     </div>
                   </div>
 

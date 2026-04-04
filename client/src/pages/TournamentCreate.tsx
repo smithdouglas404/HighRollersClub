@@ -595,6 +595,46 @@ export default function TournamentCreate() {
             )}
           </div>
         </div>
+
+        {/* Blind Schedule Preview */}
+        <div>
+          <label className={goldLabelClass}>
+            <Eye className="w-3 h-3 inline mr-1 -mt-0.5" />
+            Blind Schedule Preview
+          </label>
+          <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div className="grid grid-cols-4 gap-0 px-4 py-2 border-b border-white/5">
+              <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">Level</span>
+              <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">SB</span>
+              <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">BB</span>
+              <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">Ante</span>
+            </div>
+            {Array.from({ length: Math.min(numberOfLevels, 8) }).map((_, i) => {
+              const sb = Math.round((startingStack / 100) * Math.pow(2, i));
+              const bb = sb * 2;
+              const ante = i >= 3 ? Math.round(sb * 0.25) : 0;
+              return (
+                <div key={i} className={`grid grid-cols-4 gap-0 px-4 py-2 ${i % 2 === 0 ? "bg-white/[0.01]" : ""}`}>
+                  <span className="text-xs text-gray-400">{i + 1}</span>
+                  <span className="text-xs text-amber-300/80 tabular-nums">{sb.toLocaleString()}</span>
+                  <span className="text-xs text-amber-300/80 tabular-nums">{bb.toLocaleString()}</span>
+                  <span className="text-xs text-gray-500 tabular-nums">{ante > 0 ? ante.toLocaleString() : "-"}</span>
+                </div>
+              );
+            })}
+          </div>
+          {(() => {
+            const totalBreakTime = breaks.reduce((sum, b) => sum + Math.floor(numberOfLevels / b.everyXLevels) * b.durationMinutes, 0);
+            const estMinutes = numberOfLevels * blindInterval + totalBreakTime;
+            const hours = Math.floor(estMinutes / 60);
+            const mins = estMinutes % 60;
+            return (
+              <p className="text-[0.625rem] text-gray-500 mt-2">
+                Estimated duration: ~{hours > 0 ? `${hours}h ` : ""}{mins}m ({numberOfLevels} levels x {blindInterval}min + {totalBreakTime}min breaks)
+              </p>
+            );
+          })()}
+        </div>
       </div>
     );
   }

@@ -76,8 +76,21 @@ const RARITY_GRADIENTS: Record<string, string> = {
   common: "from-gray-500/40 via-slate-500/30 to-gray-700/40",
 };
 
+const RARITY_GLOW: Record<string, string> = {
+  mythic: "rgba(217,70,239,0.3)",
+  legendary: "rgba(212,175,55,0.3)",
+  epic: "rgba(168,85,247,0.25)",
+  rare: "rgba(59,130,246,0.2)",
+  uncommon: "rgba(34,197,94,0.15)",
+  common: "rgba(148,163,184,0.1)",
+};
+
 function getRarityColor(rarity: string): string {
   return RARITY_COLORS[rarity] || RARITY_COLORS[rarity.toLowerCase()] || RARITY_COLORS.common;
+}
+
+function getRarityGlow(rarity: string): string {
+  return RARITY_GLOW[rarity?.toLowerCase()] || RARITY_GLOW.common;
 }
 
 function getRarityGradient(rarity: string): string {
@@ -410,7 +423,7 @@ function ShopItemCard({
 }) {
   return (
     <motion.div
-      whileHover={{ scale: 1.03, y: -4 }}
+      whileHover={{ scale: 1.03, y: -4, boxShadow: `0 0 24px ${getRarityGlow(item.rarity)}` }}
       className="rounded-xl overflow-hidden transition-all cursor-pointer group card-hover"
       style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
       onClick={() => !owned && onPurchase(item)}
@@ -554,6 +567,7 @@ export default function Shop() {
   } = useWallet();
 
   // Shop state
+  const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "rarity">("default");
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
   const [inventory, setInventory] = useState<InventoryEntry[]>([]);
@@ -706,11 +720,18 @@ export default function Shop() {
   const isWishlistTab = activeTab === "Wishlist";
   const isInventoryTab = activeTab === "Inventory";
 
-  const filteredItems = isWishlistTab
+  const RARITY_RANK: Record<string, number> = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
+  const unsortedItems = isWishlistTab
     ? shopItems.filter((item) => wishlist.has(item.id))
     : activeCategory
       ? shopItems.filter((item) => item.category === activeCategory)
       : shopItems;
+  const filteredItems = [...unsortedItems].sort((a, b) => {
+    if (sortBy === "price_asc") return a.price - b.price;
+    if (sortBy === "price_desc") return b.price - a.price;
+    if (sortBy === "rarity") return (RARITY_RANK[a.rarity?.toLowerCase()] ?? 5) - (RARITY_RANK[b.rarity?.toLowerCase()] ?? 5);
+    return 0;
+  });
 
   // New Arrivals: items created within the last 7 days
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -958,7 +979,8 @@ export default function Shop() {
 
                     {/* All Items (or Wishlist items) */}
                     <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
+                      <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
                         {isWishlistTab ? (
                           <>
                             <Heart className="w-4 h-4 text-pink-400 fill-pink-400" />
@@ -971,6 +993,17 @@ export default function Shop() {
                           </>
                         )}
                       </h3>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/10 outline-none cursor-pointer"
+                      >
+                        <option value="default">Default</option>
+                        <option value="price_asc">Price: Low → High</option>
+                        <option value="price_desc">Price: High → Low</option>
+                        <option value="rarity">Rarity</option>
+                      </select>
+                      </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {(isWishlistTab ? filteredItems : remainingItems).map((item, i) => (
                           <motion.div

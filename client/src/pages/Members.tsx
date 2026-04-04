@@ -314,6 +314,10 @@ export default function Members() {
                   <span className="col-span-3 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Stats</span>
                   <span className="col-span-2 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400 text-right">Actions</span>
                 </div>
+                {/* Mobile-only card header */}
+                <div className="md:hidden px-4 py-2.5 border-b border-primary/10">
+                  <span className="text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">{sortedMembers.length} Members</span>
+                </div>
 
                 {sortedMembers.length === 0 && (searchQuery || roleFilter !== "all" || statusFilter !== "all") && (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -344,9 +348,9 @@ export default function Members() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className={`flex flex-col md:grid md:grid-cols-12 gap-3 items-start md:items-center px-4 md:px-6 py-4 md:py-6 border-b border-white/[0.04] hover:bg-primary/[0.06] transition-all duration-200 group ${
+                      className={`md:grid md:grid-cols-12 gap-3 items-start md:items-center px-4 md:px-6 py-4 md:py-6 border-b border-white/[0.04] hover:bg-primary/[0.06] transition-all duration-200 group ${
                         podiumStyle ? "relative" : ""
-                      }`}
+                      } md:flex-none flex flex-col rounded-xl md:rounded-none m-2 md:m-0 bg-white/[0.02] md:bg-transparent border md:border-0 md:border-b border-white/[0.06]`}
                       style={podiumStyle ? {
                         background: podiumStyle.bg,
                         borderBottom: podiumStyle.border,

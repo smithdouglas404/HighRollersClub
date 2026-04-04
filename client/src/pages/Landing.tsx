@@ -196,7 +196,9 @@ export default function Landing() {
                   className="flex flex-wrap items-center gap-4 pt-2"
                 >
                   <Link href="/lobby">
-                    <button
+                    <motion.button
+                      animate={{ boxShadow: ["0 0 20px rgba(212,175,55,0.2)", "0 0 40px rgba(212,175,55,0.4)", "0 0 20px rgba(212,175,55,0.2)"] }}
+                      transition={{ duration: 2, repeat: Infinity }}
                       className="group relative overflow-hidden rounded-xl px-8 py-4 font-bold text-base uppercase tracking-wider gradient-primary text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
                       data-testid="button-play-now"
                     >
@@ -206,7 +208,7 @@ export default function Landing() {
                         Play Now
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </div>
-                    </button>
+                    </motion.button>
                   </Link>
 
                   <Link href="/game">
@@ -340,10 +342,28 @@ export default function Landing() {
               <span className="font-display font-bold gold-text tracking-wider">HIGH ROLLERS</span>
               <span>&copy; 2026</span>
             </div>
-            <div className="flex items-center gap-6">
-              <a href="#" className="hover:text-primary transition-colors">Terms</a>
-              <a href="#" className="hover:text-primary transition-colors">Privacy</a>
-              <a href="#" className="hover:text-primary transition-colors">Support</a>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                {[
+                  { letter: "T", label: "Twitter" },
+                  { letter: "D", label: "Discord" },
+                  { letter: "X", label: "X" },
+                ].map((social) => (
+                  <a
+                    key={social.letter}
+                    href="#"
+                    aria-label={social.label}
+                    className="w-8 h-8 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center text-[0.625rem] text-gray-500 hover:text-primary hover:border-primary/30 transition-all"
+                  >
+                    {social.letter}
+                  </a>
+                ))}
+              </div>
+              <div className="flex items-center gap-6">
+                <a href="#" className="hover:text-primary transition-colors">Terms</a>
+                <a href="#" className="hover:text-primary transition-colors">Privacy</a>
+                <a href="#" className="hover:text-primary transition-colors">Support</a>
+              </div>
             </div>
           </div>
         </footer>

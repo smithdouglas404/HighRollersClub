@@ -362,6 +362,7 @@ export default function Analytics() {
   const [analyses, setAnalyses] = useState<AnalysisEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [chartPeriod, setChartPeriod] = useState("all");
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -541,10 +542,28 @@ export default function Analytics() {
                 border: "1px solid rgba(212,175,55,0.12)",
               }}
             >
-              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-[#c9a84c]/80" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Winnings Over Time</h3>
+                </div>
+                <div className="flex items-center gap-1">
+                  {["7 Days", "30 Days", "3 Months", "All Time"].map((label) => {
+                    const key = label === "All Time" ? "all" : label.toLowerCase().replace(/\s/g, "");
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setChartPeriod(key)}
+                        className={`px-2.5 py-1 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
+                          chartPeriod === key
+                            ? "bg-[#c9a84c]/15 text-[#c9a84c] border border-[#c9a84c]/30"
+                            : "text-gray-500 border border-transparent hover:text-gray-400"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
                 {cumulativeWinnings.length > 0 && (
                   <span className={`text-xs font-bold ${

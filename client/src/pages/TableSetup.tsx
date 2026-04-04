@@ -922,6 +922,13 @@ function StepTheme({
                   : "none",
               }}
             >
+              {/* Theme swatch */}
+              <div
+                className="w-full h-16 rounded-lg mb-2"
+                style={{
+                  background: `radial-gradient(ellipse at center, ${theme.color}40 0%, ${theme.color}15 50%, transparent 80%)`,
+                }}
+              />
               {/* Mini table preview */}
               <div
                 className="w-full h-16 rounded-lg mb-3 relative overflow-hidden"
@@ -1382,6 +1389,14 @@ export default function TableSetup() {
   return (
     <DashboardLayout title="Create Table">
       <div className="px-4 md:px-8 pb-10 max-w-3xl mx-auto">
+        {/* Mobile step progress */}
+        <div className="md:hidden mb-4">
+          <div className="text-xs text-primary font-bold mb-1">Step {step + 1} of {totalSteps}: {STEPS[step].label}</div>
+          <div className="h-1 rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((step + 1) / totalSteps) * 100}%` }} />
+          </div>
+        </div>
+
         {/* Step indicator */}
         <StepIndicator current={step} total={totalSteps} />
 

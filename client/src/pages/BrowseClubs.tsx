@@ -160,6 +160,8 @@ export default function BrowseClubs() {
     }),
   };
 
+  const getClubHue = (club: PublicClub) => (club.name.charCodeAt(0) * 7) % 360;
+
   const renderClubAvatar = (club: PublicClub, size: "sm" | "lg" = "sm") => {
     const logo = getClubLogo(club);
     const dim = size === "lg" ? "w-14 h-14" : "w-10 h-10";
@@ -172,9 +174,11 @@ export default function BrowseClubs() {
         </div>
       );
     }
+    const hue = getClubHue(club);
     return (
       <div
-        className={`${dim} rounded-xl flex items-center justify-center flex-shrink-0 ${textSize} font-black text-white/80 bg-white/[0.03] border border-white/[0.06]`}
+        className={`${dim} rounded-xl flex items-center justify-center flex-shrink-0 ${textSize} font-black text-white/80 border border-white/[0.06]`}
+        style={{ background: `linear-gradient(135deg, hsl(${hue}, 50%, 25%), hsl(${hue}, 40%, 15%))` }}
       >
         {club.name.charAt(0).toUpperCase()}
       </div>
@@ -409,12 +413,7 @@ export default function BrowseClubs() {
                       whileHover={{ y: -3, scale: 1.01 }}
                       className="rounded-xl overflow-hidden transition-shadow group bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
                     >
-                      <div
-                        className="h-[3px]"
-                        style={{
-                          background: `linear-gradient(90deg, ${accent.from}, ${accent.to})`,
-                        }}
-                      />
+                      <div className="h-12 rounded-t-xl" style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }} />
 
                       <div className="p-5">
                         <div className="flex items-start gap-3 mb-3">

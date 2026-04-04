@@ -201,15 +201,13 @@ export function ImageTable({
                 }}
               >
                 <div
-                  className="w-[68px] h-[68px] rounded-[18px] border-2 border-dashed flex flex-col items-center justify-center transition-all group-hover:border-amber-400/60 group-hover:scale-110"
+                  className="w-[44px] h-[44px] rounded-full border border-dashed flex items-center justify-center transition-all group-hover:border-amber-400/50 group-hover:scale-115"
                   style={{
-                    borderColor: "rgba(212,175,55,0.3)",
-                    background: "rgba(212,175,55,0.04)",
-                    boxShadow: "0 0 8px rgba(212,175,55,0.08)",
+                    borderColor: "rgba(212,175,55,0.18)",
+                    background: "rgba(212,175,55,0.03)",
                   }}
                 >
-                  <span className="text-[0.5625rem] text-amber-400/50 font-mono font-bold">#{i + 1}</span>
-                  <span className="text-[0.4375rem] text-amber-400/30 uppercase tracking-wider mt-0.5 group-hover:text-amber-400/70 transition-colors">SIT</span>
+                  <span className="text-[0.625rem] text-amber-400/30 font-bold group-hover:text-amber-400/60 transition-colors">+</span>
                 </div>
               </div>
             );
@@ -286,7 +284,7 @@ export function ImageTable({
                   <Card
                     key={`cc-${i}-${card.suit}-${card.rank}`}
                     card={card}
-                    size={compactMode ? "lg" : "2xl"}
+                    size={compactMode ? "lg" : (window.innerWidth < 1440 ? "xl" : "2xl")}
                     delay={compactMode ? 0 : i * 0.12}
                     dealFrom={compactMode ? undefined : { x: 200, y: -100 }}
                     faceDown={!communityFlipped && !compactMode}

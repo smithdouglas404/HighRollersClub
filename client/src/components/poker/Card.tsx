@@ -17,12 +17,12 @@ interface CardProps {
   flipDelay?: number;
 }
 
-/* ── Suit glow colors for hero card shadows (standard: red suits / black suits) ── */
+/* ── Suit glow colors for hero card shadows (4-color deck: red/blue/green/dark) ── */
 const suitGlow: Record<Suit, string> = {
   hearts:   "rgba(220,38,38,0.5)",
-  diamonds: "rgba(220,38,38,0.5)",
-  clubs:    "rgba(51,65,85,0.5)",
-  spades:   "rgba(51,65,85,0.5)",
+  diamonds: "rgba(59,130,246,0.5)",
+  clubs:    "rgba(34,197,94,0.45)",
+  spades:   "rgba(148,163,184,0.4)",
 };
 
 // Card sizes use strict 2:3 ratio matching SVG native 210x315
@@ -231,11 +231,11 @@ export function Card({
       animate={{ rotateY: 0, scale: 1, opacity: 1 }}
       transition={skipEntrance ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 20, delay }}
       whileHover={isHero && !compactMode ? {
-        rotateY: -12,
-        rotateX: 8,
-        y: -14,
-        scale: 1.08,
-        transition: { duration: 0.25 },
+        rotateY: -15,
+        rotateX: 10,
+        y: -22,
+        scale: 1.12,
+        transition: { duration: 0.2, ease: "easeOut" },
       } : undefined}
       onAnimationComplete={() => {
         if (isHero && !compactMode) setHoloActive(true);

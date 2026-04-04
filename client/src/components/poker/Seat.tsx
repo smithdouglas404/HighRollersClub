@@ -411,7 +411,7 @@ const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; border: st
   folded:  { bg: "bg-red-500/30",    text: "text-red-400",    border: "border-red-500/50",   glow: "rgba(239,68,68,0.20)" },
   called:  { bg: "bg-green-500/30",  text: "text-green-400",  border: "border-green-500/50", glow: "rgba(34,197,94,0.20)" },
   checked: { bg: "bg-gray-500/30",   text: "text-gray-300",   border: "border-gray-500/50",  glow: "rgba(156,163,175,0.20)" },
-  raised:  { bg: "bg-cyan-500/30",   text: "text-cyan-400",   border: "border-cyan-500/50",  glow: "rgba(0,212,255,0.20)" },
+  raised:  { bg: "bg-amber-500/30",   text: "text-amber-400",   border: "border-amber-500/50",  glow: "rgba(212,175,55,0.20)" },
   "all-in":{ bg: "bg-rose-500/30",  text: "text-rose-400",  border: "border-rose-500/50", glow: "rgba(244,63,94,0.20)" },
 };
 

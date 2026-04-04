@@ -51,7 +51,7 @@ export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCo
             Daily Missions
           </h3>
           {completedCount != null && (
-            <span className="text-[0.5625rem] text-cyan-400 font-bold uppercase tracking-wider">
+            <span className="text-[0.5625rem] text-amber-400 font-bold uppercase tracking-wider">
               {completedCount}/{missions.length} Complete
             </span>
           )}
@@ -64,7 +64,7 @@ export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCo
           const progressPct = Math.min(Math.round((mission.progress / mission.target) * 100), 100);
           return (
             <div key={mission.id} className="text-center">
-              <div className={`w-10 h-10 rounded-lg ${mission.completed ? "bg-green-500/15 border-green-500/20" : "bg-cyan-500/10 border-cyan-500/15"} border flex items-center justify-center mx-auto mb-2 overflow-hidden`}>
+              <div className={`w-10 h-10 rounded-lg ${mission.completed ? "bg-green-500/15 border-green-500/20" : "bg-amber-500/10 border-amber-500/15"} border flex items-center justify-center mx-auto mb-2 overflow-hidden`}>
                 {badgeUrl ? (
                   <img
                     src={badgeUrl}
@@ -72,7 +72,7 @@ export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCo
                     className={`w-10 h-10 object-cover ${mission.completed ? "" : "opacity-60 grayscale"}`}
                   />
                 ) : (
-                  <Icon className={`w-4 h-4 ${mission.completed ? "text-green-400" : "text-cyan-400"}`} />
+                  <Icon className={`w-4 h-4 ${mission.completed ? "text-green-400" : "text-amber-400"}`} />
                 )}
               </div>
               <div className="text-[0.625rem] font-medium text-gray-300 mb-1">{mission.label}</div>
@@ -105,7 +105,7 @@ export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCo
                         </button>
                       )
                       : <span className="text-green-400 ml-1">Done!</span>
-                  : <span className="text-cyan-400 ml-1">+{mission.reward}</span>
+                  : <span className="text-amber-400 ml-1">+{mission.reward}</span>
                 }
               </div>
             </div>

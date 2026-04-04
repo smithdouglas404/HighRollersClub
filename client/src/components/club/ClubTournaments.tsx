@@ -98,7 +98,7 @@ export function ClubTournaments() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-cyan-400" />
+          <Trophy className="w-4 h-4 text-amber-400" />
           Club Tournaments
         </h3>
         {isAdminOrOwner && (
@@ -108,8 +108,8 @@ export function ClubTournaments() {
             onClick={() => setShowCreate(true)}
             className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black flex items-center gap-1.5"
             style={{
-              background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
-              boxShadow: "0 0 15px rgba(0,212,255,0.2)",
+              background: "linear-gradient(135deg, #d4af37, #e8cc6a)",
+              boxShadow: "0 0 15px rgba(212,175,55,0.2)",
             }}
           >
             <Plus className="w-3 h-3" />
@@ -133,8 +133,8 @@ export function ClubTournaments() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={e => e.stopPropagation()}
-              className="glass rounded-2xl p-6 border border-cyan-500/20 w-full max-w-md mx-4"
-              style={{ boxShadow: "0 0 40px rgba(0,212,255,0.1)" }}
+              className="glass rounded-2xl p-6 border border-amber-500/20 w-full max-w-md mx-4"
+              style={{ boxShadow: "0 0 40px rgba(212,175,55,0.1)" }}
             >
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-white">New Tournament</h3>
@@ -211,7 +211,7 @@ export function ClubTournaments() {
                 onClick={handleCreate}
                 disabled={creating || !name.trim()}
                 className="w-full mt-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black flex items-center justify-center gap-1.5 disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, #00d4ff, #66e5ff)", boxShadow: "0 0 15px rgba(0,212,255,0.2)" }}
+                style={{ background: "linear-gradient(135deg, #d4af37, #e8cc6a)", boxShadow: "0 0 15px rgba(212,175,55,0.2)" }}
               >
                 {creating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trophy className="w-3 h-3" />}
                 Create Tournament
@@ -264,7 +264,7 @@ export function ClubTournaments() {
               ? "bg-green-500/15 text-green-400 border-green-500/20"
               : isComplete
               ? "bg-gray-500/15 text-gray-400 border-gray-500/20"
-              : "bg-cyan-500/15 text-cyan-400 border-cyan-500/20";
+              : "bg-amber-500/15 text-amber-400 border-amber-500/20";
 
             return (
               <motion.div
@@ -290,21 +290,21 @@ export function ClubTournaments() {
                       {t.status === "in_progress" ? "Live" : t.status}
                     </span>
                   </div>
-                  <Trophy className="w-5 h-5 text-cyan-400/40" />
+                  <Trophy className="w-5 h-5 text-amber-400/40" />
                 </div>
 
                 <div className="space-y-1.5 text-[0.625rem] text-gray-400">
                   <div className="flex items-center gap-1.5">
-                    <Coins className="w-3 h-3 text-cyan-500/60" />
+                    <Coins className="w-3 h-3 text-amber-500/60" />
                     <span>Buy-in: <strong className="text-white">{t.buyIn.toLocaleString()}</strong></span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Users className="w-3 h-3 text-cyan-500/60" />
+                    <Users className="w-3 h-3 text-amber-500/60" />
                     <span>{t.registeredCount} / {t.maxPlayers} {isComplete ? "players" : "registered"}</span>
                   </div>
                   {t.startAt && (
                     <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3 h-3 text-cyan-500/60" />
+                      <Calendar className="w-3 h-3 text-amber-500/60" />
                       <span>{new Date(t.startAt).toLocaleString()}</span>
                     </div>
                   )}
@@ -336,7 +336,7 @@ export function ClubTournaments() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleRegister(t.id)}
-                      className="flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-colors"
+                      className="flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-amber-400 border border-amber-500/20 hover:bg-amber-500/10 transition-colors"
                     >
                       Register
                     </motion.button>
@@ -348,8 +348,8 @@ export function ClubTournaments() {
                         disabled={starting === t.id}
                         className="flex-1 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-1"
                         style={{
-                          background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
-                          boxShadow: "0 0 15px rgba(0,212,255,0.2)",
+                          background: "linear-gradient(135deg, #d4af37, #e8cc6a)",
+                          boxShadow: "0 0 15px rgba(212,175,55,0.2)",
                         }}
                       >
                         {starting === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trophy className="w-3 h-3" />}

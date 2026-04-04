@@ -1214,7 +1214,7 @@ interface WalletProviderInfo {
 const WALLET_PROVIDERS: WalletProviderInfo[] = [
   { id: "metamask", name: "MetaMask", letter: "M", color: "text-orange-400", bgColor: "bg-orange-500/15", borderColor: "border-orange-500/25", glowRgb: "249,115,22" },
   { id: "coinbase", name: "Coinbase Wallet", letter: "C", color: "text-blue-400", bgColor: "bg-blue-500/15", borderColor: "border-blue-500/25", glowRgb: "59,130,246" },
-  { id: "walletconnect", name: "WalletConnect", letter: "W", color: "text-primary", bgColor: "bg-cyan-500/15", borderColor: "border-cyan-500/25", glowRgb: "6,182,212" },
+  { id: "walletconnect", name: "WalletConnect", letter: "W", color: "text-primary", bgColor: "bg-amber-500/15", borderColor: "border-amber-500/25", glowRgb: "6,182,212" },
   { id: "phantom", name: "Phantom", letter: "P", color: "text-purple-400", bgColor: "bg-purple-500/15", borderColor: "border-purple-500/25", glowRgb: "168,85,247" },
 ];
 

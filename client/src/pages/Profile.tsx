@@ -51,7 +51,7 @@ function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: n
 }
 
 function getRankTier(handsPlayed: number): { label: string; color: string; bgClass: string; borderColor: string; icon: typeof Crown; glowStyle?: { boxShadow: string } } {
-  if (handsPlayed >= 1000) return { label: "Diamond", color: "text-primary", bgClass: "from-cyan-500/20 to-blue-500/20", borderColor: "border-[#c9a84c]/50", icon: Crown, glowStyle: { boxShadow: "0 0 12px rgba(201,168,76,0.35), 0 0 24px rgba(201,168,76,0.15)" } };
+  if (handsPlayed >= 1000) return { label: "Diamond", color: "text-primary", bgClass: "from-amber-500/20 to-blue-500/20", borderColor: "border-[#c9a84c]/50", icon: Crown, glowStyle: { boxShadow: "0 0 12px rgba(201,168,76,0.35), 0 0 24px rgba(201,168,76,0.15)" } };
   if (handsPlayed >= 500) return { label: "Platinum", color: "text-gray-200", bgClass: "from-gray-300/20 to-gray-500/20", borderColor: "border-[#c9a84c]/40", icon: Crown, glowStyle: { boxShadow: "0 0 10px rgba(201,168,76,0.25), 0 0 20px rgba(201,168,76,0.10)" } };
   if (handsPlayed >= 200) return { label: "Gold", color: "text-amber-400", bgClass: "from-amber-500/20 to-yellow-500/20", borderColor: "border-amber-400/40", icon: Star };
   if (handsPlayed >= 50) return { label: "Silver", color: "text-gray-400", bgClass: "from-gray-400/20 to-gray-500/20", borderColor: "border-gray-400/30", icon: Shield };
@@ -83,7 +83,7 @@ function getPlayerLevel(handsPlayed: number): number {
 }
 
 const STAT_CARDS = [
-  { key: "handsPlayed", label: "Hands Played", icon: Gamepad2, gradient: "from-primary/15 to-blue-600/15", borderColor: "border-primary/20", textColor: "text-primary", glowColor: "rgba(0,212,255,0.12)" },
+  { key: "handsPlayed", label: "Hands Played", icon: Gamepad2, gradient: "from-primary/15 to-blue-600/15", borderColor: "border-primary/20", textColor: "text-primary", glowColor: "rgba(212,175,55,0.12)" },
   { key: "potsWon", label: "Pots Won", icon: Trophy, gradient: "from-green-500/15 to-emerald-600/15", borderColor: "border-green-500/20", textColor: "text-green-400", glowColor: "rgba(34,197,94,0.12)" },
   { key: "winRate", label: "Win Rate", icon: TrendingUp, gradient: "from-amber-500/15 to-yellow-600/15", borderColor: "border-amber-500/20", textColor: "text-amber-400", glowColor: "rgba(245,158,11,0.12)", suffix: "%" },
   { key: "bestWinStreak", label: "Best Streak", icon: Zap, gradient: "from-purple-500/15 to-violet-600/15", borderColor: "border-purple-500/20", textColor: "text-purple-400", glowColor: "rgba(168,85,247,0.12)" },
@@ -92,7 +92,7 @@ const STAT_CARDS = [
 const BADGES = [
   { name: "First Win", img: "/attached_assets/generated_images/badges/badge_first_win.webp", glow: "#ffd700", criteria: "Win your first pot", check: (s: PlayerStats) => s.potsWon >= 1, progress: (s: PlayerStats) => ({ current: Math.min(s.potsWon, 1), max: 1 }) },
   { name: "Royal Flush", img: "/attached_assets/generated_images/badges/badge_royal_flush.webp", glow: "#dc2626", criteria: "Hit a Royal Flush", check: () => false, progress: () => ({ current: 0, max: 1 }) },
-  { name: "High Roller", img: "/attached_assets/generated_images/badges/badge_high_roller.webp", glow: "#00d4ff", criteria: "Win 10,000+ chips total", check: (s: PlayerStats) => s.totalWinnings >= 10000, progress: (s: PlayerStats) => ({ current: Math.min(s.totalWinnings, 10000), max: 10000 }) },
+  { name: "High Roller", img: "/attached_assets/generated_images/badges/badge_high_roller.webp", glow: "#d4af37", criteria: "Win 10,000+ chips total", check: (s: PlayerStats) => s.totalWinnings >= 10000, progress: (s: PlayerStats) => ({ current: Math.min(s.totalWinnings, 10000), max: 10000 }) },
   { name: "Bluff Master", img: "/attached_assets/generated_images/badges/badge_bluff_master.webp", glow: "#a855f7", criteria: "Win 50 pots without showdown", check: () => false, progress: () => ({ current: 0, max: 50 }) },
   { name: "Iron Player", img: "/attached_assets/generated_images/badges/badge_iron_player.webp", glow: "#6b7280", criteria: "Play 100 hands", check: (s: PlayerStats) => s.handsPlayed >= 100, progress: (s: PlayerStats) => ({ current: Math.min(s.handsPlayed, 100), max: 100 }) },
   { name: "On Fire", img: "/attached_assets/generated_images/badges/badge_streak_fire.webp", glow: "#f59e0b", criteria: "Win 5 pots in a row", check: (s: PlayerStats) => s.bestWinStreak >= 5, progress: (s: PlayerStats) => ({ current: Math.min(s.bestWinStreak, 5), max: 5 }) },
@@ -411,13 +411,13 @@ export default function Profile() {
             className="grid grid-cols-2 md:grid-cols-4 gap-4"
           >
             {[
-              { label: "Security", icon: Shield, color: "cyan", path: "/security", gradient: "from-primary/10 to-purple-500/10", border: "hover:border-primary/30", iconBg: "bg-primary/10" },
-              { label: "Wallet", icon: Wallet, color: "cyan", path: "/wallet", gradient: "from-primary/10 to-blue-600/10", border: "hover:border-primary/30", iconBg: "bg-primary/10" },
+              { label: "Security", icon: Shield, color: "amber", path: "/security", gradient: "from-primary/10 to-purple-500/10", border: "hover:border-primary/30", iconBg: "bg-primary/10" },
+              { label: "Wallet", icon: Wallet, color: "amber", path: "/wallet", gradient: "from-primary/10 to-blue-600/10", border: "hover:border-primary/30", iconBg: "bg-primary/10" },
               { label: "Transactions", icon: Coins, color: "green", path: "/wallet?tab=history", gradient: "from-green-500/10 to-emerald-600/10", border: "hover:border-green-500/30", iconBg: "bg-green-500/10" },
               { label: "Analytics", icon: BookOpen, color: "amber", path: "/analytics", gradient: "from-amber-500/10 to-yellow-600/10", border: "hover:border-amber-500/30", iconBg: "bg-amber-500/10" },
               { label: "My Club", icon: Users, color: "green", path: "/club", gradient: "from-green-500/10 to-emerald-600/10", border: "hover:border-green-500/30", iconBg: "bg-green-500/10" },
               { label: "Leaderboard", icon: Trophy, color: "purple", path: "/leaderboard", gradient: "from-purple-500/10 to-violet-600/10", border: "hover:border-purple-500/30", iconBg: "bg-purple-500/10" },
-              { label: "Wardrobe", icon: User, color: "cyan", path: "/wardrobe", gradient: "from-cyan-500/10 to-blue-500/10", border: "hover:border-cyan-500/30", iconBg: "bg-cyan-500/10" },
+              { label: "Wardrobe", icon: User, color: "amber", path: "/wardrobe", gradient: "from-amber-500/10 to-blue-500/10", border: "hover:border-amber-500/30", iconBg: "bg-amber-500/10" },
               { label: "Premium", icon: Crown, color: "amber", path: "/premium", gradient: "from-amber-500/10 to-yellow-500/10", border: "hover:border-amber-500/30", iconBg: "bg-amber-500/10" },
             ].map((link) => {
               const LinkIcon = link.icon;

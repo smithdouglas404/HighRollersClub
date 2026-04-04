@@ -263,7 +263,7 @@ export default function ClubDashboard() {
                       onChange={(e) => setNewClubDescription(e.target.value)}
                       placeholder=" "
                       rows={2}
-                      className="peer w-full px-4 pt-5 pb-2 rounded-xl text-sm text-white outline-none resize-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+                      className="peer w-full px-4 pt-5 pb-2 rounded-xl text-sm text-white outline-none resize-none transition-all focus:ring-1 focus:ring-amber-500/40"
                       style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                     />
                     <label className="absolute left-4 top-2 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 pointer-events-none transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-xs peer-placeholder-shown:font-normal peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal peer-focus:top-2 peer-focus:text-[0.5625rem] peer-focus:font-bold peer-focus:uppercase peer-focus:tracking-wider peer-focus:text-primary">
@@ -285,13 +285,13 @@ export default function ClubDashboard() {
                           data-testid={`logo-option-${logo.id}`}
                           className={`relative rounded-xl overflow-hidden aspect-square transition-all ${
                             selectedLogo === logo.id
-                              ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-[#111b2a]"
+                              ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-[#111b2a]"
                               : "ring-1 ring-white/10 hover:ring-white/25"
                           }`}
                         >
                           <img src={logo.url} alt={logo.label} className="w-full h-full object-cover" />
                           {selectedLogo === logo.id && (
-                            <div className="absolute inset-0 bg-cyan-500/20 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-amber-500/20 flex items-center justify-center">
                               <Check className="w-5 h-5 text-primary drop-shadow-lg" />
                             </div>
                           )}
@@ -303,7 +303,7 @@ export default function ClubDashboard() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         className="mt-3 flex items-center gap-3 p-3 rounded-xl"
-                        style={{ background: "rgba(0,212,255,0.05)", border: "1px solid rgba(0,212,255,0.1)" }}
+                        style={{ background: "rgba(212,175,55,0.05)", border: "1px solid rgba(212,175,55,0.1)" }}
                       >
                         <img
                           src={CLUB_LOGO_OPTIONS.find(l => l.id === selectedLogo)?.url}
@@ -324,7 +324,7 @@ export default function ClubDashboard() {
                       type="checkbox"
                       checked={newClubIsPublic}
                       onChange={(e) => setNewClubIsPublic(e.target.checked)}
-                      className="rounded accent-cyan-500"
+                      className="rounded accent-amber-500"
                     />
                     <div>
                       <span className="font-medium text-white block text-xs">Public Club</span>
@@ -749,7 +749,7 @@ export default function ClubDashboard() {
                             const accentBg = isJoin
                               ? "bg-green-500/12 border-green-500/20"
                               : isGame
-                                ? "bg-cyan-500/12 border-cyan-500/20"
+                                ? "bg-amber-500/12 border-amber-500/20"
                                 : "bg-amber-500/12 border-amber-500/20";
                             const IconComponent = isJoin
                               ? Users

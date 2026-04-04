@@ -46,8 +46,8 @@ export function MemberAvatar({ avatarId, displayName, size = "md", className = "
     <div
       className={`${sizeClass} ${borderRadius} overflow-hidden flex items-center justify-center bg-gradient-to-br from-amber-500/30 to-purple-500/30 shrink-0 ${className}`}
       style={{
-        border: `${borderWidth}px solid rgba(0,212,255,0.3)`,
-        boxShadow: `0 0 ${glowSpread}px rgba(0,212,255,0.2)`,
+        border: `${borderWidth}px solid rgba(212,175,55,0.3)`,
+        boxShadow: `0 0 ${glowSpread}px rgba(212,175,55,0.2)`,
       }}
     >
       <span className={`font-bold text-white ${fontSize}`}>

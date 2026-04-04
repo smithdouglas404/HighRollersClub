@@ -34,7 +34,7 @@ export function TablePreviewThumbnail({
       <div
         className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
         style={{
-          boxShadow: "0 0 20px rgba(0,243,255,0.3), inset 0 0 10px rgba(0,243,255,0.1)",
+          boxShadow: "0 0 20px rgba(212,175,55,0.3), inset 0 0 10px rgba(212,175,55,0.1)",
         }}
       />
       {/* LIVE badge */}

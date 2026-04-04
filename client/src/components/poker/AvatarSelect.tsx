@@ -50,15 +50,15 @@ export interface AvatarOption {
 }
 
 export const AVATAR_OPTIONS: AvatarOption[] = [
-  { id: "neon-viper",      name: "Neon Viper",      image: avNeonViper,      fullBodyImage: fullBody1, tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
+  { id: "neon-viper",      name: "Neon Viper",      image: avNeonViper,      fullBodyImage: fullBody1, tier: "legendary", borderColor: "#d4af37", glowColor: "rgba(212,175,55,0.3)" },
   { id: "chrome-siren",    name: "Chrome Siren",    image: avChromeSiren,    fullBodyImage: fullBody2, tier: "legendary", borderColor: "#b44dff", glowColor: "rgba(180,77,255,0.3)" },
   { id: "gold-phantom",    name: "Gold Phantom",    image: avGoldPhantom,    fullBodyImage: fullBody3, tier: "legendary", borderColor: "#ffd700", glowColor: "rgba(255,215,0,0.3)" },
-  { id: "shadow-king",     name: "Shadow King",     image: avShadowKing,     fullBodyImage: fullBody4, tier: "legendary", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
+  { id: "shadow-king",     name: "Shadow King",     image: avShadowKing,     fullBodyImage: fullBody4, tier: "legendary", borderColor: "#d4af37", glowColor: "rgba(212,175,55,0.3)" },
   { id: "void-witch",      name: "Void Witch",      image: avVoidWitch,      fullBodyImage: fullBody5, tier: "legendary", borderColor: "#a855f7", glowColor: "rgba(168,85,247,0.3)" },
   { id: "cyber-samurai",   name: "Cyber Samurai",   image: avCyberSamurai,   fullBodyImage: fullBody6, tier: "legendary", borderColor: "#ef4444", glowColor: "rgba(239,68,68,0.3)" },
   { id: "red-wolf",        name: "Red Wolf",        image: avRedWolf,        fullBodyImage: fullBody7, tier: "epic", borderColor: "#ff3366", glowColor: "rgba(255,51,102,0.3)" },
   { id: "ice-queen",       name: "Ice Queen",       image: avIceQueen,       fullBodyImage: fullBody8, tier: "epic", borderColor: "#67e8f9", glowColor: "rgba(103,232,249,0.3)" },
-  { id: "tech-monk",       name: "Tech Monk",       image: avTechMonk,       tier: "epic", borderColor: "#00d4ff", glowColor: "rgba(0,212,255,0.3)" },
+  { id: "tech-monk",       name: "Tech Monk",       image: avTechMonk,       tier: "epic", borderColor: "#d4af37", glowColor: "rgba(212,175,55,0.3)" },
   { id: "cyber-punk",      name: "Cyber Punk",      image: avCyberPunk,      tier: "epic", borderColor: "#ff69b4", glowColor: "rgba(255,105,180,0.3)" },
   { id: "oracle-seer",     name: "Oracle Seer",     image: avOracleSeer,     tier: "epic", borderColor: "#34d399", glowColor: "rgba(52,211,153,0.3)" },
   { id: "punk-duchess",    name: "Punk Duchess",    image: avPunkDuchess,    tier: "epic", borderColor: "#f472b6", glowColor: "rgba(244,114,182,0.3)" },
@@ -77,9 +77,9 @@ export const AVATAR_OPTIONS: AvatarOption[] = [
 ];
 
 const TIER_CONFIG: Record<string, { bg: string; text: string; label: string; icon: any }> = {
-  legendary: { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "LEGENDARY", icon: Crown },
+  legendary: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", label: "LEGENDARY", icon: Crown },
   epic:      { bg: "bg-purple-500/10 border-purple-500/20", text: "text-purple-400", label: "EPIC", icon: Star },
-  rare:      { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "RARE", icon: Zap },
+  rare:      { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", label: "RARE", icon: Zap },
   common:    { bg: "bg-gray-500/10 border-gray-500/20", text: "text-gray-400", label: "COMMON", icon: Shield },
 };
 
@@ -136,8 +136,8 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
               className="text-center space-y-2"
             >
               <div className="w-14 h-14 mx-auto relative">
-                <div className="absolute inset-[-6px] bg-cyan-500/20 blur-xl rounded-full animate-pulse" />
-                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(0,212,255,0.5)]" />
+                <div className="absolute inset-[-6px] bg-amber-500/20 blur-xl rounded-full animate-pulse" />
+                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]" />
               </div>
               <h1 className="font-display text-xl font-bold tracking-[0.2em] gold-text">CHOOSE YOUR AVATAR</h1>
               <p className="text-xs text-gray-500">Your avatar carries your win history and total earnings</p>
@@ -282,11 +282,11 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
                   <div className="text-[0.5rem] text-gray-600 uppercase tracking-wider">Wins</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xs font-bold text-cyan-400">0</div>
+                  <div className="text-xs font-bold text-amber-400">0</div>
                   <div className="text-[0.5rem] text-gray-600 uppercase tracking-wider">Chips Won</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xs font-bold text-cyan-400">0</div>
+                  <div className="text-xs font-bold text-amber-400">0</div>
                   <div className="text-[0.5rem] text-gray-600 uppercase tracking-wider">Hands</div>
                 </div>
               </div>

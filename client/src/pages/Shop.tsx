@@ -55,16 +55,16 @@ interface InventoryEntry {
 
 const RARITY_COLORS: Record<string, string> = {
   mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
-  legendary: "text-primary bg-cyan-500/10 border-cyan-500/20",
+  legendary: "text-primary bg-amber-500/10 border-amber-500/20",
   epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  rare: "text-primary bg-cyan-500/10 border-cyan-500/20",
+  rare: "text-primary bg-amber-500/10 border-amber-500/20",
   uncommon: "text-green-400 bg-green-500/10 border-green-500/20",
   common: "text-gray-400 bg-gray-500/10 border-gray-500/20",
   // Also support capitalized keys for backward compatibility
   Mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
-  Legendary: "text-primary bg-cyan-500/10 border-cyan-500/20",
+  Legendary: "text-primary bg-amber-500/10 border-amber-500/20",
   Epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  Rare: "text-primary bg-cyan-500/10 border-cyan-500/20",
+  Rare: "text-primary bg-amber-500/10 border-amber-500/20",
 };
 
 const RARITY_GRADIENTS: Record<string, string> = {

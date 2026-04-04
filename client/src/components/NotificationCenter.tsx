@@ -50,7 +50,7 @@ export function NotificationCenter() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg glass border border-white/5 hover:border-cyan-500/20 transition-all"
+        className="relative p-2 rounded-lg glass border border-white/5 hover:border-amber-500/20 transition-all"
       >
         <Bell className="w-4 h-4 text-gray-400" />
         {totalCount > 0 && (
@@ -101,8 +101,8 @@ export function NotificationCenter() {
                   {/* Announcements */}
                   {recentAnnouncements.slice(0, 5).map((a) => (
                     <div key={`ann-${a.id}`} className="px-4 py-3 hover:bg-white/[0.02] transition-colors flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <Megaphone className="w-3.5 h-3.5 text-cyan-400" />
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <Megaphone className="w-3.5 h-3.5 text-amber-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[0.6875rem] text-white font-medium truncate">{a.title}</p>
@@ -115,8 +115,8 @@ export function NotificationCenter() {
                   {/* Upcoming Events */}
                   {upcomingEvents.slice(0, 3).map((ev) => (
                     <div key={`ev-${ev.id}`} className="px-4 py-3 hover:bg-white/[0.02] transition-colors flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <CalendarDays className="w-3.5 h-3.5 text-cyan-400" />
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <CalendarDays className="w-3.5 h-3.5 text-amber-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[0.6875rem] text-white font-medium truncate">{ev.name}</p>

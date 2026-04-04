@@ -54,12 +54,12 @@ export function ClubChatSidebar({ clubName = "Club", className }: ClubChatSideba
         {messages.map((msg) => (
           <div key={msg.id}>
             {msg.isSystem ? (
-              <p className="text-[0.625rem] text-cyan-400/60 italic">
+              <p className="text-[0.625rem] text-amber-400/60 italic">
                 {msg.message}
               </p>
             ) : (
               <div className="text-[0.6875rem] leading-relaxed">
-                <span className="font-bold" style={{ color: "#00d4ff" }}>
+                <span className="font-bold" style={{ color: "#d4af37" }}>
                   {msg.username}:
                 </span>{" "}
                 <span className="text-white/70">{msg.message}</span>
@@ -85,7 +85,7 @@ export function ClubChatSidebar({ clubName = "Club", className }: ClubChatSideba
           <button
             onClick={handleSend}
             className="p-1.5 rounded-lg transition-colors hover:bg-white/10"
-            style={{ color: "#00d4ff" }}
+            style={{ color: "#d4af37" }}
           >
             <Send className="w-3.5 h-3.5" />
           </button>

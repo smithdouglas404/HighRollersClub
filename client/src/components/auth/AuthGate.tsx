@@ -54,9 +54,9 @@ function StepDots({ current, total }: { current: number; total: number }) {
               layout
               className={`rounded-full flex items-center justify-center transition-all duration-300 ${
                 isActive
-                  ? "w-8 h-2.5 bg-cyan-500 shadow-[0_0_10px_rgba(0,212,255,0.4)]"
+                  ? "w-8 h-2.5 bg-amber-500 shadow-[0_0_10px_rgba(212,175,55,0.4)]"
                   : isCompleted
-                    ? "w-2.5 h-2.5 bg-cyan-500/60"
+                    ? "w-2.5 h-2.5 bg-amber-500/60"
                     : "w-2.5 h-2.5 bg-white/10"
               }`}
             />
@@ -267,7 +267,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             >
               {/* Logo */}
               <div className="text-center mb-8">
-                <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center mx-auto mb-3 shadow-[0_0_25px_rgba(0,212,255,0.3)]">
+                <div className="w-14 h-14 rounded-xl gold-gradient flex items-center justify-center mx-auto mb-3 shadow-[0_0_25px_rgba(212,175,55,0.3)]">
                   <Trophy className="w-7 h-7 text-black" />
                 </div>
                 <h1 className="font-display font-bold text-lg tracking-widest gold-text">
@@ -284,7 +284,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 whileTap={{ scale: 0.98 }}
                 onClick={handleGuest}
                 disabled={submitting}
-                className="w-full gold-gradient rounded-lg py-3 text-sm font-bold tracking-wider text-black flex items-center justify-center gap-2 mb-4 shadow-[0_0_15px_rgba(0,212,255,0.25)] disabled:opacity-50"
+                className="w-full gold-gradient rounded-lg py-3 text-sm font-bold tracking-wider text-black flex items-center justify-center gap-2 mb-4 shadow-[0_0_15px_rgba(212,175,55,0.25)] disabled:opacity-50"
               >
                 <Zap className="w-4 h-4" />
                 PLAY AS GUEST
@@ -308,7 +308,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder="NeonAce"
-                      className="w-full bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
+                      className="w-full bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors"
                     />
                   </div>
                 )}
@@ -327,7 +327,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                     className={`w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
                       usernameError
                         ? "border-red-500/50 focus:border-red-500/70"
-                        : "border-white/15 focus:border-cyan-500/50"
+                        : "border-white/15 focus:border-amber-500/50"
                     }`}
                     required
                   />
@@ -351,7 +351,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                       className={`w-full bg-white/5 border rounded-lg px-3 py-2 pr-9 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
                         passwordError
                           ? "border-red-500/50 focus:border-red-500/70"
-                          : "border-white/15 focus:border-cyan-500/50"
+                          : "border-white/15 focus:border-amber-500/50"
                       }`}
                       required
                     />
@@ -421,7 +421,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                       className={`w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
                         confirmError
                           ? "border-red-500/50 focus:border-red-500/70"
-                          : "border-white/15 focus:border-cyan-500/50"
+                          : "border-white/15 focus:border-amber-500/50"
                       }`}
                       required
                     />
@@ -447,7 +447,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 <button
                   type="submit"
                   disabled={submitting || !isFormValid}
-                  className="w-full bg-cyan-500/20 border border-cyan-500/30 rounded-lg py-2.5 text-sm font-bold tracking-wider text-cyan-400 hover:bg-cyan-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-amber-500/20 border border-amber-500/30 rounded-lg py-2.5 text-sm font-bold tracking-wider text-amber-400 hover:bg-amber-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
                     <div className="spinner spinner-sm mx-auto" />
@@ -469,7 +469,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                         setTouched({});
                         setConfirmPassword("");
                       }}
-                      className="text-cyan-400 hover:text-cyan-300"
+                      className="text-amber-400 hover:text-amber-300"
                     >
                       Register
                     </button>
@@ -483,7 +483,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                         setTouched({});
                         setConfirmPassword("");
                       }}
-                      className="text-cyan-400 hover:text-cyan-300"
+                      className="text-amber-400 hover:text-amber-300"
                     >
                       Login
                     </button>
@@ -508,8 +508,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
               className="glass-light rounded-2xl p-8 shadow-2xl"
             >
               <div className="text-center mb-6">
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center mx-auto mb-3">
-                  <User className="w-6 h-6 text-cyan-400" />
+                <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center mx-auto mb-3">
+                  <User className="w-6 h-6 text-amber-400" />
                 </div>
                 <h2 className="font-display font-bold text-base tracking-widest text-white">
                   SET UP YOUR PROFILE
@@ -530,7 +530,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                   onChange={(e) => setProfileDisplayName(e.target.value)}
                   placeholder="Your display name"
                   maxLength={20}
-                  className="w-full bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
+                  className="w-full bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors"
                 />
               </div>
 
@@ -549,7 +549,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setSelectedAvatar(av)}
                         className={`relative rounded-lg overflow-hidden aspect-square transition-all duration-200 ${
-                          isSelected ? "ring-2 ring-amber-400 shadow-[0_0_12px_rgba(0,212,255,0.3)]" : "ring-1 ring-white/10 opacity-70 hover:opacity-100"
+                          isSelected ? "ring-2 ring-amber-400 shadow-[0_0_12px_rgba(212,175,55,0.3)]" : "ring-1 ring-white/10 opacity-70 hover:opacity-100"
                         }`}
                       >
                         <img
@@ -562,7 +562,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            className="absolute top-1 right-1 w-4 h-4 rounded-full bg-cyan-400 flex items-center justify-center"
+                            className="absolute top-1 right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center"
                           >
                             <Check className="w-2.5 h-2.5 text-black" />
                           </motion.div>
@@ -584,7 +584,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 whileTap={{ scale: 0.98 }}
                 onClick={handleProfileContinue}
                 disabled={profileSaving}
-                className="w-full gold-gradient rounded-lg py-3 text-sm font-bold tracking-wider text-black flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,212,255,0.25)] disabled:opacity-50"
+                className="w-full gold-gradient rounded-lg py-3 text-sm font-bold tracking-wider text-black flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(212,175,55,0.25)] disabled:opacity-50"
               >
                 {profileSaving ? (
                   <div className="spinner spinner-sm" style={{ borderColor: "rgba(0,0,0,0.3)", borderTopColor: "black" }} />
@@ -622,8 +622,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
               className="glass-light rounded-2xl p-8 shadow-2xl"
             >
               <div className="text-center mb-6">
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center mx-auto mb-3">
-                  <Users className="w-6 h-6 text-cyan-400" />
+                <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center mx-auto mb-3">
+                  <Users className="w-6 h-6 text-amber-400" />
                 </div>
                 <h2 className="font-display font-bold text-base tracking-widest text-white">
                   JOIN A CLUB
@@ -639,7 +639,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleClubAction("/clubs/browse")}
-                  className="w-full bg-cyan-500/20 border border-cyan-500/30 rounded-lg py-3 text-sm font-bold tracking-wider text-cyan-400 hover:bg-cyan-500/30 transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-amber-500/20 border border-amber-500/30 rounded-lg py-3 text-sm font-bold tracking-wider text-amber-400 hover:bg-amber-500/30 transition-colors flex items-center justify-center gap-2"
                 >
                   <Users className="w-4 h-4" />
                   BROWSE CLUBS
@@ -650,7 +650,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleClubAction("/club")}
-                  className="w-full gold-gradient rounded-lg py-3 text-sm font-bold tracking-wider text-black flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,212,255,0.25)]"
+                  className="w-full gold-gradient rounded-lg py-3 text-sm font-bold tracking-wider text-black flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(212,175,55,0.25)]"
                 >
                   <Plus className="w-4 h-4" />
                   CREATE CLUB

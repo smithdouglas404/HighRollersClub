@@ -85,9 +85,9 @@ const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string;
 ];
 
 const TIER_CONFIG: Record<string, { bg: string; text: string; label: string; icon: any }> = {
-  legendary: { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "LEGENDARY", icon: Crown },
+  legendary: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", label: "LEGENDARY", icon: Crown },
   epic:      { bg: "bg-purple-500/10 border-purple-500/20", text: "text-purple-400", label: "EPIC", icon: Star },
-  rare:      { bg: "bg-cyan-500/10 border-cyan-500/20", text: "text-cyan-400", label: "RARE", icon: Zap },
+  rare:      { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", label: "RARE", icon: Zap },
   common:    { bg: "bg-gray-500/10 border-gray-500/20", text: "text-gray-400", label: "COMMON", icon: Shield },
 };
 
@@ -281,7 +281,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
 
   const selectedFormat = FORMAT_OPTIONS.find(f => f.key === gameFormat)!;
 
-  const inputClass = "w-full bg-white/[0.07] border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:shadow-[0_0_8px_rgba(0,212,255,0.15)] transition-colors placeholder:text-gray-500";
+  const inputClass = "w-full bg-white/[0.07] border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 focus:shadow-[0_0_8px_rgba(212,175,55,0.15)] transition-colors placeholder:text-gray-500";
   const labelClass = "text-[0.625rem] font-bold uppercase tracking-wider text-amber-400/80 block mb-1.5";
 
   const Toggle = ({ value, onChange, label, icon: Icon, desc }: { value: boolean; onChange: (v: boolean) => void; label: string; icon: any; desc?: string }) => (
@@ -289,14 +289,14 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
       <button
         type="button"
         onClick={() => onChange(!value)}
-        className={`w-9 h-5 rounded-full transition-colors ${value ? 'bg-cyan-500' : 'bg-white/10'} relative shrink-0`}
+        className={`w-9 h-5 rounded-full transition-colors ${value ? 'bg-amber-500' : 'bg-white/10'} relative shrink-0`}
         data-testid={`toggle-${label.toLowerCase().replace(/\s+/g, '-')}`}
       >
         <span className={`block w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${value ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
       </button>
       <div className="flex-1 min-w-0">
         <span className="text-xs text-gray-300 flex items-center gap-1.5 group-hover:text-white transition-colors">
-          <Icon className="w-3 h-3 text-cyan-400/60 shrink-0" /> {label}
+          <Icon className="w-3 h-3 text-amber-400/60 shrink-0" /> {label}
         </span>
         {desc && <div className="text-[0.5625rem] text-gray-400 mt-0.5 leading-relaxed">{desc}</div>}
       </div>
@@ -304,7 +304,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
   );
 
   const colorMap: Record<string, { icon: string; text: string }> = {
-    cyan: { icon: "text-cyan-400/60", text: "text-cyan-400/80" },
+    cyan: { icon: "text-amber-400/60", text: "text-amber-400/80" },
     amber: { icon: "text-amber-400/60", text: "text-amber-400/80" },
     purple: { icon: "text-purple-400/60", text: "text-purple-400/80" },
     emerald: { icon: "text-emerald-400/60", text: "text-emerald-400/80" },
@@ -502,8 +502,8 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
               className="text-center space-y-3"
             >
               <div className="w-12 h-12 mx-auto relative">
-                <div className="absolute inset-[-6px] bg-cyan-500/20 blur-xl rounded-full animate-pulse" />
-                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(0,212,255,0.5)]" />
+                <div className="absolute inset-[-6px] bg-amber-500/20 blur-xl rounded-full animate-pulse" />
+                <img src={lionLogo} alt="" className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]" />
               </div>
               <h1 className="font-display text-lg font-bold tracking-[0.2em] gold-text">
                 {step === 1 ? "CHOOSE YOUR AVATAR" : step === 2 ? "GAME FORMAT" : step === 3 ? "STAKES & PLAYERS" : step === 4 ? "TABLE RULES" : step === 5 ? "SPEED & EXTRAS" : "REVIEW"}
@@ -677,7 +677,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                         onClick={handlePracticeMode}
                         className="w-full rounded-xl px-5 py-4 text-left flex items-center gap-4 transition-all"
                         style={{
-                          background: "linear-gradient(135deg, rgba(52,211,153,0.08), rgba(0,212,255,0.05))",
+                          background: "linear-gradient(135deg, rgba(52,211,153,0.08), rgba(212,175,55,0.05))",
                           border: "1px solid rgba(52,211,153,0.2)",
                           boxShadow: "0 0 20px rgba(52,211,153,0.08)",
                         }}
@@ -743,7 +743,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                             );
                           })}
                         </div>
-                        <div className="mt-1.5 text-[0.625rem] text-cyan-400/60 text-center italic">
+                        <div className="mt-1.5 text-[0.625rem] text-amber-400/60 text-center italic">
                           {selectedFormat.desc}
                         </div>
                       </div>
@@ -849,8 +849,8 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className={`p-4 rounded-xl border space-y-4 ${gameFormat === "tournament" ? "border-emerald-500/15 bg-emerald-500/5" : "border-cyan-500/15 bg-cyan-500/5"}`}>
-                          <div className={`text-[0.625rem] font-bold uppercase tracking-wider ${gameFormat === "tournament" ? "text-emerald-400" : "text-cyan-400"}`}>
+                        <div className={`p-4 rounded-xl border space-y-4 ${gameFormat === "tournament" ? "border-emerald-500/15 bg-emerald-500/5" : "border-amber-500/15 bg-amber-500/5"}`}>
+                          <div className={`text-[0.625rem] font-bold uppercase tracking-wider ${gameFormat === "tournament" ? "text-emerald-400" : "text-amber-400"}`}>
                             {gameFormat === "tournament" ? "Tournament Settings" : "SNG Settings"}
                           </div>
                           <div className="grid grid-cols-3 gap-3">
@@ -895,7 +895,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                           {/* Custom Blind Schedule Editor */}
                           {blindPreset === "custom" && (
                             <div className="space-y-2 mt-2">
-                              <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-cyan-400/60">Blind Schedule</div>
+                              <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-amber-400/60">Blind Schedule</div>
                               <div className="space-y-1">
                                 <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_1.5rem] gap-1 text-[0.5rem] font-bold uppercase tracking-wider text-gray-600 px-1">
                                   <span>Lvl</span><span>SB</span><span>BB</span><span>Ante</span><span>Time</span><span></span>
@@ -944,7 +944,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                                     durationSeconds: last?.durationSeconds || 300,
                                   }]);
                                 }}
-                                className="w-full py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-cyan-400/80 border border-cyan-500/20 hover:bg-cyan-500/10 transition-colors"
+                                className="w-full py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-amber-400/80 border border-amber-500/20 hover:bg-amber-500/10 transition-colors"
                               >
                                 + Add Level
                               </button>
@@ -1067,14 +1067,14 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                       <div className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-colors ${
                         canAfford ? "bg-white/[0.03] border-white/[0.06]" : "bg-red-500/5 border-red-500/15"
                       }`}>
-                        <Wallet className={`w-3.5 h-3.5 shrink-0 ${canAfford ? "text-cyan-400" : "text-red-400"}`} />
+                        <Wallet className={`w-3.5 h-3.5 shrink-0 ${canAfford ? "text-amber-400" : "text-red-400"}`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[0.625rem] text-gray-400">{relevantWalletLabel} Wallet:</span>
                             <span className={`text-xs font-bold tabular-nums ${canAfford ? "text-white" : "text-red-400"}`}>
                               {relevantBalance.toLocaleString()}
                             </span>
-                            <span className="text-[0.5rem] text-cyan-600 uppercase">chips</span>
+                            <span className="text-[0.5rem] text-amber-600 uppercase">chips</span>
                           </div>
                           {!canAfford && (
                             <div className="flex items-center gap-1.5 mt-1">
@@ -1084,7 +1084,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                               </span>
                               <span className="text-[0.5rem] text-gray-600">—</span>
                               <Link href={`/wallet?tab=transfer&to=${relevantWalletType}`}>
-                                <span className="text-[0.5625rem] font-bold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer flex items-center gap-0.5">
+                                <span className="text-[0.5625rem] font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-0.5">
                                   <ArrowRightLeft className="w-2.5 h-2.5" /> Transfer Funds
                                 </span>
                               </Link>
@@ -1347,7 +1347,7 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                             onClick={() => setCardBack(cb.id)}
                             className={`group relative rounded-lg overflow-hidden border-2 transition-all ${
                               cardBack === cb.id
-                                ? "border-[#00d4ff] shadow-[0_0_10px_rgba(0,212,255,0.4)]"
+                                ? "border-[#d4af37] shadow-[0_0_10px_rgba(212,175,55,0.4)]"
                                 : "border-white/10 hover:border-white/25"
                             }`}
                             title={cb.label}
@@ -1358,13 +1358,13 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                               ) : (
                                 <div className="w-full h-full" style={{
                                   background: "linear-gradient(135deg, #1a0e3e 0%, #0d0522 50%, #1a0e3e 100%)",
-                                  border: "1px solid rgba(0,212,255,0.3)",
+                                  border: "1px solid rgba(212,175,55,0.3)",
                                 }} />
                               )}
                             </div>
                             {cardBack === cb.id && (
                               <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
-                                <div className="w-2 h-2 rounded-full bg-[#00d4ff]" />
+                                <div className="w-2 h-2 rounded-full bg-[#d4af37]" />
                               </div>
                             )}
                           </button>
@@ -1414,11 +1414,11 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                     </div>
                     <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
                     <div className="flex flex-wrap gap-1.5">
-                      {straddleEnabled && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Straddle</span>}
-                      {bigBlindAnte && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">BB Ante</span>}
-                      {rabbitHunting && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Rabbit Hunt</span>}
-                      {runItTwice !== "no" && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Run It Twice</span>}
-                      {showAllHands && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Show Hands</span>}
+                      {straddleEnabled && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Straddle</span>}
+                      {bigBlindAnte && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">BB Ante</span>}
+                      {rabbitHunting && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Rabbit Hunt</span>}
+                      {runItTwice !== "no" && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Run It Twice</span>}
+                      {showAllHands && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Show Hands</span>}
                       {isPrivate && <span className="px-2 py-0.5 rounded text-[0.5rem] font-bold uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20">Private</span>}
                     </div>
                   </motion.div>

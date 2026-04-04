@@ -72,7 +72,7 @@ const POKER_VARIANTS = [
     tag: "NLHE",
     description: "The world's most popular poker variant. Two hole cards, five community cards.",
     players: "2-9",
-    gradient: "from-blue-600/40 via-blue-500/20 to-cyan-500/10",
+    gradient: "from-blue-600/40 via-blue-500/20 to-amber-500/10",
     border: "border-blue-500/30",
     glow: "rgba(59,130,246,0.25)",
     icon: Spade,
@@ -127,8 +127,8 @@ const THEMES = [
     id: "neon_vault",
     name: "Neon Vault",
     description: "Electric cyber aesthetic with neon glows",
-    color: "#00d4ff",
-    tailwind: "cyan",
+    color: "#d4af37",
+    tailwind: "amber",
   },
   {
     id: "emerald",
@@ -223,16 +223,16 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                 animate={{
                   scale: isActive ? 1.15 : 1,
                   boxShadow: isActive
-                    ? "0 0 20px rgba(0,212,255,0.35)"
+                    ? "0 0 20px rgba(212,175,55,0.35)"
                     : isCompleted
-                    ? "0 0 10px rgba(0,212,255,0.15)"
+                    ? "0 0 10px rgba(212,175,55,0.15)"
                     : "none",
                 }}
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
                   isActive
-                    ? "bg-cyan-500/25 border-2 border-cyan-400"
+                    ? "bg-amber-500/25 border-2 border-amber-400"
                     : isCompleted
-                    ? "bg-cyan-500/15 border-2 border-cyan-500/40"
+                    ? "bg-amber-500/15 border-2 border-amber-500/40"
                     : "bg-white/5 border border-white/10"
                 }`}
               >
@@ -251,7 +251,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                   isActive
                     ? "text-primary"
                     : isCompleted
-                    ? "text-cyan-500/60"
+                    ? "text-amber-500/60"
                     : "text-gray-600"
                 }`}
               >
@@ -261,7 +261,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
             {i < total - 1 && (
               <div
                 className={`h-px flex-1 mx-1 mt-[-14px] transition-colors duration-300 ${
-                  i < current ? "bg-cyan-500/40" : "bg-white/5"
+                  i < current ? "bg-amber-500/40" : "bg-white/5"
                 }`}
               />
             )}
@@ -306,8 +306,8 @@ function EllipticalTable({ maxPlayers }: { maxPlayers: number }) {
         {/* Table felt */}
         <defs>
           <radialGradient id="feltGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(0,212,255,0.12)" />
-            <stop offset="100%" stopColor="rgba(0,212,255,0.03)" />
+            <stop offset="0%" stopColor="rgba(212,175,55,0.12)" />
+            <stop offset="100%" stopColor="rgba(212,175,55,0.03)" />
           </radialGradient>
         </defs>
         <ellipse
@@ -316,7 +316,7 @@ function EllipticalTable({ maxPlayers }: { maxPlayers: number }) {
           rx={rx}
           ry={ry}
           fill="url(#feltGrad)"
-          stroke="rgba(0,212,255,0.25)"
+          stroke="rgba(212,175,55,0.25)"
           strokeWidth={2}
         />
         <ellipse
@@ -325,7 +325,7 @@ function EllipticalTable({ maxPlayers }: { maxPlayers: number }) {
           rx={rx - 8}
           ry={ry - 8}
           fill="none"
-          stroke="rgba(0,212,255,0.08)"
+          stroke="rgba(212,175,55,0.08)"
           strokeWidth={1}
           strokeDasharray="4 4"
         />
@@ -343,8 +343,8 @@ function EllipticalTable({ maxPlayers }: { maxPlayers: number }) {
                 cx={x}
                 cy={y}
                 r={10}
-                fill="rgba(0,212,255,0.08)"
-                stroke="rgba(0,212,255,0.3)"
+                fill="rgba(212,175,55,0.08)"
+                stroke="rgba(212,175,55,0.3)"
                 strokeWidth={1.5}
               />
               <text
@@ -352,7 +352,7 @@ function EllipticalTable({ maxPlayers }: { maxPlayers: number }) {
                 y={y + 1}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fill="rgba(0,212,255,0.7)"
+                fill="rgba(212,175,55,0.7)"
                 fontSize={8}
                 fontWeight="bold"
                 fontFamily="monospace"
@@ -452,7 +452,7 @@ function StepGameType({
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="w-6 h-6 rounded-full bg-cyan-500/25 border border-cyan-400 flex items-center justify-center"
+                      className="w-6 h-6 rounded-full bg-amber-500/25 border border-amber-400 flex items-center justify-center"
                     >
                       <Check className="w-3.5 h-3.5 text-primary" />
                     </motion.div>
@@ -513,7 +513,7 @@ function StepStakes({
               setConfig((prev) => ({ ...prev, name: e.target.value }))
             }
             placeholder="Auto-generated if empty..."
-            className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+            className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40"
             style={{
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,255,255,0.1)",
@@ -534,7 +534,7 @@ function StepStakes({
               min={1}
               value={config.smallBlind}
               onChange={(e) => handleSBChange(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-cyan-500/40 tabular-nums"
+              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -552,7 +552,7 @@ function StepStakes({
               min={config.smallBlind * 2}
               value={config.bigBlind}
               onChange={(e) => handleBBChange(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-cyan-500/40 tabular-nums"
+              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -579,7 +579,7 @@ function StepStakes({
                   minBuyIn: Math.max(1, parseInt(e.target.value) || 0),
                 }))
               }
-              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-cyan-500/40 tabular-nums"
+              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -602,7 +602,7 @@ function StepStakes({
                   maxBuyIn: Math.max(1, parseInt(e.target.value) || 0),
                 }))
               }
-              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-cyan-500/40 tabular-nums"
+              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -615,8 +615,8 @@ function StepStakes({
         <div
           className="rounded-lg px-4 py-3 flex items-center justify-between"
           style={{
-            background: "rgba(0,212,255,0.04)",
-            border: "1px solid rgba(0,212,255,0.12)",
+            background: "rgba(212,175,55,0.04)",
+            border: "1px solid rgba(212,175,55,0.12)",
           }}
         >
           <span className="text-[0.6875rem] text-gray-400">
@@ -659,7 +659,7 @@ function StepPlayers({
               onClick={() => setConfig((prev) => ({ ...prev, maxPlayers: n }))}
               className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${
                 isActive
-                  ? "bg-cyan-500/20 text-primary border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
+                  ? "bg-amber-500/20 text-primary border-2 border-amber-400 shadow-[0_0_15px_rgba(212,175,55,0.2)]"
                   : "bg-white/5 text-gray-400 border border-white/10 hover:border-white/20 hover:text-white"
               }`}
             >
@@ -674,7 +674,7 @@ function StepPlayers({
         className="rounded-xl p-4"
         style={{
           background: "linear-gradient(135deg, rgba(20,31,40,0.6), rgba(16,24,36,0.85))",
-          border: "1px solid rgba(0,212,255,0.1)",
+          border: "1px solid rgba(212,175,55,0.1)",
         }}
       >
         <div className="text-center text-[0.625rem] text-gray-500 uppercase tracking-wider font-bold mb-1">
@@ -722,7 +722,7 @@ function StepTimers({
                   }
                   className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${
                     isActive
-                      ? "bg-cyan-500/20 text-primary border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
+                      ? "bg-amber-500/20 text-primary border-2 border-amber-400 shadow-[0_0_15px_rgba(212,175,55,0.2)]"
                       : "bg-white/5 text-gray-400 border border-white/10 hover:border-white/20 hover:text-white"
                   }`}
                 >
@@ -751,7 +751,7 @@ function StepTimers({
                   }
                   className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${
                     isActive
-                      ? "bg-cyan-500/20 text-primary border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
+                      ? "bg-amber-500/20 text-primary border-2 border-amber-400 shadow-[0_0_15px_rgba(212,175,55,0.2)]"
                       : "bg-white/5 text-gray-400 border border-white/10 hover:border-white/20 hover:text-white"
                   }`}
                 >
@@ -823,7 +823,7 @@ function StepRules({
               }))
             }
             placeholder="0"
-            className="w-full max-w-xs px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40 tabular-nums"
+            className="w-full max-w-xs px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
             style={{
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,255,255,0.1)",
@@ -842,13 +842,13 @@ function StepRules({
               <div
                 key={key}
                 className={`rounded-xl p-4 flex items-center justify-between gap-4 transition-all cursor-pointer ${
-                  isOn ? "border-cyan-500/25" : "border-white/5"
+                  isOn ? "border-amber-500/25" : "border-white/5"
                 }`}
                 style={{
                   background: isOn
-                    ? "linear-gradient(135deg, rgba(0,212,255,0.05), rgba(20,31,40,0.8))"
+                    ? "linear-gradient(135deg, rgba(212,175,55,0.05), rgba(20,31,40,0.8))"
                     : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${isOn ? "rgba(0,212,255,0.2)" : "rgba(255,255,255,0.05)"}`,
+                  border: `1px solid ${isOn ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.05)"}`,
                 }}
                 onClick={() =>
                   setConfig((prev) => ({ ...prev, [key]: !prev[key as keyof TableConfig] }))
@@ -1041,15 +1041,15 @@ function StepPrivacy({
               }
               className={`relative text-left rounded-xl p-5 transition-all ${
                 isSelected
-                  ? "border-2 border-cyan-400"
+                  ? "border-2 border-amber-400"
                   : "border border-white/5 hover:border-white/15"
               }`}
               style={{
                 background: isSelected
-                  ? "linear-gradient(135deg, rgba(0,212,255,0.06), rgba(20,31,40,0.85))"
+                  ? "linear-gradient(135deg, rgba(212,175,55,0.06), rgba(20,31,40,0.85))"
                   : "rgba(20,31,40,0.5)",
                 boxShadow: isSelected
-                  ? "0 0 25px rgba(0,212,255,0.15)"
+                  ? "0 0 25px rgba(212,175,55,0.15)"
                   : "none",
               }}
             >
@@ -1057,7 +1057,7 @@ function StepPrivacy({
                 <div
                   className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
                     isSelected
-                      ? "bg-cyan-500/20 border border-cyan-500/30"
+                      ? "bg-amber-500/20 border border-amber-500/30"
                       : "bg-white/5 border border-white/10"
                   }`}
                 >
@@ -1080,7 +1080,7 @@ function StepPrivacy({
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="w-5 h-5 rounded-full bg-cyan-500/25 border border-cyan-400 flex items-center justify-center"
+                        className="w-5 h-5 rounded-full bg-amber-500/25 border border-amber-400 flex items-center justify-center"
                       >
                         <Check className="w-3 h-3 text-primary" />
                       </motion.div>
@@ -1119,7 +1119,7 @@ function StepPrivacy({
                   setConfig((prev) => ({ ...prev, password: e.target.value }))
                 }
                 placeholder="Enter a password..."
-                className="w-full pl-10 pr-10 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-cyan-500/40"
+                className="w-full pl-10 pr-10 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40"
                 style={{
                   background: "rgba(255,255,255,0.05)",
                   border: "1px solid rgba(255,255,255,0.1)",
@@ -1169,13 +1169,13 @@ function StepPrivacy({
               <div
                 key={key}
                 className={`rounded-xl p-4 flex items-center justify-between gap-4 transition-all cursor-pointer ${
-                  isOn ? "border-cyan-500/25" : "border-white/5"
+                  isOn ? "border-amber-500/25" : "border-white/5"
                 }`}
                 style={{
                   background: isOn
-                    ? "linear-gradient(135deg, rgba(0,212,255,0.05), rgba(20,31,40,0.8))"
+                    ? "linear-gradient(135deg, rgba(212,175,55,0.05), rgba(20,31,40,0.8))"
                     : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${isOn ? "rgba(0,212,255,0.2)" : "rgba(255,255,255,0.05)"}`,
+                  border: `1px solid ${isOn ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.05)"}`,
                 }}
                 onClick={() =>
                   setConfig((prev) => ({ ...prev, [key]: !prev[key as keyof TableConfig] }))
@@ -1249,7 +1249,7 @@ function StepReview({
       <div
         className="rounded-xl overflow-hidden"
         style={{
-          border: "1px solid rgba(0,212,255,0.12)",
+          border: "1px solid rgba(212,175,55,0.12)",
         }}
       >
         {rows.map((row, i) => (
@@ -1444,8 +1444,8 @@ export default function TableSetup() {
               disabled={submitting}
               className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50"
               style={{
-                background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
-                boxShadow: "0 0 25px rgba(0,212,255,0.35)",
+                background: "linear-gradient(135deg, #d4af37, #66e5ff)",
+                boxShadow: "0 0 25px rgba(212,175,55,0.35)",
               }}
             >
               <Rocket className="w-4 h-4" />
@@ -1458,8 +1458,8 @@ export default function TableSetup() {
               onClick={goNext}
               className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
               style={{
-                background: "linear-gradient(135deg, #00d4ff, #66e5ff)",
-                boxShadow: "0 0 20px rgba(0,212,255,0.25)",
+                background: "linear-gradient(135deg, #d4af37, #66e5ff)",
+                boxShadow: "0 0 20px rgba(212,175,55,0.25)",
               }}
             >
               Next

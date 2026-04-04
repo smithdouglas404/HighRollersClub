@@ -13,7 +13,7 @@ const FEATURES = [
     icon: Shield,
     title: "Provably Fair",
     desc: "Every shuffle uses SHA-256 cryptographic verification with multi-party entropy. You can audit any hand.",
-    accent: "#00d4ff",
+    accent: "#d4af37",
   },
   {
     icon: Users,

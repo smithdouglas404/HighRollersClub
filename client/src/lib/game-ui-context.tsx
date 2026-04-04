@@ -99,7 +99,7 @@ export interface CardBackPreset {
 export const CARD_BACK_PRESETS: CardBackPreset[] = [
   { id: 'default', label: 'Default', swatch: '#1a0e3e' },
   { id: 'classic', label: 'Classic Navy', imageUrl: '/cardbacks/cardback_classic.webp', swatch: '#1a2a5c' },
-  { id: 'neon', label: 'Neon Cyber', imageUrl: '/cardbacks/cardback_neon.webp', swatch: '#00d4ff' },
+  { id: 'neon', label: 'Neon Cyber', imageUrl: '/cardbacks/cardback_neon.webp', swatch: '#d4af37' },
   { id: 'royal', label: 'Royal Red', imageUrl: '/cardbacks/cardback_royal.webp', swatch: '#8b0000' },
   { id: 'holographic', label: 'Holographic', imageUrl: '/cardbacks/cardback_holographic.webp', swatch: '#c0c0ff' },
 ];

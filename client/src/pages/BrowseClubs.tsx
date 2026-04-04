@@ -30,7 +30,7 @@ function getClubLogo(club: PublicClub) {
 
 function getClubAccentColor(index: number) {
   const colors = [
-    { from: "rgba(0,212,255,0.5)", to: "rgba(0,212,255,0.1)", glow: "rgba(0,212,255,0.15)" },
+    { from: "rgba(212,175,55,0.5)", to: "rgba(212,175,55,0.1)", glow: "rgba(212,175,55,0.15)" },
     { from: "rgba(168,85,247,0.5)", to: "rgba(168,85,247,0.1)", glow: "rgba(168,85,247,0.15)" },
     { from: "rgba(34,197,94,0.5)", to: "rgba(34,197,94,0.1)", glow: "rgba(34,197,94,0.15)" },
     { from: "rgba(245,158,11,0.5)", to: "rgba(245,158,11,0.1)", glow: "rgba(245,158,11,0.15)" },

@@ -76,8 +76,8 @@ function WinningsChart({ data }: { data: number[] }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={isPositive ? "#00d4ff" : "#ff3366"} stopOpacity="0.4" />
-          <stop offset="100%" stopColor={isPositive ? "#00d4ff" : "#ff3366"} stopOpacity="0.02" />
+          <stop offset="0%" stopColor={isPositive ? "#d4af37" : "#ff3366"} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={isPositive ? "#d4af37" : "#ff3366"} stopOpacity="0.02" />
         </linearGradient>
       </defs>
 
@@ -105,7 +105,7 @@ function WinningsChart({ data }: { data: number[] }) {
         <path
           d={pathD}
           fill="none"
-          stroke={isPositive ? "#00d4ff" : "#ff3366"}
+          stroke={isPositive ? "#d4af37" : "#ff3366"}
           strokeWidth="2"
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -118,7 +118,7 @@ function WinningsChart({ data }: { data: number[] }) {
           cx={points[points.length - 1].x}
           cy={points[points.length - 1].y}
           r="4"
-          fill={isPositive ? "#00d4ff" : "#ff3366"}
+          fill={isPositive ? "#d4af37" : "#ff3366"}
           stroke="rgba(10,16,34,0.8)"
           strokeWidth="2"
         />
@@ -227,8 +227,8 @@ function TableVolumeChart({ data, labels }: { data: number[]; labels: string[] }
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#00d4ff" stopOpacity="0.3" />
+          <stop offset="0%" stopColor="#d4af37" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#d4af37" stopOpacity="0.3" />
         </linearGradient>
       </defs>
 
@@ -254,7 +254,7 @@ function TableVolumeChart({ data, labels }: { data: number[]; labels: string[] }
           <g key={i}>
             <rect x={x} y={y} width={barWidth} height={barH} fill="url(#barGrad)" rx="3" />
             {/* Bar glow */}
-            <rect x={x} y={y} width={barWidth} height={barH} fill="none" stroke="rgba(0,212,255,0.25)" strokeWidth="1" rx="3" />
+            <rect x={x} y={y} width={barWidth} height={barH} fill="none" stroke="rgba(212,175,55,0.25)" strokeWidth="1" rx="3" />
             {/* Value on top */}
             <text x={x + barWidth / 2} y={y - 5} fill="rgba(255,255,255,0.5)" fontSize="8" fontFamily="monospace" textAnchor="middle">
               {v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
@@ -337,7 +337,7 @@ const MOCK_TABLE_VOLUME = [1200, 1850, 2100, 1780, 2450, 2900];
 const MOCK_VOLUME_LABELS = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
 
 const MOCK_RETENTION_SEGMENTS = [
-  { label: "Returning", value: 57, color: "#00d4ff" },
+  { label: "Returning", value: 57, color: "#d4af37" },
   { label: "New", value: 33, color: "#c9a84c" },
   { label: "Inactive", value: 10, color: "rgba(255,255,255,0.15)" },
 ];
@@ -668,10 +668,10 @@ export default function Analytics() {
                   <div className="p-3 rounded-lg bg-white/8 border border-white/15">
                     <div className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-2">Play Type</div>
                     <div className="text-lg font-bold tracking-tight mt-1" style={{
-                      color: vpipPct <= 20 && pfrPct <= 15 ? "#00d4ff"
+                      color: vpipPct <= 20 && pfrPct <= 15 ? "#d4af37"
                         : vpipPct <= 20 && pfrPct > 15 ? "#ff6060"
                         : vpipPct > 20 && pfrPct <= 15 ? "#ffa500"
-                        : "#00d4ff"
+                        : "#d4af37"
                     }}>
                       {vpipPct <= 20 && pfrPct <= 15 ? "Tight-Passive (Rock)"
                         : vpipPct <= 20 && pfrPct > 15 ? "Tight-Aggressive (TAG)"

@@ -64,8 +64,8 @@ export function BlindLevelIndicator({
         className="rounded-xl backdrop-blur-md overflow-hidden"
         style={{
           background: "linear-gradient(180deg, rgba(20,31,40,0.88) 0%, rgba(16,24,36,0.92) 100%)",
-          border: "1px solid rgba(0,212,255,0.12)",
-          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 20px rgba(0,212,255,0.05)",
+          border: "1px solid rgba(212,175,55,0.12)",
+          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 20px rgba(212,175,55,0.05)",
           minWidth: 220,
         }}
       >
@@ -80,12 +80,12 @@ export function BlindLevelIndicator({
               style={{
                 background: isWarning
                   ? "rgba(234,179,8,0.15)"
-                  : "rgba(0,212,255,0.08)",
-                border: `1px solid ${isWarning ? "rgba(234,179,8,0.3)" : "rgba(0,212,255,0.15)"}`,
+                  : "rgba(212,175,55,0.08)",
+                border: `1px solid ${isWarning ? "rgba(234,179,8,0.3)" : "rgba(212,175,55,0.15)"}`,
               }}
             >
               <Layers
-                className={`w-4 h-4 ${isWarning ? "text-yellow-400" : "text-cyan-400"}`}
+                className={`w-4 h-4 ${isWarning ? "text-yellow-400" : "text-amber-400"}`}
               />
             </div>
             <div className="text-left">
@@ -143,8 +143,8 @@ export function BlindLevelIndicator({
                     <div
                       className="flex-1 rounded-lg px-3 py-2 text-center"
                       style={{
-                        background: "rgba(0,212,255,0.04)",
-                        border: "1px solid rgba(0,212,255,0.1)",
+                        background: "rgba(212,175,55,0.04)",
+                        border: "1px solid rgba(212,175,55,0.1)",
                       }}
                     >
                       <div className="text-[0.5rem] text-gray-600 uppercase">SB</div>
@@ -154,8 +154,8 @@ export function BlindLevelIndicator({
                     <div
                       className="flex-1 rounded-lg px-3 py-2 text-center"
                       style={{
-                        background: "rgba(0,212,255,0.04)",
-                        border: "1px solid rgba(0,212,255,0.1)",
+                        background: "rgba(212,175,55,0.04)",
+                        border: "1px solid rgba(212,175,55,0.1)",
                       }}
                     >
                       <div className="text-[0.5rem] text-gray-600 uppercase">BB</div>
@@ -257,7 +257,7 @@ export function BlindLevelIndicator({
                           key={entry.level}
                           className={`flex items-center justify-between text-[0.625rem] px-2 py-1 rounded ${
                             entry.level === currentLevel
-                              ? "bg-cyan-500/10 border border-cyan-500/20"
+                              ? "bg-amber-500/10 border border-amber-500/20"
                               : entry.level < currentLevel
                                 ? "opacity-40"
                                 : ""
@@ -266,7 +266,7 @@ export function BlindLevelIndicator({
                           <span
                             className={`font-mono ${
                               entry.level === currentLevel
-                                ? "text-cyan-300 font-bold"
+                                ? "text-amber-300 font-bold"
                                 : "text-gray-500"
                             }`}
                           >

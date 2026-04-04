@@ -27,14 +27,14 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
 
   const getWinRateColor = (rate: number) => {
     if (rate >= 40) return { text: "text-green-400", bar: "#22c55e", glow: "rgba(34,197,94,0.3)" };
-    if (rate >= 25) return { text: "text-cyan-400", bar: "#06b6d4", glow: "rgba(0,212,255,0.3)" };
+    if (rate >= 25) return { text: "text-amber-400", bar: "#06b6d4", glow: "rgba(212,175,55,0.3)" };
     if (rate >= 15) return { text: "text-yellow-400", bar: "#eab308", glow: "rgba(234,179,8,0.3)" };
     return { text: "text-red-400", bar: "#ef4444", glow: "rgba(239,68,68,0.3)" };
   };
 
   const getStatColor = (value: number, thresholds: { high: number; mid: number }) => {
     if (value >= thresholds.high) return "text-green-400";
-    if (value >= thresholds.mid) return "text-cyan-400";
+    if (value >= thresholds.mid) return "text-amber-400";
     if (value >= thresholds.mid / 2) return "text-yellow-400";
     return "text-red-400";
   };
@@ -91,8 +91,8 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
         className="rounded-xl backdrop-blur-md overflow-hidden"
         style={{
           background: "linear-gradient(180deg, rgba(20,31,40,0.88) 0%, rgba(16,24,36,0.92) 100%)",
-          border: "1px solid rgba(0,212,255,0.1)",
-          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(0,212,255,0.04)",
+          border: "1px solid rgba(212,175,55,0.1)",
+          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(212,175,55,0.04)",
           minWidth: 210,
         }}
       >

@@ -81,8 +81,8 @@ export function ProvablyFairPanel({
     const html = `<!DOCTYPE html>
 <html><head><title>Poker Hand Verification - Hand #${shuffleProof.handNumber}</title>
 <style>body{font-family:monospace;background:#0a0a0a;color:#e0e0e0;padding:2rem;max-width:800px;margin:0 auto}
-h1{color:#00d4ff}pre{background:#111;padding:1rem;border-radius:8px;overflow-x:auto;border:1px solid #222}
-.pass{color:#22c55e;font-weight:bold}.fail{color:#ef4444;font-weight:bold}button{background:#00d4ff;color:#000;border:none;padding:0.75rem 1.5rem;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1rem}button:hover{opacity:0.9}</style></head>
+h1{color:#d4af37}pre{background:#111;padding:1rem;border-radius:8px;overflow-x:auto;border:1px solid #222}
+.pass{color:#22c55e;font-weight:bold}.fail{color:#ef4444;font-weight:bold}button{background:#d4af37;color:#000;border:none;padding:0.75rem 1.5rem;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1rem}button:hover{opacity:0.9}</style></head>
 <body><h1>Provably Fair Verification (v${version})</h1>
 <p>Hand #${shuffleProof.handNumber} | Table: ${shuffleProof.tableId}</p>
 <h3>Proof Data</h3>
@@ -125,7 +125,7 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
       className="w-[320px] h-full flex flex-col z-40 pointer-events-auto relative overflow-hidden"
       style={{
         background: "linear-gradient(180deg, rgba(20,31,40,0.92) 0%, rgba(16,24,36,0.96) 100%)",
-        borderLeft: "1px solid rgba(0,212,255,0.12)",
+        borderLeft: "1px solid rgba(212,175,55,0.12)",
         boxShadow: "-8px 0 40px rgba(0,0,0,0.5)",
       }}
     >
@@ -294,10 +294,10 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
             {commitmentHash ? (
               <div className="flex items-center gap-2">
                 <div
-                  className="flex-1 rounded-lg px-3 py-2.5 text-[0.5625rem] font-mono text-cyan-400/80 truncate"
+                  className="flex-1 rounded-lg px-3 py-2.5 text-[0.5625rem] font-mono text-amber-400/80 truncate"
                   style={{
-                    background: "rgba(0,212,255,0.04)",
-                    border: "1px solid rgba(0,212,255,0.1)",
+                    background: "rgba(212,175,55,0.04)",
+                    border: "1px solid rgba(212,175,55,0.1)",
                   }}
                   title={commitmentHash}
                 >
@@ -307,9 +307,9 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                   onClick={() => handleCopy(commitmentHash, "hash")}
                   className="shrink-0 px-3 py-2.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all"
                   style={{
-                    background: copiedField === "hash" ? "rgba(0,212,255,0.15)" : "rgba(0,212,255,0.08)",
-                    border: `1px solid ${copiedField === "hash" ? "rgba(0,212,255,0.3)" : "rgba(0,212,255,0.15)"}`,
-                    color: copiedField === "hash" ? "#00d4ff" : "#8ecae6",
+                    background: copiedField === "hash" ? "rgba(212,175,55,0.15)" : "rgba(212,175,55,0.08)",
+                    border: `1px solid ${copiedField === "hash" ? "rgba(212,175,55,0.3)" : "rgba(212,175,55,0.15)"}`,
+                    color: copiedField === "hash" ? "#d4af37" : "#8ecae6",
                   }}
                 >
                   {copiedField === "hash" ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -367,9 +367,9 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
                       onClick={() => handleCopy(shuffleProof.serverSeed, "seed")}
                       className="shrink-0 p-2 rounded-lg transition-all"
                       style={{
-                        background: copiedField === "seed" ? "rgba(0,212,255,0.15)" : "rgba(168,85,247,0.08)",
-                        border: `1px solid ${copiedField === "seed" ? "rgba(0,212,255,0.3)" : "rgba(168,85,247,0.15)"}`,
-                        color: copiedField === "seed" ? "#00d4ff" : "#a78bfa",
+                        background: copiedField === "seed" ? "rgba(212,175,55,0.15)" : "rgba(168,85,247,0.08)",
+                        border: `1px solid ${copiedField === "seed" ? "rgba(212,175,55,0.3)" : "rgba(168,85,247,0.15)"}`,
+                        color: copiedField === "seed" ? "#d4af37" : "#a78bfa",
                       }}
                     >
                       {copiedField === "seed" ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -408,10 +408,10 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
               </button>
               {showDeckOrder && (
                 <div
-                  className="rounded-lg px-3 py-2 text-[0.5rem] font-mono text-cyan-400/60 break-all max-h-32 overflow-y-auto custom-scrollbar"
+                  className="rounded-lg px-3 py-2 text-[0.5rem] font-mono text-amber-400/60 break-all max-h-32 overflow-y-auto custom-scrollbar"
                   style={{
-                    background: "rgba(0,212,255,0.02)",
-                    border: "1px solid rgba(0,212,255,0.06)",
+                    background: "rgba(212,175,55,0.02)",
+                    border: "1px solid rgba(212,175,55,0.06)",
                   }}
                 >
                   {shuffleProof.deckOrder}
@@ -459,8 +459,8 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
             disabled={!shuffleProof}
             className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:bg-green-500/[0.03] group disabled:opacity-30 disabled:cursor-not-allowed"
             style={{
-              background: "rgba(0,212,255,0.02)",
-              border: "1px solid rgba(0,212,255,0.1)",
+              background: "rgba(212,175,55,0.02)",
+              border: "1px solid rgba(212,175,55,0.1)",
             }}
           >
             <div className="w-8 h-8 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0">
@@ -482,11 +482,11 @@ el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order
         style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
       >
         <div className="text-[0.5625rem] text-gray-600 font-mono">
-          <span className="text-cyan-500/60">HMAC-SHA256 Fisher-Yates</span>
+          <span className="text-amber-500/60">HMAC-SHA256 Fisher-Yates</span>
           <span className="mx-1.5 text-gray-700">+</span>
-          <span className="text-cyan-500/60">SHA-512 Entropy</span>
+          <span className="text-amber-500/60">SHA-512 Entropy</span>
           <span className="mx-1.5 text-gray-700">+</span>
-          <span className="text-cyan-500/60">Polygon</span>
+          <span className="text-amber-500/60">Polygon</span>
         </div>
       </div>
     </motion.div>

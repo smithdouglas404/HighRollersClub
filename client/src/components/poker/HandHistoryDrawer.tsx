@@ -58,7 +58,7 @@ function SessionStats({ hands }: { hands: HandRecord[] }) {
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
       >
-        <span className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+        <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
           <TrendingUp className="w-3 h-3" /> Session Stats
         </span>
         {expanded ? <ChevronUp className="w-3 h-3 text-gray-600" /> : <ChevronDown className="w-3 h-3 text-gray-600" />}
@@ -83,7 +83,7 @@ function SessionStats({ hands }: { hands: HandRecord[] }) {
                 </div>
                 <div className="text-center">
                   <div className="text-[0.5625rem] text-gray-600 uppercase">Best Pot</div>
-                  <div className="text-xs font-bold text-cyan-400">{stats.biggestPot.toLocaleString()}</div>
+                  <div className="text-xs font-bold text-amber-400">{stats.biggestPot.toLocaleString()}</div>
                 </div>
               </div>
 
@@ -157,9 +157,9 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
-            className="fixed left-4 bottom-32 z-40 bg-surface-high/50 backdrop-blur-xl rounded-full p-3 border border-white/[0.06] hover:border-cyan-500/30 transition-all shadow-lg"
+            className="fixed left-4 bottom-32 z-40 bg-surface-high/50 backdrop-blur-xl rounded-full p-3 border border-white/[0.06] hover:border-amber-500/30 transition-all shadow-lg"
           >
-            <History className="w-5 h-5 text-cyan-400" />
+            <History className="w-5 h-5 text-amber-400" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -177,7 +177,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-cyan-400" />
+                <History className="w-4 h-4 text-amber-400" />
                 <span className="text-xs font-bold uppercase tracking-wider text-white">Hand History</span>
               </div>
               <button
@@ -201,7 +201,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                   <History className="w-8 h-8 text-red-500/50 mb-2" />
                   <p className="text-[0.625rem] text-red-400">{fetchError}</p>
-                  <button onClick={fetchHands} className="mt-2 text-[0.625rem] text-cyan-400 hover:text-cyan-300 transition-colors">
+                  <button onClick={fetchHands} className="mt-2 text-[0.625rem] text-amber-400 hover:text-amber-300 transition-colors">
                     Retry
                   </button>
                 </div>
@@ -233,7 +233,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                       </div>
                       <div className="flex items-center gap-3 text-[0.625rem] text-gray-500">
                         <span className="flex items-center gap-1">
-                          <Coins className="w-2.5 h-2.5 text-cyan-500/60" />
+                          <Coins className="w-2.5 h-2.5 text-amber-500/60" />
                           {(hand.potTotal || 0).toLocaleString()}
                         </span>
                         {winners.length > 0 && (
@@ -281,7 +281,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                       a.href = url; a.download = `hand-history-${tableId.slice(0,8)}.json`;
                       a.click(); URL.revokeObjectURL(url);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-cyan-500 hover:text-cyan-300 transition-colors py-1"
+                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-amber-500 hover:text-amber-300 transition-colors py-1"
                   >
                     <Download className="w-3 h-3" /> JSON
                   </button>
@@ -302,7 +302,7 @@ export function HandHistoryDrawer({ tableId }: { tableId: string }) {
                       a.href = url; a.download = `hand-history-${tableId.slice(0,8)}.csv`;
                       a.click(); URL.revokeObjectURL(url);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-cyan-500 hover:text-cyan-300 transition-colors py-1"
+                    className="flex-1 flex items-center justify-center gap-1 text-[0.625rem] font-bold text-amber-500 hover:text-amber-300 transition-colors py-1"
                   >
                     <Download className="w-3 h-3" /> CSV
                   </button>

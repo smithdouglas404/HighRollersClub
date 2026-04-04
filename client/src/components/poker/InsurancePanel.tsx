@@ -77,7 +77,7 @@ export function InsurancePanel({ offer, onAccept, onDecline }: InsurancePanelPro
         <div className="p-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-cyan-400">
+            <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-amber-400">
               Equity Insurance
             </div>
             <div

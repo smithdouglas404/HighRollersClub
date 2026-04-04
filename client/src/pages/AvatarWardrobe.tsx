@@ -37,7 +37,7 @@ const OWNED_ITEMS: WardrobeItem[] = [
 const RARITY_STYLES: Record<string, { border: string; text: string; bg: string }> = {
   legendary: { border: "border-amber-500/30",  text: "text-amber-400",  bg: "bg-amber-500/10" },
   epic:      { border: "border-purple-500/30", text: "text-purple-400", bg: "bg-purple-500/10" },
-  rare:      { border: "border-cyan-500/30",   text: "text-primary",   bg: "bg-cyan-500/10" },
+  rare:      { border: "border-amber-500/30",   text: "text-primary",   bg: "bg-amber-500/10" },
   uncommon:  { border: "border-green-500/30",  text: "text-green-400",  bg: "bg-green-500/10" },
   common:    { border: "border-gray-500/30",   text: "text-gray-400",   bg: "bg-gray-500/10" },
 };

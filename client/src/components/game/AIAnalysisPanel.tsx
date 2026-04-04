@@ -101,8 +101,8 @@ export function AIAnalysisPanel({
         className="rounded-xl backdrop-blur-md overflow-hidden"
         style={{
           background: "linear-gradient(180deg, rgba(20,31,40,0.90) 0%, rgba(16,24,36,0.95) 100%)",
-          border: "1px solid rgba(0,212,255,0.1)",
-          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(0,212,255,0.04)",
+          border: "1px solid rgba(212,175,55,0.1)",
+          boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(212,175,55,0.04)",
         }}
       >
         {/* Header */}
@@ -338,12 +338,12 @@ export function AIAnalysisPanel({
                               transition={{ delay: 0.35 + i * 0.05 }}
                               className="flex items-start gap-2 rounded-lg px-3 py-2"
                               style={{
-                                background: "rgba(0,212,255,0.03)",
-                                border: "1px solid rgba(0,212,255,0.08)",
+                                background: "rgba(212,175,55,0.03)",
+                                border: "1px solid rgba(212,175,55,0.08)",
                               }}
                             >
-                              <Lightbulb className="w-3 h-3 text-cyan-400/70 shrink-0 mt-0.5" />
-                              <span className="text-[0.6875rem] text-cyan-300/80 leading-relaxed">
+                              <Lightbulb className="w-3 h-3 text-amber-400/70 shrink-0 mt-0.5" />
+                              <span className="text-[0.6875rem] text-amber-300/80 leading-relaxed">
                                 {rec}
                               </span>
                             </motion.div>

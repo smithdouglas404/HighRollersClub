@@ -62,7 +62,7 @@ export default function Leaderboard() {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />
           <div className="relative z-10 flex items-center gap-3">
-            <Medal className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(0,212,255,0.4)]" />
+            <Medal className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" />
             <h2 className="text-lg font-black tracking-[0.12em] uppercase gold-text">
               Leaderboard
             </h2>

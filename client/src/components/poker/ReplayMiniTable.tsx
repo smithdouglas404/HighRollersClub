@@ -20,10 +20,10 @@ const SUIT_COLORS: Record<string, string> = {
 function MiniCard({ card, faceDown }: { card?: { suit: string; rank: string }; faceDown?: boolean }) {
   if (faceDown || !card) {
     return (
-      <div className="w-7 h-10 rounded border border-cyan-500/30 flex items-center justify-center"
+      <div className="w-7 h-10 rounded border border-amber-500/30 flex items-center justify-center"
         style={{ background: "linear-gradient(135deg, #0a1929, #132238)" }}
       >
-        <div className="w-4 h-6 rounded-sm border border-cyan-500/20" />
+        <div className="w-4 h-6 rounded-sm border border-amber-500/20" />
       </div>
     );
   }
@@ -62,9 +62,9 @@ export function ReplayMiniTable({ snapshot }: { snapshot: ReplaySnapshot }) {
       {/* Pot display */}
       {snapshot.pot > 0 && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-          <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/50 border border-cyan-500/20 backdrop-blur-sm">
-            <Coins className="w-3 h-3 text-cyan-400" />
-            <span className="text-xs font-bold font-mono text-cyan-400">
+          <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/50 border border-amber-500/20 backdrop-blur-sm">
+            <Coins className="w-3 h-3 text-amber-400" />
+            <span className="text-xs font-bold font-mono text-amber-400">
               {snapshot.pot.toLocaleString()}
             </span>
           </div>

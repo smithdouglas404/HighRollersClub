@@ -126,7 +126,7 @@ function ProgressBar({ progress }: { progress: number }) {
             width: `${progress}%`,
             background: progress >= 100
               ? "linear-gradient(90deg, #38A169, #3fff8b)"
-              : "linear-gradient(90deg, #00d4ff, #81ecff)",
+              : "linear-gradient(90deg, #d4af37, #81ecff)",
             boxShadow: progress >= 100
               ? "0 0 12px rgba(63,255,139,0.4)"
               : "0 0 12px rgba(129,236,255,0.4)",

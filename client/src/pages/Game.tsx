@@ -536,7 +536,7 @@ function GameTable({
             }
           </span>
           <div className="w-px h-5 bg-white/10" />
-          <span className="text-sm font-bold text-primary font-mono tracking-wider" style={{ textShadow: "0 0 8px rgba(0,212,255,0.4)" }}>{phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
+          <span className="text-sm font-bold text-primary font-mono tracking-wider" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>{phaseLabels[gameState.phase] || gameState.phase?.toUpperCase()}</span>
           <span className="text-[0.625rem] text-gray-500 font-mono">
             {(gameState as any).handNumber
               ? <>Hand #{(gameState as any).handNumber}</>
@@ -588,7 +588,7 @@ function GameTable({
           )}
 
           {waiting && addBots && (
-            <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-primary bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20">
+            <button onClick={addBots} className="flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold text-primary bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20">
               <Bot className="w-3 h-3" /> BOTS
             </button>
           )}
@@ -901,11 +901,11 @@ function GameTable({
                           else { sound.playBgm(); setBgmPlaying(true); }
                         }}
                         className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all ${
-                          isActive && bgmPlaying ? "bg-cyan-500/15 border border-cyan-500/25" : "bg-white/5 border border-transparent hover:bg-white/8"
+                          isActive && bgmPlaying ? "bg-amber-500/15 border border-amber-500/25" : "bg-white/5 border border-transparent hover:bg-white/8"
                         }`}
                       >
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                          isActive && bgmPlaying ? "bg-cyan-500/25" : "bg-white/10"
+                          isActive && bgmPlaying ? "bg-amber-500/25" : "bg-white/10"
                         }`}>
                           {isActive && bgmPlaying
                             ? <Pause className="w-3 h-3 text-primary" />
@@ -919,7 +919,7 @@ function GameTable({
                         {isActive && bgmPlaying && (
                           <div className="flex items-end gap-[2px] h-3">
                             {[0.6, 1, 0.4, 0.8, 0.5].map((h, i) => (
-                              <div key={i} className="w-[2px] bg-cyan-400 rounded-full animate-pulse" style={{ height: `${h * 12}px`, animationDelay: `${i * 0.15}s` }} />
+                              <div key={i} className="w-[2px] bg-amber-400 rounded-full animate-pulse" style={{ height: `${h * 12}px`, animationDelay: `${i * 0.15}s` }} />
                             ))}
                           </div>
                         )}
@@ -940,7 +940,7 @@ function GameTable({
                   />
                   <button
                     onClick={() => { if (bgmUrl) { sound.setBgmUrl(bgmUrl); if (bgmPlaying) { sound.stopBgm(); setBgmPlaying(false); } else { sound.playBgm(); setBgmPlaying(true); } } }}
-                    className={`px-2 py-1.5 rounded text-[0.625rem] font-bold ${bgmPlaying ? "bg-red-500/20 text-red-400" : "bg-cyan-500/20 text-primary"}`}
+                    className={`px-2 py-1.5 rounded text-[0.625rem] font-bold ${bgmPlaying ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-primary"}`}
                   >
                     {bgmPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                   </button>
@@ -1077,7 +1077,7 @@ function GameTable({
                 return (
                   <div
                     key={p.id}
-                    className={`px-3 py-1.5 border-b border-white/[0.04] transition-colors ${isMe ? "bg-cyan-500/[0.07]" : "hover:bg-white/[0.02]"}`}
+                    className={`px-3 py-1.5 border-b border-white/[0.04] transition-colors ${isMe ? "bg-amber-500/[0.07]" : "hover:bg-white/[0.02]"}`}
                   >
                     <div className="flex items-center gap-2">
                       {/* Rank badge */}
@@ -1131,7 +1131,7 @@ function GameTable({
                           background: rank === 0
                             ? "linear-gradient(90deg, #ffd700, #f59e0b)"
                             : isMe
-                            ? "linear-gradient(90deg, #00d4ff, #0891b2)"
+                            ? "linear-gradient(90deg, #d4af37, #0891b2)"
                             : "linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.08))",
                         }}
                       />
@@ -1415,7 +1415,7 @@ function GameTable({
                       <Mic className="w-3 h-3" />
                     </button>
                   )}
-                  <button type="submit" className="px-2 py-1.5 rounded bg-cyan-500/20 text-primary text-[0.625rem] font-bold hover:bg-cyan-500/30">
+                  <button type="submit" className="px-2 py-1.5 rounded bg-amber-500/20 text-primary text-[0.625rem] font-bold hover:bg-amber-500/30">
                     &gt;
                   </button>
                 </form>
@@ -1713,14 +1713,14 @@ function GameTable({
               className="w-full max-w-sm rounded-2xl overflow-hidden"
               style={{
                 background: "linear-gradient(180deg, rgba(12,20,35,0.98) 0%, rgba(8,14,24,0.99) 100%)",
-                border: "1px solid rgba(0,212,255,0.15)",
-                boxShadow: "0 0 40px rgba(0,212,255,0.08)",
+                border: "1px solid rgba(212,175,55,0.15)",
+                boxShadow: "0 0 40px rgba(212,175,55,0.08)",
               }}
             >
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-cyan-500/15 border border-cyan-500/25">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/15 border border-amber-500/25">
                     <Settings2 className="w-4 h-4 text-primary" />
                   </div>
                   <div>
@@ -1747,7 +1747,7 @@ function GameTable({
                       value={manageTableWalletLimit}
                       onChange={(e) => setManageTableWalletLimit(parseInt(e.target.value) || 0)}
                       min={0}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-500/50 transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-amber-500/50 transition-colors"
                       placeholder="No limit"
                       data-testid="input-wallet-limit"
                     />
@@ -1767,7 +1767,7 @@ function GameTable({
                         value={manageTableSB}
                         onChange={(e) => setManageTableSB(parseInt(e.target.value) || 1)}
                         min={1}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-500/50 transition-colors"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-amber-500/50 transition-colors"
                         data-testid="input-manage-sb"
                       />
                     </div>
@@ -1778,7 +1778,7 @@ function GameTable({
                         value={manageTableBB}
                         onChange={(e) => setManageTableBB(parseInt(e.target.value) || 2)}
                         min={2}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-500/50 transition-colors"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-amber-500/50 transition-colors"
                         data-testid="input-manage-bb"
                       />
                     </div>
@@ -1818,8 +1818,8 @@ function GameTable({
                   className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all"
                   style={{
                     background: "linear-gradient(180deg, #0891b2 0%, #0e7490 100%)",
-                    border: "1px solid rgba(0,212,255,0.3)",
-                    boxShadow: "0 0 16px rgba(0,212,255,0.15)",
+                    border: "1px solid rgba(212,175,55,0.3)",
+                    boxShadow: "0 0 16px rgba(212,175,55,0.15)",
                   }}
                   data-testid="button-save-resume"
                 >
@@ -1978,7 +1978,7 @@ function GameTable({
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               className="glass rounded-2xl p-6 w-full max-w-xs border border-white/10"
-              style={{ boxShadow: "0 0 40px rgba(0,212,255,0.1)" }}
+              style={{ boxShadow: "0 0 40px rgba(212,175,55,0.1)" }}
             >
               <div className="text-center mb-5">
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 mb-2">
@@ -2056,7 +2056,7 @@ function GameTable({
                   }}
                   disabled={addChipsAmount <= 0 || (walletBalance || 0) < addChipsAmount}
                   className="flex-1 rounded-lg py-2.5 text-xs font-bold tracking-wider text-black disabled:opacity-50 transition-all"
-                  style={{ background: "linear-gradient(135deg, #00d4ff, #66e5ff)" }}
+                  style={{ background: "linear-gradient(135deg, #d4af37, #66e5ff)" }}
                 >
                   CONFIRM
                 </motion.button>
@@ -2144,7 +2144,7 @@ function GameTable({
                     src={selectedPlayerDetail.avatar}
                     alt={selectedPlayerDetail.name}
                     className="w-14 h-14 rounded-xl object-cover border-2 border-white/10"
-                    style={{ boxShadow: "0 0 16px rgba(0,212,255,0.15)" }}
+                    style={{ boxShadow: "0 0 16px rgba(212,175,55,0.15)" }}
                   />
                 ) : (
                   <div
@@ -2444,14 +2444,14 @@ function HandCountdownOverlay({ seconds }: { seconds: number | null }) {
           <div
             className="text-6xl font-black tabular-nums text-primary"
             style={{
-              textShadow: "0 0 30px rgba(0,212,255,0.5), 0 0 60px rgba(0,212,255,0.2)",
+              textShadow: "0 0 30px rgba(212,175,55,0.5), 0 0 60px rgba(212,175,55,0.2)",
             }}
           >
             {seconds}
           </div>
-          <div className="mt-3 w-16 h-1 rounded-full bg-cyan-500/20 overflow-hidden">
+          <div className="mt-3 w-16 h-1 rounded-full bg-amber-500/20 overflow-hidden">
             <motion.div
-              className="h-full bg-cyan-400 rounded-full"
+              className="h-full bg-amber-400 rounded-full"
               initial={{ width: "100%" }}
               animate={{ width: "0%" }}
               transition={{ duration: 1, ease: "linear" }}
@@ -2628,7 +2628,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
             backdropFilter: "blur(24px)",
             WebkitBackdropFilter: "blur(24px)",
             border: "1px solid rgba(255,255,255,0.06)",
-            boxShadow: "0 0 60px rgba(0,0,0,0.4), 0 0 30px rgba(0,212,255,0.04)",
+            boxShadow: "0 0 60px rgba(0,0,0,0.4), 0 0 30px rgba(212,175,55,0.04)",
           }}
         >
           {/* Table info header */}
@@ -2662,7 +2662,7 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
               <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-2">
                 Fixed Buy-In
               </label>
-              <div className="rounded-lg p-4 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,212,255,0.15)" }}>
+              <div className="rounded-lg p-4 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,175,55,0.15)" }}>
                 <div className="text-2xl font-bold text-primary font-mono">
                   ${(tableInfo?.buyInAmount || 500).toLocaleString()}
                 </div>
@@ -2724,8 +2724,8 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
                         isOccupied
                           ? "bg-red-500/10 border-red-500/20 text-red-400/40 cursor-not-allowed"
                           : isSelected
-                            ? "bg-cyan-500/25 border-cyan-400 text-primary shadow-[0_0_10px_rgba(0,212,255,0.3)]"
-                            : "bg-white/5 border-white/10 text-gray-400 hover:border-cyan-500/30 hover:text-white"
+                            ? "bg-amber-500/25 border-amber-400 text-primary shadow-[0_0_10px_rgba(212,175,55,0.3)]"
+                            : "bg-white/5 border-white/10 text-gray-400 hover:border-amber-500/30 hover:text-white"
                       }`}
                     >
                       {i + 1}

@@ -98,7 +98,7 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
     setConfirmApply(false);
   };
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500/50 transition-colors";
+  const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50 transition-colors";
   const labelClass = "text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 block mb-1";
 
   const Toggle = ({ value, onChange, label, icon: Icon, badge }: { value: boolean; onChange: (v: boolean) => void; label: string; icon: any; badge?: string }) => (
@@ -106,7 +106,7 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
       <button
         type="button"
         onClick={() => onChange(!value)}
-        className={`w-8 h-[18px] rounded-full transition-colors ${value ? 'bg-cyan-500' : 'bg-white/10'} relative shrink-0`}
+        className={`w-8 h-[18px] rounded-full transition-colors ${value ? 'bg-amber-500' : 'bg-white/10'} relative shrink-0`}
         data-testid={`admin-toggle-${label.toLowerCase().replace(/\s+/g, '-')}`}
       >
         <span className={`block w-3 h-3 rounded-full bg-white absolute top-[3px] transition-transform ${value ? 'translate-x-[16px]' : 'translate-x-[3px]'}`} />
@@ -120,7 +120,7 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
 
   const SectionHeader = ({ label, icon: Icon, color = "cyan" }: { label: string; icon: any; color?: string }) => {
     const colorMap: Record<string, { icon: string; text: string }> = {
-      cyan: { icon: "text-cyan-400/60", text: "text-cyan-400/80" },
+      cyan: { icon: "text-amber-400/60", text: "text-amber-400/80" },
       amber: { icon: "text-amber-400/60", text: "text-amber-400/80" },
       purple: { icon: "text-purple-400/60", text: "text-purple-400/80" },
     };
@@ -200,8 +200,8 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
       {/* Table Rules */}
       <div>
         <div className="flex items-center gap-1.5 mb-1">
-          <DollarSign className="w-3.5 h-3.5 text-cyan-400/60" />
-          <span className="text-[0.625rem] font-bold uppercase tracking-widest text-cyan-400/80">Table Rules</span>
+          <DollarSign className="w-3.5 h-3.5 text-amber-400/60" />
+          <span className="text-[0.625rem] font-bold uppercase tracking-widest text-amber-400/80">Table Rules</span>
           <div className="flex-1 h-px bg-white/[0.04]" />
         </div>
         <div className="space-y-0">
@@ -214,7 +214,7 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
             <select
               value={local.runItTwice}
               onChange={(e) => update("runItTwice", e.target.value as "always" | "ask" | "no")}
-              className="ml-auto bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[0.625rem] text-white focus:outline-none focus:border-cyan-500/50"
+              className="ml-auto bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[0.625rem] text-white focus:outline-none focus:border-amber-500/50"
             >
               <option value="no" className="bg-gray-900">No</option>
               <option value="ask" className="bg-gray-900">Ask Players</option>
@@ -398,8 +398,8 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
       {/* Bots */}
       <div>
         <div className="flex items-center gap-1.5 mb-1">
-          <Bot className="w-3.5 h-3.5 text-cyan-400/60" />
-          <span className="text-[0.625rem] font-bold uppercase tracking-widest text-cyan-400/80">Bots</span>
+          <Bot className="w-3.5 h-3.5 text-amber-400/60" />
+          <span className="text-[0.625rem] font-bold uppercase tracking-widest text-amber-400/80">Bots</span>
           <div className="flex-1 h-px bg-white/[0.04]" />
         </div>
         <Toggle value={local.allowBots} onChange={(v) => update("allowBots", v)} icon={Bot} label="Allow Bots" />
@@ -409,9 +409,9 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
 
   const renderPreferencesTab = () => (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-        <Settings2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-        <span className="text-[0.625rem] text-cyan-300/80">Personal preferences — saved locally.</span>
+      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+        <Settings2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+        <span className="text-[0.625rem] text-amber-300/80">Personal preferences — saved locally.</span>
       </div>
 
       {/* Sound & Notifications */}
@@ -496,7 +496,7 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
             className="fixed right-0 top-0 bottom-0 z-[61] w-80 flex flex-col overflow-hidden"
             style={{
               background: "linear-gradient(180deg, rgba(12,20,35,0.98) 0%, rgba(8,14,24,0.99) 100%)",
-              borderLeft: "1px solid rgba(0,212,255,0.1)",
+              borderLeft: "1px solid rgba(212,175,55,0.1)",
               boxShadow: "-8px 0 32px rgba(0,0,0,0.5)",
             }}
           >
@@ -524,24 +524,24 @@ export function InGameAdminPanel({ isOpen, onClose, settings, onApply, isMultipl
                 <button
                   onClick={() => setActiveTab("game")}
                   className={`flex-1 pb-2 text-[0.625rem] font-bold uppercase tracking-wider transition-colors relative ${
-                    activeTab === "game" ? "text-cyan-400" : "text-gray-500 hover:text-gray-300"
+                    activeTab === "game" ? "text-amber-400" : "text-gray-500 hover:text-gray-300"
                   }`}
                 >
                   Game
                   {activeTab === "game" && (
-                    <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-cyan-400 rounded-full" />
+                    <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-amber-400 rounded-full" />
                   )}
                 </button>
               )}
               <button
                 onClick={() => setActiveTab("preferences")}
                 className={`flex-1 pb-2 text-[0.625rem] font-bold uppercase tracking-wider transition-colors relative ${
-                  activeTab === "preferences" ? "text-cyan-400" : "text-gray-500 hover:text-gray-300"
+                  activeTab === "preferences" ? "text-amber-400" : "text-gray-500 hover:text-gray-300"
                 }`}
               >
                 Preferences
                 {activeTab === "preferences" && (
-                  <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-cyan-400 rounded-full" />
+                  <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-amber-400 rounded-full" />
                 )}
               </button>
             </div>

@@ -46,9 +46,9 @@ export default function ClubSettings() {
   const [antiCollusion, setAntiCollusion] = useState(true);
 
   // S14: Branding
-  const [themeColor, setThemeColor] = useState("cyan");
+  const [themeColor, setThemeColor] = useState("gold");
   const THEME_COLORS = [
-    { id: "cyan", label: "Cyan", color: "#00d4ff" },
+    { id: "gold", label: "Gold", color: "#d4af37" },
     { id: "gold", label: "Gold", color: "#f59e0b" },
     { id: "purple", label: "Purple", color: "#a855f7" },
     { id: "green", label: "Green", color: "#22c55e" },
@@ -535,13 +535,13 @@ export default function ClubSettings() {
                 <div
                   className="rounded-lg p-3 flex items-center gap-3"
                   style={{
-                    background: `${THEME_COLORS.find(c => c.id === themeColor)?.color ?? '#00d4ff'}10`,
-                    border: `1px solid ${THEME_COLORS.find(c => c.id === themeColor)?.color ?? '#00d4ff'}30`,
+                    background: `${THEME_COLORS.find(c => c.id === themeColor)?.color ?? '#d4af37'}10`,
+                    border: `1px solid ${THEME_COLORS.find(c => c.id === themeColor)?.color ?? '#d4af37'}30`,
                   }}
                 >
                   <div
                     className="w-4 h-4 rounded-full shrink-0"
-                    style={{ background: THEME_COLORS.find(c => c.id === themeColor)?.color ?? '#00d4ff' }}
+                    style={{ background: THEME_COLORS.find(c => c.id === themeColor)?.color ?? '#d4af37' }}
                   />
                   <span className="text-[0.625rem] text-gray-400">
                     Preview: Club elements will use the <strong className="text-white">{THEME_COLORS.find(c => c.id === themeColor)?.label}</strong> theme

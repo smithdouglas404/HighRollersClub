@@ -52,7 +52,7 @@ export function RunItVotePanel({ onVote }: RunItVotePanelProps) {
           boxShadow: "0 0 30px rgba(212,175,55,0.1)",
         }}
       >
-        <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-cyan-400 mb-1">
+        <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-amber-400 mb-1">
           All-In Runout
         </div>
         <div className="text-xs text-gray-400 mb-4">
@@ -114,7 +114,7 @@ export function RunItResults({ boards, heroId }: RunItResultsProps) {
           boxShadow: "0 0 20px rgba(0,0,0,0.3)",
         }}
       >
-        <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-cyan-400 mb-3 text-center">
+        <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-amber-400 mb-3 text-center">
           Run It {boards.length === 2 ? "Twice" : "Thrice"}
         </div>
         <div className="space-y-2">

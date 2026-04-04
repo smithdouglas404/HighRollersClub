@@ -312,7 +312,7 @@ export function TauntPicker({ heroId, isMultiplayer }: TauntPickerProps) {
                 onClick={() => setTab("free")}
                 className={`flex-1 py-2 text-[0.625rem] font-bold uppercase tracking-wider transition-colors ${
                   tab === "free"
-                    ? "text-cyan-400 border-b-2 border-cyan-400"
+                    ? "text-amber-400 border-b-2 border-amber-400"
                     : "text-gray-500 hover:text-gray-300"
                 }`}
               >
@@ -322,7 +322,7 @@ export function TauntPicker({ heroId, isMultiplayer }: TauntPickerProps) {
                 onClick={() => setTab("premium")}
                 className={`flex-1 py-2 text-[0.625rem] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1 ${
                   tab === "premium"
-                    ? "text-cyan-400 border-b-2 border-cyan-400"
+                    ? "text-amber-400 border-b-2 border-amber-400"
                     : "text-gray-500 hover:text-gray-300"
                 }`}
               >
@@ -405,7 +405,7 @@ export function TauntPicker({ heroId, isMultiplayer }: TauntPickerProps) {
         className={`glass rounded-xl p-3 transition-all ${isOpen ? "neon-border-amber" : ""} ${cooldown ? "opacity-50" : ""}`}
         disabled={cooldown}
       >
-        <Megaphone className={`w-5 h-5 ${isOpen ? "text-cyan-400" : "text-gray-500"}`} />
+        <Megaphone className={`w-5 h-5 ${isOpen ? "text-amber-400" : "text-gray-500"}`} />
       </motion.button>
     </div>
   );

@@ -181,7 +181,7 @@ export function EmotePicker({ heroId, isMultiplayer }: { heroId: string; isMulti
         className={`glass rounded-xl p-3 transition-all ${isOpen ? "neon-border-amber" : ""} ${cooldown ? "opacity-50" : ""}`}
         disabled={cooldown}
       >
-        <MessageCircle className={`w-5 h-5 ${isOpen ? "text-cyan-400" : "text-gray-500"}`} />
+        <MessageCircle className={`w-5 h-5 ${isOpen ? "text-amber-400" : "text-gray-500"}`} />
       </motion.button>
     </div>
   );

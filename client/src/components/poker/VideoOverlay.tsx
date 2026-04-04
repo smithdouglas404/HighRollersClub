@@ -170,8 +170,8 @@ export function VideoGrid({ players, heroId }: VideoGridProps) {
         onClick={() => setCollapsed(!collapsed)}
         className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-white/5 transition-colors"
       >
-        <Video className="w-3 h-3 text-cyan-400" />
-        <span className="text-[0.625rem] font-bold uppercase tracking-wider text-cyan-400">
+        <Video className="w-3 h-3 text-amber-400" />
+        <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400">
           Live Video
         </span>
         <span className="text-[0.5rem] text-gray-500 ml-0.5">
@@ -273,7 +273,7 @@ export function VideoControlBar({ heroId, tableId, playerIds, isAdmin }: VideoCo
       {!active ? (
         <button
           onClick={handleToggleVideo}
-          className="flex items-center gap-1.5 px-3 py-1 rounded text-[0.625rem] font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1 rounded text-[0.625rem] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
           title="Join video chat"
         >
           <Camera className="w-3.5 h-3.5" /> JOIN VIDEO
@@ -285,13 +285,13 @@ export function VideoControlBar({ heroId, tableId, playerIds, isAdmin }: VideoCo
             onClick={handleToggleVideo}
             className={`p-1.5 rounded transition-colors ${
               videoOn
-                ? "bg-cyan-500/15 hover:bg-cyan-500/25"
+                ? "bg-amber-500/15 hover:bg-amber-500/25"
                 : "bg-red-500/15 hover:bg-red-500/25"
             }`}
             title={videoOn ? "Turn off camera" : "Turn on camera"}
           >
             {videoOn ? (
-              <Video className="w-3.5 h-3.5 text-cyan-400" />
+              <Video className="w-3.5 h-3.5 text-amber-400" />
             ) : (
               <VideoOff className="w-3.5 h-3.5 text-red-400" />
             )}
@@ -302,13 +302,13 @@ export function VideoControlBar({ heroId, tableId, playerIds, isAdmin }: VideoCo
             onClick={handleToggleAudio}
             className={`p-1.5 rounded transition-colors ${
               audioOn
-                ? "bg-cyan-500/15 hover:bg-cyan-500/25"
+                ? "bg-amber-500/15 hover:bg-amber-500/25"
                 : "bg-red-500/15 hover:bg-red-500/25"
             }`}
             title={audioOn ? "Mute mic" : "Unmute mic"}
           >
             {audioOn ? (
-              <Mic className="w-3.5 h-3.5 text-cyan-400" />
+              <Mic className="w-3.5 h-3.5 text-amber-400" />
             ) : (
               <MicOff className="w-3.5 h-3.5 text-red-400" />
             )}

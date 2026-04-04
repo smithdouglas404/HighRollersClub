@@ -12,7 +12,7 @@ interface BreakingNewsModalProps {
 }
 
 const PRIORITY_STYLES: Record<Priority, { border: string; icon: typeof Bell; iconColor: string; pulse: boolean }> = {
-  normal:    { border: "border-cyan-500/50",  icon: Bell,          iconColor: "text-cyan-400",  pulse: false },
+  normal:    { border: "border-amber-500/50",  icon: Bell,          iconColor: "text-amber-400",  pulse: false },
   important: { border: "border-amber-500/50", icon: AlertTriangle, iconColor: "text-amber-400", pulse: false },
   urgent:    { border: "border-red-500/50",   icon: AlertTriangle, iconColor: "text-red-400",   pulse: true },
 };
@@ -67,7 +67,7 @@ export function BreakingNewsModal({ title, message, priority = "normal", onClose
             {/* Icon */}
             <div className="flex items-center gap-3 mb-4">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                priority === "urgent" ? "bg-red-500/15" : priority === "important" ? "bg-amber-500/15" : "bg-cyan-500/15"
+                priority === "urgent" ? "bg-red-500/15" : priority === "important" ? "bg-amber-500/15" : "bg-amber-500/15"
               }`}>
                 <Icon className={`w-5 h-5 ${style.iconColor}`} />
               </div>

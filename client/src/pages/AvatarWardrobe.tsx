@@ -63,12 +63,9 @@ function AvatarCard({
         {/* Gradient overlay at bottom */}
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
 
-        {/* Legendary lock overlay */}
-        {avatar.tier === "legendary" && !isEquipped && (
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 z-10">
-            <Lock className="w-5 h-5 text-amber-400/80" />
-            <span className="text-[0.5rem] font-bold text-amber-400/80 uppercase tracking-wider">Level 10</span>
-          </div>
+        {/* Legendary premium indicator */}
+        {avatar.tier === "legendary" && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 z-10" />
         )}
 
         {/* 3D badge */}
@@ -131,10 +128,10 @@ export default function AvatarWardrobe() {
 
   const handleSave = async () => {
     try {
-      await fetch("/api/profile", {
-        method: "PATCH",
+      await fetch("/api/profile/avatar", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatar: equipped.image }),
+        body: JSON.stringify({ avatarId: equipped.id }),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);

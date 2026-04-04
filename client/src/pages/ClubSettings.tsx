@@ -68,7 +68,13 @@ export default function ClubSettings() {
   const handleSave = async () => {
     if (saving || !name.trim()) return;
     setSaving(true);
-    const ok = await updateClub({ name, description, isPublic });
+    const ok = await updateClub({
+      name, description, isPublic,
+      timezone, language,
+      rakePercent, maxBuyInCap: 0, creditLimit: 0,
+      require2fa: false, adminApprovalRequired: adminApproval,
+      antiCollusion, themeColor,
+    });
     if (ok) {
       setSuccessMsg("Club settings saved successfully.");
       setTimeout(() => setSuccessMsg(""), 3000);

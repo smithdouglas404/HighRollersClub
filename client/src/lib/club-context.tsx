@@ -129,7 +129,7 @@ interface ClubContextType {
   reload: () => Promise<void>;
   switchClub: (clubId: string) => void;
   createClub: (data: { name: string; description?: string; isPublic?: boolean }) => Promise<ClubData | null>;
-  updateClub: (data: { name?: string; description?: string; isPublic?: boolean }) => Promise<boolean>;
+  updateClub: (data: Record<string, any>) => Promise<boolean>;
   deleteClub: () => Promise<boolean>;
   sendInvite: (username: string) => Promise<boolean>;
   handleInvitation: (invId: string, status: "accepted" | "declined") => Promise<boolean>;
@@ -313,7 +313,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     }
   }, [reload, switchClub, toast]);
 
-  const updateClub = useCallback(async (data: { name?: string; description?: string; isPublic?: boolean }) => {
+  const updateClub = useCallback(async (data: Record<string, any>) => {
     if (!club) return false;
     try {
       const res = await fetch(`/api/clubs/${club.id}`, {

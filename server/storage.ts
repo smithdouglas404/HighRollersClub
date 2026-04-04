@@ -46,6 +46,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByWalletAddress(address: string): Promise<User | undefined>;
+  getUserByFirebaseUid(uid: string): Promise<User | undefined>;
   getUserByMemberId(memberId: string): Promise<User | undefined>;
   getAllUsersByKycStatus(status: string): Promise<User[]>;
   createUser(user: Partial<User> & Pick<User, "username" | "password">): Promise<User>;
@@ -310,6 +311,9 @@ export class MemStorage implements IStorage {
   async getUserByWalletAddress(address: string) {
     return Array.from(this.users.values()).find(u => u.walletAddress?.toLowerCase() === address.toLowerCase());
   }
+  async getUserByFirebaseUid(uid: string) {
+    return Array.from(this.users.values()).find(u => u.firebaseUid === uid);
+  }
   async getUserByMemberId(memberId: string) {
     return Array.from(this.users.values()).find(u => u.memberId === memberId);
   }
@@ -333,6 +337,7 @@ export class MemStorage implements IStorage {
       walletAddress: data.walletAddress || null,
       twoFactorSecret: data.twoFactorSecret || null,
       twoFactorEnabled: data.twoFactorEnabled ?? false,
+      firebaseUid: data.firebaseUid ?? null,
       connectedWallets: data.connectedWallets ?? null,
       recoveryCodes: data.recoveryCodes ?? null,
       premiumUntil: data.premiumUntil ?? null,
@@ -1375,6 +1380,10 @@ export class DatabaseStorage implements IStorage {
     const [user] = await this.db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${address})`);
     return user;
   }
+  async getUserByFirebaseUid(uid: string) {
+    const [user] = await this.db.select().from(users).where(eq(users.firebaseUid, uid));
+    return user;
+  }
   async getUserByMemberId(memberId: string) {
     const [user] = await this.db.select().from(users).where(eq(users.memberId, memberId));
     return user;
@@ -1392,6 +1401,9 @@ export class DatabaseStorage implements IStorage {
       role: data.role || "guest",
       provider: data.provider || "local",
       providerId: data.providerId,
+      firebaseUid: data.firebaseUid,
+      email: data.email,
+      memberId: data.memberId,
     }).returning();
     return user;
   }

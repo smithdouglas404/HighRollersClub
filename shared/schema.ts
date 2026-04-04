@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   email: text("email"),
   walletAddress: text("wallet_address"),
+  firebaseUid: text("firebase_uid").unique(),
   connectedWallets: jsonb("connected_wallets"), // [{provider, address}]
   recoveryCodes: jsonb("recovery_codes"), // hashed recovery codes [{hash, salt, used}]
   premiumUntil: timestamp("premium_until"), // premium subscription expiry

@@ -10,6 +10,7 @@ import { type User } from "@shared/schema";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual, createHmac, createHash } from "crypto";
 import { promisify } from "util";
 import nodemailer from "nodemailer";
+import { verifyFirebaseToken } from "./firebase-admin";
 
 const scryptAsync = promisify(scrypt);
 
@@ -327,10 +328,102 @@ export function registerAuthRoutes(app: Express) {
     });
   });
 
-  // Get current user
-  app.get("/api/auth/me", (req, res) => {
-    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
-    res.json(req.user);
+  // Get current user (also checks Firebase token if no session)
+  app.get("/api/auth/me", async (req, res) => {
+    if (req.user) return res.json(req.user);
+
+    // Try Firebase token fallback
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const decoded = await verifyFirebaseToken(authHeader.slice(7));
+      if (decoded) {
+        const user = await storage.getUserByFirebaseUid(decoded.uid);
+        if (user) {
+          const safeUser = sanitizeUser(user);
+          req.login(safeUser, (err) => {
+            if (err) return res.status(401).json({ message: "Not authenticated" });
+            res.json(safeUser);
+          });
+          return;
+        }
+      }
+    }
+
+    return res.status(401).json({ message: "Not authenticated" });
+  });
+
+  // Firebase authentication sync — creates or links account from Firebase token
+  app.post("/api/auth/firebase-sync", async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Firebase token required" });
+    }
+
+    const decoded = await verifyFirebaseToken(authHeader.slice(7));
+    if (!decoded) {
+      return res.status(401).json({ message: "Invalid Firebase token" });
+    }
+
+    const { displayName, username: requestedUsername, avatarUrl, email } = req.body;
+
+    try {
+      // Check if user already exists with this Firebase UID
+      const existing = await storage.getUserByFirebaseUid(decoded.uid);
+
+      if (existing) {
+        // Update profile if new info provided
+        const updates: Record<string, any> = {};
+        if (displayName && displayName !== existing.displayName) updates.displayName = displayName;
+        if (avatarUrl) updates.avatarId = avatarUrl;
+        if (email && !existing.email) updates.email = email;
+        if (Object.keys(updates).length > 0) {
+          await storage.updateUser(existing.id, updates);
+        }
+
+        const safeUser = sanitizeUser(existing);
+        req.login(safeUser, (err) => {
+          if (err) return next(err);
+          res.json({ ...safeUser, balance: existing.chipBalance });
+        });
+        return;
+      }
+
+      // Create new user from Firebase
+      const baseUsername = requestedUsername || email?.split("@")[0] || decoded.uid.slice(0, 16);
+      let finalUsername = baseUsername.replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 20).toLowerCase();
+
+      const existingByUsername = await storage.getUserByUsername(finalUsername);
+      if (existingByUsername) {
+        finalUsername = `${finalUsername}_${Date.now().toString(36).slice(-4)}`;
+      }
+
+      const memberId = "HR-" + createHash("sha256").update(decoded.uid + Date.now().toString()).digest("hex").substring(0, 8);
+      const user = await storage.createUser({
+        username: finalUsername,
+        password: await hashPassword(randomUUID()), // placeholder password
+        displayName: displayName || decoded.name || finalUsername,
+        role: "member",
+        chipBalance: 10000,
+        memberId,
+        firebaseUid: decoded.uid,
+        email: email || decoded.email || null,
+        provider: "google",
+        avatarId: GUEST_AVATAR_IDS[Math.floor(Math.random() * GUEST_AVATAR_IDS.length)],
+      });
+
+      // Create wallets and seed main wallet
+      await storage.ensureWallets(user.id);
+      await storage.atomicAddToWallet(user.id, "main", 10000);
+
+      const safeUser = sanitizeUser(user);
+      req.login(safeUser, (err) => {
+        if (err) return next(err);
+        res.status(201).json({ ...safeUser, balance: 10000 });
+      });
+    } catch (err: any) {
+      console.error("Firebase sync error:", err);
+      res.status(500).json({ message: "Failed to sync Firebase user" });
+    }
   });
 
   // Change password

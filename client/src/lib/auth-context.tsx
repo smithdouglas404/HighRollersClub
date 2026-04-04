@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { signInWithPopup, signOut, onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
+import { auth as firebaseAuth, googleProvider, firebaseConfigured } from "./firebase";
 
 export interface AuthUser {
   id: string;
@@ -20,16 +22,20 @@ export interface AuthUser {
   kycRejectionReason?: string | null;
   memberId?: string | null;
   kycBlockchainTxHash?: string | null;
+  firebaseUid?: string | null;
   createdAt: string;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
+  firebaseUser: FirebaseUser | null;
   loading: boolean;
   error: string | null;
+  firebaseEnabled: boolean;
   loginAsGuest: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string, displayName?: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -38,8 +44,10 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [firebaseSynced, setFirebaseSynced] = useState(false);
 
   const fetchUser = useCallback(async () => {
     try {
@@ -57,8 +65,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check session on mount
   useEffect(() => {
-    fetchUser().finally(() => setLoading(false));
+    fetchUser().finally(() => {
+      // If Firebase isn't configured, we're done loading
+      if (!firebaseConfigured) {
+        setLoading(false);
+      }
+    });
   }, [fetchUser]);
+
+  // Listen for Firebase auth state changes
+  useEffect(() => {
+    if (!firebaseConfigured || !firebaseAuth) {
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (fbUser) => {
+      setFirebaseUser(fbUser);
+      if (!fbUser) {
+        // Firebase signed out — only clear user if they were a Firebase user
+        if (user?.firebaseUid) {
+          setUser(null);
+        }
+        setFirebaseSynced(false);
+        setLoading(false);
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // Sync Firebase user to backend when Firebase auth state changes
+  useEffect(() => {
+    if (!firebaseUser || firebaseSynced) return;
+    if (user && !user.firebaseUid) return; // Already logged in via local auth
+
+    const syncUser = async () => {
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const res = await fetch("/api/auth/firebase-sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            displayName: firebaseUser.displayName || "Player",
+            username: firebaseUser.email?.split("@")[0],
+            avatarUrl: firebaseUser.photoURL,
+            email: firebaseUser.email,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+          setFirebaseSynced(true);
+        }
+      } catch (err) {
+        console.error("Failed to sync Firebase user:", err);
+        // Fallback: try session-based /me
+        await fetchUser();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    syncUser();
+  }, [firebaseUser, firebaseSynced, fetchUser]);
 
   const loginAsGuest = useCallback(async () => {
     setError(null);
@@ -116,18 +189,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async () => {
+    if (!firebaseConfigured || !firebaseAuth) {
+      setError("Google sign-in is not configured");
+      return;
+    }
+    setError(null);
+    try {
+      const result = await signInWithPopup(firebaseAuth, googleProvider);
+      // The onAuthStateChanged listener will handle syncing
+      setFirebaseUser(result.user);
+      setFirebaseSynced(false); // Trigger sync
+    } catch (err: any) {
+      if (err.code === "auth/popup-closed-by-user") return;
+      setError(err.message || "Google sign-in failed");
+      throw err;
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     let serverLogoutFailed = false;
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
-      if (!res.ok) {
-        serverLogoutFailed = true;
-      }
+      if (!res.ok) serverLogoutFailed = true;
     } catch {
       serverLogoutFailed = true;
     }
-    // Always clear local state so user can re-login
+
+    // Also sign out of Firebase
+    if (firebaseConfigured && firebaseAuth) {
+      try { await signOut(firebaseAuth); } catch { /* ignore */ }
+    }
+
     setUser(null);
+    setFirebaseUser(null);
+    setFirebaseSynced(false);
     if (serverLogoutFailed) {
       setError("Logged out locally, but server session may still be active");
     }
@@ -138,7 +234,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUser]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, loginAsGuest, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{
+      user, firebaseUser, loading, error,
+      firebaseEnabled: firebaseConfigured,
+      loginAsGuest, login, register, loginWithGoogle, logout, refreshUser,
+    }}>
       {children}
     </AuthContext.Provider>
   );

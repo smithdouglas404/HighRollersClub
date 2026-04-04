@@ -121,7 +121,7 @@ export function useDealingSequence(
 
     const dealOrder = getDealOrder();
     const s = speedMultiplier; // scale factor for animations
-    const DEAL_INTERVAL = 100 * s; // ms per card per player
+    const DEAL_INTERVAL = 180 * s; // ms per card per player — deliberate pace
 
     // Phase 1: Dealer move
     setState(prev => ({
@@ -134,14 +134,14 @@ export function useDealingSequence(
       showBurnCard: false,
     }));
 
-    let elapsed = 250 * s; // dealer move time
+    let elapsed = 400 * s; // dealer move time — let button animate
 
     // Phase 2: Posting blinds (with chip sound)
     schedule(() => {
       soundEngine.playChipClink();
       setState(prev => ({ ...prev, dealPhase: "posting-blinds" }));
     }, elapsed);
-    elapsed += 350 * s;
+    elapsed += 500 * s; // let blinds post visibly
 
     // Phase 3: Dealing round 1 (one card each, clockwise)
     schedule(() => {
@@ -160,7 +160,7 @@ export function useDealingSequence(
         });
       }, delay);
     }
-    elapsed += dealOrder.length * DEAL_INTERVAL + 80 * s;
+    elapsed += dealOrder.length * DEAL_INTERVAL + 200 * s; // pause between rounds
 
     // Phase 4: Dealing round 2 (second card each, clockwise)
     schedule(() => {
@@ -179,7 +179,7 @@ export function useDealingSequence(
         });
       }, delay);
     }
-    elapsed += dealOrder.length * DEAL_INTERVAL + 150 * s;
+    elapsed += dealOrder.length * DEAL_INTERVAL + 300 * s; // settle before controls
 
     // Phase 5: Ready
     schedule(() => {
@@ -226,7 +226,7 @@ export function useDealingSequence(
         showBurnCard: true,
         controlsReady: false,
       }));
-      elapsed += 300 * s;
+      elapsed += 450 * s; // let burn card be visible
 
       // Deal 3 cards face-down
       schedule(() => {
@@ -239,7 +239,7 @@ export function useDealingSequence(
           communityFlipped: false,
         }));
       }, elapsed);
-      elapsed += 400 * s;
+      elapsed += 600 * s; // let cards land before flipping
 
       // Flip them face-up
       schedule(() => {
@@ -249,7 +249,7 @@ export function useDealingSequence(
           communityFlipped: true,
         }));
       }, elapsed);
-      elapsed += 600 * s;
+      elapsed += 800 * s; // let players see the flop
 
       // Ready
       schedule(() => {
@@ -273,7 +273,7 @@ export function useDealingSequence(
         showBurnCard: true,
         controlsReady: false,
       }));
-      elapsed += 300 * s;
+      elapsed += 450 * s;
 
       schedule(() => {
         soundEngine.playPhaseReveal();
@@ -285,7 +285,7 @@ export function useDealingSequence(
           communityFlipped: false,
         }));
       }, elapsed);
-      elapsed += 300 * s;
+      elapsed += 500 * s;
 
       schedule(() => {
         setState(prev => ({
@@ -294,7 +294,7 @@ export function useDealingSequence(
           communityFlipped: true,
         }));
       }, elapsed);
-      elapsed += 400 * s;
+      elapsed += 700 * s;
 
       schedule(() => {
         setState(prev => ({
@@ -317,7 +317,7 @@ export function useDealingSequence(
         showBurnCard: true,
         controlsReady: false,
       }));
-      elapsed += 300 * s;
+      elapsed += 450 * s;
 
       schedule(() => {
         soundEngine.playPhaseReveal();
@@ -329,7 +329,7 @@ export function useDealingSequence(
           communityFlipped: false,
         }));
       }, elapsed);
-      elapsed += 300 * s;
+      elapsed += 500 * s;
 
       schedule(() => {
         setState(prev => ({
@@ -338,7 +338,7 @@ export function useDealingSequence(
           communityFlipped: true,
         }));
       }, elapsed);
-      elapsed += 400 * s;
+      elapsed += 700 * s;
 
       schedule(() => {
         setState(prev => ({

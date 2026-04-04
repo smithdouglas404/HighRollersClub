@@ -62,15 +62,15 @@ export function InsurancePanel({ offer, onAccept, onDecline }: InsurancePanelPro
         className="rounded-xl overflow-hidden backdrop-blur-xl"
         style={{
           background: "linear-gradient(135deg, rgba(10,15,30,0.95), rgba(20,10,40,0.95))",
-          border: "1px solid rgba(0,212,255,0.2)",
-          boxShadow: "0 0 30px rgba(0,212,255,0.1), inset 0 1px 0 rgba(255,255,255,0.05)",
+          border: "1px solid rgba(212,175,55,0.2)",
+          boxShadow: "0 0 30px rgba(212,175,55,0.1), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
       >
         {/* Holographic top border */}
         <div
           className="h-[2px] w-full"
           style={{
-            background: "linear-gradient(90deg, transparent, #00d4ff, #00d4ff, #00d4ff, transparent)",
+            background: "linear-gradient(90deg, transparent, #d4af37, #d4af37, #d4af37, transparent)",
           }}
         />
 

@@ -210,7 +210,7 @@ class SoundEngine {
   playCardDeal() { this.playSound('card-deal'); }
   playCardFlip() { this.playSound('card-flip'); }
   playChipClink() { this.playSound('chip-bet'); }
-  playChipSlide() { this.playSound('chip-bet'); }
+  playChipSlide() { this.playSound('chip-slide'); }
   playFold() { this.playSound('fold'); }
   playCheck() { this.playSound('check'); }
   playCall() { this.playSound('call'); }

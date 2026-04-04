@@ -12,9 +12,9 @@ export interface Emote {
 }
 
 export const EMOTES: Emote[] = [
-  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#00d4ff", imageUrl: "/emotes/emote_gg.webp" },
+  { id: "gg", emoji: "\ud83c\udfae", label: "GG", color: "#d4af37", imageUrl: "/emotes/emote_gg.webp" },
   { id: "nice", emoji: "\ud83d\udc4f", label: "Nice Hand", color: "#ffd700", imageUrl: "/emotes/emote_nice.webp" },
-  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#00d4ff", imageUrl: "/emotes/emote_bluff.webp" },
+  { id: "bluff", emoji: "\ud83e\udd14", label: "Bluff?", color: "#d4af37", imageUrl: "/emotes/emote_bluff.webp" },
   { id: "allin", emoji: "\ud83d\ude80", label: "All In!", color: "#ff3366", imageUrl: "/emotes/emote_allin.webp" },
   { id: "gl", emoji: "\ud83c\udf40", label: "Good Luck", color: "#22c55e", imageUrl: "/emotes/emote_gl.webp" },
   { id: "think", emoji: "\ud83e\udde0", label: "Hmm...", color: "#b44dff", imageUrl: "/emotes/emote_think.webp" },

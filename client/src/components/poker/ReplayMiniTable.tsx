@@ -45,8 +45,8 @@ export function ReplayMiniTable({ snapshot }: { snapshot: ReplaySnapshot }) {
       style={{
         aspectRatio: "16/10",
         background: "radial-gradient(ellipse 80% 70% at 50% 50%, #1a4a3a 0%, #0d2e23 50%, #0a1f18 100%)",
-        border: "3px solid rgba(0,212,255,0.15)",
-        boxShadow: "0 0 40px rgba(0,212,255,0.06), inset 0 0 80px rgba(0,0,0,0.4)",
+        border: "3px solid rgba(212,175,55,0.15)",
+        boxShadow: "0 0 40px rgba(212,175,55,0.06), inset 0 0 80px rgba(0,0,0,0.4)",
       }}
     >
       {/* Felt oval */}
@@ -54,7 +54,7 @@ export function ReplayMiniTable({ snapshot }: { snapshot: ReplaySnapshot }) {
         className="absolute inset-[8%] rounded-[50%]"
         style={{
           background: "radial-gradient(ellipse at 50% 50%, #1e5a44 0%, #174a38 60%, #0d3325 100%)",
-          border: "2px solid rgba(0,212,255,0.1)",
+          border: "2px solid rgba(212,175,55,0.1)",
           boxShadow: "inset 0 2px 20px rgba(0,0,0,0.3)",
         }}
       />
@@ -107,9 +107,9 @@ export function ReplayMiniTable({ snapshot }: { snapshot: ReplaySnapshot }) {
                 player.isFolded ? "opacity-30" : ""
               }`}
               style={{
-                background: isActive ? "rgba(0,212,255,0.12)" : "rgba(0,0,0,0.5)",
-                border: `1px solid ${isActive ? "rgba(0,212,255,0.4)" : "rgba(255,255,255,0.08)"}`,
-                boxShadow: isActive ? "0 0 12px rgba(0,212,255,0.2)" : "none",
+                background: isActive ? "rgba(212,175,55,0.12)" : "rgba(0,0,0,0.5)",
+                border: `1px solid ${isActive ? "rgba(212,175,55,0.4)" : "rgba(255,255,255,0.08)"}`,
+                boxShadow: isActive ? "0 0 12px rgba(212,175,55,0.2)" : "none",
                 backdropFilter: "blur(8px)",
               }}
             >

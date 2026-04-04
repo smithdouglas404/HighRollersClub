@@ -103,7 +103,7 @@ function SessionStats({ hands }: { hands: HandRecord[] }) {
                     />
                     <polyline
                       fill="none"
-                      stroke="#00d4ff"
+                      stroke="#d4af37"
                       strokeWidth="1.5"
                       points={points}
                     />

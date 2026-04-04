@@ -5,7 +5,7 @@
 // Seat positions as % of the table-image overlay div (1408x768 aspect).
 // Seats sit on/just outside the rail edge of the poker table image.
 export const TABLE_SEATS = [
-  { x: 50.0, y: 95.0, scale: 1.0  },  // 0: Hero (6 o'clock) — full size
+  { x: 50.0, y: 91.0, scale: 1.0  },  // 0: Hero (6 o'clock) — full size
   { x: 17.0, y: 80.0, scale: 0.95 },  // 1: bottom-left (7 o'clock)
   { x: 3.5,  y: 50.0, scale: 0.92 },  // 2: left (9 o'clock)
   { x: 13.0, y: 18.0, scale: 0.88 },  // 3: top-left (11 o'clock)

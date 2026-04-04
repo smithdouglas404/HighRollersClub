@@ -31,7 +31,7 @@ export function CommentarySubtitles({ enabled }: CommentarySubtitlesProps) {
   if (!enabled || !speaker || !text) return null;
 
   const speakerName = speaker === "pbp" ? "LON" : "NORMAN";
-  const speakerColor = speaker === "pbp" ? "#00d4ff" : "#ffd700";
+  const speakerColor = speaker === "pbp" ? "#d4af37" : "#ffd700";
   const isExcited = emphasis === "excited";
 
   return (

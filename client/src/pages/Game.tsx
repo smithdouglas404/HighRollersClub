@@ -1165,7 +1165,12 @@ function GameTable({
                     playerCount={players.length}
                     maxSeats={10}
                     players={players}
-                    dealerSeatIndex={players.findIndex(p => p.isDealer)}
+                    dealerSeatIndex={(() => {
+                      const rawIdx = players.findIndex(p => p.isDealer);
+                      if (rawIdx < 0) return -1;
+                      const heroIdx = players.findIndex(p => p.id === heroId);
+                      return (rawIdx - heroIdx + players.length) % players.length;
+                    })()}
                     visibleCommunityCards={dealing.visibleCommunityCards}
                     communityFlipped={dealing.communityFlipped}
                     showBurnCard={dealing.showBurnCard}

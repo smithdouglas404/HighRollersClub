@@ -48,8 +48,8 @@ export function RunItVotePanel({ onVote }: RunItVotePanelProps) {
         className="rounded-xl p-5 backdrop-blur-xl text-center"
         style={{
           background: "rgba(10,15,30,0.92)",
-          border: "1px solid rgba(0,212,255,0.2)",
-          boxShadow: "0 0 30px rgba(0,212,255,0.1)",
+          border: "1px solid rgba(212,175,55,0.2)",
+          boxShadow: "0 0 30px rgba(212,175,55,0.1)",
         }}
       >
         <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-cyan-400 mb-1">
@@ -73,8 +73,8 @@ export function RunItVotePanel({ onVote }: RunItVotePanelProps) {
                   : count === 2
                   ? "linear-gradient(135deg, rgba(0,150,200,0.4), rgba(0,120,180,0.4))"
                   : "linear-gradient(135deg, rgba(0,180,220,0.5), rgba(0,140,180,0.5))",
-                border: `1px solid ${count === 1 ? "rgba(255,255,255,0.15)" : "rgba(0,212,255,0.3)"}`,
-                boxShadow: count > 1 ? "0 0 12px rgba(0,212,255,0.15)" : "none",
+                border: `1px solid ${count === 1 ? "rgba(255,255,255,0.15)" : "rgba(212,175,55,0.3)"}`,
+                boxShadow: count > 1 ? "0 0 12px rgba(212,175,55,0.15)" : "none",
               }}
             >
               {count === 1 ? "Once" : count === 2 ? "Twice" : "Thrice"}
@@ -110,7 +110,7 @@ export function RunItResults({ boards, heroId }: RunItResultsProps) {
         className="rounded-xl p-4 backdrop-blur-xl"
         style={{
           background: "rgba(10,15,30,0.9)",
-          border: "1px solid rgba(0,212,255,0.15)",
+          border: "1px solid rgba(212,175,55,0.15)",
           boxShadow: "0 0 20px rgba(0,0,0,0.3)",
         }}
       >

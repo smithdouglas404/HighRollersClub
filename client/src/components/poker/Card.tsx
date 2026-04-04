@@ -25,13 +25,14 @@ const suitGlow: Record<Suit, string> = {
   spades:   "rgba(51,65,85,0.5)",
 };
 
+// Card sizes use strict 2:3 ratio matching SVG native 210x315
 const sizeConfig = {
-  sm:    { w: "w-[52px]",   h: "h-[72px]",   wPx: 52,  hPx: 72  },
-  md:    { w: "w-[72px]",   h: "h-[100px]",  wPx: 72,  hPx: 100 },
-  lg:    { w: "w-[90px]",   h: "h-[126px]",  wPx: 90,  hPx: 126 },
-  xl:    { w: "w-[108px]",  h: "h-[152px]",  wPx: 108, hPx: 152 },
-  "2xl": { w: "w-[130px]",  h: "h-[182px]",  wPx: 130, hPx: 182 },
-  "3xl": { w: "w-[160px]",  h: "h-[224px]",  wPx: 160, hPx: 224 },
+  sm:    { w: "w-[50px]",   h: "h-[75px]",   wPx: 50,  hPx: 75  },
+  md:    { w: "w-[70px]",   h: "h-[105px]",  wPx: 70,  hPx: 105 },
+  lg:    { w: "w-[90px]",   h: "h-[135px]",  wPx: 90,  hPx: 135 },
+  xl:    { w: "w-[108px]",  h: "h-[162px]",  wPx: 108, hPx: 162 },
+  "2xl": { w: "w-[130px]",  h: "h-[195px]",  wPx: 130, hPx: 195 },
+  "3xl": { w: "w-[160px]",  h: "h-[240px]",  wPx: 160, hPx: 240 },
 };
 
 /* ── Card image URLs (Doug's SVG deck) ── */
@@ -50,12 +51,12 @@ function CardFace({ card, isHero }: { card: CardType; isHero: boolean }) {
       boxShadow: isHero
         ? "inset 0 0 10px rgba(212,175,55,0.15), inset 0 1px 0 rgba(255,255,255,0.15)"
         : "inset 0 0 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.1)",
-      background: "#f8f6f0",
+      background: "#fdfeee",
     }}>
       <img
         src={getCardFaceUrl(card.rank, card.suit)}
         alt={`${card.rank} of ${card.suit}`}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-contain"
         draggable={false}
         style={{ filter: "contrast(1.05) saturate(1.1)" }}
       />

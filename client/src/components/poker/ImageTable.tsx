@@ -246,7 +246,7 @@ export function ImageTable({
             className="absolute pointer-events-none"
             style={{
               left: "50%",
-              top: "38%",
+              top: "44%",
               transform: "translate(-50%, -50%)",
               width: "420px",
               height: "180px",
@@ -271,7 +271,7 @@ export function ImageTable({
                 className="absolute flex gap-2.5"
                 style={{
                   left: "50%",
-                  top: "38%",
+                  top: "44%",
                   transform: "translate(-50%, -50%)",
                   filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.7))",
                 }}
@@ -302,7 +302,7 @@ export function ImageTable({
               exit={{ opacity: 0, scale: 0.85 }}
               transition={compactMode ? { duration: 0 } : undefined}
               className="absolute flex flex-col items-center gap-1"
-              style={{ left: "50%", top: "22%", transform: "translate(-50%, -50%)" }}
+              style={{ left: "50%", top: "28%", transform: "translate(-50%, -50%)" }}
             >
               {/* Phase label */}
               {dealPhase && (

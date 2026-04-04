@@ -28,7 +28,7 @@ export function ReplayTimeline({
       style={{
         background: "rgba(20,31,40,0.65)",
         backdropFilter: "blur(16px)",
-        border: "1px solid rgba(0,212,255,0.12)",
+        border: "1px solid rgba(212,175,55,0.12)",
       }}
     >
       {/* Street markers */}
@@ -41,7 +41,7 @@ export function ReplayTimeline({
               onClick={() => onGoToAction(marker.actionIndex)}
               className={`px-2.5 py-1 rounded text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
                 isCurrentOrPast
-                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/20"
+                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/20"
                   : "text-gray-600 hover:text-gray-400 border border-transparent"
               }`}
             >
@@ -84,7 +84,7 @@ export function ReplayTimeline({
         })}
         {/* Playhead */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-cyan-400 border-2 border-white shadow-[0_0_8px_rgba(0,212,255,0.4)] transition-all duration-150 group-hover:scale-125"
+          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-white shadow-[0_0_8px_rgba(212,175,55,0.4)] transition-all duration-150 group-hover:scale-125"
           style={{ left: `calc(${progress * 100}% - 7px)` }}
         />
       </div>
@@ -108,15 +108,15 @@ export function ReplayTimeline({
           className="p-3 rounded-full transition-all"
           style={{
             background: isPlaying
-              ? "rgba(0,212,255,0.15)"
-              : "linear-gradient(135deg, #00d4ff, #009ec2)",
-            border: `1px solid ${isPlaying ? "rgba(0,212,255,0.3)" : "transparent"}`,
-            boxShadow: isPlaying ? "none" : "0 0 15px rgba(0,212,255,0.3)",
+              ? "rgba(212,175,55,0.15)"
+              : "linear-gradient(135deg, #d4af37, #009ec2)",
+            border: `1px solid ${isPlaying ? "rgba(212,175,55,0.3)" : "transparent"}`,
+            boxShadow: isPlaying ? "none" : "0 0 15px rgba(212,175,55,0.3)",
           }}
           title="Play/Pause (Space)"
         >
           {isPlaying ? (
-            <Pause className="w-5 h-5 text-cyan-400" />
+            <Pause className="w-5 h-5 text-amber-400" />
           ) : (
             <Play className="w-5 h-5 text-black" />
           )}
@@ -149,7 +149,7 @@ export function ReplayTimeline({
             {snapshot.players.find(p => p.id === snapshot.currentAction!.playerId)?.displayName ?? "Player"}
             {" "}
           </span>
-          <span className="text-[0.625rem] font-bold text-cyan-400 uppercase">
+          <span className="text-[0.625rem] font-bold text-amber-400 uppercase">
             {snapshot.currentAction.action}
           </span>
           {snapshot.currentAction.amount ? (

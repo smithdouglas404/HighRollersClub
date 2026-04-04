@@ -39,8 +39,8 @@ export function VideoThumbnail({ userId, isLocal = false }: VideoThumbnailProps)
     <div
       className="absolute inset-0 rounded-xl overflow-hidden z-[2]"
       style={{
-        boxShadow: "0 0 12px rgba(0,212,255,0.3), inset 0 0 6px rgba(0,212,255,0.1)",
-        border: "2px solid rgba(0,212,255,0.5)",
+        boxShadow: "0 0 12px rgba(212,175,55,0.3), inset 0 0 6px rgba(212,175,55,0.1)",
+        border: "2px solid rgba(212,175,55,0.5)",
       }}
     >
       <video
@@ -160,7 +160,7 @@ export function VideoGrid({ players, heroId }: VideoGridProps) {
       style={{
         width: panelWidth,
         background: "rgba(8,14,28,0.92)",
-        border: "1px solid rgba(0,212,255,0.15)",
+        border: "1px solid rgba(212,175,55,0.15)",
         backdropFilter: "blur(16px)",
         boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
       }}

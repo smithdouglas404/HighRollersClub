@@ -54,7 +54,7 @@ export const TAUNT_MAP = new Map(ALL_TAUNTS.map(t => [t.id, t]));
 const RARITY_COLORS: Record<string, string> = {
   common: "#9ca3af",
   uncommon: "#22c55e",
-  rare: "#00d4ff",
+  rare: "#d4af37",
   epic: "#a855f7",
   legendary: "#f59e0b",
 };
@@ -62,7 +62,7 @@ const RARITY_COLORS: Record<string, string> = {
 const RARITY_BORDER: Record<string, string> = {
   common: "rgba(156,163,175,0.15)",
   uncommon: "rgba(34,197,94,0.25)",
-  rare: "rgba(0,212,255,0.30)",
+  rare: "rgba(212,175,55,0.30)",
   epic: "rgba(168,85,247,0.30)",
   legendary: "rgba(245,158,11,0.40)",
 };
@@ -70,7 +70,7 @@ const RARITY_BORDER: Record<string, string> = {
 const RARITY_GLOW: Record<string, string> = {
   common: "none",
   uncommon: "0 0 8px rgba(34,197,94,0.15)",
-  rare: "0 0 12px rgba(0,212,255,0.20)",
+  rare: "0 0 12px rgba(212,175,55,0.20)",
   epic: "0 0 15px rgba(168,85,247,0.25)",
   legendary: "0 0 20px rgba(245,158,11,0.35)",
 };

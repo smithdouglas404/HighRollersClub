@@ -327,6 +327,7 @@ function BetChipStack({ amount }: { amount: number }) {
       style={{
         width: 24,
         height: 24 + chipCount * 3,
+        perspective: "100px",
         transform: "rotateX(50deg)",
         transformOrigin: "bottom center",
       }}
@@ -370,7 +371,8 @@ function PlayerChipStack({ chips, side }: { chips: number; side: "left" | "right
       style={{
         justifyContent: side === "left" ? "flex-end" : "flex-start",
         gap: 2,
-        transform: `rotateX(45deg) scale(var(--seat-scale, 1))`,
+        perspective: "100px",
+        transform: `scale(var(--seat-scale, 1)) rotateX(45deg)`,
         transformOrigin: "bottom center",
         marginTop: -4,
       }}
@@ -815,11 +817,9 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 ...(!isTop && seatIndex !== 0 && isRight ? { left: "-8px", top: "50%", transform: "translateY(-50%) translateX(-100%)" } : {}),
               };
               return (
-                <div style={betStyle} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
-                  style2-unused=""
-                >
-                  <span className="text-[#d4af37] font-bold font-mono" style={{ fontSize: "0.5em" }}
-                    style={{ background: "rgba(10,10,12,0.85)", border: "1px solid rgba(212,175,55,0.3)", borderRadius: "9999px", padding: "1px 6px" }}>
+                <div style={betStyle} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full">
+                  <span className="text-[#d4af37] font-bold font-mono"
+                    style={{ fontSize: "0.5em", background: "rgba(10,10,12,0.85)", border: "1px solid rgba(212,175,55,0.3)", borderRadius: "9999px", padding: "1px 6px" }}>
                     {formatChips(player.currentBet)}
                   </span>
                 </div>

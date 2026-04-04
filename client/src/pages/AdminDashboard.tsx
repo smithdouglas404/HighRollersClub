@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw } from "lucide-react";
+import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;
@@ -91,7 +91,13 @@ interface PaymentRecord {
   createdAt: string;
 }
 
-type Tab = "overview" | "withdrawals" | "collusion" | "system" | "payments";
+interface SocialLinks {
+  twitter: string;
+  discord: string;
+  telegram: string;
+}
+
+type Tab = "overview" | "withdrawals" | "collusion" | "system" | "payments" | "settings";
 
 export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -107,6 +113,9 @@ export default function AdminDashboard() {
   const [rakebackResult, setRakebackResult] = useState<RakebackResult | null>(null);
   const [trialBalance, setTrialBalance] = useState<TrialBalance | null>(null);
   const [adminPayments, setAdminPayments] = useState<PaymentRecord[]>([]);
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>({ twitter: "", discord: "", telegram: "" });
+  const [savingSocial, setSavingSocial] = useState(false);
+  const [socialSaved, setSocialSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [processingRakeback, setProcessingRakeback] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
@@ -164,6 +173,12 @@ export default function AdminDashboard() {
         .then(r => r.ok ? r.json() : [])
         .then(setAdminPayments)
         .catch(err => setError(err.message || "Failed to load payments"))
+        .finally(() => setLoading(false));
+    } else if (activeTab === "settings") {
+      fetch("/api/settings/social", { credentials: "include" })
+        .then(r => r.ok ? r.json() : { twitter: "", discord: "", telegram: "" })
+        .then(data => setSocialLinks(data))
+        .catch(() => {})
         .finally(() => setLoading(false));
     } else if (activeTab === "system") {
       Promise.all([
@@ -264,6 +279,7 @@ export default function AdminDashboard() {
     { key: "collusion", label: "Collusion", icon: <AlertTriangle className="w-4 h-4" /> },
     { key: "payments", label: "Payments", icon: <Eye className="w-4 h-4" /> },
     { key: "system", label: "System", icon: <Server className="w-4 h-4" /> },
+    { key: "settings", label: "Settings", icon: <Settings className="w-4 h-4" /> },
   ];
 
   if (authLoading) {
@@ -668,6 +684,90 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Settings */}
+        {!loading && activeTab === "settings" && (
+          <div className="space-y-6">
+            <div className="glass rounded-xl p-6">
+              <h3 className="text-sm font-bold text-white mb-4">Social Links</h3>
+              <p className="text-xs text-gray-500 mb-4">Configure social media URLs displayed in the landing page footer. Leave blank to hide a link.</p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Twitter / X URL</label>
+                  <input
+                    type="url"
+                    value={socialLinks.twitter}
+                    onChange={e => { setSocialLinks(prev => ({ ...prev, twitter: e.target.value })); setSocialSaved(false); }}
+                    placeholder="https://x.com/yourhandle"
+                    className="w-full rounded-lg px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:border-primary/40 focus:outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Discord URL</label>
+                  <input
+                    type="url"
+                    value={socialLinks.discord}
+                    onChange={e => { setSocialLinks(prev => ({ ...prev, discord: e.target.value })); setSocialSaved(false); }}
+                    placeholder="https://discord.gg/invite-code"
+                    className="w-full rounded-lg px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:border-primary/40 focus:outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Telegram URL</label>
+                  <input
+                    type="url"
+                    value={socialLinks.telegram}
+                    onChange={e => { setSocialLinks(prev => ({ ...prev, telegram: e.target.value })); setSocialSaved(false); }}
+                    placeholder="https://t.me/yourchannel"
+                    className="w-full rounded-lg px-4 py-2.5 text-sm bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:border-primary/40 focus:outline-none transition-colors"
+                  />
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    onClick={async () => {
+                      setSavingSocial(true);
+                      setSocialSaved(false);
+                      setError(null);
+                      try {
+                        const res = await fetch("/api/settings/social", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "include",
+                          body: JSON.stringify(socialLinks),
+                        });
+                        if (!res.ok) {
+                          const errData = await res.json().catch(() => ({}));
+                          throw new Error(errData.message || "Failed to save social links");
+                        }
+                        const saved = await res.json();
+                        setSocialLinks(saved);
+                        setSocialSaved(true);
+                      } catch (err: any) {
+                        setError(err.message || "Failed to save social links");
+                      } finally {
+                        setSavingSocial(false);
+                      }
+                    }}
+                    disabled={savingSocial}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30 transition-colors disabled:opacity-50"
+                  >
+                    {savingSocial ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Save className="w-3 h-3" />
+                    )}
+                    {savingSocial ? "Saving..." : "Save Social Links"}
+                  </button>
+                  {socialSaved && (
+                    <span className="text-xs text-green-400 font-bold flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Saved
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

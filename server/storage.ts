@@ -38,6 +38,8 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByWalletAddress(address: string): Promise<User | undefined>;
   createUser(user: Partial<User> & Pick<User, "username" | "password">): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
 
@@ -250,6 +252,12 @@ export class MemStorage implements IStorage {
   async getUserByUsername(username: string) {
     return Array.from(this.users.values()).find(u => u.username === username);
   }
+  async getUserByEmail(email: string) {
+    return Array.from(this.users.values()).find(u => u.email === email);
+  }
+  async getUserByWalletAddress(address: string) {
+    return Array.from(this.users.values()).find(u => u.walletAddress?.toLowerCase() === address.toLowerCase());
+  }
   async createUser(data: Partial<User> & Pick<User, "username" | "password">): Promise<User> {
     const id = randomUUID();
     const user: User = {
@@ -263,6 +271,8 @@ export class MemStorage implements IStorage {
       role: data.role || "guest",
       provider: data.provider || "local",
       providerId: data.providerId || null,
+      email: data.email || null,
+      walletAddress: data.walletAddress || null,
       twoFactorSecret: data.twoFactorSecret || null,
       twoFactorEnabled: data.twoFactorEnabled ?? false,
       connectedWallets: data.connectedWallets ?? null,
@@ -1104,6 +1114,14 @@ export class DatabaseStorage implements IStorage {
   }
   async getUserByUsername(username: string) {
     const [user] = await this.db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+  async getUserByEmail(email: string) {
+    const [user] = await this.db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+  async getUserByWalletAddress(address: string) {
+    const [user] = await this.db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${address})`);
     return user;
   }
   async createUser(data: Partial<User> & Pick<User, "username" | "password">): Promise<User> {

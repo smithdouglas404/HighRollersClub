@@ -10,6 +10,8 @@ export interface AuthUser {
   role: string;
   provider: string;
   lastDailyClaim: string | null;
+  email?: string | null;
+  walletAddress?: string | null;
   twoFactorEnabled?: boolean;
   createdAt: string;
 }

@@ -511,6 +511,67 @@ function TwoFactorAuth() {
    ──────────────────────────────────────────────────────────── */
 
 function ConnectedWallets() {
+  const { user, refreshUser } = useAuth();
+  const [walletAddress, setWalletAddress] = useState(user?.walletAddress || "");
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  useEffect(() => {
+    setWalletAddress(user?.walletAddress || "");
+  }, [user?.walletAddress]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/profile/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ walletAddress: walletAddress.trim() || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Failed to update wallet" }));
+        throw new Error(data.message || "Failed to update wallet");
+      }
+      setFeedback({
+        type: "success",
+        message: walletAddress.trim() ? "Wallet address linked successfully" : "Wallet address unlinked",
+      });
+      await refreshUser();
+    } catch (err: any) {
+      setFeedback({ type: "error", message: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUnlink = async () => {
+    setWalletAddress("");
+    setSaving(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/profile/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ walletAddress: null }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Failed to unlink wallet" }));
+        throw new Error(data.message || "Failed to unlink wallet");
+      }
+      setFeedback({ type: "success", message: "Wallet address unlinked" });
+      await refreshUser();
+    } catch (err: any) {
+      setFeedback({ type: "error", message: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isLinked = !!user?.walletAddress;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -520,12 +581,59 @@ function ConnectedWallets() {
     >
       <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
         <Wallet className="w-4 h-4 text-primary/70" />
-        Connected Wallets
+        Connected Wallet
       </h3>
 
-      <div className="text-center py-8">
-        <Lock className="w-8 h-8 text-gray-600 mx-auto mb-2" />
-        <p className="text-sm text-gray-400">Wallet linking coming soon</p>
+      {isLinked && (
+        <div className="flex items-center gap-3 p-3.5 rounded-lg bg-green-500/5 border border-green-500/15 mb-4">
+          <Check className="w-4 h-4 text-green-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="text-[0.625rem] text-gray-500 block">Linked Wallet Address</span>
+            <span className="text-sm font-mono text-white truncate block">{user.walletAddress}</span>
+          </div>
+          <button
+            onClick={handleUnlink}
+            disabled={saving}
+            className="px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-50 transition-all shrink-0"
+          >
+            Unlink
+          </button>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <div>
+          <label className="block text-[0.625rem] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">
+            Wallet Address
+          </label>
+          <input
+            type="text"
+            value={walletAddress}
+            onChange={(e) => { setWalletAddress(e.target.value); setFeedback(null); }}
+            placeholder="0x..."
+            className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all"
+          />
+        </div>
+
+        {feedback && (
+          <div className={`flex items-center gap-2 p-3 rounded-lg text-[0.625rem] font-medium ${
+            feedback.type === "success"
+              ? "bg-green-500/10 text-green-400 border border-green-500/20"
+              : "bg-red-500/10 text-red-400 border border-red-500/20"
+          }`}>
+            {feedback.type === "success" ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+            {feedback.message}
+          </div>
+        )}
+
+        <button
+          onClick={handleSave}
+          disabled={saving || !walletAddress.trim()}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        >
+          {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+          {isLinked ? "Update Wallet" : "Link Wallet"}
+        </button>
       </div>
     </motion.div>
   );

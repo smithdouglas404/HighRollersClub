@@ -35,6 +35,9 @@ import PremiumUpgrade from "@/pages/PremiumUpgrade";
 import AnnouncementManager from "@/pages/AnnouncementManager";
 import AccountRecovery from "@/pages/AccountRecovery";
 import AvatarWardrobe from "@/pages/AvatarWardrobe";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
+import Support from "@/pages/Support";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -194,6 +197,9 @@ function Router() {
       <Route path="/admin/announcements" component={ProtectedAnnouncementManager} />
       <Route path="/admin" component={ProtectedAdmin} />
       <Route path="/sponsorship">{() => <Redirect to="/admin" />}</Route>
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/support" component={Support} />
       <Route path="/recovery" component={AccountRecovery} />
       <Route path="/wardrobe" component={ProtectedWardrobe} />
       <Route path="/dye-shop">{() => <Redirect to="/shop" />}</Route>

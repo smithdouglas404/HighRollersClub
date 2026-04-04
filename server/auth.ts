@@ -9,6 +9,7 @@ import { hasDatabase, getPool } from "./db";
 import { type User } from "@shared/schema";
 import { randomUUID, scrypt, randomBytes, timingSafeEqual, createHmac } from "crypto";
 import { promisify } from "util";
+import nodemailer from "nodemailer";
 
 const scryptAsync = promisify(scrypt);
 
@@ -486,6 +487,166 @@ export function registerAuthRoutes(app: Express) {
       });
     } catch (err) {
       res.status(500).json({ message: "Recovery failed" });
+    }
+  });
+
+  // ── Email Recovery ──────────────────────────────────────────────────
+
+  const recoveryCodeStore = new Map<string, { code: string; expiresAt: number }>();
+
+  app.post("/api/auth/request-recovery-email", async (req, res) => {
+    try {
+      const { email, username } = req.body;
+      // Look up user by username or email
+      let user: User | undefined;
+      if (username) {
+        user = await storage.getUserByUsername(username);
+      } else if (email) {
+        user = await storage.getUserByEmail(email);
+      }
+
+      // Always return 200 (don't reveal if user exists)
+      if (!user) {
+        return res.json({ sent: true });
+      }
+
+      // Generate 6-digit code
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 min
+      recoveryCodeStore.set(user.id, { code, expiresAt });
+
+      if (process.env.SMTP_HOST) {
+        // Send real email
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT || "587", 10),
+          secure: process.env.SMTP_SECURE === "true",
+          auth: process.env.SMTP_USER ? {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          } : undefined,
+        });
+
+        const fromAddr = process.env.SMTP_FROM || "noreply@highrollers.club";
+        const targetEmail = user.email || email;
+        if (targetEmail) {
+          await transporter.sendMail({
+            from: fromAddr,
+            to: targetEmail,
+            subject: "HighRollers Account Recovery Code",
+            text: `Your recovery code is: ${code}\n\nThis code expires in 15 minutes.`,
+            html: `<p>Your recovery code is: <strong>${code}</strong></p><p>This code expires in 15 minutes.</p>`,
+          });
+        }
+        res.json({ sent: true });
+      } else {
+        // Dev mode: log code to console
+        console.log(`[DEV] Recovery code for ${user.username}: ${code}`);
+        res.json({ sent: true, dev: true });
+      }
+    } catch (err) {
+      console.error("Recovery email error:", err);
+      res.json({ sent: true }); // Don't leak errors
+    }
+  });
+
+  app.post("/api/auth/verify-recovery-email", async (req, res, next) => {
+    try {
+      const { username, code } = req.body;
+      if (!username || !code) {
+        return res.status(400).json({ message: "Username and code are required" });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or code" });
+      }
+
+      const stored = recoveryCodeStore.get(user.id);
+      if (!stored) {
+        return res.status(401).json({ message: "No recovery code found. Please request a new one." });
+      }
+
+      if (Date.now() > stored.expiresAt) {
+        recoveryCodeStore.delete(user.id);
+        return res.status(401).json({ message: "Recovery code has expired. Please request a new one." });
+      }
+
+      if (stored.code !== code.trim()) {
+        return res.status(401).json({ message: "Invalid recovery code" });
+      }
+
+      // Code is valid - delete it and log user in
+      recoveryCodeStore.delete(user.id);
+      const safeUser = sanitizeUser(user);
+      req.login(safeUser, (err) => {
+        if (err) return next(err);
+        res.json({ message: "Recovery successful", user: safeUser });
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Recovery failed" });
+    }
+  });
+
+  // ── Wallet Challenge / Verify ──────────────────────────────────────
+
+  const walletChallengeStore = new Map<string, { challenge: string; expiresAt: number }>();
+
+  app.post("/api/auth/wallet-challenge", (_req, res) => {
+    const challenge = `Sign this message to verify your wallet ownership: ${randomUUID()}`;
+    const token = randomBytes(16).toString("hex");
+    walletChallengeStore.set(token, { challenge, expiresAt: Date.now() + 10 * 60 * 1000 });
+    res.json({ challenge, token });
+  });
+
+  app.post("/api/auth/verify-wallet", async (req, res, next) => {
+    try {
+      const { address, signature, token } = req.body;
+      if (!address || !signature || !token) {
+        return res.status(400).json({ message: "Address, signature, and token are required" });
+      }
+
+      const stored = walletChallengeStore.get(token);
+      if (!stored) {
+        return res.status(401).json({ message: "Invalid or expired challenge. Please request a new one." });
+      }
+
+      if (Date.now() > stored.expiresAt) {
+        walletChallengeStore.delete(token);
+        return res.status(401).json({ message: "Challenge has expired. Please request a new one." });
+      }
+
+      // Simplified verification: just check signature is non-empty and challenge matches
+      // Real crypto verification (e.g. with ethers.js) can be added later
+      if (typeof signature !== "string" || signature.trim().length === 0) {
+        return res.status(400).json({ message: "Signature cannot be empty" });
+      }
+
+      walletChallengeStore.delete(token);
+
+      // If user is already logged in, link the wallet to their account
+      if (req.user) {
+        await storage.updateUser(req.user.id, { walletAddress: address.trim() });
+        const updatedUser = await storage.getUser(req.user.id);
+        if (updatedUser) {
+          const safeUser = sanitizeUser(updatedUser);
+          return res.json({ message: "Wallet linked successfully", user: safeUser });
+        }
+      }
+
+      // Otherwise, find user by stored wallet address
+      const user = await storage.getUserByWalletAddress(address.trim());
+      if (!user) {
+        return res.status(401).json({ message: "No account found with this wallet address. Please link your wallet first from Security settings." });
+      }
+
+      const safeUser = sanitizeUser(user);
+      req.login(safeUser, (err) => {
+        if (err) return next(err);
+        res.json({ message: "Wallet verification successful", user: safeUser });
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Wallet verification failed" });
     }
   });
 

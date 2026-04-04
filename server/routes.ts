@@ -17,6 +17,13 @@ import { MTTManager, activeMTTs } from "./game/mtt-manager";
 let globalSystemLocked = false;
 let globalLockReason = "";
 
+// In-memory social link settings
+let socialLinks: { twitter: string; discord: string; telegram: string } = {
+  twitter: "",
+  discord: "",
+  telegram: "",
+};
+
 export function isSystemLocked(): boolean {
   return globalSystemLocked;
 }
@@ -2632,6 +2639,22 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // ─── POST /api/profile/wallet ─────────────────────────────────────────────
+  app.post("/api/profile/wallet", requireAuth, async (req, res, next) => {
+    try {
+      const { walletAddress } = req.body;
+      // Allow null/empty to unlink
+      const address = walletAddress && typeof walletAddress === "string" ? walletAddress.trim() : null;
+      await storage.updateUser(req.user!.id, { walletAddress: address });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ─── Analytics Endpoints ──────────────────────────────────────────────────
 
   // Club Activity: recent events, member joins, table creations for user's clubs
@@ -2778,6 +2801,48 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) {
       next(err);
     }
+  });
+
+  // ─── Social Link Settings ──────────────────────────────────────────────
+  app.get("/api/settings/social", (_req, res) => {
+    res.json(socialLinks);
+  });
+
+  app.put("/api/settings/social", requireAuth, async (req, res) => {
+    if (req.user!.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const { twitter, discord, telegram } = req.body;
+    if (typeof twitter === "string") socialLinks.twitter = twitter;
+    if (typeof discord === "string") socialLinks.discord = discord;
+    if (typeof telegram === "string") socialLinks.telegram = telegram;
+    res.json(socialLinks);
+  });
+
+  // ─── Support Contact ────────────────────────────────────────────────────
+  const supportMessages: Array<{ id: string; name: string; email: string; subject: string; message: string; createdAt: string }> = [];
+
+  app.post("/api/support/contact", (req, res) => {
+    const { name, email, subject, message } = req.body || {};
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ message: "All fields are required: name, email, subject, message" });
+    }
+    if (typeof name !== "string" || typeof email !== "string" || typeof subject !== "string" || typeof message !== "string") {
+      return res.status(400).json({ message: "All fields must be strings" });
+    }
+    if (name.length > 100 || email.length > 200 || subject.length > 200 || message.length > 5000) {
+      return res.status(400).json({ message: "One or more fields exceed maximum length" });
+    }
+    const entry = {
+      id: require("crypto").randomUUID(),
+      name: name.trim(),
+      email: email.trim(),
+      subject: subject.trim(),
+      message: message.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    supportMessages.push(entry);
+    res.json({ success: true, id: entry.id });
   });
 
   // ─── Create HTTP Server + WebSocket ──────────────────────────────────────

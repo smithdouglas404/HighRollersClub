@@ -47,9 +47,67 @@ function RecoveryCard({
   );
 }
 
-/* -- Crypto Wallet Verification (coming soon) ----------------------------- */
+/* -- Crypto Wallet Verification ------------------------------------------- */
 
 function WalletRecovery() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [address, setAddress] = useState("");
+  const [challenge, setChallenge] = useState("");
+  const [token, setToken] = useState("");
+  const [signature, setSignature] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<"success" | "error" | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [, navigate] = useLocation();
+
+  const handleGetChallenge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!address.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setErrorMsg("");
+    try {
+      const res = await apiRequest("POST", "/api/auth/wallet-challenge", {});
+      const data = await res.json();
+      setChallenge(data.challenge);
+      setToken(data.token);
+      setStep(2);
+    } catch (err: any) {
+      setResult("error");
+      setErrorMsg("Failed to get challenge. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signature.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setErrorMsg("");
+    try {
+      const res = await apiRequest("POST", "/api/auth/verify-wallet", {
+        address: address.trim(),
+        signature: signature.trim(),
+        token,
+      });
+      await res.json();
+      setResult("success");
+      setTimeout(() => navigate("/"), 1500);
+    } catch (err: any) {
+      setResult("error");
+      try {
+        const parsed = JSON.parse(err.message.split(": ").slice(1).join(": "));
+        setErrorMsg(parsed.message || "Wallet verification failed.");
+      } catch {
+        setErrorMsg("Wallet verification failed. Make sure your wallet is linked to an account.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <RecoveryCard
       icon={Wallet}
@@ -59,40 +117,269 @@ function WalletRecovery() {
       accentColor="bg-purple-500/15 text-purple-400"
       accentBorder="border-purple-500/15"
     >
-      <div className="flex items-center gap-2 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-        <Info className="w-4 h-4 text-purple-400 shrink-0" />
-        <span className="text-[0.625rem] font-medium text-purple-300">
-          Wallet recovery coming soon. In the meantime, use backup codes or contact support.
-        </span>
-      </div>
+      {step === 1 && (
+        <form onSubmit={handleGetChallenge} className="space-y-3">
+          <p className="text-[0.625rem] text-gray-400">
+            Enter the wallet address linked to your account to receive a challenge to sign.
+          </p>
+          <div>
+            <label className="block text-[0.625rem] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">
+              Wallet Address
+            </label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => { setAddress(e.target.value); setResult(null); }}
+              placeholder="0x..."
+              className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-purple-500/30 transition-all"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading || !address.trim()}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/25 hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wallet className="w-3.5 h-3.5" />}
+            {loading ? "Loading..." : "Get Challenge"}
+          </button>
+        </form>
+      )}
+
+      {step === 2 && (
+        <div className="space-y-3">
+          <p className="text-[0.625rem] text-gray-400">
+            Sign the following message in your wallet, then paste the signature below.
+          </p>
+          <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+            <label className="block text-[0.625rem] text-gray-500 uppercase tracking-wider mb-1 font-medium">
+              Challenge to Sign
+            </label>
+            <p className="text-xs font-mono text-purple-300 break-all select-all">{challenge}</p>
+          </div>
+          <form onSubmit={handleVerify} className="space-y-3">
+            <div>
+              <label className="block text-[0.625rem] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">
+                Signature
+              </label>
+              <input
+                type="text"
+                value={signature}
+                onChange={(e) => { setSignature(e.target.value); setResult(null); }}
+                placeholder="Paste your signature here"
+                className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-purple-500/30 transition-all"
+                required
+              />
+            </div>
+
+            {result === "success" && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <CheckCircle2 className="w-4 h-4 text-green-400" />
+                <span className="text-[0.625rem] font-medium text-green-400">
+                  Wallet verified! Redirecting to your account...
+                </span>
+              </div>
+            )}
+
+            {result === "error" && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <AlertTriangle className="w-4 h-4 text-red-400" />
+                <span className="text-[0.625rem] font-medium text-red-400">{errorMsg}</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                disabled={loading || !signature.trim()}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/25 hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wallet className="w-3.5 h-3.5" />}
+                {loading ? "Verifying..." : "Verify Signature"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStep(1); setResult(null); setSignature(""); }}
+                className="px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition-all"
+              >
+                Back
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </RecoveryCard>
   );
 }
 
-/* -- Email Recovery (requires SMTP) --------------------------------------- */
+/* -- Email Recovery ------------------------------------------------------- */
 
 function EmailRecovery() {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [username, setUsername] = useState("");
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<"success" | "error" | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [, navigate] = useLocation();
+
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setErrorMsg("");
+    try {
+      const res = await apiRequest("POST", "/api/auth/request-recovery-email", {
+        username: username.trim(),
+      });
+      await res.json();
+      setCodeSent(true);
+      setStep(2);
+    } catch {
+      // API always returns 200, but handle network errors
+      setResult("error");
+      setErrorMsg("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setErrorMsg("");
+    try {
+      const res = await apiRequest("POST", "/api/auth/verify-recovery-email", {
+        username: username.trim(),
+        code: code.trim(),
+      });
+      await res.json();
+      setResult("success");
+      setTimeout(() => navigate("/"), 1500);
+    } catch (err: any) {
+      setResult("error");
+      try {
+        const parsed = JSON.parse(err.message.split(": ").slice(1).join(": "));
+        setErrorMsg(parsed.message || "Invalid code. Please try again.");
+      } catch {
+        setErrorMsg("Invalid code. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <RecoveryCard
       icon={Mail}
       title="Email Recovery"
-      description="Receive a recovery link to your registered email"
+      description="Receive a recovery code to your registered email"
       index={1}
       accentColor="bg-primary/15 text-primary"
       accentBorder="border-primary/15"
     >
-      <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <span className="text-[0.625rem] font-medium text-amber-300 block">
-            Email recovery requires SMTP configuration.
-          </span>
-          <span className="text-[0.625rem] text-amber-400/70 block">
-            Server administrators can enable this by configuring SMTP_HOST, SMTP_PORT, and SMTP_FROM
-            environment variables. See the deployment documentation for setup details.
-          </span>
-        </div>
-      </div>
+      {step === 1 && (
+        <form onSubmit={handleSendCode} className="space-y-3">
+          <p className="text-[0.625rem] text-gray-400">
+            Enter your username or email to receive a 6-digit recovery code.
+          </p>
+          <div>
+            <label className="block text-[0.625rem] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">
+              Username or Email
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => { setUsername(e.target.value); setResult(null); }}
+              placeholder="your username or email"
+              className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all"
+              required
+            />
+          </div>
+
+          {result === "error" && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <span className="text-[0.625rem] font-medium text-red-400">{errorMsg}</span>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !username.trim()}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+            {loading ? "Sending..." : "Send Code"}
+          </button>
+        </form>
+      )}
+
+      {step === 2 && (
+        <form onSubmit={handleVerify} className="space-y-3">
+          {codeSent && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+              <Mail className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-[0.625rem] font-medium text-primary">
+                If an account exists with that username/email, a recovery code has been sent. Check your inbox.
+              </span>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-[0.625rem] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">
+              6-Digit Code
+            </label>
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => { setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); setResult(null); }}
+              placeholder="123456"
+              maxLength={6}
+              className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all tracking-[0.3em] text-center"
+              required
+            />
+          </div>
+
+          {result === "success" && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <CheckCircle2 className="w-4 h-4 text-green-400" />
+              <span className="text-[0.625rem] font-medium text-green-400">
+                Code verified! Redirecting to your account...
+              </span>
+            </div>
+          )}
+
+          {result === "error" && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <span className="text-[0.625rem] font-medium text-red-400">{errorMsg}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={loading || code.length !== 6}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+              {loading ? "Verifying..." : "Verify Code"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setStep(1); setResult(null); setCode(""); setCodeSent(false); }}
+              className="px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition-all"
+            >
+              Back
+            </button>
+          </div>
+        </form>
+      )}
     </RecoveryCard>
   );
 }

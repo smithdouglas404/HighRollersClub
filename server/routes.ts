@@ -14,6 +14,7 @@ import { setAnthropicApiKey, getAnthropicApiKey, hasAIEnabled } from "./game/ai-
 import { hasDatabase, getDb } from "./db";
 import { MTTManager, activeMTTs } from "./game/mtt-manager";
 import { getTournamentSchedule, setTournamentSchedule, type ScheduledTournament } from "./scheduler";
+import { fastFoldManager, type FastFoldPoolConfig } from "./game/fast-fold-manager";
 
 // ─── Tier System Constants ──────────────────────────────────────────────────
 const TIER_ORDER = ["free", "bronze", "silver", "gold", "platinum"] as const;
@@ -262,6 +263,13 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if ((body.gameFormat === "sng" || body.gameFormat === "tournament") && body.blindPreset && !body.blindSchedule) {
         body.blindSchedule = getBlindPreset(body.blindPreset);
       }
+      // Lottery SNG: force hyper-turbo schedule, 3 players, 500 starting chips
+      if (body.gameFormat === "lottery_sng") {
+        body.blindSchedule = getBlindPreset("hyper_turbo");
+        body.maxPlayers = 3;
+        body.startingChips = 500;
+        body.payoutStructure = [{ place: 1, percentage: 100 }];
+      }
       delete body.blindPreset; // Not a schema field
 
       const parsed = insertTableSchema.safeParse(body);
@@ -291,6 +299,179 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) {
       next(err);
     }
+  });
+
+  // ─── Lottery SNG (Spin & Go) ─────────��────────────────────────────────────
+  const LOTTERY_BUY_IN_TIERS = [100, 250, 500, 1000, 2500, 5000] as const;
+
+  // In-memory queue for each buy-in tier: maps tier → array of waiting table IDs
+  const lotteryQueues = new Map<number, string[]>();
+  for (const tier of LOTTERY_BUY_IN_TIERS) {
+    lotteryQueues.set(tier, []);
+  }
+
+  app.get("/api/lottery-sng/tiers", requireAuth, async (_req, res) => {
+    const tiers = LOTTERY_BUY_IN_TIERS.map(buyIn => {
+      const queue = lotteryQueues.get(buyIn) || [];
+      // Count registered players across all queued tables for this tier
+      let totalQueued = 0;
+      for (const tableId of queue) {
+        const instance = tableManager.getTable(tableId);
+        if (instance && instance.lifecycle && instance.lifecycle.status === "registering") {
+          totalQueued += instance.lifecycle.registeredPlayers.size;
+        }
+      }
+      return {
+        buyIn,
+        playersQueued: totalQueued,
+        prizePoolRange: {
+          min: buyIn * 3 * 2,   // 2x multiplier
+          max: buyIn * 3 * 1000, // 1000x multiplier (jackpot)
+        },
+      };
+    });
+    res.json(tiers);
+  });
+
+  app.post("/api/lottery-sng/register", requireAuth, async (req, res, next) => {
+    try {
+      const { buyIn } = req.body;
+      if (!buyIn || !LOTTERY_BUY_IN_TIERS.includes(buyIn)) {
+        return res.status(400).json({ message: `Invalid buy-in. Available tiers: ${LOTTERY_BUY_IN_TIERS.join(", ")}` });
+      }
+
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Find an existing lottery table for this tier that has room
+      const queue = lotteryQueues.get(buyIn) || [];
+      let tableId: string | null = null;
+
+      for (const queuedTableId of queue) {
+        const instance = tableManager.getTable(queuedTableId);
+        if (instance && instance.lifecycle && instance.lifecycle.status === "registering" && instance.lifecycle.registeredPlayers.size < 3) {
+          // Don't let player register twice
+          if (!instance.lifecycle.registeredPlayers.has(userId)) {
+            tableId = queuedTableId;
+            break;
+          }
+        }
+      }
+
+      // If no suitable table, create a new one
+      if (!tableId) {
+        const blindSchedule = getBlindPreset("hyper_turbo");
+        const tableData = insertTableSchema.parse({
+          name: `Spin & Go ${buyIn}`,
+          maxPlayers: 3,
+          smallBlind: 10,
+          bigBlind: 20,
+          minBuyIn: buyIn,
+          maxBuyIn: buyIn,
+          ante: 0,
+          timeBankSeconds: 15,
+          isPrivate: false,
+          allowBots: false,
+          replaceBots: false,
+          gameFormat: "lottery_sng",
+          blindSchedule,
+          buyInAmount: buyIn,
+          startingChips: 500,
+          payoutStructure: [{ place: 1, percentage: 100 }],
+        });
+        const newTable = await storage.createTable({
+          ...tableData,
+          createdById: userId,
+        });
+        tableId = newTable.id;
+        queue.push(tableId);
+        lotteryQueues.set(buyIn, queue);
+      }
+
+      // Join the table via table manager
+      const result = await tableManager.joinTable(
+        tableId,
+        userId,
+        user.displayName || user.username || "Player",
+        buyIn,
+      );
+
+      if (!result.ok) {
+        return res.status(400).json({ message: result.error });
+      }
+
+      // Clean up completed tables from queue
+      const updatedQueue = (lotteryQueues.get(buyIn) || []).filter(id => {
+        const inst = tableManager.getTable(id);
+        return inst && inst.lifecycle && inst.lifecycle.status === "registering";
+      });
+      lotteryQueues.set(buyIn, updatedQueue);
+
+      res.json({ tableId, message: "Registered for Lottery SNG" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Fast-Fold Pools ───��───────────────────��─────────────────────────────
+  app.get("/api/fast-fold/pools", requireAuth, async (_req, res) => {
+    const pools = fastFoldManager.getAllPools();
+    const poolStates = pools.map(p => fastFoldManager.getPoolState(p.poolId)).filter(Boolean);
+    res.json(poolStates);
+  });
+
+  app.post("/api/fast-fold/pools", requireAuth, async (req, res) => {
+    const user = req.user!;
+    // Only admins can create pools
+    const dbUser = await storage.getUser(user.id);
+    if (!dbUser || dbUser.role !== "admin") {
+      return res.status(403).json({ message: "Admin only" });
+    }
+    const { name, smallBlind, bigBlind, minBuyIn, maxBuyIn, maxPlayersPerTable, ante, rakePercent, rakeCap } = req.body;
+    if (!name || !smallBlind || !bigBlind || !minBuyIn || !maxBuyIn) {
+      return res.status(400).json({ message: "Missing required fields: name, smallBlind, bigBlind, minBuyIn, maxBuyIn" });
+    }
+    const config: FastFoldPoolConfig = {
+      name,
+      smallBlind: Number(smallBlind),
+      bigBlind: Number(bigBlind),
+      minBuyIn: Number(minBuyIn),
+      maxBuyIn: Number(maxBuyIn),
+      maxPlayersPerTable: Number(maxPlayersPerTable) || 6,
+      ante: Number(ante) || 0,
+      rakePercent: Number(rakePercent) || 0,
+      rakeCap: Number(rakeCap) || 0,
+    };
+    const pool = fastFoldManager.createPool(config);
+    res.status(201).json(fastFoldManager.getPoolState(pool.poolId));
+  });
+
+  app.post("/api/fast-fold/pools/:poolId/join", requireAuth, async (req, res) => {
+    const { poolId } = req.params;
+    const { buyIn } = req.body;
+    if (!buyIn || Number(buyIn) <= 0) {
+      return res.status(400).json({ message: "Valid buyIn required" });
+    }
+    const user = req.user!;
+    const result = await fastFoldManager.addPlayer(
+      poolId,
+      user.id,
+      user.displayName || user.username,
+      Number(buyIn)
+    );
+    if (!result.ok) {
+      return res.status(400).json({ message: result.error });
+    }
+    res.json({ ok: true, tableId: result.tableId, poolState: fastFoldManager.getPoolState(poolId) });
+  });
+
+  app.post("/api/fast-fold/pools/:poolId/leave", requireAuth, async (req, res) => {
+    const result = await fastFoldManager.removePlayer(req.user!.id);
+    if (!result.ok) {
+      return res.status(400).json({ message: result.error });
+    }
+    res.json({ ok: true });
   });
 
   // ─── User's Clubs ───────────────────────────────────────────────────────
@@ -1575,7 +1756,11 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       for (const [k, v] of Object.entries(req.headers)) {
         if (typeof v === "string") headers[k.toLowerCase()] = v;
       }
-      const result = await svc.processWebhook(provider, req.body, headers);
+      // For Stripe, pass raw body (Buffer) for signature verification
+      const webhookBody = provider === "stripe" && (req as any).rawBody
+        ? (req as any).rawBody
+        : req.body;
+      const result = await svc.processWebhook(provider, webhookBody, headers);
       res.json({ ok: true, ...result });
     } catch (err: any) {
       console.error(`[Webhook] Error processing ${req.params.provider} webhook:`, err.message);

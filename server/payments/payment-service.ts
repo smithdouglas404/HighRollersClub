@@ -445,6 +445,14 @@ export function getPaymentService(): PaymentService {
         webhookSecret: process.env.DIRECT_WALLET_WEBHOOK_SECRET,
       }));
     }
+
+    if (process.env.STRIPE_API_KEY) {
+      const { StripeGateway } = require("./stripe-gateway");
+      paymentServiceInstance.registerGateway(new StripeGateway({
+        apiKey: process.env.STRIPE_API_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+      }));
+    }
   }
   return paymentServiceInstance;
 }

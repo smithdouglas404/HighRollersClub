@@ -28,6 +28,7 @@ const WALLET_CONFIG = [
 ];
 
 const CRYPTO_CURRENCIES = [
+  { id: "USD", name: "Credit/Debit Card", icon: "💳", color: "text-emerald-400" },
   { id: "BTC", name: "Bitcoin", icon: "₿", color: "text-orange-400" },
   { id: "ETH", name: "Ethereum", icon: "Ξ", color: "text-blue-400" },
   { id: "USDT", name: "Tether", icon: "$", color: "text-green-400" },
@@ -37,12 +38,13 @@ const CRYPTO_CURRENCIES = [
 ];
 
 const GATEWAYS = [
+  { id: "stripe", name: "Stripe", desc: "Credit/debit card, instant", badge: "Cards" },
   { id: "nowpayments", name: "NOWPayments", desc: "200+ coins, simple setup", badge: "Most Coins" },
   { id: "direct", name: "Direct Wallet", desc: "No middleman, lowest fees", badge: "Low Fees" },
 ];
 
 const FEE_ESTIMATES: Record<string, string> = {
-  USDT: "~1 USDT", BTC: "~0.0001 BTC", ETH: "~0.002 ETH", SOL: "~0.001 SOL",
+  USD: "No fee", USDT: "~1 USDT", BTC: "~0.0001 BTC", ETH: "~0.002 ETH", SOL: "~0.001 SOL",
   LTC: "~0.001 LTC", DOGE: "~2 DOGE",
 };
 
@@ -364,6 +366,7 @@ function TransferPanel({ onComplete, initialFrom, initialTo }: { onComplete: () 
 
 // Map backend SupportedCurrency to the display shape used by the UI
 const CURRENCY_ICON_MAP: Record<string, { icon: string; color: string }> = {
+  USD: { icon: "$", color: "text-emerald-400" },
   BTC: { icon: "\u20BF", color: "text-orange-400" },
   ETH: { icon: "\u039E", color: "text-blue-400" },
   USDT: { icon: "$", color: "text-green-400" },
@@ -382,7 +385,7 @@ function DepositPanel() {
   const [allocation, setAllocation] = useState<Record<string, number>>({ main: 100, cash_game: 0, sng: 0, tournament: 0 });
   const [lockedWallets, setLockedWallets] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
-  const [depositResult, setDepositResult] = useState<{ payAddress: string; payAmount: string; currency: string; expiresAt: string } | null>(null);
+  const [depositResult, setDepositResult] = useState<{ payAddress: string; payAmount: string; currency: string; expiresAt: string; gatewayProvider?: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [expirySeconds, setExpirySeconds] = useState(0);
 
@@ -521,8 +524,12 @@ function DepositPanel() {
       });
       if (res.ok) {
         const data = await res.json();
-        setDepositResult({ payAddress: data.payAddress, payAmount: data.payAmount, currency: data.currency, expiresAt: data.expiresAt });
-        toast({ title: "Deposit Created", description: `Send ${data.payAmount} ${currency} to the address shown` });
+        setDepositResult({ payAddress: data.payAddress, payAmount: data.payAmount, currency: data.currency, expiresAt: data.expiresAt, gatewayProvider: data.gatewayProvider || gateway });
+        if (data.gatewayProvider === "stripe" || gateway === "stripe") {
+          toast({ title: "Deposit Created", description: "Click the button to complete payment with your card" });
+        } else {
+          toast({ title: "Deposit Created", description: `Send ${data.payAmount} ${currency} to the address shown` });
+        }
       } else {
         const err = await res.json().catch(() => ({ message: "Deposit failed" }));
         toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -546,6 +553,8 @@ function DepositPanel() {
   if (depositResult) {
     const expiryMin = Math.floor(expirySeconds / 60);
     const expirySec = expirySeconds % 60;
+    const isStripe = depositResult.gatewayProvider === "stripe";
+
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
         <div className="text-center space-y-2">
@@ -553,23 +562,50 @@ function DepositPanel() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="w-14 h-14 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto"
+            className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto ${
+              isStripe ? "bg-indigo-500/10 border border-indigo-500/20" : "bg-green-500/10 border border-green-500/20"
+            }`}
           >
-            <QrCode className="w-7 h-7 text-green-400" />
+            {isStripe
+              ? <ExternalLink className="w-7 h-7 text-indigo-400" />
+              : <QrCode className="w-7 h-7 text-green-400" />
+            }
           </motion.div>
-          <p className="text-sm font-bold text-white">Send Payment</p>
-          <p className="text-xs text-gray-500">Send exactly <span className="text-primary font-bold">{depositResult.payAmount} {depositResult.currency}</span></p>
+          <p className="text-sm font-bold text-white">{isStripe ? "Complete Payment" : "Send Payment"}</p>
+          {isStripe ? (
+            <p className="text-xs text-gray-500">Pay <span className="text-primary font-bold">${depositResult.payAmount} USD</span> with your card</p>
+          ) : (
+            <p className="text-xs text-gray-500">Send exactly <span className="text-primary font-bold">{depositResult.payAmount} {depositResult.currency}</span></p>
+          )}
         </div>
 
-        {/* Address with copy */}
-        <div className="relative group">
-          <div className="px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] font-mono text-xs text-gray-300 break-all pr-12">
-            {depositResult.payAddress}
+        {/* Stripe: Pay with Card button */}
+        {isStripe ? (
+          <div className="space-y-3">
+            <a
+              href={depositResult.payAddress}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-indigo-500 to-purple-600 text-white border border-indigo-400/30 hover:from-indigo-400 hover:to-purple-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Pay with Card
+            </a>
+            <p className="text-[0.5625rem] text-gray-600 text-center">You will be redirected to Stripe's secure checkout</p>
           </div>
-          <button onClick={copyAddress} aria-label="Copy deposit address" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-            {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-gray-400" />}
-          </button>
-        </div>
+        ) : (
+          <>
+            {/* Crypto: Address with copy */}
+            <div className="relative group">
+              <div className="px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] font-mono text-xs text-gray-300 break-all pr-12">
+                {depositResult.payAddress}
+              </div>
+              <button onClick={copyAddress} aria-label="Copy deposit address" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-gray-400" />}
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Expiry countdown */}
         {expirySeconds > 0 && (
@@ -601,7 +637,9 @@ function DepositPanel() {
           })}
         </div>
 
-        <p className="text-[0.5625rem] text-gray-600 text-center">Payment will be credited after blockchain confirmations</p>
+        <p className="text-[0.5625rem] text-gray-600 text-center">
+          {isStripe ? "Payment will be credited instantly after card authorization" : "Payment will be credited after blockchain confirmations"}
+        </p>
         <button onClick={() => { setDepositResult(null); setStep(1); }} className="w-full py-2.5 rounded-lg text-xs font-medium text-gray-400 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">
           New Deposit
         </button>
@@ -662,42 +700,64 @@ function DepositPanel() {
 
         {step === 2 && (
           <motion.div key="step2" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
-            {/* Currency */}
+            {/* Payment Method */}
             <div>
-              <label id="deposit-crypto-label" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Cryptocurrency</label>
+              <label id="deposit-crypto-label" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Payment Method</label>
               <div className="grid grid-cols-3 gap-1.5">
                 {activeCurrencies.map(c => (
-                  <button key={c.id} onClick={() => setCurrency(c.id)}
+                  <button key={c.id} onClick={() => {
+                    setCurrency(c.id);
+                    // Auto-select appropriate gateway
+                    if (c.id === "USD") {
+                      setGateway("stripe");
+                    } else if (gateway === "stripe") {
+                      // Switch away from Stripe for crypto currencies
+                      const cryptoGateway = activeGateways.find(g => g.id !== "stripe");
+                      if (cryptoGateway) setGateway(cryptoGateway.id);
+                    }
+                  }}
                     className={`px-2 py-2.5 rounded-lg text-[0.625rem] font-semibold border transition-all flex items-center gap-1.5 justify-center ${
                       currency === c.id ? "bg-primary/15 text-primary border-primary/25" : "bg-white/[0.02] text-gray-500 border-white/[0.05] hover:bg-white/[0.05]"
                     }`}>
                     <span className={c.color}>{c.icon}</span>
-                    {c.id}
+                    {c.id === "USD" ? "Card" : c.id}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Gateway */}
-            <div>
-              <label id="deposit-gateway-label" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Payment Gateway</label>
-              <div className="space-y-1.5">
-                {activeGateways.map(g => (
-                  <button key={g.id} onClick={() => setGateway(g.id)}
-                    className={`w-full px-3 py-2.5 rounded-lg text-left border transition-all flex items-center justify-between ${
-                      gateway === g.id ? "bg-primary/10 border-primary/20" : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]"
-                    }`}>
-                    <div>
-                      <p className={`text-xs font-medium ${gateway === g.id ? "text-primary" : "text-gray-300"}`}>{g.name}</p>
-                      <p className="text-[0.5625rem] text-gray-600">{g.desc}</p>
-                    </div>
-                    <span className={`text-[0.5rem] font-bold uppercase px-1.5 py-0.5 rounded-full ${gateway === g.id ? "bg-primary/20 text-primary" : "bg-white/[0.05] text-gray-600"}`}>
-                      {g.badge}
-                    </span>
-                  </button>
-                ))}
+            {/* Gateway — hidden for USD/Stripe since it's the only fiat option */}
+            {currency === "USD" ? (
+              <div className="px-3 py-2.5 rounded-lg bg-indigo-500/5 border border-indigo-500/15 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                  <Shield className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-indigo-300">Stripe Secure Checkout</p>
+                  <p className="text-[0.5625rem] text-gray-500">Visa, Mastercard, AMEX, and more</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label id="deposit-gateway-label" className="text-[0.625rem] text-gray-500 uppercase tracking-wider font-medium mb-1.5 block">Payment Gateway</label>
+                <div className="space-y-1.5">
+                  {activeGateways.filter(g => g.id !== "stripe").map(g => (
+                    <button key={g.id} onClick={() => setGateway(g.id)}
+                      className={`w-full px-3 py-2.5 rounded-lg text-left border transition-all flex items-center justify-between ${
+                        gateway === g.id ? "bg-primary/10 border-primary/20" : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]"
+                      }`}>
+                      <div>
+                        <p className={`text-xs font-medium ${gateway === g.id ? "text-primary" : "text-gray-300"}`}>{g.name}</p>
+                        <p className="text-[0.5625rem] text-gray-600">{g.desc}</p>
+                      </div>
+                      <span className={`text-[0.5rem] font-bold uppercase px-1.5 py-0.5 rounded-full ${gateway === g.id ? "bg-primary/20 text-primary" : "bg-white/[0.05] text-gray-600"}`}>
+                        {g.badge}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-2">
               <button onClick={() => setStep(1)} className="px-4 py-2.5 rounded-lg text-xs font-bold uppercase text-gray-400 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">Back</button>
@@ -773,7 +833,7 @@ function DepositPanel() {
               <button onClick={() => setStep(2)} className="px-4 py-2.5 rounded-lg text-xs font-bold uppercase text-gray-400 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">Back</button>
               <button onClick={handleDeposit} disabled={loading || totalPercent !== 100}
                 className="flex-1 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wider bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 border border-green-500/20 hover:border-green-500/40 transition-all disabled:opacity-40">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Generate Payment Address"}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (currency === "USD" ? "Proceed to Card Payment" : "Generate Payment Address")}
               </button>
             </div>
           </motion.div>

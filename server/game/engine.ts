@@ -8,7 +8,7 @@ import type { BlindLevel } from "./blind-presets";
 // ─── Types ───────────────────────────────────────────────────────────────────
 export type GamePhase = "waiting" | "collecting-seeds" | "pre-flop" | "flop" | "turn" | "river" | "showdown";
 export type PlayerStatus = "waiting" | "thinking" | "folded" | "all-in" | "checked" | "called" | "raised" | "sitting-out";
-export type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
+export type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot" | "fast_fold" | "lottery_sng";
 
 export interface SeatPlayer {
   id: string;

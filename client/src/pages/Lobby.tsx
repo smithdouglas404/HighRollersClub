@@ -16,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NeonButton } from "@/components/ui/neon";
 
-type GameFormat = "all" | "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
+type GameFormat = "all" | "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot" | "fast_fold" | "lottery_sng";
 type StakeLevel = "all" | "micro" | "low" | "mid" | "high";
 type PokerVariant = "all" | "nlhe" | "plo" | "plo5" | "short_deck";
 
@@ -50,6 +50,8 @@ const FORMAT_TABS: { key: GameFormat; label: string; icon: any }[] = [
   { key: "heads_up", label: "Heads Up", icon: Swords },
   { key: "tournament", label: "Tournament", icon: Trophy },
   { key: "bomb_pot", label: "Bomb Pot", icon: Bomb },
+  { key: "fast_fold", label: "Rush", icon: Zap },
+  { key: "lottery_sng", label: "Spin & Go", icon: CircleDot },
 ];
 
 const STAKE_TABS: { key: StakeLevel; label: string; description: string }[] = [

@@ -9,6 +9,7 @@ import { isIpBlocked } from "./middleware/geofence";
 import { isSystemLocked } from "./routes";
 import { subscribeCommentary, unsubscribeCommentary, setOmniscientMode, getCommentaryState } from "./game/commentary-engine";
 import { antiCheatEngine } from "./anti-cheat";
+import { fastFoldManager } from "./game/fast-fold-manager";
 
 // Client connection with metadata
 export interface WsClient {
@@ -40,6 +41,9 @@ export type ClientMessage =
   | { type: "wait_for_bb" }
   | { type: "commentary_toggle"; enabled: boolean }
   | { type: "commentary_omniscient"; enabled: boolean }
+  // Fast-fold pool messages
+  | { type: "join_fast_fold_pool"; poolId: string; buyIn: number }
+  | { type: "leave_fast_fold_pool" }
   // Admin controls
   | { type: "admin_pause_game"; tableId: string }
   | { type: "admin_resume_game"; tableId: string }
@@ -81,12 +85,18 @@ export type ServerMessage =
   | { type: "player_moved"; playerId: string; displayName: string; toTableId: string; reason: string }
   | { type: "commentary"; segment: any }
   | { type: "commentary_status"; enabled: boolean; omniscientMode: boolean }
+  // Lottery SNG messages
+  | { type: "lottery_spin"; multiplier: number; prizePool: number; animation: "spinning" }
+  | { type: "lottery_result"; multiplier: number; prizePool: number }
   // Admin control responses
   | { type: "game_paused"; pausedBy: string }
   | { type: "game_resumed"; resumedBy: string }
   | { type: "waiting_list"; players: { id: string; name: string; avatar?: string; chipBalance: number }[] }
   | { type: "player_approved"; playerId: string; displayName: string }
-  | { type: "player_declined"; playerId: string };
+  | { type: "player_declined"; playerId: string }
+  // Fast-fold pool responses
+  | { type: "fast_fold_reassign"; newTableId: string }
+  | { type: "fast_fold_pool_info"; poolId: string; playerCount: number; tablesActive: number };
 
 // Global map of connected clients
 const clients = new Map<string, WsClient>();
@@ -673,6 +683,40 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         enabled: true,
         omniscientMode: msg.enabled,
       });
+      break;
+    }
+
+    // ═══ FAST-FOLD POOL ═══
+
+    case "join_fast_fold_pool": {
+      if (isSystemLocked()) {
+        sendToUser(client.userId, { type: "error", message: "System is temporarily locked for maintenance" });
+        return;
+      }
+      const result = await fastFoldManager.addPlayer(
+        msg.poolId,
+        client.userId,
+        client.displayName,
+        msg.buyIn
+      );
+      if (!result.ok) {
+        sendToUser(client.userId, { type: "error", message: result.error! });
+        return;
+      }
+      if (result.tableId) {
+        client.tableId = result.tableId;
+        sendGameStateToTable(result.tableId);
+      }
+      break;
+    }
+
+    case "leave_fast_fold_pool": {
+      const result = await fastFoldManager.removePlayer(client.userId);
+      if (!result.ok) {
+        sendToUser(client.userId, { type: "error", message: result.error! });
+        return;
+      }
+      client.tableId = null;
       break;
     }
 

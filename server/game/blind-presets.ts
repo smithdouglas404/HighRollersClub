@@ -41,6 +41,18 @@ export const TURBO_SNG_SCHEDULE: BlindLevel[] = [
   { level: 10, sb: 1000, bb: 2000, ante: 200, durationSeconds: 180 },
 ];
 
+// Hyper-Turbo SNG (Lottery/Spin & Go): 8 levels, 2 minutes each
+export const HYPER_TURBO_SCHEDULE: BlindLevel[] = [
+  { level: 1, sb: 10, bb: 20, ante: 0, durationSeconds: 120 },
+  { level: 2, sb: 15, bb: 30, ante: 5, durationSeconds: 120 },
+  { level: 3, sb: 25, bb: 50, ante: 5, durationSeconds: 120 },
+  { level: 4, sb: 50, bb: 100, ante: 10, durationSeconds: 120 },
+  { level: 5, sb: 75, bb: 150, ante: 15, durationSeconds: 120 },
+  { level: 6, sb: 100, bb: 200, ante: 25, durationSeconds: 120 },
+  { level: 7, sb: 150, bb: 300, ante: 50, durationSeconds: 120 },
+  { level: 8, sb: 250, bb: 500, ante: 75, durationSeconds: 120 },
+];
+
 // MTT: 15 levels, 10 minutes each
 export const MTT_SCHEDULE: BlindLevel[] = [
   { level: 1, sb: 10, bb: 20, ante: 0, durationSeconds: 600 },
@@ -170,6 +182,7 @@ export function getLargeFieldPayouts(playerCount: number): PayoutEntry[] {
 export function getBlindPreset(name: string): BlindLevel[] {
   switch (name) {
     case "turbo": return TURBO_SNG_SCHEDULE;
+    case "hyper_turbo": return HYPER_TURBO_SCHEDULE;
     case "mtt": return MTT_SCHEDULE;
     case "standard":
     default: return STANDARD_SNG_SCHEDULE;

@@ -10,7 +10,9 @@ import { blockchainConfig } from "../blockchain/config";
 import { VRFClient } from "../blockchain/vrf-client";
 import { ContractClient } from "../blockchain/contract-client";
 import { SNGLifecycle, type EliminationInfo } from "./format-lifecycle";
-import { STANDARD_SNG_SCHEDULE, getDefaultPayouts, type BlindLevel, type PayoutEntry } from "./blind-presets";
+import { LotterySNGLifecycle } from "./lottery-sng-lifecycle";
+import { STANDARD_SNG_SCHEDULE, HYPER_TURBO_SCHEDULE, getDefaultPayouts, type BlindLevel, type PayoutEntry } from "./blind-presets";
+import { fastFoldManager } from "./fast-fold-manager";
 
 // 12 cinematic avatar IDs available for players
 const AVATAR_IDS = [
@@ -129,9 +131,13 @@ class TableManager {
       engine.vrfClient = this.vrfClient;
     }
 
-    // Create lifecycle for SNG
+    // Create lifecycle for SNG or Lottery SNG
     let lifecycle: SNGLifecycle | null = null;
-    if (gameFormat === "sng") {
+    if (gameFormat === "lottery_sng") {
+      lifecycle = new LotterySNGLifecycle(
+        tableRow.buyInAmount || tableRow.minBuyIn,
+      );
+    } else if (gameFormat === "sng") {
       lifecycle = new SNGLifecycle(
         tableRow.maxPlayers,
         tableRow.buyInAmount || tableRow.minBuyIn,
@@ -443,7 +449,7 @@ class TableManager {
       }
 
       // Track tournament hands
-      if (gameFormat === "tournament" || gameFormat === "sng") {
+      if (gameFormat === "tournament" || gameFormat === "sng" || gameFormat === "lottery_sng") {
         for (const p of summary.players) {
           if (!p.id.startsWith("bot-")) {
             storage.incrementPlayerStat(p.id, "tournamentHands", 1).catch(() => {});
@@ -460,6 +466,11 @@ class TableManager {
       this.processPendingLeaves(tableId).catch(err => {
         console.error(`[table-manager] Error processing pending leaves for ${tableId}:`, err);
       });
+
+      // Fast-fold: reassign all players to new tables after hand completes
+      if (gameFormat === "fast_fold" && fastFoldManager.isTableInPool(tableId)) {
+        fastFoldManager.handleHandComplete(tableId);
+      }
 
       // Broadcast seed reveal at showdown
       broadcastToTable(tableId, {
@@ -577,7 +588,7 @@ class TableManager {
     // Determine wallet type from the table's game format
     const instance = this.tables.get(tableId);
     const format = instance?.config.gameFormat || "cash";
-    const walletType = format === "sng" ? "sng" : format === "tournament" ? "tournament" : "main";
+    const walletType = (format === "sng" || format === "lottery_sng") ? "sng" : format === "tournament" ? "tournament" : "main";
 
     await storage.ensureWallets(userId);
     const { newBalance } = await storage.atomicAddToWallet(userId, walletType as any, amount);
@@ -652,6 +663,110 @@ class TableManager {
   ): Promise<{ ok: boolean; error?: string }> {
     const instance = await this.ensureTable(tableId);
     const { engine, config, lifecycle } = instance;
+
+    // Lottery SNG path: 3-player spin & go
+    if (config.gameFormat === "lottery_sng" && lifecycle && lifecycle instanceof LotterySNGLifecycle) {
+      const fixedBuyIn = config.buyInAmount;
+
+      // Check if player already registered
+      if (lifecycle.registeredPlayers.has(userId)) {
+        return { ok: false, error: "Already registered" };
+      }
+      if (lifecycle.status !== "registering") {
+        return { ok: false, error: "Game already started" };
+      }
+
+      // Atomically deduct fixed buy-in from SNG wallet
+      const user = await storage.getUser(userId);
+      if (!user) return { ok: false, error: "User not found" };
+
+      await storage.ensureWallets(userId);
+      const deductResult = await storage.atomicDeductFromWallet(userId, "sng", fixedBuyIn);
+      if (!deductResult.success) {
+        return { ok: false, error: "Insufficient chips in SNG wallet" };
+      }
+
+      await storage.createTransaction({
+        userId,
+        type: "buyin",
+        amount: -fixedBuyIn,
+        balanceBefore: deductResult.newBalance + fixedBuyIn,
+        balanceAfter: deductResult.newBalance,
+        tableId,
+        description: `Lottery SNG buy-in (${fixedBuyIn} chips)`,
+        walletType: "sng",
+        relatedTransactionId: null,
+        paymentId: null,
+        metadata: null,
+      });
+
+      // Register in lifecycle
+      lifecycle.register(userId, displayName, fixedBuyIn);
+
+      // Find available seat (max 3)
+      const occupiedSeats = new Set(engine.state.players.map(p => p.seatIndex));
+      let seat = requestedSeat;
+      if (seat === undefined || occupiedSeats.has(seat)) {
+        for (let i = 0; i < 3; i++) {
+          if (!occupiedSeats.has(i)) { seat = i; break; }
+        }
+      }
+      if (seat === undefined) return { ok: false, error: "No seats available" };
+
+      // Add with 500 starting chips
+      engine.addPlayer(userId, displayName, seat, 500, false);
+      await storage.addTablePlayer(tableId, userId, seat, 500);
+
+      // Assign avatar
+      const usedAvatarsLottery = new Set(instance.avatarMap.values());
+      const lotteryAvatar = (user.avatarId && AVATAR_IDS.includes(user.avatarId as any))
+        ? user.avatarId
+        : AVATAR_IDS.find(a => !usedAvatarsLottery.has(a)) || AVATAR_IDS[0];
+      instance.avatarMap.set(userId, lotteryAvatar);
+
+      broadcastToTable(tableId, {
+        type: "player_joined",
+        player: { id: userId, displayName, seatIndex: seat, chips: 500, avatarId: lotteryAvatar },
+      }, userId);
+
+      // Auto-start when all 3 players are registered
+      if (lifecycle.canStart()) {
+        // Spin the multiplier
+        const multiplier = lifecycle.spinMultiplier();
+        const prizePool = lifecycle.prizePool;
+
+        // Broadcast spinning animation
+        broadcastToTable(tableId, {
+          type: "lottery_spin",
+          multiplier,
+          prizePool,
+          animation: "spinning",
+        } as any);
+
+        // After 3-second reveal delay, start the game
+        setTimeout(() => {
+          broadcastToTable(tableId, {
+            type: "lottery_result",
+            multiplier,
+            prizePool,
+          } as any);
+
+          lifecycle.start();
+          engine.startBlindSchedule();
+
+          broadcastToTable(tableId, {
+            type: "tournament_status",
+            status: "playing",
+            prizePool,
+          } as any);
+
+          // Start the first hand after another short delay
+          setTimeout(() => engine.startHand(), 1000);
+        }, 3000);
+      }
+
+      return { ok: true };
+    }
 
     // SNG path: fixed buy-in
     if (config.gameFormat === "sng" && lifecycle) {
@@ -784,7 +899,7 @@ class TableManager {
     if (!user) return { ok: false, error: "User not found" };
 
     await storage.ensureWallets(userId);
-    const walletType = config.gameFormat === "sng" ? "sng" : config.gameFormat === "tournament" ? "tournament" : "cash_game";
+    const walletType = (config.gameFormat === "sng" || config.gameFormat === "lottery_sng") ? "sng" : config.gameFormat === "tournament" ? "tournament" : "cash_game";
     const deductResult = await storage.atomicDeductFromWallet(userId, walletType as any, buyIn);
     if (!deductResult.success) {
       return { ok: false, error: `Insufficient chips in ${walletType} wallet` };
@@ -989,8 +1104,8 @@ class TableManager {
     const player = instance.engine.getPlayer(userId);
     if (!player) return;
 
-    // SNG during registration: refund buy-in
-    if (instance.config.gameFormat === "sng" && instance.lifecycle && instance.lifecycle.status === "registering") {
+    // SNG/Lottery SNG during registration: refund buy-in
+    if ((instance.config.gameFormat === "sng" || instance.config.gameFormat === "lottery_sng") && instance.lifecycle && instance.lifecycle.status === "registering") {
       const reg = instance.lifecycle.registeredPlayers.get(userId);
       if (reg && reg.buyIn > 0) {
         // Refund buy-in to SNG wallet
@@ -1018,8 +1133,8 @@ class TableManager {
       return;
     }
 
-    // SNG in play: forfeit (eliminate with last place)
-    if (instance.config.gameFormat === "sng" && instance.lifecycle && instance.lifecycle.status === "playing") {
+    // SNG/Lottery SNG in play: forfeit (eliminate with last place)
+    if ((instance.config.gameFormat === "sng" || instance.config.gameFormat === "lottery_sng") && instance.lifecycle && instance.lifecycle.status === "playing") {
       const info = instance.lifecycle.forfeit(userId, player.displayName);
       if (info) {
         broadcastToTable(tableId, {
@@ -1085,7 +1200,7 @@ class TableManager {
     const displayName = player.displayName || "Player";
 
     // Save chip count for return buy-in enforcement (cash games only)
-    if (instance.config.gameFormat === "cash" || instance.config.gameFormat === "bomb_pot" || instance.config.gameFormat === "heads_up") {
+    if (instance.config.gameFormat === "cash" || instance.config.gameFormat === "bomb_pot" || instance.config.gameFormat === "heads_up" || instance.config.gameFormat === "fast_fold") {
       if (cashOut > instance.config.minBuyIn) {
         this.lastChipCounts.set(`${tableId}:${userId}`, cashOut);
       }
@@ -1098,7 +1213,7 @@ class TableManager {
     // Return chips to wallet balance atomically (same wallet type used for buy-in)
     if (cashOut > 0) {
       const format = instance.config.gameFormat;
-      const walletType = format === "sng" ? "sng" : format === "tournament" ? "tournament" : "cash_game";
+      const walletType = (format === "sng" || format === "lottery_sng") ? "sng" : format === "tournament" ? "tournament" : "cash_game";
       await storage.ensureWallets(userId);
       const { success, newBalance } = await storage.atomicAddToWallet(userId, walletType as any, cashOut);
       if (success) {
@@ -1186,7 +1301,14 @@ class TableManager {
     const player = instance.engine.getPlayer(userId);
     if (!player) return { ok: false, error: "Not seated at this table" };
 
-    return instance.engine.handleAction(userId, action, amount, actionNumber);
+    const result = instance.engine.handleAction(userId, action, amount, actionNumber);
+
+    // Fast-fold: on fold, instantly move player to a new table
+    if (result.ok && action === "fold" && fastFoldManager.isTableInPool(tableId)) {
+      fastFoldManager.handleFold(userId, tableId);
+    }
+
+    return result;
   }
 
   handleBuyTime(tableId: string, userId: string): { ok: boolean; error?: string; costChips?: number; extraSeconds?: number } {
@@ -1235,7 +1357,7 @@ class TableManager {
         } else {
           // No hand in progress — sit in immediately
           player.sitInNextHand = false;
-          const isTournament = instance.config.gameFormat === "sng" || instance.config.gameFormat === "tournament";
+          const isTournament = instance.config.gameFormat === "sng" || instance.config.gameFormat === "tournament" || instance.config.gameFormat === "lottery_sng";
           if (!isTournament && (player.missedBigBlind || player.missedSmallBlind)) {
             player.isSittingOut = false;
             player.waitingForBB = true;
@@ -1520,7 +1642,7 @@ class TableManager {
       const botName = BOT_NAMES[botIndex];
 
       // SNG bots get starting chips, cash bots get random buy-in
-      const botChips = config.gameFormat === "sng"
+      const botChips = (config.gameFormat === "sng" || config.gameFormat === "lottery_sng")
         ? config.startingChips
         : config.minBuyIn + Math.floor(Math.random() * (config.maxBuyIn - config.minBuyIn));
 
@@ -1560,8 +1682,8 @@ class TableManager {
         inst.bots.push(bot);
         inst.avatarMap.set(b.botId, b.avatar);
 
-        // Register bot in SNG lifecycle — bots don't pay real buy-in, use 0 to avoid inflating prize pool
-        if (inst.lifecycle && config.gameFormat === "sng") {
+        // Register bot in SNG/Lottery lifecycle — bots don't pay real buy-in, use 0 to avoid inflating prize pool
+        if (inst.lifecycle && (config.gameFormat === "sng" || config.gameFormat === "lottery_sng")) {
           inst.lifecycle.register(b.botId, b.botName, 0);
         }
 
@@ -1573,8 +1695,8 @@ class TableManager {
 
         sendGameStateToTable(tableId);
 
-        // SNG auto-start when full
-        if (config.gameFormat === "sng" && inst.lifecycle && inst.lifecycle.canStart()) {
+        // SNG/Lottery auto-start when full
+        if ((config.gameFormat === "sng" || config.gameFormat === "lottery_sng") && inst.lifecycle && inst.lifecycle.canStart()) {
           inst.lifecycle.start();
           inst.engine.startBlindSchedule();
           broadcastToTable(tableId, {

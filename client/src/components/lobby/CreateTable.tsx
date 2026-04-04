@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, Users, Coins, Clock, Lock, Bot, Zap, Trophy, Bomb, Swords, UserPlus, Eye } from "lucide-react";
+import { X, Users, Coins, Clock, Lock, Bot, Zap, Trophy, Bomb, Swords, UserPlus, Eye, CircleDot } from "lucide-react";
 
-type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot";
+type GameFormat = "cash" | "sng" | "heads_up" | "tournament" | "bomb_pot" | "fast_fold" | "lottery_sng";
 
 interface CreateTableModalProps {
   onClose: () => void;
@@ -16,6 +16,8 @@ const FORMAT_OPTIONS: { key: GameFormat; label: string; icon: any; desc: string;
   { key: "tournament", label: "Tournament", icon: Trophy, desc: "Multi-table, scheduled start", color: "emerald" },
   { key: "heads_up", label: "Heads Up", icon: Swords, desc: "1v1 match", color: "purple" },
   { key: "bomb_pot", label: "Bomb Pot", icon: Bomb, desc: "Cash + periodic bomb pots", color: "red" },
+  { key: "fast_fold", label: "Rush Poker", icon: Zap, desc: "Fold & get new hand instantly", color: "cyan" },
+  { key: "lottery_sng", label: "Spin & Go", icon: CircleDot, desc: "Random multiplier, winner takes all", color: "pink" },
 ];
 
 export function CreateTableModal({ onClose, onCreate, defaultPrivate }: CreateTableModalProps) {

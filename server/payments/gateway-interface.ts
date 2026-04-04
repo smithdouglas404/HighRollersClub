@@ -58,7 +58,7 @@ export interface ExchangeRateResponse {
 }
 
 export interface IPaymentGateway {
-  readonly name: string;  // "nowpayments" | "coinpayments" | "direct"
+  readonly name: string;  // "nowpayments" | "coinpayments" | "direct" | "stripe"
 
   // Deposit flow
   createPayment(req: CreatePaymentRequest): Promise<CreatePaymentResponse>;

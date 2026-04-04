@@ -72,7 +72,7 @@ export class SNGLifecycle {
     return info;
   }
 
-  private completeWithWinner(): void {
+  protected completeWithWinner(): void {
     this.status = "complete";
 
     // Find the winner (player not in elimination order)

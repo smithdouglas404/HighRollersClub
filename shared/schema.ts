@@ -222,7 +222,7 @@ export const insertTableSchema = z.object({
   clubId: z.string().optional(),
   allowBots: z.boolean().default(true),
   replaceBots: z.boolean().default(true),
-  gameFormat: z.enum(["cash", "sng", "heads_up", "tournament", "bomb_pot"]).default("cash"),
+  gameFormat: z.enum(["cash", "sng", "heads_up", "tournament", "bomb_pot", "fast_fold", "lottery_sng"]).default("cash"),
   blindSchedule: z.array(z.object({
     level: z.number(),
     sb: z.number(),
@@ -238,6 +238,8 @@ export const insertTableSchema = z.object({
     place: z.number(),
     percentage: z.number(),
   })).optional(),
+  lotteryMultiplier: z.number().int().min(2).optional(),
+  lotteryBasePrize: z.number().int().min(0).optional(),
   rakePercent: z.number().int().min(0).max(10).default(0),
   rakeCap: z.number().int().min(0).default(0),
   straddleEnabled: z.boolean().default(false),

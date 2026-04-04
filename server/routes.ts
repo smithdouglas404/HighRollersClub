@@ -3737,6 +3737,527 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     res.json({ success: true, id: entry.id });
   });
 
+  // ─── Club Wars ──────────────────────────────────────────────────────────
+  app.get("/api/club-wars", requireAuth, async (req, res, next) => {
+    try {
+      const { clubId, status } = req.query;
+      const wars = await storage.getClubWars(
+        clubId as string | undefined,
+        status as string | undefined
+      );
+      res.json(wars);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/club-wars/matchmake", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      if (user.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+      const allClubs = await storage.getClubs();
+      if (allClubs.length < 2) return res.status(400).json({ message: "Need at least 2 clubs" });
+
+      // Sort by ELO and pair adjacent clubs
+      const sorted = [...allClubs].sort((a, b) => (a.eloRating ?? 1200) - (b.eloRating ?? 1200));
+      const pairs: any[] = [];
+      for (let i = 0; i + 1 < sorted.length; i += 2) {
+        const c1 = sorted[i], c2 = sorted[i + 1];
+        const war = await storage.createClubWar({
+          club1Id: c1.id,
+          club2Id: c2.id,
+          club1Name: c1.name,
+          club2Name: c2.name,
+          status: "pending",
+          winnerId: null,
+          club1Score: 0,
+          club2Score: 0,
+          club1Elo: c1.eloRating ?? 1200,
+          club2Elo: c2.eloRating ?? 1200,
+          eloChange: null,
+          scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          completedAt: null,
+        });
+        pairs.push(war);
+      }
+      res.json(pairs);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/club-wars/:id/complete", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      if (user.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+      const war = await storage.getClubWars();
+      const found = war.find(w => w.id === req.params.id);
+      if (!found) return res.status(404).json({ message: "War not found" });
+      if (found.status === "completed") return res.status(400).json({ message: "Already completed" });
+
+      const { club1Score, club2Score } = req.body;
+      if (typeof club1Score !== "number" || typeof club2Score !== "number") {
+        return res.status(400).json({ message: "Scores required" });
+      }
+
+      const winnerId = club1Score > club2Score ? found.club1Id : club1Score < club2Score ? found.club2Id : null;
+      const K = 32;
+      const elo1 = found.club1Elo ?? 1200;
+      const elo2 = found.club2Elo ?? 1200;
+      const expected1 = 1 / (1 + Math.pow(10, (elo2 - elo1) / 400));
+      const actual1 = club1Score > club2Score ? 1 : club1Score < club2Score ? 0 : 0.5;
+      const eloChange = Math.round(K * (actual1 - expected1));
+
+      const updated = await storage.updateClubWar(req.params.id, {
+        club1Score,
+        club2Score,
+        winnerId,
+        eloChange,
+        status: "completed",
+        completedAt: new Date(),
+      });
+
+      // Update club ELO ratings
+      await storage.updateClub(found.club1Id, { eloRating: elo1 + eloChange });
+      await storage.updateClub(found.club2Id, { eloRating: elo2 - eloChange });
+
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Avatar Marketplace ────────────────────────────────────────────────
+  app.get("/api/marketplace", requireAuth, async (req, res, next) => {
+    try {
+      const listings = await storage.getListings("active");
+      res.json(listings);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/marketplace/list", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const { itemId, price } = req.body;
+      if (!itemId || !price || price < 1) return res.status(400).json({ message: "itemId and price required" });
+
+      // Verify ownership
+      const inventory = await storage.getUserInventory(user.id);
+      const owns = inventory.find(i => i.itemId === itemId);
+      if (!owns) return res.status(400).json({ message: "You don't own this item" });
+
+      const listing = await storage.createListing({
+        sellerId: user.id,
+        itemId,
+        price,
+        status: "active",
+        buyerId: null,
+        platformFee: Math.floor(price * 0.1),
+        soldAt: null,
+      });
+      res.json(listing);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/marketplace/:id/buy", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const listings = await storage.getListings("active");
+      const listing = listings.find(l => l.id === req.params.id);
+      if (!listing) return res.status(404).json({ message: "Listing not found" });
+      if (listing.sellerId === user.id) return res.status(400).json({ message: "Cannot buy your own listing" });
+
+      const fee = Math.floor(listing.price * 0.1);
+      const sellerPayout = listing.price - fee;
+
+      // Deduct from buyer
+      const deduct = await storage.atomicDeductChips(user.id, listing.price);
+      if (!deduct.success) return res.status(400).json({ message: "Insufficient chips" });
+
+      // Pay seller
+      await storage.atomicAddChips(listing.sellerId, sellerPayout);
+
+      // Transfer item
+      await storage.addToInventory(user.id, listing.itemId);
+
+      // Mark sold
+      const updated = await storage.buyListing(req.params.id, user.id);
+      res.json({ listing: updated, fee, sellerPayout });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/marketplace/:id/cancel", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const listings = await storage.getListings();
+      const listing = listings.find(l => l.id === req.params.id);
+      if (!listing) return res.status(404).json({ message: "Listing not found" });
+      if (listing.sellerId !== user.id) return res.status(403).json({ message: "Not your listing" });
+
+      const updated = await storage.cancelListing(req.params.id);
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Staking System ────────────────────────────────────────────────────
+  app.get("/api/stakes/my", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const myStakes = await storage.getStakesForPlayer(user.id);
+      res.json(myStakes);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/stakes/offer", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const { playerId, tournamentId, stakePercent, buyInShare } = req.body;
+      if (!playerId || !tournamentId || !stakePercent || !buyInShare) {
+        return res.status(400).json({ message: "playerId, tournamentId, stakePercent, buyInShare required" });
+      }
+
+      // Deduct buy-in share from backer
+      const deduct = await storage.atomicDeductChips(user.id, buyInShare);
+      if (!deduct.success) return res.status(400).json({ message: "Insufficient chips" });
+
+      const stake = await storage.createStake({
+        backerId: user.id,
+        playerId,
+        tournamentId,
+        stakePercent,
+        buyInShare,
+        status: "pending",
+        payout: null,
+      });
+      res.json(stake);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/stakes/:id/accept", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const stake = await storage.getStake(req.params.id);
+      if (!stake) return res.status(404).json({ message: "Stake not found" });
+      if (stake.playerId !== user.id) return res.status(403).json({ message: "Not your stake to accept" });
+      if (stake.status !== "pending") return res.status(400).json({ message: "Stake not pending" });
+
+      const updated = await storage.updateStake(req.params.id, { status: "accepted" });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/stakes/:id/settle", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const stake = await storage.getStake(req.params.id);
+      if (!stake) return res.status(404).json({ message: "Stake not found" });
+      if (stake.backerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      if (stake.status !== "accepted" && stake.status !== "active") {
+        return res.status(400).json({ message: "Stake not in settleable state" });
+      }
+
+      const { payout } = req.body;
+      if (typeof payout !== "number" || payout < 0) return res.status(400).json({ message: "payout required" });
+
+      // Calculate backer's share
+      const backerShare = Math.floor(payout * (stake.stakePercent / 100));
+      if (backerShare > 0) {
+        await storage.atomicAddChips(stake.backerId, backerShare);
+      }
+      // Player gets the rest
+      const playerShare = payout - backerShare;
+      if (playerShare > 0) {
+        await storage.atomicAddChips(stake.playerId, playerShare);
+      }
+
+      const updated = await storage.updateStake(req.params.id, { status: "settled", payout });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/stakes/:id/cancel", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      const stake = await storage.getStake(req.params.id);
+      if (!stake) return res.status(404).json({ message: "Stake not found" });
+      if (stake.backerId !== user.id && stake.playerId !== user.id) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      if (stake.status !== "pending" && stake.status !== "accepted") {
+        return res.status(400).json({ message: "Cannot cancel at this stage" });
+      }
+
+      // Refund backer
+      await storage.atomicAddChips(stake.backerId, stake.buyInShare);
+
+      const updated = await storage.updateStake(req.params.id, { status: "cancelled" });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Coaching - Live Analysis ────────────────────────────────────────────
+  app.post("/api/coaching/live-analysis", requireAuth, async (req, res, next) => {
+    try {
+      const { holeCards, communityCards, pot, currentBet, position, phase } = req.body;
+      if (!holeCards || !Array.isArray(holeCards) || holeCards.length < 2) {
+        return res.status(400).json({ message: "holeCards required (array of 2+)" });
+      }
+
+      // Deduct 50 chips
+      const user = await storage.getUser(req.user!.id);
+      if (!user || user.chipBalance < 50) {
+        return res.status(400).json({ message: "Insufficient chips (50 required)" });
+      }
+      await storage.atomicDeductChips(req.user!.id, 50);
+
+      // Algorithmic poker math — no AI needed
+      const ranks = "23456789TJQKA";
+      const cardRank = (c: string) => ranks.indexOf(c[0]);
+      const r1 = cardRank(holeCards[0]);
+      const r2 = cardRank(holeCards[1]);
+      const suited = holeCards[0]?.[1] === holeCards[1]?.[1];
+      const paired = r1 === r2;
+
+      // Hand strength 1-10
+      let strength = Math.max(r1, r2) * 0.5 + Math.min(r1, r2) * 0.3;
+      if (paired) strength += 3;
+      if (suited) strength += 1.5;
+      if (r1 >= 10 && r2 >= 10) strength += 2;
+      strength = Math.min(10, Math.max(1, Math.round(strength)));
+
+      // Position modifier
+      const positionBonus: Record<string, number> = {
+        "BTN": 1.5, "CO": 1.2, "MP": 0, "EP": -1, "SB": -0.5, "BB": 0.5,
+      };
+      const posMod = positionBonus[position] || 0;
+
+      // Pot odds calculation
+      const potSize = pot || 100;
+      const betToCall = currentBet || 0;
+      const potOdds = betToCall > 0 ? betToCall / (potSize + betToCall) : 0;
+
+      const communityLen = Array.isArray(communityCards) ? communityCards.length : 0;
+      const streetBonus = communityLen >= 3 ? 0.5 : 0;
+
+      const winProb = Math.min(0.95, Math.max(0.05, (strength + posMod + streetBonus) / 12));
+      const ev = Math.round((winProb * potSize - (1 - winProb) * betToCall) * 100) / 100;
+
+      let action: string;
+      let confidence: number;
+      if (strength + posMod >= 7) {
+        action = "RAISE";
+        confidence = Math.min(95, 60 + strength * 3);
+      } else if (ev > 0 || potOdds < winProb) {
+        action = "CALL";
+        confidence = Math.min(85, 50 + strength * 2);
+      } else {
+        action = "FOLD";
+        confidence = Math.min(90, 55 + (10 - strength) * 3);
+      }
+
+      const explanations: Record<string, string> = {
+        RAISE: `Strong hand (${strength}/10) in ${position || "position"} with positive EV.`,
+        CALL: `Decent odds — pot odds ${(potOdds * 100).toFixed(0)}% vs ${(winProb * 100).toFixed(0)}% equity.`,
+        FOLD: `Weak holding (${strength}/10) — negative EV in this spot.`,
+      };
+
+      res.json({ action, ev, confidence: Math.round(confidence), explanation: explanations[action] });
+    } catch (err) { next(err); }
+  });
+
+  // ─── API Keys ─────────────────────────────────────────────────────────────
+  app.post("/api/api-keys", requireAuth, async (req, res, next) => {
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.length > 50) {
+        return res.status(400).json({ message: "Name required (max 50 chars)" });
+      }
+      const crypto = require("crypto");
+      const rawKey = "sk_" + crypto.randomBytes(32).toString("hex");
+      const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+      const apiKey = await storage.createApiKey(req.user!.id, keyHash, name.trim());
+      res.status(201).json({ id: apiKey.id, name: apiKey.name, key: rawKey, createdAt: apiKey.createdAt });
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/api-keys", requireAuth, async (req, res, next) => {
+    try {
+      const keys = await storage.getApiKeysByUser(req.user!.id);
+      res.json(keys.map(k => ({ id: k.id, name: k.name, lastUsed: k.lastUsed, createdAt: k.createdAt })));
+    } catch (err) { next(err); }
+  });
+
+  app.delete("/api/api-keys/:id", requireAuth, async (req, res, next) => {
+    try {
+      const keys = await storage.getApiKeysByUser(req.user!.id);
+      if (!keys.find(k => k.id === req.params.id)) return res.status(404).json({ message: "API key not found" });
+      await storage.deleteApiKey(req.params.id);
+      res.json({ ok: true });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Public Stats API (API key required) ─────────────────────────────────
+  const apiKeyRateLimits = new Map<string, { count: number; resetAt: number }>();
+
+  app.get("/api/v1/stats/:userId", async (req, res, next) => {
+    try {
+      const apiKeyHeader = req.headers["x-api-key"] as string;
+      if (!apiKeyHeader) return res.status(401).json({ message: "X-API-Key header required" });
+
+      const crypto = require("crypto");
+      const keyHash = crypto.createHash("sha256").update(apiKeyHeader).digest("hex");
+      const apiKey = await storage.getApiKeyByHash(keyHash);
+      if (!apiKey) return res.status(401).json({ message: "Invalid API key" });
+
+      const now = Date.now();
+      let rl = apiKeyRateLimits.get(apiKey.id);
+      if (!rl || rl.resetAt < now) {
+        rl = { count: 0, resetAt: now + 60_000 };
+        apiKeyRateLimits.set(apiKey.id, rl);
+      }
+      rl.count++;
+      if (rl.count > 100) return res.status(429).json({ message: "Rate limit exceeded (100/min)" });
+
+      storage.updateApiKeyLastUsed(apiKey.id).catch(() => {});
+
+      const stats = await storage.getPlayerStats(req.params.userId);
+      if (!stats) return res.status(404).json({ message: "Player not found" });
+
+      const handsPlayed = stats.handsPlayed || 1;
+      res.json({
+        userId: req.params.userId,
+        handsPlayed: stats.handsPlayed,
+        potsWon: stats.potsWon,
+        vpip: Math.round((stats.vpip / handsPlayed) * 100 * 10) / 10,
+        pfr: Math.round((stats.pfr / handsPlayed) * 100 * 10) / 10,
+        winRate: Math.round((stats.potsWon / handsPlayed) * 100 * 10) / 10,
+        totalWinnings: stats.totalWinnings,
+        bestWinStreak: stats.bestWinStreak,
+        sngWins: stats.sngWins,
+        headsUpWins: stats.headsUpWins,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Daily Missions ──────────────────────────────────────────────────────
+  const MISSION_TEMPLATES = {
+    daily: [
+      { type: "hands_played", label: "Grinder", description: "Play {target} hands", target: 20, reward: 500 },
+      { type: "pots_won", label: "Winner Winner", description: "Win {target} pots", target: 5, reward: 750 },
+      { type: "bluff_wins", label: "Bluff Master", description: "Win {target} hands on a fold", target: 3, reward: 1000 },
+      { type: "preflop_folds", label: "Patient Player", description: "Fold preflop {target} times", target: 10, reward: 300 },
+      { type: "big_pot_wins", label: "Big Fish", description: "Win a pot over 10K chips", target: 1, reward: 1500 },
+      { type: "vpip", label: "Action Player", description: "Voluntarily enter {target} pots", target: 15, reward: 400 },
+    ],
+    weekly: [
+      { type: "hands_played", label: "Marathon", description: "Play {target} hands this week", target: 100, reward: 3000 },
+      { type: "pots_won", label: "Shark Week", description: "Win {target} pots this week", target: 30, reward: 5000 },
+      { type: "plo_hands", label: "Omaha Explorer", description: "Play {target} PLO hands", target: 20, reward: 2000 },
+      { type: "tournament_hands", label: "Tournament Grinder", description: "Play {target} tournament hands", target: 50, reward: 4000 },
+      { type: "sng_win", label: "SNG Champion", description: "Win a Sit & Go", target: 1, reward: 3000 },
+      { type: "big_pot_wins", label: "Whale Hunter", description: "Win {target} big pots", target: 5, reward: 5000 },
+    ],
+  };
+
+  app.post("/api/missions/generate-daily", requireAuth, async (req, res, next) => {
+    try {
+      const shuffle = <T>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
+      const dailyPicks = shuffle(MISSION_TEMPLATES.daily).slice(0, 3 + Math.round(Math.random()));
+      const weeklyPicks = shuffle(MISSION_TEMPLATES.weekly).slice(0, 3 + Math.round(Math.random()));
+
+      const created = [];
+      for (const t of [...dailyPicks, ...weeklyPicks]) {
+        const isWeekly = MISSION_TEMPLATES.weekly.includes(t as any);
+        const mission = await storage.createMission({
+          type: t.type,
+          label: t.label,
+          description: t.description.replace("{target}", String(t.target)),
+          target: t.target,
+          reward: t.reward,
+          periodType: isWeekly ? "weekly" : "daily",
+          isActive: true,
+        });
+        await storage.createUserMission({
+          userId: req.user!.id,
+          missionId: mission.id,
+          progress: 0,
+          completedAt: null,
+          claimedAt: null,
+          periodStart: new Date(),
+        });
+        created.push({ ...mission, progress: 0 });
+      }
+      res.json(created);
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/missions/active", requireAuth, async (req, res, next) => {
+    try {
+      const userMissionsList = await storage.getUserMissions(req.user!.id);
+      const allMissions = await storage.getMissions();
+      const missionMap = new Map(allMissions.map(m => [m.id, m]));
+      const stats = await storage.getPlayerStats(req.user!.id);
+
+      const active = userMissionsList
+        .filter(um => !um.claimedAt)
+        .map(um => {
+          const mission = missionMap.get(um.missionId);
+          if (!mission || !mission.isActive) return null;
+
+          let liveProgress = um.progress;
+          if (stats) {
+            const fieldMap: Record<string, keyof typeof stats> = {
+              hands_played: "handsPlayed",
+              pots_won: "potsWon",
+              bluff_wins: "bluffWins",
+              preflop_folds: "preflopFolds",
+              big_pot_wins: "bigPotWins",
+              plo_hands: "ploHands",
+              tournament_hands: "tournamentHands",
+              sng_win: "sngWins",
+              vpip: "vpip",
+            };
+            const field = fieldMap[mission.type];
+            if (field && typeof stats[field] === "number") {
+              liveProgress = Math.min(stats[field] as number, mission.target);
+            }
+          }
+
+          return {
+            id: um.id,
+            missionId: mission.id,
+            type: mission.type,
+            label: mission.label,
+            description: mission.description,
+            target: mission.target,
+            reward: mission.reward,
+            periodType: mission.periodType,
+            progress: liveProgress,
+            completed: liveProgress >= mission.target,
+            claimed: !!um.claimedAt,
+          };
+        })
+        .filter(Boolean);
+
+      res.json(active);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/missions/:id/claim", requireAuth, async (req, res, next) => {
+    try {
+      const userMissionsList = await storage.getUserMissions(req.user!.id);
+      const um = userMissionsList.find(m => m.id === req.params.id);
+      if (!um) return res.status(404).json({ message: "Mission not found" });
+      if (um.claimedAt) return res.status(400).json({ message: "Already claimed" });
+
+      const allMissions = await storage.getMissions();
+      const mission = allMissions.find(m => m.id === um.missionId);
+      if (!mission) return res.status(404).json({ message: "Mission definition not found" });
+
+      await storage.updateUserMission(um.id, { claimedAt: new Date() });
+      await storage.atomicAddChips(req.user!.id, mission.reward);
+      res.json({ ok: true, reward: mission.reward });
+    } catch (err) { next(err); }
+  });
+
   // ─── Create HTTP Server + WebSocket ──────────────────────────────────────
   const httpServer = createServer(app);
   setupWebSocket(httpServer, sessionMiddleware);

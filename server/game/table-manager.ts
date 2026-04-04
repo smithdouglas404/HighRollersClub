@@ -402,6 +402,52 @@ class TableManager {
         }
       }
 
+      // Track bluff wins (winner when all opponents folded)
+      const allFolded = summary.players.every(p =>
+        winnerIds.includes(p.id) || (summary.actions.some(a => a.playerId === p.id && a.action === "fold"))
+      );
+      if (allFolded && summary.winners.length > 0) {
+        for (const w of summary.winners) {
+          if (!w.playerId.startsWith("bot-")) {
+            storage.incrementPlayerStat(w.playerId, "bluffWins", 1).catch(() => {});
+          }
+        }
+      }
+
+      // Track big pot wins (pot > 10K)
+      if (summary.pot > 10000) {
+        for (const w of summary.winners) {
+          if (!w.playerId.startsWith("bot-")) {
+            storage.incrementPlayerStat(w.playerId, "bigPotWins", 1).catch(() => {});
+          }
+        }
+      }
+
+      // Track preflop folds
+      for (const a of summary.actions) {
+        if (a.phase === "preflop" && a.action === "fold" && !a.playerId.startsWith("bot-")) {
+          storage.incrementPlayerStat(a.playerId, "preflopFolds", 1).catch(() => {});
+        }
+      }
+
+      // Track PLO hands
+      if (tableRow.pokerVariant === "plo" || tableRow.pokerVariant === "plo5") {
+        for (const p of summary.players) {
+          if (!p.id.startsWith("bot-")) {
+            storage.incrementPlayerStat(p.id, "ploHands", 1).catch(() => {});
+          }
+        }
+      }
+
+      // Track tournament hands
+      if (gameFormat === "tournament" || gameFormat === "sng") {
+        for (const p of summary.players) {
+          if (!p.id.startsWith("bot-")) {
+            storage.incrementPlayerStat(p.id, "tournamentHands", 1).catch(() => {});
+          }
+        }
+      }
+
       // Update league standings for club tables
       if (tableRow.clubId) {
         this.updateLeagueStandings(tableRow.clubId, summary.winners.map(w => w.playerId)).catch(() => {});

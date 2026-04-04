@@ -26,6 +26,7 @@ import ClubRankings from "@/pages/ClubRankings";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
 import Security from "@/pages/Security";
+import ApiDocs from "@/pages/ApiDocs";
 import AdminDashboard from "@/pages/AdminDashboard";
 import Tournaments from "@/pages/Tournaments";
 import TournamentCreate from "@/pages/TournamentCreate";
@@ -36,6 +37,9 @@ import PremiumUpgrade from "@/pages/PremiumUpgrade";
 import AnnouncementManager from "@/pages/AnnouncementManager";
 import AccountRecovery from "@/pages/AccountRecovery";
 import AvatarWardrobe from "@/pages/AvatarWardrobe";
+import ClubWars from "@/pages/ClubWars";
+import Marketplace from "@/pages/Marketplace";
+import Stakes from "@/pages/Stakes";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import Support from "@/pages/Support";
@@ -131,6 +135,18 @@ function ProtectedWardrobe() {
   return <AuthGate><AvatarWardrobe /></AuthGate>;
 }
 
+function ProtectedClubWars() {
+  return <AuthGate><ClubWars /></AuthGate>;
+}
+
+function ProtectedMarketplace() {
+  return <AuthGate><Marketplace /></AuthGate>;
+}
+
+function ProtectedStakes() {
+  return <AuthGate><Stakes /></AuthGate>;
+}
+
 function GameWithTable({ params }: { params: { tableId: string } }) {
   return <AuthGate><ErrorBoundary fallbackTitle="Game Error"><Game tableId={params.tableId} /></ErrorBoundary></AuthGate>;
 }
@@ -206,8 +222,12 @@ function Router() {
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/support" component={Support} />
+      <Route path="/api-docs" component={ApiDocs} />
       <Route path="/recovery" component={AccountRecovery} />
       <Route path="/wardrobe" component={ProtectedWardrobe} />
+      <Route path="/club-wars" component={ProtectedClubWars} />
+      <Route path="/marketplace" component={ProtectedMarketplace} />
+      <Route path="/stakes" component={ProtectedStakes} />
       <Route path="/dye-shop">{() => <Redirect to="/shop" />}</Route>
       <Route path="/avatar-customizer">{() => <Redirect to="/wardrobe" />}</Route>
       <Route path="/avatar-render">{() => <Redirect to="/wardrobe" />}</Route>

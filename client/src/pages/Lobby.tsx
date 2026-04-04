@@ -465,6 +465,164 @@ function ClubActivityFeed() {
   );
 }
 
+// ─── Daily Challenges ────────────────────────────────────────────────────────
+
+interface ChallengeItem {
+  id: string;
+  label: string;
+  description: string;
+  target: number;
+  reward: number;
+  periodType: string;
+  progress: number;
+  completed: boolean;
+  claimed: boolean;
+}
+
+const CHALLENGE_EMOJIS: Record<string, string> = {
+  hands_played: "\u{1F3B0}",
+  pots_won: "\u{1F3C6}",
+  bluff_wins: "\u{1F3AD}",
+  preflop_folds: "\u{1F9D8}",
+  big_pot_wins: "\u{1F4B0}",
+  vpip: "\u{26A1}",
+  plo_hands: "\u{1F0CF}",
+  tournament_hands: "\u{2694}",
+  sng_win: "\u{1F451}",
+};
+
+function DailyChallenges() {
+  const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchChallenges = async () => {
+    try {
+      const res = await fetch("/api/missions/active", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setChallenges(data);
+        // If no challenges, generate them
+        if (data.length === 0) {
+          const genRes = await fetch("/api/missions/generate-daily", {
+            method: "POST",
+            credentials: "include",
+          });
+          if (genRes.ok) {
+            // Re-fetch
+            const res2 = await fetch("/api/missions/active", { credentials: "include" });
+            if (res2.ok) setChallenges(await res2.json());
+          }
+        }
+      }
+    } catch {} finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchChallenges();
+    const interval = setInterval(fetchChallenges, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleClaim = async (id: string) => {
+    try {
+      const res = await fetch(`/api/missions/${id}/claim`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast({ title: "Reward claimed!", description: `+${data.reward} chips added to your balance.` });
+        setChallenges(prev => prev.filter(c => c.id !== id));
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to claim reward", variant: "destructive" });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="mb-6 rounded-md p-4 bg-surface-high/30 backdrop-blur-xl border border-white/[0.06] animate-pulse h-20" />
+    );
+  }
+
+  if (challenges.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-6"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <Flame className="w-4 h-4 text-primary" />
+        <span className="text-xs font-bold uppercase tracking-wider text-primary">Daily Challenges</span>
+        <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+          {challenges.length}
+        </span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+        {challenges.map(c => {
+          const pct = Math.min(100, Math.round((c.progress / c.target) * 100));
+          const emoji = CHALLENGE_EMOJIS[c.label.toLowerCase().replace(/\s+/g, "_")] ||
+                        Object.values(CHALLENGE_EMOJIS)[Math.abs(c.label.charCodeAt(0)) % Object.keys(CHALLENGE_EMOJIS).length];
+          return (
+            <motion.div
+              key={c.id}
+              layout
+              className="shrink-0 w-56 rounded-lg bg-surface-high/40 backdrop-blur-xl border border-white/[0.06] p-3 hover:border-primary/20 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-base">{emoji}</span>
+                <span className="text-xs font-bold text-white truncate">{c.label}</span>
+                <span className={cn(
+                  "ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
+                  c.periodType === "weekly" ? "bg-purple-500/15 text-purple-400" : "bg-blue-500/15 text-blue-400"
+                )}>
+                  {c.periodType}
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground mb-2 truncate">{c.description}</p>
+
+              {/* Progress bar */}
+              <div className="w-full h-1.5 rounded-full bg-white/[0.06] mb-2 overflow-hidden">
+                <motion.div
+                  className={cn("h-full rounded-full", c.completed ? "bg-green-500" : "bg-primary")}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground">
+                  {c.progress}/{c.target}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-amber-400 flex items-center gap-0.5">
+                    <Coins className="w-3 h-3" />
+                    {c.reward.toLocaleString()}
+                  </span>
+                  {c.completed && !c.claimed && (
+                    <button
+                      onClick={() => handleClaim(c.id)}
+                      className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-all"
+                    >
+                      Claim
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
 export default function Lobby() {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
@@ -665,6 +823,9 @@ export default function Lobby() {
 
         {/* Banner Carousel */}
         <LobbyBannerCarousel />
+
+        {/* Daily Challenges */}
+        <DailyChallenges />
 
         {/* Game Mode Selection Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

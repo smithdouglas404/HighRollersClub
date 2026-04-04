@@ -11,7 +11,9 @@ import {
   type HandPlayer, type HandAction, type TournamentRegistration,
   type Wallet, type WalletType, type Payment, type WithdrawalRequest, type SupportedCurrency,
   type ChatMessage, type CollusionAlert, type PlayerNote,
-  type Notification, type ClubChallenge,
+  type Notification, type ClubChallenge, type ClubWar,
+  type MarketplaceListing, type Stake,
+  type ApiKey,
   walletTypeEnum,
   users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, tournamentRegistrations, playerStats,
   clubInvitations, clubAnnouncements, clubEvents,
@@ -21,9 +23,11 @@ import {
   handPlayers, handActions,
   wallets, payments, withdrawalRequests, supportedCurrencies,
   chatMessages, collusionAlerts, playerNotes, wishlists,
-  notifications, clubChallenges,
+  notifications, clubChallenges, clubWars,
+  marketplaceListings, stakes,
+  apiKeys,
 } from "@shared/schema";
-import { eq, and, desc, sql, inArray, gte } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, gte, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { hasDatabase, getDb } from "./db";
 
@@ -117,7 +121,7 @@ export interface IStorage {
   getPlayerStats(userId: string): Promise<PlayerStat | undefined>;
   getPlayerStatsBatch(userIds: string[]): Promise<Map<string, PlayerStat>>;
   getLeaderboard(metric: "chips" | "wins" | "winRate", limit?: number, period?: "today" | "week" | "month" | "all"): Promise<{ userId: string; username: string; displayName: string | null; avatarId: string | null; value: number }[]>;
-  incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number): Promise<void>;
+  incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr" | "bluffWins" | "ploHands" | "bigPotWins" | "preflopFolds" | "tournamentHands", amount: number): Promise<void>;
   resetDailyStats(userId: string): Promise<void>;
 
   // Missions
@@ -234,6 +238,31 @@ export interface IStorage {
   createClubChallenge(data: Omit<ClubChallenge, "id" | "createdAt">): Promise<ClubChallenge>;
   updateChallengeProgress(id: string, increment: number): Promise<ClubChallenge | undefined>;
   completeChallenge(id: string): Promise<ClubChallenge | undefined>;
+
+  // Club Wars
+  getClubWars(clubId?: string, status?: string): Promise<ClubWar[]>;
+  createClubWar(data: Omit<ClubWar, "id" | "createdAt">): Promise<ClubWar>;
+  updateClubWar(id: string, data: Partial<ClubWar>): Promise<ClubWar | undefined>;
+  getUpcomingClubWars(): Promise<ClubWar[]>;
+
+  // Marketplace
+  getListings(status?: string): Promise<MarketplaceListing[]>;
+  createListing(data: Omit<MarketplaceListing, "id" | "createdAt">): Promise<MarketplaceListing>;
+  buyListing(id: string, buyerId: string): Promise<MarketplaceListing | undefined>;
+  cancelListing(id: string): Promise<MarketplaceListing | undefined>;
+
+  // Stakes
+  getStakesForPlayer(userId: string): Promise<Stake[]>;
+  createStake(data: Omit<Stake, "id" | "createdAt">): Promise<Stake>;
+  updateStake(id: string, data: Partial<Stake>): Promise<Stake | undefined>;
+  getStake(id: string): Promise<Stake | undefined>;
+
+  // API Keys
+  createApiKey(userId: string, keyHash: string, name: string): Promise<ApiKey>;
+  getApiKeysByUser(userId: string): Promise<ApiKey[]>;
+  deleteApiKey(id: string): Promise<void>;
+  getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  updateApiKeyLastUsed(id: string): Promise<void>;
 
   // OAuth
   getUserByProvider(provider: string, providerId: string): Promise<User | undefined>;
@@ -355,6 +384,7 @@ export class MemStorage implements IStorage {
       adminApprovalRequired: false,
       antiCollusion: false,
       themeColor: "gold",
+      eloRating: 1200,
       createdAt: new Date(),
     };
     this.clubs.set(id, club);
@@ -747,7 +777,7 @@ export class MemStorage implements IStorage {
     result.sort((a, b) => b.value - a.value);
     return result.slice(0, limit);
   }
-  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number) {
+  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr" | "bluffWins" | "ploHands" | "bigPotWins" | "preflopFolds" | "tournamentHands", amount: number) {
     let stats = this.playerStatsList.get(userId);
     if (!stats) {
       stats = {
@@ -756,6 +786,7 @@ export class MemStorage implements IStorage {
         bestWinStreak: 0, currentWinStreak: 0, totalWinnings: 0,
         vpip: 0, pfr: 0, showdownCount: 0,
         sngWins: 0, bombPotsPlayed: 0, headsUpWins: 0,
+        bluffWins: 0, ploHands: 0, bigPotWins: 0, preflopFolds: 0, tournamentHands: 0,
         lastResetAt: new Date(), updatedAt: new Date(),
       };
       this.playerStatsList.set(userId, stats);
@@ -1192,6 +1223,101 @@ export class MemStorage implements IStorage {
     if (!c) return undefined;
     c.completedAt = new Date();
     return c;
+  }
+
+  // ── Club Wars ──────────────────────────────────────────────────────────
+  private clubWarsList: ClubWar[] = [];
+  async getClubWars(clubId?: string, status?: string) {
+    let result = this.clubWarsList;
+    if (clubId) result = result.filter(w => w.club1Id === clubId || w.club2Id === clubId);
+    if (status) result = result.filter(w => w.status === status);
+    return result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  async createClubWar(data: Omit<ClubWar, "id" | "createdAt">) {
+    const war: ClubWar = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.clubWarsList.push(war);
+    return war;
+  }
+  async updateClubWar(id: string, data: Partial<ClubWar>) {
+    const w = this.clubWarsList.find(w => w.id === id);
+    if (!w) return undefined;
+    Object.assign(w, data);
+    return w;
+  }
+  async getUpcomingClubWars() {
+    const now = new Date();
+    return this.clubWarsList
+      .filter(w => w.status === "pending" && w.scheduledAt > now)
+      .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+  }
+
+  // ── Marketplace ─────────────────────────────────────────────────────
+  private marketplaceListingsList: MarketplaceListing[] = [];
+  async getListings(status?: string) {
+    let result = this.marketplaceListingsList;
+    if (status) result = result.filter(l => l.status === status);
+    return result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  async createListing(data: Omit<MarketplaceListing, "id" | "createdAt">) {
+    const listing: MarketplaceListing = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.marketplaceListingsList.push(listing);
+    return listing;
+  }
+  async buyListing(id: string, buyerId: string) {
+    const listing = this.marketplaceListingsList.find(l => l.id === id);
+    if (!listing || listing.status !== "active") return undefined;
+    listing.status = "sold";
+    listing.buyerId = buyerId;
+    listing.soldAt = new Date();
+    return listing;
+  }
+  async cancelListing(id: string) {
+    const listing = this.marketplaceListingsList.find(l => l.id === id);
+    if (!listing || listing.status !== "active") return undefined;
+    listing.status = "cancelled";
+    return listing;
+  }
+
+  // ── Stakes ─────────────────────────────────────────────────────────
+  private stakesList: Stake[] = [];
+  async getStakesForPlayer(userId: string) {
+    return this.stakesList.filter(s => s.backerId === userId || s.playerId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  async createStake(data: Omit<Stake, "id" | "createdAt">) {
+    const stake: Stake = { ...data, id: randomUUID(), createdAt: new Date() };
+    this.stakesList.push(stake);
+    return stake;
+  }
+  async updateStake(id: string, data: Partial<Stake>) {
+    const s = this.stakesList.find(s => s.id === id);
+    if (!s) return undefined;
+    Object.assign(s, data);
+    return s;
+  }
+  async getStake(id: string) {
+    return this.stakesList.find(s => s.id === id);
+  }
+
+  // ── API Keys ────────────────────────────────────────────────────────────
+  private apiKeysList: ApiKey[] = [];
+  async createApiKey(userId: string, keyHash: string, name: string) {
+    const key: ApiKey = { id: randomUUID(), userId, keyHash, name, lastUsed: null, createdAt: new Date() };
+    this.apiKeysList.push(key);
+    return key;
+  }
+  async getApiKeysByUser(userId: string) {
+    return this.apiKeysList.filter(k => k.userId === userId);
+  }
+  async deleteApiKey(id: string) {
+    this.apiKeysList = this.apiKeysList.filter(k => k.id !== id);
+  }
+  async getApiKeyByHash(keyHash: string) {
+    return this.apiKeysList.find(k => k.keyHash === keyHash);
+  }
+  async updateApiKeyLastUsed(id: string) {
+    const key = this.apiKeysList.find(k => k.id === id);
+    if (key) key.lastUsed = new Date();
   }
 
   // ── OAuth ──────────────────────────────────────────────────────────────
@@ -1715,7 +1841,7 @@ export class DatabaseStorage implements IStorage {
       value: Math.round((r.potsWon / r.handsPlayed) * 100),
     }));
   }
-  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number) {
+  async incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr" | "bluffWins" | "ploHands" | "bigPotWins" | "preflopFolds" | "tournamentHands", amount: number) {
     // Use raw SQL upsert to avoid race conditions when two concurrent
     // increments fire for the same user
     const colMap: Record<string, string> = {
@@ -1726,6 +1852,11 @@ export class DatabaseStorage implements IStorage {
       headsUpWins: "heads_up_wins",
       vpip: "vpip",
       pfr: "pfr",
+      bluffWins: "bluff_wins",
+      ploHands: "plo_hands",
+      bigPotWins: "big_pot_wins",
+      preflopFolds: "preflop_folds",
+      tournamentHands: "tournament_hands",
     };
     const colName = colMap[field];
     if (field === "potsWon") {
@@ -2253,6 +2384,97 @@ export class DatabaseStorage implements IStorage {
       .where(eq(clubChallenges.id, id))
       .returning();
     return challenge;
+  }
+
+  // ── Club Wars ──────────────────────────────────────────────────────────
+  async getClubWars(clubId?: string, status?: string) {
+    const conditions = [];
+    if (clubId) conditions.push(or(eq(clubWars.club1Id, clubId), eq(clubWars.club2Id, clubId)));
+    if (status) conditions.push(eq(clubWars.status, status));
+    const query = this.db.select().from(clubWars);
+    if (conditions.length > 0) {
+      return query.where(and(...conditions)).orderBy(desc(clubWars.createdAt));
+    }
+    return query.orderBy(desc(clubWars.createdAt));
+  }
+  async createClubWar(data: Omit<ClubWar, "id" | "createdAt">) {
+    const [war] = await this.db.insert(clubWars).values(data).returning();
+    return war;
+  }
+  async updateClubWar(id: string, data: Partial<ClubWar>) {
+    const [war] = await this.db.update(clubWars).set(data).where(eq(clubWars.id, id)).returning();
+    return war;
+  }
+  async getUpcomingClubWars() {
+    return this.db.select().from(clubWars)
+      .where(and(eq(clubWars.status, "pending"), gte(clubWars.scheduledAt, new Date())))
+      .orderBy(clubWars.scheduledAt);
+  }
+
+  // ── Marketplace ─────────────────────────────────────────────────────
+  async getListings(status?: string) {
+    if (status) {
+      return this.db.select().from(marketplaceListings)
+        .where(eq(marketplaceListings.status, status))
+        .orderBy(desc(marketplaceListings.createdAt));
+    }
+    return this.db.select().from(marketplaceListings).orderBy(desc(marketplaceListings.createdAt));
+  }
+  async createListing(data: Omit<MarketplaceListing, "id" | "createdAt">) {
+    const [listing] = await this.db.insert(marketplaceListings).values(data).returning();
+    return listing;
+  }
+  async buyListing(id: string, buyerId: string) {
+    const [listing] = await this.db.update(marketplaceListings)
+      .set({ status: "sold", buyerId, soldAt: new Date() })
+      .where(and(eq(marketplaceListings.id, id), eq(marketplaceListings.status, "active")))
+      .returning();
+    return listing;
+  }
+  async cancelListing(id: string) {
+    const [listing] = await this.db.update(marketplaceListings)
+      .set({ status: "cancelled" })
+      .where(and(eq(marketplaceListings.id, id), eq(marketplaceListings.status, "active")))
+      .returning();
+    return listing;
+  }
+
+  // ── Stakes ─────────────────────────────────────────────────────────
+  async getStakesForPlayer(userId: string) {
+    return this.db.select().from(stakes)
+      .where(or(eq(stakes.backerId, userId), eq(stakes.playerId, userId)))
+      .orderBy(desc(stakes.createdAt));
+  }
+  async createStake(data: Omit<Stake, "id" | "createdAt">) {
+    const [stake] = await this.db.insert(stakes).values(data).returning();
+    return stake;
+  }
+  async updateStake(id: string, data: Partial<Stake>) {
+    const [stake] = await this.db.update(stakes).set(data).where(eq(stakes.id, id)).returning();
+    return stake;
+  }
+  async getStake(id: string) {
+    const [stake] = await this.db.select().from(stakes).where(eq(stakes.id, id));
+    return stake;
+  }
+
+  // ── API Keys ────────────────────────────────────────────────────────────
+  async createApiKey(userId: string, keyHash: string, name: string) {
+    const [key] = await this.db.insert(apiKeys).values({ userId, keyHash, name }).returning();
+    return key;
+  }
+  async getApiKeysByUser(userId: string) {
+    return this.db.select().from(apiKeys).where(eq(apiKeys.userId, userId)).orderBy(desc(apiKeys.createdAt));
+  }
+  async deleteApiKey(id: string) {
+    await this.db.delete(apiKeys).where(eq(apiKeys.id, id));
+  }
+  async getApiKeyByHash(keyHash: string) {
+    const [key] = await this.db.select().from(apiKeys).where(eq(apiKeys.keyHash, keyHash));
+    return key;
+  }
+  async updateApiKeyLastUsed(id: string) {
+    await this.db.update(apiKeys).set({ lastUsed: new Date() }).where(eq(apiKeys.id, id));
   }
 
   // ── OAuth ──────────────────────────────────────────────────────────────

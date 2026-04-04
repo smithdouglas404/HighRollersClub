@@ -760,6 +760,137 @@ function LinkedSocialAccounts() {
 }
 
 /* ────────────────────────────────────────────────────────────
+   API Keys Section
+   ──────────────────────────────────────────────────────────── */
+
+function ApiKeysSection() {
+  const [keys, setKeys] = useState<{ id: string; name: string; lastUsed: string | null; createdAt: string }[]>([]);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [generatedKey, setGeneratedKey] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/api-keys", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(setKeys)
+      .catch(() => {});
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!newKeyName.trim() || loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: newKeyName.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGeneratedKey(data.key);
+        setKeys(prev => [{ id: data.id, name: data.name, lastUsed: null, createdAt: data.createdAt }, ...prev]);
+        setNewKeyName("");
+      }
+    } catch {} finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    await fetch(`/api/api-keys/${id}`, { method: "DELETE", credentials: "include" });
+    setKeys(prev => prev.filter(k => k.id !== id));
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(generatedKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.25 }}
+      className="rounded-xl p-5 bg-surface-high/30 backdrop-blur-xl border border-white/[0.06]"
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <Key className="w-4 h-4 text-primary" />
+        <h3 className="text-sm font-display font-bold text-white">API Keys</h3>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        Generate API keys to access player statistics programmatically.
+        See <a href="/api-docs" className="text-primary hover:underline">API Documentation</a> for usage.
+      </p>
+
+      {/* Generate new key */}
+      <div className="flex gap-2 mb-4">
+        <input
+          value={newKeyName}
+          onChange={e => setNewKeyName(e.target.value)}
+          placeholder="Key name (e.g., My App)"
+          maxLength={50}
+          className="flex-1 px-3 py-2 rounded-lg text-xs bg-surface-highest/50 border border-white/[0.06] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/30"
+        />
+        <button
+          onClick={handleGenerate}
+          disabled={!newKeyName.trim() || loading}
+          className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-black bg-primary hover:bg-primary/90 transition-all disabled:opacity-40"
+        >
+          Generate
+        </button>
+      </div>
+
+      {/* Show generated key once */}
+      <AnimatePresence>
+        {generatedKey && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20"
+          >
+            <p className="text-[10px] font-bold text-green-400 uppercase tracking-wider mb-1">
+              Copy this key now -- it will not be shown again
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs text-green-300 font-mono flex-1 break-all">{generatedKey}</code>
+              <button onClick={handleCopy} className="p-1.5 rounded-md bg-white/5 hover:bg-white/10 transition-colors">
+                {copied ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Key list */}
+      {keys.length > 0 && (
+        <div className="space-y-2">
+          {keys.map(k => (
+            <div key={k.id} className="flex items-center justify-between p-3 rounded-lg bg-black/20 border border-white/[0.04]">
+              <div>
+                <span className="text-xs font-bold text-white">{k.name}</span>
+                <span className="text-[10px] text-muted-foreground ml-2">
+                  {k.lastUsed ? `Last used ${new Date(k.lastUsed).toLocaleDateString()}` : "Never used"}
+                </span>
+              </div>
+              <button
+                onClick={() => handleDelete(k.id)}
+                className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────
    Main Security Page
    ──────────────────────────────────────────────────────────── */
 
@@ -805,6 +936,7 @@ export default function Security() {
           <TwoFactorAuth />
           <ConnectedWallets />
           <LinkedSocialAccounts />
+          <ApiKeysSection />
         </div>
       </div>
     </DashboardLayout>

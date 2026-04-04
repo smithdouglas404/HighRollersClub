@@ -57,6 +57,7 @@ export const clubs = pgTable("clubs", {
   adminApprovalRequired: boolean("admin_approval_required").notNull().default(false),
   antiCollusion: boolean("anti_collusion").notNull().default(false),
   themeColor: text("theme_color").notNull().default("gold"),
+  eloRating: integer("elo_rating").notNull().default(1200),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -456,6 +457,11 @@ export const playerStats = pgTable("player_stats", {
   sngWins: integer("sng_wins").notNull().default(0),
   bombPotsPlayed: integer("bomb_pots_played").notNull().default(0),
   headsUpWins: integer("heads_up_wins").notNull().default(0),
+  bluffWins: integer("bluff_wins").notNull().default(0),
+  ploHands: integer("plo_hands").notNull().default(0),
+  bigPotWins: integer("big_pot_wins").notNull().default(0),
+  preflopFolds: integer("preflop_folds").notNull().default(0),
+  tournamentHands: integer("tournament_hands").notNull().default(0),
   lastResetAt: timestamp("last_reset_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
@@ -786,3 +792,75 @@ export const notifications = pgTable("notifications", {
 ]);
 
 export type Notification = typeof notifications.$inferSelect;
+
+// ─── Club Wars ───────────────────────────────────────────────────────────
+export const clubWars = pgTable("club_wars", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  club1Id: varchar("club1_id").notNull().references(() => clubs.id),
+  club2Id: varchar("club2_id").notNull().references(() => clubs.id),
+  club1Name: text("club1_name").notNull(),
+  club2Name: text("club2_name").notNull(),
+  status: text("status").notNull().default("pending"), // pending, active, completed
+  winnerId: varchar("winner_id"),
+  club1Score: integer("club1_score").notNull().default(0),
+  club2Score: integer("club2_score").notNull().default(0),
+  club1Elo: integer("club1_elo"),
+  club2Elo: integer("club2_elo"),
+  eloChange: integer("elo_change"),
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ClubWar = typeof clubWars.$inferSelect;
+
+// ─── Marketplace Listings ────────────────────────────────────────────────────
+export const marketplaceListings = pgTable("marketplace_listings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: varchar("seller_id").notNull().references(() => users.id),
+  itemId: varchar("item_id").notNull().references(() => shopItems.id),
+  price: integer("price").notNull(),
+  status: text("status").notNull().default("active"), // active, sold, cancelled
+  buyerId: varchar("buyer_id").references(() => users.id),
+  platformFee: integer("platform_fee"), // 10% cut
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  soldAt: timestamp("sold_at"),
+}, (table) => [
+  index("marketplace_listings_status_idx").on(table.status),
+  index("marketplace_listings_seller_idx").on(table.sellerId),
+]);
+
+export type MarketplaceListing = typeof marketplaceListings.$inferSelect;
+
+// ─── Stakes ─────────────────────────────────────────────────────────────────
+export const stakes = pgTable("stakes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  backerId: varchar("backer_id").notNull().references(() => users.id),
+  playerId: varchar("player_id").notNull().references(() => users.id),
+  tournamentId: varchar("tournament_id").notNull().references(() => tournaments.id),
+  stakePercent: integer("stake_percent").notNull(),
+  buyInShare: integer("buy_in_share").notNull(),
+  status: text("status").notNull().default("pending"), // pending, accepted, active, settled, cancelled
+  payout: integer("payout"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("stakes_backer_idx").on(table.backerId),
+  index("stakes_player_idx").on(table.playerId),
+]);
+
+export type Stake = typeof stakes.$inferSelect;
+
+// ─── API Keys ───────────────────────────────────────────────────────────────
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  keyHash: text("key_hash").notNull(), // SHA-256 hash of the actual key
+  name: text("name").notNull(), // user-given label
+  lastUsed: timestamp("last_used"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("api_keys_user_idx").on(table.userId),
+  index("api_keys_hash_idx").on(table.keyHash),
+]);
+
+export type ApiKey = typeof apiKeys.$inferSelect;

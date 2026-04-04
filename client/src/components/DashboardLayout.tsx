@@ -12,7 +12,8 @@ import { PageTransition } from "./shared/PageTransition";
 import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
   BarChart3, LogOut, Search, Wallet, Medal,
-  Shield, ChevronDown, Check, Menu, X, Coins, Crown, Shirt
+  Shield, ChevronDown, Check, Menu, X, Coins, Crown, Shirt,
+  Store, Handshake
 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
@@ -33,6 +34,9 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
   { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse", "/clubs/create"] },
   { icon: Swords, label: "League & Alliances", href: "/leagues" },
+  { icon: Swords, label: "Club Wars", href: "/club-wars", match: ["/club-wars"] },
+  { icon: Store, label: "Marketplace", href: "/marketplace", match: ["/marketplace"] },
+  { icon: Handshake, label: "Staking", href: "/stakes", match: ["/stakes"] },
   { icon: Trophy, label: "Club Rankings", href: "/club-rankings", match: ["/club-rankings"] },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
   { icon: Shirt, label: "Wardrobe", href: "/wardrobe", match: ["/wardrobe"] },

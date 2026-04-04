@@ -40,7 +40,7 @@ function getCardFaceUrl(rank: string, suit: string): string {
 }
 
 const CARD_BACK_URL = "/cardbacks/cardback_royal.webp";
-const CARD_BACK_FALLBACK = "/cards/card_back.webp";
+const CARD_BACK_FALLBACK = "/cardbacks/cardback_classic.webp";
 
 /* ── Card face: SVG card with realistic styling ── */
 function CardFace({ card, isHero }: { card: CardType; isHero: boolean }) {

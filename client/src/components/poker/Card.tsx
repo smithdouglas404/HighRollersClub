@@ -28,10 +28,10 @@ const suitGlow: Record<Suit, string> = {
 const sizeConfig = {
   sm:    { w: "w-[52px]",   h: "h-[72px]",   wPx: 52,  hPx: 72  },
   md:    { w: "w-[72px]",   h: "h-[100px]",  wPx: 72,  hPx: 100 },
-  lg:    { w: "w-[84px]",   h: "h-[118px]",  wPx: 84,  hPx: 118 },
-  xl:    { w: "w-[95px]",   h: "h-[136px]",  wPx: 95,  hPx: 136 },
-  "2xl": { w: "w-[110px]",  h: "h-[156px]",  wPx: 110, hPx: 156 },
-  "3xl": { w: "w-[140px]",  h: "h-[200px]",  wPx: 140, hPx: 200 },
+  lg:    { w: "w-[90px]",   h: "h-[126px]",  wPx: 90,  hPx: 126 },
+  xl:    { w: "w-[108px]",  h: "h-[152px]",  wPx: 108, hPx: 152 },
+  "2xl": { w: "w-[130px]",  h: "h-[182px]",  wPx: 130, hPx: 182 },
+  "3xl": { w: "w-[160px]",  h: "h-[224px]",  wPx: 160, hPx: 224 },
 };
 
 /* ── Card image URLs (Doug's SVG deck) ── */
@@ -39,25 +39,36 @@ function getCardFaceUrl(rank: string, suit: string): string {
   return `/cards/${rank}_${suit}.svg`;
 }
 
-const CARD_BACK_URL = "/cardbacks/cardback_neon.webp";
+const CARD_BACK_URL = "/cardbacks/cardback_royal.webp";
 const CARD_BACK_FALLBACK = "/cards/card_back.webp";
 
-/* ── Card face: Nano Banana generated image ── */
+/* ── Card face: SVG card with realistic styling ── */
 function CardFace({ card, isHero }: { card: CardType; isHero: boolean }) {
   return (
     <div className="absolute inset-0 rounded-lg overflow-hidden" style={{
-      border: isHero ? "2px solid #d4af37" : "1.5px solid #c9a84c",
-      boxShadow: isHero ? "inset 0 0 8px rgba(212,175,55,0.12)" : "inset 0 0 4px rgba(201,168,76,0.08)",
+      border: isHero ? "2px solid #d4af37" : "1.5px solid rgba(180,160,120,0.5)",
+      boxShadow: isHero
+        ? "inset 0 0 10px rgba(212,175,55,0.15), inset 0 1px 0 rgba(255,255,255,0.15)"
+        : "inset 0 0 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.1)",
+      background: "#f8f6f0",
     }}>
       <img
         src={getCardFaceUrl(card.rank, card.suit)}
         alt={`${card.rank} of ${card.suit}`}
         className="w-full h-full object-cover"
         draggable={false}
+        style={{ filter: "contrast(1.05) saturate(1.1)" }}
       />
-      {/* Light sheen overlay */}
+      {/* Paper texture + light sheen */}
       <div className="absolute inset-0 rounded-lg pointer-events-none" style={{
-        background: "linear-gradient(155deg, rgba(255,255,255,0.18) 0%, transparent 25%, transparent 65%, rgba(255,255,255,0.05) 100%)",
+        background: `
+          linear-gradient(155deg, rgba(255,255,255,0.25) 0%, transparent 20%, transparent 60%, rgba(255,255,255,0.08) 100%),
+          linear-gradient(to bottom, rgba(255,255,255,0.06) 0%, transparent 30%, rgba(0,0,0,0.04) 100%)
+        `,
+      }} />
+      {/* Subtle edge shadow for depth */}
+      <div className="absolute inset-0 rounded-lg pointer-events-none" style={{
+        boxShadow: "inset 0 0 3px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(0,0,0,0.06)",
       }} />
     </div>
   );
@@ -237,8 +248,8 @@ export function Card({
       )}
       style={{
         boxShadow: isHero
-          ? `0 4px 12px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.3), 0 0 24px ${glow}`
-          : `0 2px 8px rgba(0,0,0,0.4), 0 6px 16px rgba(0,0,0,0.25)`,
+          ? `0 6px 16px rgba(0,0,0,0.5), 0 16px 36px rgba(0,0,0,0.35), 0 0 28px ${glow}, 0 1px 0 rgba(255,255,255,0.1)`
+          : `0 4px 12px rgba(0,0,0,0.5), 0 10px 24px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.08)`,
         transformOrigin: isHero ? "left center" : "center center",
       }}
     >

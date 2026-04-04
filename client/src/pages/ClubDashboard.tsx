@@ -240,12 +240,12 @@ export default function ClubDashboard() {
     setCreatingClub(true);
     setCreateError("");
     try {
-      const logoUrl = selectedLogo ? CLUB_LOGO_OPTIONS.find(l => l.id === selectedLogo)?.url : undefined;
+      const avatarUrl = selectedLogo ? CLUB_LOGO_OPTIONS.find(l => l.id === selectedLogo)?.url : undefined;
       const result = await createClub({
         name: newClubName.trim(),
         description: newClubDescription.trim() || undefined,
         isPublic: newClubIsPublic,
-        logoUrl,
+        avatarUrl,
       });
       if (!result) {
         setCreateError("Failed to create club. Please try again.");
@@ -263,7 +263,7 @@ export default function ClubDashboard() {
     setActionLoading(null);
   };
 
-  const clubLogo = club ? CLUB_LOGO_OPTIONS.find(l => l.id === (club as any).logoId) : null;
+  const clubLogo = club ? CLUB_LOGO_OPTIONS.find(l => l.url === (club as any).avatarUrl) : null;
 
   const tabs = [
     { key: "overview" as const, label: "Overview", icon: LayoutDashboard, count: null },

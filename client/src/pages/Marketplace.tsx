@@ -108,10 +108,20 @@ export default function Marketplace() {
   };
 
   const handleBuy = async (listing: Listing) => {
-    await fetch(`/api/marketplace/${listing.id}/buy`, {
-      method: "POST",
-      credentials: "include",
-    });
+    try {
+      const res = await fetch(`/api/marketplace/${listing.id}/buy`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Purchase failed" }));
+        alert(data.message || "Purchase failed");
+        return;
+      }
+    } catch {
+      alert("Network error — purchase failed");
+      return;
+    }
     setConfirmBuy(null);
     fetchData();
   };

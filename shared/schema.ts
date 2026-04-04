@@ -494,6 +494,7 @@ export const userMissions = pgTable("user_missions", {
   completedAt: timestamp("completed_at"),
   claimedAt: timestamp("claimed_at"),
   periodStart: timestamp("period_start").notNull().defaultNow(),
+  baselineValue: integer("baseline_value").notNull().default(0),
 }, (table) => [
   index("user_missions_user_idx").on(table.userId),
   index("user_missions_mission_idx").on(table.missionId),

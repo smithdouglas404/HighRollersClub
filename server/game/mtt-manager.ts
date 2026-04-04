@@ -147,6 +147,9 @@ export class MTTManager {
         autoTrimExcessBets: false,
         pokerVariant: this.pokerVariant,
         useCentsValues: false,
+        requireAdminApproval: false,
+        allowSpectators: true,
+        clubMembersOnly: false,
       });
 
       this.tableIds.add(tableRow.id);
@@ -628,6 +631,46 @@ export class MTTManager {
 
     // Update tournament status in DB
     await storage.updateTournament(this.tournamentId, { status: "complete" });
+
+    // Notify the winner with a leaderboard_change notification
+    if (winner && !winner.userId.startsWith("bot-")) {
+      try {
+        await storage.createNotification(
+          winner.userId,
+          "leaderboard_change",
+          "Tournament Victory!",
+          `You won the tournament and earned ${prizeAmount.toLocaleString()} chips! Your leaderboard ranking may have changed.`,
+          { tournamentId: this.tournamentId, place: 1, prizeAmount },
+        );
+      } catch (_) { /* non-critical */ }
+    }
+
+    // Notify participants who placed in the money about challenge completion
+    try {
+      const tournament = await storage.getTournament(this.tournamentId);
+      if (tournament?.clubId) {
+        const challenges = await storage.getClubChallenges(tournament.clubId);
+        const tourneyChallenges = challenges.filter(
+          (c) => c.type === "tournaments_won" && !c.completedAt,
+        );
+        for (const ch of tourneyChallenges) {
+          const updated = await storage.updateChallengeProgress(ch.id, 1);
+          if (updated && updated.completedAt) {
+            // Challenge just completed - notify all club members
+            const members = await storage.getClubMembers(tournament.clubId);
+            for (const m of members) {
+              await storage.createNotification(
+                m.userId,
+                "challenge_complete",
+                `Challenge Complete: ${updated.title}`,
+                `${updated.description} - Reward: ${updated.rewardDescription}`,
+                { challengeId: updated.id, clubId: tournament.clubId },
+              );
+            }
+          }
+        }
+      }
+    } catch (_) { /* non-critical */ }
 
     // Broadcast tournament complete to all remaining tables
     const results = this.getStandings();

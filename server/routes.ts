@@ -1563,7 +1563,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // ─── Hand Routes ─────────────────────────────────────────────────────────
-  app.get("/api/hands/:id", requireAuth, async (req, res, next) => {
+  app.get("/api/hands/:id", async (req, res, next) => {
     try {
       const hand = await storage.getGameHand(req.params.id);
       if (!hand) return res.status(404).json({ message: "Hand not found" });
@@ -1623,7 +1623,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // Hand actions (action-by-action replay log)
-  app.get("/api/hands/:id/actions", requireAuth, async (req, res, next) => {
+  app.get("/api/hands/:id/actions", async (req, res, next) => {
     try {
       const actions = await storage.getHandActions(req.params.id);
       res.json(actions);
@@ -2106,19 +2106,40 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   async function resetStaleMissions(userId: string, allMissions: any[], userMs: any[]): Promise<boolean> {
     let didReset = false;
     let resetDaily = false;
+    const stats = await storage.getPlayerStats(userId);
+
+    const baselineFieldMap: Record<string, string> = {
+      hands_played: "handsPlayed",
+      pots_won: "potsWon",
+      bluff_wins: "bluffWins",
+      preflop_folds: "preflopFolds",
+      big_pot_wins: "bigPotWins",
+      plo_hands: "ploHands",
+      tournament_hands: "tournamentHands",
+      sng_win: "sngWins",
+      vpip: "vpip",
+      win_streak: "bestWinStreak",
+      consecutive_wins: "currentWinStreak",
+      bomb_pot: "bombPotsPlayed",
+      heads_up_win: "headsUpWins",
+    };
+
     for (const um of userMs) {
       const mission = allMissions.find((m: any) => m.id === um.missionId);
       if (!mission) continue;
       if (isMissionPeriodStale(um.periodStart, mission.periodType)) {
+        const statField = baselineFieldMap[mission.type];
+        const newBaseline = stats && statField && typeof (stats as any)[statField] === "number"
+          ? (stats as any)[statField] as number
+          : 0;
         await storage.updateUserMission(um.id, {
           progress: 0,
           claimedAt: null,
           completedAt: null,
           periodStart: new Date(),
+          baselineValue: newBaseline,
         });
         didReset = true;
-        // Only reset stats when daily missions expire (weekly missions
-        // rely on cumulative stats that shouldn't be wiped mid-week)
         if (mission.periodType === "daily") {
           resetDaily = true;
         }
@@ -2147,16 +2168,17 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       const result = allMissions.map(m => {
         const userMission = userMs.find(um => um.missionId === m.id);
+        const baseline = userMission?.baselineValue ?? 0;
         let progress = 0;
         if (stats) {
           switch (m.type) {
-            case "hands_played": progress = stats.handsPlayed; break;
-            case "pots_won": progress = stats.potsWon; break;
-            case "win_streak": progress = stats.bestWinStreak; break;
-            case "consecutive_wins": progress = stats.currentWinStreak; break;
-            case "sng_win": progress = (stats as any).sngWins ?? 0; break;
-            case "bomb_pot": progress = (stats as any).bombPotsPlayed ?? 0; break;
-            case "heads_up_win": progress = (stats as any).headsUpWins ?? 0; break;
+            case "hands_played": progress = Math.max(0, stats.handsPlayed - baseline); break;
+            case "pots_won": progress = Math.max(0, stats.potsWon - baseline); break;
+            case "win_streak": progress = Math.max(0, stats.bestWinStreak - baseline); break;
+            case "consecutive_wins": progress = Math.max(0, stats.currentWinStreak - baseline); break;
+            case "sng_win": progress = Math.max(0, ((stats as any).sngWins ?? 0) - baseline); break;
+            case "bomb_pot": progress = Math.max(0, ((stats as any).bombPotsPlayed ?? 0) - baseline); break;
+            case "heads_up_win": progress = Math.max(0, ((stats as any).headsUpWins ?? 0) - baseline); break;
             default: progress = userMission?.progress || 0;
           }
         }
@@ -2188,16 +2210,18 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
 
       const stats = await storage.getPlayerStats(req.user!.id);
+      const userMission = userMs.find(um => um.missionId === mission.id);
+      const baseline = userMission?.baselineValue ?? 0;
       let progress = 0;
       if (stats) {
         switch (mission.type) {
-          case "hands_played": progress = stats.handsPlayed; break;
-          case "pots_won": progress = stats.potsWon; break;
-          case "win_streak": progress = stats.bestWinStreak; break;
-          case "consecutive_wins": progress = stats.currentWinStreak; break;
-          case "sng_win": progress = (stats as any).sngWins ?? 0; break;
-          case "bomb_pot": progress = (stats as any).bombPotsPlayed ?? 0; break;
-          case "heads_up_win": progress = (stats as any).headsUpWins ?? 0; break;
+          case "hands_played": progress = Math.max(0, stats.handsPlayed - baseline); break;
+          case "pots_won": progress = Math.max(0, stats.potsWon - baseline); break;
+          case "win_streak": progress = Math.max(0, stats.bestWinStreak - baseline); break;
+          case "consecutive_wins": progress = Math.max(0, stats.currentWinStreak - baseline); break;
+          case "sng_win": progress = Math.max(0, ((stats as any).sngWins ?? 0) - baseline); break;
+          case "bomb_pot": progress = Math.max(0, ((stats as any).bombPotsPlayed ?? 0) - baseline); break;
+          case "heads_up_win": progress = Math.max(0, ((stats as any).headsUpWins ?? 0) - baseline); break;
         }
       }
 
@@ -2212,7 +2236,6 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
 
       // Create or update user mission
-      let userMission = userMs.find(um => um.missionId === mission.id);
       if (userMission) {
         await storage.updateUserMission(userMission.id, {
           claimedAt: new Date(),
@@ -2227,6 +2250,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
           completedAt: new Date(),
           claimedAt: new Date(),
           periodStart: new Date(),
+          baselineValue: baseline,
         });
       }
 
@@ -3819,6 +3843,34 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       await storage.updateClub(found.club1Id, { eloRating: elo1 + eloChange });
       await storage.updateClub(found.club2Id, { eloRating: elo2 - eloChange });
 
+      // Notify members of both clubs about war completion
+      try {
+        const [club1, club2] = await Promise.all([
+          storage.getClub(found.club1Id),
+          storage.getClub(found.club2Id),
+        ]);
+        const club1Name = club1?.name ?? "Club 1";
+        const club2Name = club2?.name ?? "Club 2";
+        const resultText = winnerId === found.club1Id
+          ? `${club1Name} won!`
+          : winnerId === found.club2Id
+          ? `${club2Name} won!`
+          : "It's a draw!";
+        const notifyClub = async (clubId: string) => {
+          const members = await storage.getClubMembers(clubId);
+          for (const m of members) {
+            await storage.createNotification(
+              m.userId,
+              "club_announcement",
+              `Club War Complete: ${club1Name} vs ${club2Name}`,
+              `${resultText} Score: ${club1Score}-${club2Score}. ELO change: ${eloChange > 0 ? "+" : ""}${eloChange}.`,
+              { warId: req.params.id, club1Id: found.club1Id, club2Id: found.club2Id },
+            );
+          }
+        };
+        await Promise.all([notifyClub(found.club1Id), notifyClub(found.club2Id)]);
+      } catch (_) { /* non-critical */ }
+
       res.json(updated);
     } catch (err) { next(err); }
   });
@@ -3873,7 +3925,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       // Pay seller
       await storage.atomicAddChips(listing.sellerId, sellerPayout);
 
-      // Transfer item
+      // Transfer item — remove from seller, give to buyer
+      await storage.removeFromInventory(listing.sellerId, listing.itemId);
       await storage.addToInventory(user.id, listing.itemId);
 
       // Mark sold
@@ -3900,7 +3953,22 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     try {
       const user = req.user as any;
       const myStakes = await storage.getStakesForPlayer(user.id);
-      res.json(myStakes);
+      // Enrich with display names and tournament info
+      const enriched = await Promise.all(myStakes.map(async (s) => {
+        const [backer, player, tournament] = await Promise.all([
+          storage.getUser(s.backerId),
+          storage.getUser(s.playerId),
+          storage.getTournament(s.tournamentId),
+        ]);
+        return {
+          ...s,
+          backerName: backer?.displayName ?? backer?.username ?? s.backerId.slice(0, 8),
+          playerName: player?.displayName ?? player?.username ?? s.playerId.slice(0, 8),
+          tournamentName: tournament?.name ?? s.tournamentId.slice(0, 8),
+          tournamentStatus: tournament?.status ?? "unknown",
+        };
+      }));
+      res.json(enriched);
     } catch (err) { next(err); }
   });
 
@@ -3969,6 +4037,33 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
 
       const updated = await storage.updateStake(req.params.id, { status: "settled", payout });
+
+      // Notify both backer and player about settlement
+      try {
+        const backerUser = await storage.getUser(stake.backerId);
+        const playerUser = await storage.getUser(stake.playerId);
+        const backerName = backerUser?.displayName ?? "Backer";
+        const playerName = playerUser?.displayName ?? "Player";
+        if (backerShare > 0) {
+          await storage.createNotification(
+            stake.backerId,
+            "leaderboard_change",
+            "Stake Settled",
+            `Your stake on ${playerName} paid out ${backerShare.toLocaleString()} chips (${stake.stakePercent}% of ${payout.toLocaleString()}).`,
+            { stakeId: req.params.id },
+          );
+        }
+        if (playerShare > 0) {
+          await storage.createNotification(
+            stake.playerId,
+            "leaderboard_change",
+            "Stake Settled",
+            `Stake from ${backerName} settled. You received ${playerShare.toLocaleString()} chips.`,
+            { stakeId: req.params.id },
+          );
+        }
+      } catch (_) { /* non-critical */ }
+
       res.json(updated);
     } catch (err) { next(err); }
   });
@@ -4163,6 +4258,24 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const dailyPicks = shuffle(MISSION_TEMPLATES.daily).slice(0, 3 + Math.round(Math.random()));
       const weeklyPicks = shuffle(MISSION_TEMPLATES.weekly).slice(0, 3 + Math.round(Math.random()));
 
+      // Snapshot current stats so progress is relative to mission creation
+      const stats = await storage.getPlayerStats(req.user!.id);
+      const baselineFieldMap: Record<string, keyof NonNullable<typeof stats>> = {
+        hands_played: "handsPlayed",
+        pots_won: "potsWon",
+        bluff_wins: "bluffWins",
+        preflop_folds: "preflopFolds",
+        big_pot_wins: "bigPotWins",
+        plo_hands: "ploHands",
+        tournament_hands: "tournamentHands",
+        sng_win: "sngWins",
+        vpip: "vpip",
+        win_streak: "bestWinStreak",
+        consecutive_wins: "currentWinStreak",
+        bomb_pot: "bombPotsPlayed",
+        heads_up_win: "headsUpWins",
+      };
+
       const created = [];
       for (const t of [...dailyPicks, ...weeklyPicks]) {
         const isWeekly = MISSION_TEMPLATES.weekly.includes(t as any);
@@ -4175,6 +4288,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
           periodType: isWeekly ? "weekly" : "daily",
           isActive: true,
         });
+        const statField = baselineFieldMap[t.type];
+        const baseline = stats && statField && typeof (stats as any)[statField] === "number"
+          ? (stats as any)[statField] as number
+          : 0;
         await storage.createUserMission({
           userId: req.user!.id,
           missionId: mission.id,
@@ -4182,6 +4299,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
           completedAt: null,
           claimedAt: null,
           periodStart: new Date(),
+          baselineValue: baseline,
         });
         created.push({ ...mission, progress: 0 });
       }
@@ -4217,7 +4335,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
             };
             const field = fieldMap[mission.type];
             if (field && typeof stats[field] === "number") {
-              liveProgress = Math.min(stats[field] as number, mission.target);
+              const baseline = um.baselineValue ?? 0;
+              liveProgress = Math.min(Math.max(0, (stats[field] as number) - baseline), mission.target);
             }
           }
 
@@ -4238,23 +4357,6 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         .filter(Boolean);
 
       res.json(active);
-    } catch (err) { next(err); }
-  });
-
-  app.post("/api/missions/:id/claim", requireAuth, async (req, res, next) => {
-    try {
-      const userMissionsList = await storage.getUserMissions(req.user!.id);
-      const um = userMissionsList.find(m => m.id === req.params.id);
-      if (!um) return res.status(404).json({ message: "Mission not found" });
-      if (um.claimedAt) return res.status(400).json({ message: "Already claimed" });
-
-      const allMissions = await storage.getMissions();
-      const mission = allMissions.find(m => m.id === um.missionId);
-      if (!mission) return res.status(404).json({ message: "Mission definition not found" });
-
-      await storage.updateUserMission(um.id, { claimedAt: new Date() });
-      await storage.atomicAddChips(req.user!.id, mission.reward);
-      res.json({ ok: true, reward: mission.reward });
     } catch (err) { next(err); }
   });
 

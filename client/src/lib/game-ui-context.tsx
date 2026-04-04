@@ -133,6 +133,7 @@ const GameUIContext = createContext<GameUIContextValue | null>(null);
 
 function getInitialCompactMode(): boolean {
   try {
+    if (new URLSearchParams(window.location.search).get('compact') === 'true') return true;
     return localStorage.getItem('poker-compact-mode') === 'true';
   } catch {
     return false;

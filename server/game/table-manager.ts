@@ -355,13 +355,16 @@ class TableManager {
         storage.getClubChallenges(clubId).then(challenges => {
           const now = new Date();
           const active = challenges.filter(c => !c.completedAt && new Date(c.expiresAt).getTime() > now.getTime());
-          const humanPlayerCount = summary.players.filter(p => !p.id.startsWith("bot-")).length;
-          const humanWinnerCount = summary.winners.filter(w => !w.playerId.startsWith("bot-")).length;
+          const humanPlayers = summary.players.filter(p => !p.id.startsWith("bot-"));
+          const humanWinners = summary.winners.filter(w => !w.playerId.startsWith("bot-"));
+          const totalChipsWon = humanWinners.reduce((sum, w) => sum + (w.amount || 0), 0);
           for (const ch of active) {
-            if (ch.type === "hands_played" && humanPlayerCount > 0) {
-              storage.updateChallengeProgress(ch.id, 1).catch(() => {});
-            } else if (ch.type === "pots_won" && humanWinnerCount > 0) {
-              storage.updateChallengeProgress(ch.id, humanWinnerCount).catch(() => {});
+            if (ch.type === "hands_played" && humanPlayers.length > 0) {
+              storage.updateChallengeProgress(ch.id, humanPlayers.length).catch(() => {});
+            } else if (ch.type === "pots_won" && humanWinners.length > 0) {
+              storage.updateChallengeProgress(ch.id, humanWinners.length).catch(() => {});
+            } else if (ch.type === "total_chips_won" && totalChipsWon > 0) {
+              storage.updateChallengeProgress(ch.id, totalChipsWon).catch(() => {});
             }
           }
         }).catch(() => {});
@@ -425,7 +428,7 @@ class TableManager {
 
       // Track preflop folds
       for (const a of summary.actions) {
-        if (a.phase === "preflop" && a.action === "fold" && !a.playerId.startsWith("bot-")) {
+        if (a.phase === "pre-flop" && a.action === "fold" && !a.playerId.startsWith("bot-")) {
           storage.incrementPlayerStat(a.playerId, "preflopFolds", 1).catch(() => {});
         }
       }

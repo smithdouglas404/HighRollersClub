@@ -141,6 +141,7 @@ export interface IStorage {
   createShopItem(data: Omit<ShopItem, "id" | "createdAt">): Promise<ShopItem>;
   getUserInventory(userId: string): Promise<UserInventoryItem[]>;
   addToInventory(userId: string, itemId: string): Promise<UserInventoryItem>;
+  removeFromInventory(userId: string, itemId: string): Promise<void>;
   equipItem(id: string): Promise<void>;
   unequipItem(id: string): Promise<void>;
 
@@ -865,6 +866,10 @@ export class MemStorage implements IStorage {
     const inv: UserInventoryItem = { id: randomUUID(), userId, itemId, equippedAt: null, purchasedAt: new Date() };
     this.userInventoryList.push(inv);
     return inv;
+  }
+  async removeFromInventory(userId: string, itemId: string): Promise<void> {
+    const idx = this.userInventoryList.findIndex(i => i.userId === userId && i.itemId === itemId);
+    if (idx !== -1) this.userInventoryList.splice(idx, 1);
   }
   async equipItem(id: string) {
     const item = this.userInventoryList.find(i => i.id === id);
@@ -1943,6 +1948,9 @@ export class DatabaseStorage implements IStorage {
   async addToInventory(userId: string, itemId: string): Promise<UserInventoryItem> {
     const [inv] = await this.db.insert(userInventory).values({ userId, itemId }).returning();
     return inv;
+  }
+  async removeFromInventory(userId: string, itemId: string): Promise<void> {
+    await this.db.delete(userInventory).where(and(eq(userInventory.userId, userId), eq(userInventory.itemId, itemId)));
   }
   async equipItem(id: string) {
     await this.db.update(userInventory).set({ equippedAt: new Date() }).where(eq(userInventory.id, id));

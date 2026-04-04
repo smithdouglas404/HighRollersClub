@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, TrendingUp, TrendingDown, Coins } from "lucide-react";
 
@@ -35,12 +35,29 @@ export function CoachingOverlay({
   const [result, setResult] = useState<CoachingResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const lastAnalyzedRef = useRef<{ phase: string; pot: number; isHeroTurn: boolean }>({
+    phase: "",
+    pot: 0,
+    isHeroTurn: false,
+  });
 
   useEffect(() => {
     if (!enabled || !isHeroTurn || !holeCards || holeCards.length < 2) {
       setResult(null);
       return;
     }
+
+    // Guard: skip if the same decision point was already analyzed
+    const current = { phase, pot, isHeroTurn };
+    const last = lastAnalyzedRef.current;
+    if (
+      last.phase === current.phase &&
+      last.pot === current.pot &&
+      last.isHeroTurn === current.isHeroTurn
+    ) {
+      return;
+    }
+    lastAnalyzedRef.current = current;
 
     let cancelled = false;
     setLoading(true);

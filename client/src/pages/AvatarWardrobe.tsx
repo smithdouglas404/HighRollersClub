@@ -100,17 +100,17 @@ function AvatarCard({
 export default function AvatarWardrobe() {
   const { user } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [equippedId, setEquippedId] = useState<string>(user?.avatar || AVATAR_OPTIONS[0].id);
+  const [equippedId, setEquippedId] = useState<string>(user?.avatarId || AVATAR_OPTIONS[0].id);
   const [filterTier, setFilterTier] = useState<AvatarOption["tier"] | "all">("all");
   const [saved, setSaved] = useState(false);
 
   // Set initial equipped from user's current avatar
   useEffect(() => {
-    if (user?.avatar) {
-      const match = AVATAR_OPTIONS.find(a => a.image === user.avatar || a.id === user.avatar);
+    if (user?.avatarId) {
+      const match = AVATAR_OPTIONS.find(a => a.image === user.avatarId || a.id === user.avatarId);
       if (match) setEquippedId(match.id);
     }
-  }, [user?.avatar]);
+  }, [user?.avatarId]);
 
   const selected = AVATAR_OPTIONS.find(a => a.id === selectedId);
   const equipped = AVATAR_OPTIONS.find(a => a.id === equippedId) || AVATAR_OPTIONS[0];

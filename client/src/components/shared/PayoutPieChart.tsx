@@ -14,7 +14,7 @@ const COLORS = [
   "#d4af37", // 1st - gold
   "#c0c0c0", // 2nd - silver
   "#cd7f32", // 3rd - bronze
-  "#d4af37", // 4th - cyan
+  "#d4af37", // 4th - gold
   "#a855f7", // 5th - purple
   "#22c55e", // 6th - green
   "#f59e0b", // 7th - amber

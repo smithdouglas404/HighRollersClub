@@ -322,7 +322,7 @@ export function ClubTournaments() {
                     <div
                       className={cn(
                         "h-full rounded-full transition-all",
-                        isLive ? "bg-gradient-to-r from-green-500 to-green-400" : "bg-gradient-to-r from-cyan-500 to-cyan-400"
+                        isLive ? "bg-gradient-to-r from-green-500 to-green-400" : "bg-gradient-to-r from-amber-500 to-amber-400"
                       )}
                       style={{ width: `${Math.min(100, (t.registeredCount / t.maxPlayers) * 100)}%` }}
                     />

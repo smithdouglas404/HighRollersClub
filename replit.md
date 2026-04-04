@@ -70,6 +70,18 @@ Preferred communication style: Simple, everyday language.
 
 10. **Premium UI pages:** Profile (hero banner, rank tiers, animated stat counters, 64px achievement badges with progress bars, taunt voice picker), Members (gold/silver/bronze podium styling for top 3, trend indicators, gradient invite panel), Club Dashboard (club logo picker, animated stat cards, alliance info, tab animations), Browse Clubs (featured clubs section, sort options, club logos, activity indicators), Lobby (hot tables section, format tab counts, seat dot indicators, gradient table cards).
 
+13. **UI/UX polish system:** Cross-cutting improvements applied globally:
+    - **Page transitions:** `PageTransition` component (`client/src/components/shared/PageTransition.tsx`) wraps all DashboardLayout children with fade-slide animations on route change.
+    - **Stagger animations:** `StaggerContainer`, `StaggerItem`, and `FadeIn` reusable components for sequential card/list entrance animations.
+    - **Sidebar active indicator:** Animated `layoutId="sidebar-active"` shared-layout spring animation on the active nav item.
+    - **Mobile swipe sidebar:** Mobile sidebar supports drag-to-close gesture with velocity/offset thresholds.
+    - **Card hover lift:** `.card-hover` CSS class applied to all interactive cards (Lobby tables, variant cards, quick actions, Shop items, Tournament cards, Wallet cards) — adds translateY(-2px) lift + gold glow on hover.
+    - **Custom scrollbar:** Slim 5px gold-tinted scrollbar with transparent track.
+    - **Focus-visible:** Gold outline ring for keyboard users only (`:focus-visible`), no outline on mouse clicks.
+    - **Touch targets:** `.touch-target` CSS class ensures 44x44px minimum on touch devices (`pointer: coarse`).
+    - **Skeleton shimmer:** `.skeleton-shimmer` CSS class for loading placeholder animation.
+    - **Reduced motion:** `prefers-reduced-motion` media query disables all animations globally for accessibility.
+
 ### Project Structure
 
 ```

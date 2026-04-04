@@ -411,7 +411,7 @@ function ShopItemCard({
   return (
     <motion.div
       whileHover={{ scale: 1.03, y: -4 }}
-      className="rounded-xl overflow-hidden transition-all cursor-pointer group"
+      className="rounded-xl overflow-hidden transition-all cursor-pointer group card-hover"
       style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
       onClick={() => !owned && onPurchase(item)}
       role="button"

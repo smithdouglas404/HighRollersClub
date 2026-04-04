@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { WalletBar } from "./wallet/WalletBar";
 import { NotificationCenter } from "./NotificationCenter";
 import { MemberAvatar } from "./shared/MemberAvatar";
+import { PageTransition } from "./shared/PageTransition";
 import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
   BarChart3, LogOut, Search, Wallet, Medal,
@@ -195,20 +196,28 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             <Link key={item.label} href={item.href}>
               <motion.div
                 whileHover={{ x: 2 }}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer group ${
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer group touch-target ${
                   isActive
-                    ? "bg-primary/10 text-primary border border-primary/20 neon-box-glow"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                 }`}
               >
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-active"
+                    className="absolute inset-0 rounded-lg bg-primary/10 border border-primary/20"
+                    style={{ boxShadow: "0 0 15px rgba(129,236,255,0.15), inset 0 0 10px rgba(129,236,255,0.08)" }}
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  />
+                )}
                 <Icon
-                  className={`w-4 h-4 shrink-0 ${
+                  className={`relative z-10 w-4 h-4 shrink-0 ${
                     isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                   }`}
                 />
-                <span className="tracking-wide">{item.label}</span>
+                <span className="relative z-10 tracking-wide">{item.label}</span>
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
+                  <div className="relative z-10 ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
                 )}
               </motion.div>
             </Link>
@@ -302,11 +311,10 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
         </motion.aside>
       )}
 
-      {/* ─── Mobile Sidebar Overlay ───────────────────────────────── */}
+      {/* ─── Mobile Sidebar Overlay — swipe-to-close ───────────── */}
       <AnimatePresence>
         {isMobile && sidebarOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -315,18 +323,23 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
               className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
               onClick={() => setSidebarOpen(false)}
             />
-            {/* Slide-in sidebar */}
             <motion.aside
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col"
+              drag="x"
+              dragConstraints={{ left: -280, right: 0 }}
+              dragElastic={0.1}
+              onDragEnd={(_e, info) => {
+                if (info.offset.x < -80 || info.velocity.x < -300) setSidebarOpen(false);
+              }}
+              className="fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col touch-pan-y"
             >
               <div
                 className="absolute inset-0 border-r border-white/[0.06]"
                 style={{
-                  background: "rgba(10,10,12,0.85)",
+                  background: "rgba(10,10,12,0.95)",
                   backdropFilter: "blur(20px)",
                   borderTop: "2px solid rgba(212,175,55,0.2)",
                 }}
@@ -345,7 +358,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             {isMobile && (
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-lg hover:bg-white/5 transition-colors border border-white/10"
+                className="p-2 rounded-lg hover:bg-white/5 transition-colors border border-white/10 touch-target"
               >
                 <Menu className="w-5 h-5 text-muted-foreground" />
               </button>
@@ -378,7 +391,9 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             <WalletBar />
           </motion.div>
         </div>
-        {children}
+        <PageTransition key={location}>
+          {children}
+        </PageTransition>
       </main>
     </div>
   );

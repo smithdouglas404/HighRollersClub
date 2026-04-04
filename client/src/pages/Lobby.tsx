@@ -96,7 +96,7 @@ function TableCard({ table, onClick, featured, currentUserId, onDelete }: { tabl
       tabIndex={0}
       data-testid={`card-table-${table.id}`}
       className={cn(
-        "group cursor-pointer rounded-md p-5 transition-all duration-300 relative overflow-hidden",
+        "group cursor-pointer rounded-md p-5 transition-all duration-300 relative overflow-hidden card-hover",
         "hover:shadow-[0_0_25px_rgba(212,175,55,0.12)]",
         isPlaying && "border-l-2 border-l-secondary",
         isFull && "opacity-60"
@@ -707,7 +707,7 @@ export default function Lobby() {
                 <div
                   onClick={() => setActiveVariant(activeVariant === variant.key ? "all" : variant.key)}
                   className={cn(
-                    "group cursor-pointer relative overflow-hidden rounded-md transition-all duration-300",
+                    "group cursor-pointer relative overflow-hidden rounded-md transition-all duration-300 card-hover",
                     isActive
                       ? "shadow-[0_0_30px_rgba(212,175,55,0.25)]"
                       : "hover:shadow-[0_0_20px_rgba(212,175,55,0.1)]"
@@ -808,7 +808,7 @@ export default function Lobby() {
                 navigate("/game");
               }
             }}
-            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all"
+            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -843,7 +843,7 @@ export default function Lobby() {
                 startingChips: 1500,
               });
             }}
-            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all"
+            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -862,7 +862,7 @@ export default function Lobby() {
             transition={{ delay: 0.1 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => { setDefaultPrivate(true); setShowCreateTable(true); }}
-            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all"
+            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">

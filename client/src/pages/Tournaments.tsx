@@ -206,7 +206,7 @@ export default function Tournaments() {
                   key={tournament.id}
                   variants={cardVariants}
                   whileHover={{ scale: 1.005, y: -2 }}
-                  className="rounded-xl overflow-hidden transition-all cursor-pointer"
+                  className="rounded-xl overflow-hidden transition-all cursor-pointer card-hover"
                   style={{
                     background: "rgba(15,15,20,0.7)",
                     backdropFilter: "blur(12px)",

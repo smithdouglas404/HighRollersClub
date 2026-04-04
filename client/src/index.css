@@ -534,19 +534,65 @@
   transform: translateY(1px);
 }
 
-/* Scrollbar — cyan tint */
+/* Scrollbar — gold tint, slim profile */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 212, 255, 0.2);
-  border-radius: 3px;
+  background: rgba(212, 175, 55, 0.18);
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 212, 255, 0.4);
+  background: rgba(212, 175, 55, 0.35);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Smooth scroll on main containers */
+html { scroll-behavior: smooth; }
+
+/* Focus-visible — gold ring for keyboard users only */
+:focus-visible {
+  outline: 2px solid rgba(212, 175, 55, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Interactive card lift — add .card-hover to any clickable card */
+.card-hover {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 12px rgba(212,175,55,0.08);
+}
+.card-hover:active {
+  transform: translateY(0px);
+  transition-duration: 0.08s;
+}
+
+/* Skeleton shimmer animation */
+@keyframes skeletonShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.8s ease-in-out infinite;
+}
+
+/* Touch-friendly tap target minimum */
+@media (pointer: coarse) {
+  .touch-target { min-height: 44px; min-width: 44px; }
 }
 
 /* Date picker dark styling */

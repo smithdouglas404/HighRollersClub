@@ -1628,7 +1628,7 @@ export default function Wallet() {
                   animate={{ y: 0, opacity: 1 }}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
                   transition={{ delay: 0.1 + i * 0.05 }}
-                  className="rounded-xl p-4 relative overflow-hidden group cursor-pointer transition-shadow duration-300"
+                  className="rounded-xl p-4 relative overflow-hidden group cursor-pointer transition-shadow duration-300 card-hover"
                   style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px rgba(${w.rgb}, 0.15)`; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}

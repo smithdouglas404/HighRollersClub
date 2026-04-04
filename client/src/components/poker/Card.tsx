@@ -126,9 +126,9 @@ export function Card({
           type: "spring",
           stiffness: 200,
           damping: 20,
+          onComplete: () => setHasFlipped(true),
         });
         sound?.playCardFlip();
-        setHasFlipped(true);
       }, flipDelay * 1000);
       return () => clearTimeout(timer);
     }
@@ -209,13 +209,15 @@ export function Card({
   }
 
   // ── Branch 3: Normal face-up card ──
+  // If hasFlipped is true, the card already completed a 3D flip — skip the rotateY entrance
   const glow = suitGlow[card.suit];
+  const skipEntrance = hasFlipped || compactMode;
 
   return (
     <motion.div
-      initial={compactMode ? { rotateY: 0, scale: 1, opacity: 1 } : { rotateY: 180, scale: 0.6, opacity: 0 }}
+      initial={skipEntrance ? { rotateY: 0, scale: 1, opacity: 1 } : { rotateY: 180, scale: 0.6, opacity: 0 }}
       animate={{ rotateY: 0, scale: 1, opacity: 1 }}
-      transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 20, delay }}
+      transition={skipEntrance ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 20, delay }}
       whileHover={isHero && !compactMode ? {
         rotateY: -12,
         rotateX: 8,

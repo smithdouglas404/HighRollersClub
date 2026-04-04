@@ -7,7 +7,7 @@ import { CLUB_LOGO_OPTIONS } from "@/pages/ClubDashboard";
 import {
   Search, Users, Globe, Lock, Loader2, CalendarDays,
   UserPlus, Clock, FolderSearch, ArrowUpDown, Trophy,
-  TrendingUp, Zap, Crown, Star, SortAsc,
+  TrendingUp, Crown, Star, SortAsc,
 } from "lucide-react";
 
 interface PublicClub extends ClubData {
@@ -28,17 +28,21 @@ function getClubLogo(club: PublicClub) {
   return match?.url ?? null;
 }
 
-function getClubAccentColor(index: number) {
-  const colors = [
-    { from: "rgba(212,175,55,0.5)", to: "rgba(212,175,55,0.1)", glow: "rgba(212,175,55,0.15)" },
-    { from: "rgba(168,85,247,0.5)", to: "rgba(168,85,247,0.1)", glow: "rgba(168,85,247,0.15)" },
-    { from: "rgba(34,197,94,0.5)", to: "rgba(34,197,94,0.1)", glow: "rgba(34,197,94,0.15)" },
-    { from: "rgba(245,158,11,0.5)", to: "rgba(245,158,11,0.1)", glow: "rgba(245,158,11,0.15)" },
-    { from: "rgba(239,68,68,0.5)", to: "rgba(239,68,68,0.1)", glow: "rgba(239,68,68,0.15)" },
-    { from: "rgba(59,130,246,0.5)", to: "rgba(59,130,246,0.1)", glow: "rgba(59,130,246,0.15)" },
-  ];
-  return colors[index % colors.length];
+function getClubHueFromName(clubName: string) {
+  return clubName.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
 }
+
+function getClubBannerGradient(clubName: string) {
+  const hue = getClubHueFromName(clubName);
+  return `linear-gradient(135deg, hsl(${hue}, 45%, 25%), hsl(${hue + 30}, 45%, 15%))`;
+}
+
+function isNewClub(createdAt: string) {
+  const created = new Date(createdAt);
+  const daysSinceCreation = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24);
+  return daysSinceCreation < 7;
+}
+
 
 export default function BrowseClubs() {
   const { user } = useAuth();
@@ -160,7 +164,7 @@ export default function BrowseClubs() {
     }),
   };
 
-  const getClubHue = (club: PublicClub) => (club.name.charCodeAt(0) * 7) % 360;
+  const getClubHue = (club: PublicClub) => getClubHueFromName(club.name);
 
   const renderClubAvatar = (club: PublicClub, size: "sm" | "lg" = "sm") => {
     const logo = getClubLogo(club);
@@ -321,7 +325,6 @@ export default function BrowseClubs() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {featuredClubs.map((club, i) => {
-                const accent = getClubAccentColor(i);
                 return (
                   <motion.div
                     key={club.id}
@@ -332,21 +335,25 @@ export default function BrowseClubs() {
                     whileHover={{ y: -3, scale: 1.01 }}
                     className="relative rounded-xl overflow-hidden group bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
                   >
+                    {/* Name-based gradient banner */}
                     <div
-                      className="h-1"
-                      style={{ background: `linear-gradient(90deg, ${accent.from}, ${accent.to})` }}
-                    />
-
-                    <div className="absolute top-3 right-3">
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-                        <Crown className="w-3 h-3 text-amber-400" />
-                        <span className="text-[0.5625rem] font-bold text-amber-400">#{i + 1}</span>
+                      className="relative h-20 rounded-t-xl"
+                      style={{ background: getClubBannerGradient(club.name) }}
+                    >
+                      <div className="absolute top-2.5 right-2.5">
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/30 backdrop-blur-sm">
+                          <Crown className="w-3 h-3 text-amber-300" />
+                          <span className="text-[0.5625rem] font-bold text-amber-300">#{i + 1}</span>
+                        </div>
+                      </div>
+                      {/* Avatar overlapping banner/content border */}
+                      <div className="absolute -bottom-6 left-5">
+                        {renderClubAvatar(club, "lg")}
                       </div>
                     </div>
 
-                    <div className="p-5">
+                    <div className="p-5 pt-8">
                       <div className="flex items-center gap-3 mb-3">
-                        {renderClubAvatar(club, "lg")}
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm font-bold text-white truncate">{club.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
@@ -356,10 +363,22 @@ export default function BrowseClubs() {
                               {club.isPublic ? <Globe className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
                               {club.isPublic ? "Public" : "Private"}
                             </span>
-                            <span className="text-[0.5625rem] text-gray-500">
-                              <Users className="w-2.5 h-2.5 inline mr-0.5" />
+                            <span
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold"
+                              style={{
+                                background: `hsla(${getClubHueFromName(club.name)}, 45%, 25%, 0.3)`,
+                                color: `hsl(${getClubHueFromName(club.name)}, 50%, 70%)`,
+                              }}
+                            >
+                              <Users className="w-2.5 h-2.5" />
                               {club.memberCount}
                             </span>
+                            {club.memberCount >= 3 && (
+                              <span className="inline-flex items-center gap-1 text-[0.5625rem] text-emerald-400">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                Active
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -396,7 +415,6 @@ export default function BrowseClubs() {
             >
               <AnimatePresence mode="popLayout">
                 {sortedAndFilteredClubs.map((club, i) => {
-                  const accent = getClubAccentColor(i);
                   const trending = isTrending(club);
                   const isFeatured = featuredIds.has(club.id);
 
@@ -413,47 +431,79 @@ export default function BrowseClubs() {
                       whileHover={{ y: -3, scale: 1.01 }}
                       className="rounded-xl overflow-hidden transition-shadow group bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
                     >
-                      <div className="h-12 rounded-t-xl" style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }} />
+                      {/* Gradient banner — color derived from club name */}
+                      <div className="relative h-20 rounded-t-xl" style={{ background: getClubBannerGradient(club.name) }}>
+                        {/* Badges overlaid on banner */}
+                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                          {isNewClub(club.createdAt) && (
+                            <span
+                              data-testid={`badge-new-${club.id}`}
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase bg-green-500/20 text-green-300 border border-green-400/30 backdrop-blur-sm"
+                            >
+                              <TrendingUp className="w-2.5 h-2.5" />
+                              New
+                            </span>
+                          )}
+                          {trending && (
+                            <span
+                              data-testid={`badge-trending-${club.id}`}
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-400/30 backdrop-blur-sm"
+                            >
+                              <TrendingUp className="w-2.5 h-2.5" />
+                              Trending
+                            </span>
+                          )}
+                          {isFeatured && (
+                            <span
+                              data-testid={`badge-top-${club.id}`}
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-400/30 backdrop-blur-sm"
+                            >
+                              <Trophy className="w-2.5 h-2.5" />
+                              Top
+                            </span>
+                          )}
+                        </div>
+                        {/* Club avatar overlapping the banner/content border */}
+                        <div className="absolute -bottom-6 left-5">
+                          {(() => {
+                            const logo = getClubLogo(club);
+                            if (logo) {
+                              return (
+                                <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 ring-2 ring-surface-high/80 shadow-lg">
+                                  <img src={logo} alt={club.name} className="w-full h-full object-cover" />
+                                </div>
+                              );
+                            }
+                            const hue = getClubHueFromName(club.name);
+                            return (
+                              <div
+                                className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 text-xl font-black text-white/80 ring-2 ring-surface-high/80 shadow-lg border border-white/[0.06]"
+                                style={{ background: `linear-gradient(135deg, hsl(${hue}, 50%, 30%), hsl(${hue}, 40%, 18%))` }}
+                              >
+                                {club.name.charAt(0).toUpperCase()}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
 
-                      <div className="p-5">
+                      <div className="p-5 pt-8">
                         <div className="flex items-start gap-3 mb-3">
-                          {renderClubAvatar(club)}
-
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <h3 className="text-sm font-bold text-white truncate flex-1">
                                 {club.name}
                               </h3>
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {trending && (
-                                  <span
-                                    data-testid={`badge-trending-${club.id}`}
-                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase bg-green-500/10 text-green-400 border border-green-500/20"
-                                  >
-                                    <TrendingUp className="w-2.5 h-2.5" />
-                                    New
-                                  </span>
-                                )}
-                                {isFeatured && (
-                                  <span
-                                    data-testid={`badge-top-${club.id}`}
-                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                                  >
-                                    <Trophy className="w-2.5 h-2.5" />
-                                    Top
-                                  </span>
-                                )}
-                                <span
-                                  className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider ${
-                                    club.isPublic
-                                      ? "bg-primary/10 text-primary border border-primary/20"
-                                      : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                                  }`}
-                                >
-                                  {club.isPublic ? <Globe className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
-                                  {club.isPublic ? "Public" : "Private"}
-                                </span>
-                              </div>
+                              <span
+                                className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider ${
+                                  club.isPublic
+                                    ? "bg-primary/10 text-primary border border-primary/20"
+                                    : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                }`}
+                              >
+                                {club.isPublic ? <Globe className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
+                                {club.isPublic ? "Public" : "Private"}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -462,15 +512,30 @@ export default function BrowseClubs() {
                           {club.description || "No description provided."}
                         </p>
 
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                            <Users className="w-3.5 h-3.5 text-gray-500" />
-                            <span data-testid={`text-members-${club.id}`}>{club.memberCount} member{club.memberCount !== 1 ? "s" : ""}</span>
-                            <span className="text-[0.5625rem] text-gray-600">&bull; Last active 2h ago</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                            <CalendarDays className="w-3.5 h-3.5 text-gray-500" />
-                            <span>
+                        <div className="flex items-center gap-3 mb-4 flex-wrap">
+                          {/* Member count badge */}
+                          <span
+                            data-testid={`text-members-${club.id}`}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-bold"
+                            style={{
+                              background: `hsla(${getClubHueFromName(club.name)}, 45%, 25%, 0.3)`,
+                              color: `hsl(${getClubHueFromName(club.name)}, 50%, 70%)`,
+                              border: `1px solid hsla(${getClubHueFromName(club.name)}, 45%, 35%, 0.3)`,
+                            }}
+                          >
+                            <Users className="w-3 h-3" />
+                            {club.memberCount} member{club.memberCount !== 1 ? "s" : ""}
+                          </span>
+                          {/* Active dot — shown when club has online members (approximated by memberCount >= 3) */}
+                          {club.memberCount >= 3 && (
+                            <span className="inline-flex items-center gap-1 text-[0.625rem] text-emerald-400" data-testid={`badge-active-${club.id}`}>
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
+                              Active
+                            </span>
+                          )}
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <CalendarDays className="w-3 h-3" />
+                            <span className="text-[0.625rem]">
                               {new Date(club.createdAt).toLocaleDateString(undefined, {
                                 month: "short",
                                 day: "numeric",
@@ -478,12 +543,6 @@ export default function BrowseClubs() {
                               })}
                             </span>
                           </div>
-                          {club.memberCount >= 5 && (
-                            <div className="flex items-center gap-1 text-xs text-emerald-400">
-                              <Zap className="w-3 h-3" />
-                              <span className="text-[0.625rem]" data-testid={`badge-active-${club.id}`}>Active</span>
-                            </div>
-                          )}
                         </div>
 
                         {renderActionButton(club)}

@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageBackground } from "@/components/shared/PageBackground";
-import { Trophy, Clock, Users, Flame, Plus, Gamepad2 } from "lucide-react";
+import { Trophy, Clock, Users, Flame, Plus, Gamepad2, Timer } from "lucide-react";
 
 interface Tournament {
   id: number;
@@ -49,6 +49,43 @@ function formatStartTime(iso?: string): string {
 
 function calculatePrizePool(t: Tournament): number {
   return t.prizePool || t.buyInAmount * t.maxPlayers;
+}
+
+/** Live countdown that ticks every second */
+function useCountdown(iso?: string): string | null {
+  const calc = useCallback(() => {
+    if (!iso) return null;
+    const ms = new Date(iso).getTime() - Date.now();
+    if (ms <= 0) return null;
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    if (h > 24) {
+      const d = Math.floor(h / 24);
+      return `${d}d ${h % 24}h`;
+    }
+    return `${h}h ${m}m ${s}s`;
+  }, [iso]);
+
+  const [display, setDisplay] = useState(calc);
+  useEffect(() => {
+    if (!iso) return;
+    setDisplay(calc());
+    const id = setInterval(() => setDisplay(calc()), 1000);
+    return () => clearInterval(id);
+  }, [iso, calc]);
+  return display;
+}
+
+function CountdownBadge({ iso }: { iso?: string }) {
+  const text = useCountdown(iso);
+  if (!text) return null;
+  return (
+    <span className="inline-flex items-center gap-1 text-[0.5625rem] font-bold text-amber-400 tabular-nums">
+      <Timer className="w-3 h-3" />
+      {text}
+    </span>
+  );
 }
 
 const containerVariants = {
@@ -207,20 +244,39 @@ export default function Tournaments() {
         )}
 
         {/* ── Tournament Cards ───────────────────────────────────── */}
-        {!loading && !error && tournaments.length > 0 && (
+        {!loading && !error && tournaments.length > 0 && (() => {
+          const filtered = tournaments.filter((t) => {
+            if (statusFilter === "all") return true;
+            if (statusFilter === "upcoming") return t.status === "registration" || t.status === "upcoming";
+            if (statusFilter === "running") return t.status === "running" || t.status === "in_progress";
+            if (statusFilter === "completed") return t.status === "completed" || t.status === "finished";
+            return true;
+          });
+
+          if (filtered.length === 0) {
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-16 text-center"
+              >
+                <Trophy className="w-8 h-8 text-gray-700 mb-2" />
+                <p className="text-xs text-gray-600">
+                  No {statusFilter} tournaments found.
+                </p>
+              </motion.div>
+            );
+          }
+
+          return (
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
             className="flex flex-col gap-4"
+            key={statusFilter}
           >
-            {tournaments.filter((t) => {
-              if (statusFilter === "all") return true;
-              if (statusFilter === "upcoming") return t.status === "registration" || t.status === "upcoming";
-              if (statusFilter === "running") return t.status === "running" || t.status === "in_progress";
-              if (statusFilter === "completed") return t.status === "completed" || t.status === "finished";
-              return true;
-            }).map((tournament) => {
+            {filtered.map((tournament) => {
               const prizePool = calculatePrizePool(tournament);
               const isRegOpen = tournament.status === "registration";
               const registered = tournament.registeredPlayers ?? 0;
@@ -277,17 +333,13 @@ export default function Tournaments() {
                         {tournament.name}
                       </h3>
 
-                      {/* Start time */}
-                      <div className="flex items-center gap-1.5 mt-1.5 text-[0.6875rem] text-gray-500">
+                      {/* Start time + live countdown */}
+                      <div className="flex items-center gap-2 mt-1.5 text-[0.6875rem] text-gray-500">
                         <Clock className="w-3.5 h-3.5" />
                         <span>{formatStartTime(tournament.scheduledStartTime)}</span>
-                        {(tournament.status === "registration" || tournament.status === "upcoming") && tournament.scheduledStartTime && (() => {
-                          const msLeft = new Date(tournament.scheduledStartTime).getTime() - Date.now();
-                          if (msLeft <= 0) return null;
-                          const hoursLeft = Math.floor(msLeft / 3600000);
-                          const minsLeft = Math.floor((msLeft % 3600000) / 60000);
-                          return <span className="text-[0.5625rem] text-amber-400">{hoursLeft}h {minsLeft}m</span>;
-                        })()}
+                        {(tournament.status === "registration" || tournament.status === "upcoming") && (
+                          <CountdownBadge iso={tournament.scheduledStartTime} />
+                        )}
                       </div>
                     </div>
 
@@ -338,12 +390,26 @@ export default function Tournaments() {
 
                   {/* Registration progress bar */}
                   <div className="mx-5 mb-3">
-                    <div className="h-1 rounded-full bg-white/5">
-                      <div
-                        className="h-full rounded-full transition-all"
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600">
+                        Registration
+                      </span>
+                      <span className="text-[0.5rem] font-bold tabular-nums text-gray-500">
+                        {registered}/{tournament.maxPlayers} ({Math.round((registered / tournament.maxPlayers) * 100)}%)
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min((registered / tournament.maxPlayers) * 100, 100)}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
                         style={{
-                          width: `${Math.min((registered / tournament.maxPlayers) * 100, 100)}%`,
-                          background: "linear-gradient(90deg, rgba(212,175,55,0.6), rgba(212,175,55,0.9))",
+                          background: registered >= tournament.maxPlayers
+                            ? "linear-gradient(90deg, #dc2626, #ef4444)"
+                            : registered >= tournament.maxPlayers * 0.8
+                              ? "linear-gradient(90deg, #d97706, #f59e0b)"
+                              : "linear-gradient(90deg, rgba(212,175,55,0.6), rgba(212,175,55,0.9))",
                         }}
                       />
                     </div>
@@ -357,7 +423,8 @@ export default function Tournaments() {
               );
             })}
           </motion.div>
-        )}
+          );
+        })()}
       </div>
     </DashboardLayout>
   );

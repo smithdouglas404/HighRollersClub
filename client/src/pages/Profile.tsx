@@ -392,39 +392,8 @@ export default function Profile() {
             </div>
           </Link>
 
-          {/* ── Recent Sessions (placeholder) ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.17 }}
-            className="rounded-xl p-6 mb-6"
-            style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
-          >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/80 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
-              <Clock className="w-4 h-4 text-[#c9a84c]/70" />
-              Recent Sessions
-            </h3>
-            <div className="space-y-2">
-              {[
-                { time: "Today", hands: 24, result: "+1,250", positive: true },
-                { time: "Yesterday", hands: 18, result: "-320", positive: false },
-                { time: "2 days ago", hands: 42, result: "+3,800", positive: true },
-              ].map((session, i) => (
-                <div key={i} className="flex items-center gap-4 p-3.5 rounded-lg hover:border-white/10 transition-colors" data-testid={`session-row-${i}`} style={{ background: "rgba(15,15,20,0.5)", border: "1px solid rgba(212,175,55,0.08)" }}>
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center">
-                    <Gamepad2 className="w-4 h-4 text-primary/60" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-semibold text-white">{session.time}</div>
-                    <div className="text-[0.625rem] text-gray-500">{session.hands} hands played</div>
-                  </div>
-                  <div className={`text-sm font-bold ${session.positive ? "text-secondary" : "text-destructive"}`}>
-                    {session.result}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+          {/* ── Recent Sessions ── */}
+          <RecentSessionsSection />
 
           {/* ── Taunt Voice ── */}
           <TauntVoicePicker currentVoice={user?.tauntVoice || "default"} />
@@ -668,6 +637,86 @@ function PlayerNotesSection() {
                     <Trash2 className="w-3.5 h-3.5" />
                   )}
                 </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+interface SessionSummary {
+  tableId: string;
+  tableName: string;
+  handsPlayed: number;
+  netResult: number;
+  lastPlayedAt: string;
+}
+
+function formatSessionTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return date.toLocaleDateString();
+}
+
+function RecentSessionsSection() {
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/wallet/sessions?limit=5", { credentials: "include" })
+      .then(r => {
+        if (!r.ok) throw new Error("Failed to load sessions");
+        return r.json();
+      })
+      .then(data => setSessions(Array.isArray(data) ? data : []))
+      .catch((err) => setSessionsError(err.message || "Failed to load sessions"))
+      .finally(() => setLoadingSessions(false));
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.17 }}
+      className="rounded-xl p-6 mb-6"
+      style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/80 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+        <Clock className="w-4 h-4 text-[#c9a84c]/70" />
+        Recent Sessions
+      </h3>
+      {loadingSessions ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : sessionsError ? (
+        <div className="text-center py-6 text-[0.6875rem] text-red-400">{sessionsError}</div>
+      ) : sessions.length === 0 ? (
+        <div className="text-center py-6 text-[0.6875rem] text-gray-600">No sessions yet. Play some hands to see your results here.</div>
+      ) : (
+        <div className="space-y-2">
+          {sessions.map((session, i) => {
+            const positive = session.netResult >= 0;
+            return (
+              <div key={session.tableId + "-" + i} className="flex items-center gap-4 p-3.5 rounded-lg hover:border-white/10 transition-colors" data-testid={`session-row-${i}`} style={{ background: "rgba(15,15,20,0.5)", border: "1px solid rgba(212,175,55,0.08)" }}>
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center">
+                  <Gamepad2 className="w-4 h-4 text-primary/60" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-semibold text-white">{session.tableName || formatSessionTime(session.lastPlayedAt)}</div>
+                  <div className="text-[0.625rem] text-gray-500">{session.handsPlayed} hands played · {formatSessionTime(session.lastPlayedAt)}</div>
+                </div>
+                <div className={`text-sm font-bold ${positive ? "text-secondary" : "text-destructive"}`}>
+                  {positive ? "+" : ""}{session.netResult.toLocaleString()}
+                </div>
               </div>
             );
           })}

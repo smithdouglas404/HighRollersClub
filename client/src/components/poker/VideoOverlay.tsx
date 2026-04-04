@@ -219,6 +219,7 @@ export function VideoControlBar({ heroId, tableId, playerIds, isAdmin }: VideoCo
   const [videoOn, setVideoOn] = useState(true);
   const [audioOn, setAudioOn] = useState(true);
   const [recording, setRecording] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
@@ -233,8 +234,19 @@ export function VideoControlBar({ heroId, tableId, playerIds, isAdmin }: VideoCo
 
   const handleToggleVideo = useCallback(async () => {
     if (!active) {
-      await videoManager.start(heroId, tableId, playerIds);
-      setActive(true);
+      try {
+        setError(null);
+        await videoManager.start(heroId, tableId, playerIds);
+        // If start() returned without creating a call, the service is unavailable
+        if (!videoManager.getLocalStream()) {
+          setError("Video chat unavailable");
+          return;
+        }
+        setActive(true);
+      } catch (err) {
+        console.warn("[VideoControlBar] Failed to start video:", err);
+        setError("Video chat unavailable");
+      }
     } else {
       videoManager.toggleVideo();
     }
@@ -249,6 +261,7 @@ export function VideoControlBar({ heroId, tableId, playerIds, isAdmin }: VideoCo
   const handleStop = useCallback(() => {
     videoManager.stop();
     setActive(false);
+    setError(null);
   }, []);
 
   const handleToggleRecording = useCallback(async () => {
@@ -269,8 +282,15 @@ export function VideoControlBar({ heroId, tableId, playerIds, isAdmin }: VideoCo
   // Inline buttons designed to sit in the top bar alongside other controls
   return (
     <div className="flex items-center gap-1">
+      {/* Error message when video service is unavailable */}
+      {error && (
+        <span className="text-[0.625rem] font-medium text-gray-500 px-2 py-1 rounded bg-white/5 border border-white/10">
+          <VideoOff className="w-3 h-3 inline mr-1 -mt-0.5" />
+          {error}
+        </span>
+      )}
       {/* Join / Camera toggle — prominent when inactive */}
-      {!active ? (
+      {!active && !error ? (
         <button
           onClick={handleToggleVideo}
           className="flex items-center gap-1.5 px-3 py-1 rounded text-[0.625rem] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"

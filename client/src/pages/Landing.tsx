@@ -49,9 +49,9 @@ const FEATURES = [
 
 const SPLASH_IMAGES = [
   casinoBg,
-  "/attached_assets/generated_images/splash/splash_poker_cinematic.webp",
-  "/attached_assets/generated_images/splash/splash_tournament.webp",
-  "/attached_assets/generated_images/splash/splash_high_stakes.webp",
+  "/splash/splash_poker_cinematic.webp",
+  "/splash/splash_tournament.webp",
+  "/splash/splash_high_stakes.webp",
 ];
 
 export default function Landing() {

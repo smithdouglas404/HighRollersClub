@@ -196,9 +196,9 @@ function TableCard({ table, onClick, featured, currentUserId, onDelete }: { tabl
 }
 
 const LOBBY_BANNERS = [
-  "/attached_assets/generated_images/banners/banner_welcome.webp",
-  "/attached_assets/generated_images/banners/banner_tournament.webp",
-  "/attached_assets/generated_images/banners/banner_seasonal.webp",
+  "/banners/banner_welcome.webp",
+  "/banners/banner_tournament.webp",
+  "/banners/banner_seasonal.webp",
 ];
 
 function LobbyBannerCarousel() {

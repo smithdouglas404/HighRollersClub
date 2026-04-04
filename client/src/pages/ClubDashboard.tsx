@@ -21,12 +21,12 @@ import { NeonButton } from "@/components/ui/neon";
 
 
 export const CLUB_LOGO_OPTIONS = [
-  { id: "lions", label: "Lions", url: "/attached_assets/generated_images/clubs/club_lions.webp" },
-  { id: "sharks", label: "Sharks", url: "/attached_assets/generated_images/clubs/club_sharks.webp" },
-  { id: "eagles", label: "Eagles", url: "/attached_assets/generated_images/clubs/club_eagles.webp" },
-  { id: "dragons", label: "Dragons", url: "/attached_assets/generated_images/clubs/club_dragons.webp" },
-  { id: "wolves", label: "Wolves", url: "/attached_assets/generated_images/clubs/club_wolves.webp" },
-  { id: "aces", label: "Aces", url: "/attached_assets/generated_images/clubs/club_aces.webp" },
+  { id: "lions", label: "Lions", url: "/clubs/club_lions.webp" },
+  { id: "sharks", label: "Sharks", url: "/clubs/club_sharks.webp" },
+  { id: "eagles", label: "Eagles", url: "/clubs/club_eagles.webp" },
+  { id: "dragons", label: "Dragons", url: "/clubs/club_dragons.webp" },
+  { id: "wolves", label: "Wolves", url: "/clubs/club_wolves.webp" },
+  { id: "aces", label: "Aces", url: "/clubs/club_aces.webp" },
 ];
 
 function AnimatedNumber({ value, className }: { value: number; className?: string }) {

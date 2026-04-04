@@ -62,18 +62,18 @@ import avatar5 from "@assets/generated_images/avatars/avatar_cyber_punk.webp";
 
 // Extended avatar pool for bot variety
 const EXTRA_AVATAR_URLS = [
-  "/attached_assets/generated_images/avatars/avatar_cyber_samurai.webp",
-  "/attached_assets/generated_images/avatars/avatar_neon_medic.webp",
-  "/attached_assets/generated_images/avatars/avatar_dj_chrome.webp",
-  "/attached_assets/generated_images/avatars/avatar_ghost_sniper.webp",
-  "/attached_assets/generated_images/avatars/avatar_oracle_seer.webp",
-  "/attached_assets/generated_images/avatars/avatar_merchant_boss.webp",
-  "/attached_assets/generated_images/avatars/avatar_street_racer.webp",
-  "/attached_assets/generated_images/avatars/avatar_void_witch.webp",
-  "/attached_assets/generated_images/avatars/avatar_mech_pilot.webp",
-  "/attached_assets/generated_images/avatars/avatar_data_thief.webp",
-  "/attached_assets/generated_images/avatars/avatar_punk_duchess.webp",
-  "/attached_assets/generated_images/avatars/avatar_iron_bull.webp",
+  "/avatars/avatar_cyber_samurai.webp",
+  "/avatars/avatar_neon_medic.webp",
+  "/avatars/avatar_dj_chrome.webp",
+  "/avatars/avatar_ghost_sniper.webp",
+  "/avatars/avatar_oracle_seer.webp",
+  "/avatars/avatar_merchant_boss.webp",
+  "/avatars/avatar_street_racer.webp",
+  "/avatars/avatar_void_witch.webp",
+  "/avatars/avatar_mech_pilot.webp",
+  "/avatars/avatar_data_thief.webp",
+  "/avatars/avatar_punk_duchess.webp",
+  "/avatars/avatar_iron_bull.webp",
 ];
 
 

@@ -34,7 +34,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse", "/clubs/create"] },
   { icon: Swords, label: "League & Alliances", href: "/leagues" },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
-  { icon: Shirt, label: "Wardrobe", href: "/wardrobe", match: ["/wardrobe", "/dye-shop", "/avatar-customizer", "/avatar-render"] },
+  { icon: Shirt, label: "Wardrobe", href: "/wardrobe", match: ["/wardrobe"] },
   { icon: Crown, label: "Premium", href: "/premium", match: ["/premium"] },
 ];
 

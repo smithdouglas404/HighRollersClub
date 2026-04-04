@@ -60,36 +60,6 @@ const DELIVERY_STYLE_OPTIONS: {
   },
 ];
 
-// Mock recent announcements for UI display
-const MOCK_ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: "1",
-    title: "Scheduled Maintenance",
-    message: "Servers will be down for maintenance on Sunday 2am-4am UTC.",
-    audience: "all",
-    priority: "important",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    status: "sent",
-  },
-  {
-    id: "2",
-    title: "New Tournament Series",
-    message: "The Spring Championship series starts next week. Register now!",
-    audience: "active",
-    priority: "normal",
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    status: "sent",
-  },
-  {
-    id: "3",
-    title: "Emergency: Table 7 Issue",
-    message: "Table 7 experienced a disconnect. All hands have been voided and chips restored.",
-    audience: "table",
-    priority: "urgent",
-    createdAt: new Date(Date.now() - 259200000).toISOString(),
-    status: "sent",
-  },
-];
 
 export default function AnnouncementManager() {
   const { user, loading: authLoading } = useAuth();
@@ -119,8 +89,32 @@ export default function AnnouncementManager() {
       ta.selectionEnd = end + marker.length;
     });
   }, [message]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>(MOCK_ANNOUNCEMENTS);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Fetch announcements from server
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/announcements", {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAnnouncements(Array.isArray(data) ? data : data.announcements ?? []);
+        } else {
+          setAnnouncements([]);
+        }
+      } catch {
+        setAnnouncements([]);
+        setFetchError("Could not load announcements from server.");
+      } finally {
+        setFetchLoading(false);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user && user.role !== "admin") {
@@ -411,7 +405,15 @@ export default function AnnouncementManager() {
             Recent Announcements
           </h2>
 
-          {announcements.length === 0 ? (
+          {fetchLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="spinner spinner-md" />
+            </div>
+          ) : fetchError ? (
+            <div className="text-xs text-amber-400 font-bold bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+              {fetchError}
+            </div>
+          ) : announcements.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
                 <Megaphone className="w-7 h-7 text-primary/40" />

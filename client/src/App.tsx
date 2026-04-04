@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -33,12 +33,8 @@ import TableSetup from "@/pages/TableSetup";
 import ClubCreate from "@/pages/ClubCreate";
 import PremiumUpgrade from "@/pages/PremiumUpgrade";
 import AnnouncementManager from "@/pages/AnnouncementManager";
-import SponsorshipReports from "@/pages/SponsorshipReports";
 import AccountRecovery from "@/pages/AccountRecovery";
 import AvatarWardrobe from "@/pages/AvatarWardrobe";
-import AvatarCustomizer from "@/pages/AvatarCustomizer";
-import AvatarRenderProgress from "@/pages/AvatarRenderProgress";
-import DyeShop from "@/pages/DyeShop";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -123,24 +119,8 @@ function ProtectedAnnouncementManager() {
   return <AuthGate><AnnouncementManager /></AuthGate>;
 }
 
-function ProtectedSponsorshipReports() {
-  return <AuthGate><SponsorshipReports /></AuthGate>;
-}
-
 function ProtectedWardrobe() {
   return <AuthGate><AvatarWardrobe /></AuthGate>;
-}
-
-function ProtectedDyeShop() {
-  return <AuthGate><DyeShop /></AuthGate>;
-}
-
-function ProtectedAvatarCustomizer() {
-  return <AuthGate><AvatarCustomizer /></AuthGate>;
-}
-
-function ProtectedAvatarRenderProgress() {
-  return <AuthGate><AvatarRenderProgress /></AuthGate>;
 }
 
 function GameWithTable({ params }: { params: { tableId: string } }) {
@@ -213,12 +193,12 @@ function Router() {
       <Route path="/premium" component={ProtectedPremium} />
       <Route path="/admin/announcements" component={ProtectedAnnouncementManager} />
       <Route path="/admin" component={ProtectedAdmin} />
-      <Route path="/sponsorship" component={ProtectedSponsorshipReports} />
+      <Route path="/sponsorship">{() => <Redirect to="/admin" />}</Route>
       <Route path="/recovery" component={AccountRecovery} />
       <Route path="/wardrobe" component={ProtectedWardrobe} />
-      <Route path="/dye-shop" component={ProtectedDyeShop} />
-      <Route path="/avatar-customizer" component={ProtectedAvatarCustomizer} />
-      <Route path="/avatar-render" component={ProtectedAvatarRenderProgress} />
+      <Route path="/dye-shop">{() => <Redirect to="/shop" />}</Route>
+      <Route path="/avatar-customizer">{() => <Redirect to="/wardrobe" />}</Route>
+      <Route path="/avatar-render">{() => <Redirect to="/wardrobe" />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

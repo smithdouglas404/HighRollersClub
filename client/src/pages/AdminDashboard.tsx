@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
-import { useLocation, Link } from "wouter";
-import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Megaphone } from "lucide-react";
+import { useLocation } from "wouter";
+import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;
@@ -300,11 +300,6 @@ export default function AdminDashboard() {
               {t.icon} {t.label}
             </button>
           ))}
-          <Link href="/sponsorship">
-            <span className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 border border-transparent transition-all cursor-pointer">
-              <Megaphone className="w-4 h-4" /> Sponsorship Reports
-            </span>
-          </Link>
         </div>
 
         {loading && (

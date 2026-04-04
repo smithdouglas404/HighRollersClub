@@ -507,114 +507,10 @@ function TwoFactorAuth() {
 }
 
 /* ────────────────────────────────────────────────────────────
-   Connected Wallets
+   Connected Wallets (Coming Soon)
    ──────────────────────────────────────────────────────────── */
 
-const WALLET_PROVIDERS = [
-  {
-    id: "metamask",
-    name: "MetaMask",
-    icon: "🦊",
-    color: "from-orange-500/15 to-amber-600/15",
-    borderColor: "border-orange-500/20",
-    textColor: "text-orange-400",
-  },
-  {
-    id: "coinbase",
-    name: "Coinbase Wallet",
-    icon: "🔵",
-    color: "from-blue-500/15 to-blue-600/15",
-    borderColor: "border-blue-500/20",
-    textColor: "text-blue-400",
-  },
-  {
-    id: "walletconnect",
-    name: "WalletConnect",
-    icon: "🔗",
-    color: "from-indigo-500/15 to-violet-600/15",
-    borderColor: "border-indigo-500/20",
-    textColor: "text-indigo-400",
-  },
-  {
-    id: "phantom",
-    name: "Phantom",
-    icon: "👻",
-    color: "from-purple-500/15 to-violet-600/15",
-    borderColor: "border-purple-500/20",
-    textColor: "text-purple-400",
-  },
-];
-
 function ConnectedWallets() {
-  const [connectedWallets, setConnectedWallets] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  // Fetch connected wallets on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/auth/wallets", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          const map: Record<string, string> = {};
-          for (const w of data.wallets ?? []) {
-            map[w.provider] = w.address;
-          }
-          setConnectedWallets(map);
-        }
-      } catch {
-        // ignore fetch errors
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  const handleConnect = async (providerId: string) => {
-    // Generate a mock address since we can't do real Web3
-    const mockAddress = "0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-    setActionLoading(providerId);
-    try {
-      const res = await fetch("/api/auth/wallet/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ provider: providerId, address: mockAddress }),
-      });
-      if (res.ok) {
-        setConnectedWallets((prev) => ({ ...prev, [providerId]: mockAddress }));
-      }
-    } catch {
-      // ignore
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleDisconnect = async (providerId: string) => {
-    setActionLoading(providerId);
-    try {
-      const res = await fetch("/api/auth/wallet/disconnect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ provider: providerId }),
-      });
-      if (res.ok) {
-        setConnectedWallets((prev) => {
-          const next = { ...prev };
-          delete next[providerId];
-          return next;
-        });
-      }
-    } catch {
-      // ignore
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -627,62 +523,10 @@ function ConnectedWallets() {
         Connected Wallets
       </h3>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-5 h-5 animate-spin text-primary/40" />
-        </div>
-      ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {WALLET_PROVIDERS.map((provider) => {
-          const isConnected = !!connectedWallets[provider.id];
-          const address = connectedWallets[provider.id];
-          const isBusy = actionLoading === provider.id;
-
-          return (
-            <div
-              key={provider.id}
-              className={`relative flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br ${provider.color} border ${provider.borderColor} transition-all hover:scale-[1.01]`}
-            >
-              <div className="text-2xl shrink-0">{provider.icon}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold text-white">{provider.name}</div>
-                {isConnected ? (
-                  <div className="text-[0.5625rem] text-gray-400 font-mono truncate">{address}</div>
-                ) : (
-                  <div className="text-[0.5625rem] text-gray-500">Not connected</div>
-                )}
-              </div>
-              {isBusy ? (
-                <Loader2 className="w-4 h-4 animate-spin text-primary/60 shrink-0" />
-              ) : isConnected ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 text-green-400 text-[0.5625rem] font-bold border border-green-500/20">
-                    <Check className="w-3 h-3" />
-                    Connected
-                  </span>
-                  <button
-                    onClick={() => handleDisconnect(provider.id)}
-                    disabled={!!actionLoading}
-                    className="p-1 rounded-md hover:bg-white/10 transition-colors text-gray-500 hover:text-red-400 disabled:opacity-40"
-                    title="Disconnect"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => handleConnect(provider.id)}
-                  disabled={!!actionLoading}
-                  className="px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 hover:text-white transition-all disabled:opacity-40"
-                >
-                  Connect
-                </button>
-              )}
-            </div>
-          );
-        })}
+      <div className="text-center py-8">
+        <Lock className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+        <p className="text-sm text-gray-400">Wallet linking coming soon</p>
       </div>
-      )}
     </motion.div>
   );
 }

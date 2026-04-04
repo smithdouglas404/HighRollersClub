@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Table Layout Review</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0c; color: white; font-family: system-ui; }
+  h2 { text-align: center; padding: 12px; color: #d4af37; font-size: 14px; letter-spacing: 0.1em; }
+  .viewport {
+    position: relative;
+    margin: 0 auto 40px;
+    background: radial-gradient(ellipse at 50% 45%, #1a2235 0%, #0a0e18 100%);
+    overflow: hidden;
+  }
+  /* Table image container — matches ImageTable.tsx exactly */
+  .table-image-wrap {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 92%;
+    aspect-ratio: 1408 / 768;
+    max-height: 88%;
+  }
+  .table-image-wrap img {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+    filter: drop-shadow(0 12px 50px rgba(0,0,0,0.8));
+  }
+  /* Seats overlay — matches Game.tsx wrapper exactly */
+  .seats-overlay {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 92%;
+    aspect-ratio: 1408 / 768;
+    max-height: 88%;
+  }
+  .seat {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+  }
+  .seat-card {
+    border-radius: 8px 8px 0 0;
+    border: 2px solid;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    color: rgba(255,255,255,0.7);
+    background: linear-gradient(135deg, #2a2010, #161210);
+  }
+  .seat-info {
+    background: rgba(8,8,12,0.92);
+    border-radius: 0 0 6px 6px;
+    padding: 2px 6px;
+    text-align: center;
+    border: 2px solid;
+    border-top: none;
+  }
+  .seat-info .name { font-weight: 700; color: white; }
+  .seat-info .chips { font-family: monospace; font-weight: 700; color: #ffd700; }
+  .seat-label {
+    position: absolute;
+    bottom: -16px;
+    font-size: 9px;
+    color: rgba(212,175,55,0.6);
+    white-space: nowrap;
+  }
+  .legend {
+    text-align: center;
+    padding: 8px;
+    font-size: 11px;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+
+<h2>VIEWPORT: 1920 x 1080 (Full HD)</h2>
+<div class="viewport" id="v1" style="width: 1920px; height: 1080px; transform: scale(0.5); transform-origin: top center;">
+</div>
+
+<h2>VIEWPORT: 1366 x 768 (Laptop)</h2>
+<div class="viewport" id="v2" style="width: 1366px; height: 768px; transform: scale(0.7); transform-origin: top center;">
+</div>
+
+<h2>VIEWPORT: 1024 x: 768 (Small)</h2>
+<div class="viewport" id="v3" style="width: 1024px; height: 768px; transform: scale(0.9); transform-origin: top center;">
+</div>
+
+<div class="legend">
+  Seats are positioned as % of the table-image overlay div (92% wide, aspect 1408:768, max-height 88%).<br>
+  Each seat scales proportionally: Hero=1.0, sides=0.88-0.92, far=0.78-0.84
+</div>
+
+<script>
+const TABLE_SEATS = [
+  { x: 50.0, y: 95.0, scale: 1.0,  label: "0: Hero" },
+  { x: 17.0, y: 80.0, scale: 0.95, label: "1: BL" },
+  { x: 3.5,  y: 50.0, scale: 0.92, label: "2: L" },
+  { x: 13.0, y: 18.0, scale: 0.88, label: "3: TL" },
+  { x: 33.0, y: 4.0,  scale: 0.86, label: "4: TLC" },
+  { x: 50.0, y: 0.0,  scale: 0.85, label: "5: TC" },
+  { x: 67.0, y: 4.0,  scale: 0.86, label: "6: TRC" },
+  { x: 87.0, y: 18.0, scale: 0.88, label: "7: TR" },
+  { x: 96.5, y: 50.0, scale: 0.92, label: "8: R" },
+  { x: 83.0, y: 80.0, scale: 0.95, label: "9: BR" },
+];
+
+const NAMES = ["You (Hero)", "Player 2", "Player 3", "Player 4", "Player 5", "Player 6", "Player 7", "Player 8", "Player 9", "Player 10"];
+const CHIPS = [25000, 18500, 12000, 9800, 15200, 22100, 8400, 11600, 19700, 14300];
+const COLORS = ["#d4af37","#5eead4","#94a3b8","#25a065","#e0c97f","#a1a1aa","#6bb8c9","#34d399","#8faab8","#5eead4"];
+
+function buildViewport(container) {
+  // Table image
+  const wrap = document.createElement('div');
+  wrap.className = 'table-image-wrap';
+  wrap.innerHTML = '<img src="/poker_table_clean_topdown.webp" alt="table">';
+  container.appendChild(wrap);
+
+  // Seats overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'seats-overlay';
+  container.appendChild(overlay);
+
+  TABLE_SEATS.forEach((seat, i) => {
+    const s = seat.scale;
+    const baseW = 60; // base portrait card width
+    const baseH = 82;
+    const w = Math.round(baseW * s);
+    const h = Math.round(baseH * s);
+    const fontSize = Math.round(14 * s);
+
+    const el = document.createElement('div');
+    el.className = 'seat';
+    el.style.left = seat.x + '%';
+    el.style.top = seat.y + '%';
+
+    el.innerHTML = `
+      <div class="seat-card" style="width:${w}px;height:${h}px;border-color:${COLORS[i]};font-size:${Math.round(20*s)}px;">
+        ${NAMES[i].charAt(0)}
+      </div>
+      <div class="seat-info" style="width:${w}px;border-color:${COLORS[i]}40;font-size:${fontSize * 0.55}px;">
+        <div class="name">${NAMES[i].split(' ')[0]}</div>
+        <div class="chips">$${CHIPS[i].toLocaleString()}</div>
+      </div>
+      <div class="seat-label">${seat.label} (${s}x)</div>
+    `;
+
+    overlay.appendChild(el);
+  });
+
+  // Community cards area
+  const cards = document.createElement('div');
+  cards.style.cssText = 'position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);display:flex;gap:6px;z-index:5;';
+  for (let i = 0; i < 5; i++) {
+    const card = document.createElement('div');
+    card.style.cssText = `width:50px;height:70px;border-radius:6px;background:linear-gradient(135deg,#1a3a1a,#0d2510);border:1.5px solid #d4af37;box-shadow:0 4px 12px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;color:#d4af37;font-size:18px;font-weight:900;`;
+    const suits = ['♠','♥','♦','♣','♠'];
+    const ranks = ['A','K','Q','J','10'];
+    card.innerHTML = `<span style="color:${i===1||i===2?'#dc2626':'#ddd'}">${ranks[i]}${suits[i]}</span>`;
+    cards.appendChild(card);
+  }
+  overlay.appendChild(cards);
+
+  // Pot
+  const pot = document.createElement('div');
+  pot.style.cssText = 'position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);background:rgba(15,15,20,0.85);border:1px solid rgba(212,175,55,0.4);border-radius:20px;padding:4px 16px;z-index:5;';
+  pot.innerHTML = '<span style="color:#d4af37;font-weight:900;font-size:14px;">Pot: $12,500</span>';
+  overlay.appendChild(pot);
+}
+
+buildViewport(document.getElementById('v1'));
+buildViewport(document.getElementById('v2'));
+buildViewport(document.getElementById('v3'));
+</script>
+</body>
+</html>

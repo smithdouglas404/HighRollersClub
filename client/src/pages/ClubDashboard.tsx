@@ -182,10 +182,12 @@ export default function ClubDashboard() {
     setCreatingClub(true);
     setCreateError("");
     try {
+      const logoUrl = selectedLogo ? CLUB_LOGO_OPTIONS.find(l => l.id === selectedLogo)?.url : undefined;
       const result = await createClub({
         name: newClubName.trim(),
         description: newClubDescription.trim() || undefined,
         isPublic: newClubIsPublic,
+        logoUrl,
       });
       if (!result) {
         setCreateError("Failed to create club. Please try again.");

@@ -402,25 +402,12 @@ export default function Landing() {
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                {[
-                  { letter: "T", label: "Twitter" },
-                  { letter: "D", label: "Discord" },
-                  { letter: "X", label: "X" },
-                ].map((social) => (
-                  <a
-                    key={social.letter}
-                    href="#"
-                    aria-label={social.label}
-                    className="w-8 h-8 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center text-[0.625rem] text-gray-500 hover:text-primary hover:border-primary/30 transition-all"
-                  >
-                    {social.letter}
-                  </a>
-                ))}
+                <span className="text-[0.625rem] text-gray-600">Follow us — links coming soon</span>
               </div>
-              <div className="flex items-center gap-6">
-                <a href="#" className="hover:text-primary transition-colors">Terms</a>
-                <a href="#" className="hover:text-primary transition-colors">Privacy</a>
-                <a href="#" className="hover:text-primary transition-colors">Support</a>
+              <div className="flex items-center gap-6 text-[0.625rem] text-gray-600">
+                <span>Terms — coming soon</span>
+                <span>Privacy — coming soon</span>
+                <span>Support — coming soon</span>
               </div>
             </div>
           </div>

@@ -71,8 +71,8 @@ export default function ClubSettings() {
     const ok = await updateClub({
       name, description, isPublic,
       timezone, language,
-      rakePercent, maxBuyInCap: 0, creditLimit: 0,
-      require2fa: false, adminApprovalRequired: adminApproval,
+      rakePercent, maxBuyInCap: maxBuyIn, creditLimit: defaultCreditLimit,
+      require2fa: require2FA, adminApprovalRequired: adminApproval,
       antiCollusion, themeColor,
     });
     if (ok) {

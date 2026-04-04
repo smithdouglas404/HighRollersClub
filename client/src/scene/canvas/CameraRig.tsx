@@ -3,10 +3,12 @@ import { useEffect } from "react";
 import * as THREE from "three";
 
 /**
- * Blueprint Section 4 — Camera modes
- * Hero Overview: default mode, slightly elevated cinematic angle,
- * all players and board visible.
- * Fixed. No orbit controls. Directed, premium, legible.
+ * Fixed cinematic camera — premium 3/4 top-down perspective.
+ * No orbit controls. The camera is positioned to show:
+ * - all 10 seats clearly
+ * - the full board card area
+ * - the pot center
+ * - depth and dimensionality of the table structure
  */
 export function CameraRig() {
   const { camera } = useThree();
@@ -19,9 +21,10 @@ export function CameraRig() {
       camera.updateProjectionMatrix();
     }
 
-    // Hero Overview — 3/4 top-down, slightly in front, looking at table center
-    camera.position.set(0, 5.5, 4.0);
-    camera.lookAt(0, 0, -0.1);
+    // Premium 3/4 top-down angle
+    // Slightly elevated, slightly in front, looking at table center
+    camera.position.set(0, 5.2, 3.8);
+    camera.lookAt(0, 0, -0.2);
   }, [camera]);
 
   return null;

@@ -1,32 +1,30 @@
 import { useMemo } from "react";
 import * as THREE from "three";
-import { createGunmetalMaterial, createCyanEmissiveMaterial } from "../materials/metalMaterial";
+import { createGunmetalMaterial } from "../materials/metalMaterial";
 
 /**
- * Blueprint Section 5 — OuterMetalRing
- * Brushed dark gunmetal + soft cyan edge reflections.
- * From HTML: 5px cyan ring + 17px dark gap
- * Two layers: thick gunmetal rail + thin cyan accent edge.
+ * Outer ring — dark brushed gunmetal with visible mass.
+ * Torus geometry scaled to ellipse, with restrained cyan reflective response
+ * from emissive elements in the scene.
  */
 export function OuterMetalRing() {
-  const parts = useMemo(() => {
-    // Main rail — thick gunmetal (the 17px dark gap in HTML)
-    const railGeo = new THREE.TorusGeometry(1, 0.09, 32, 128);
-    railGeo.scale(2.38, 1, 1.56);
-    const railMat = createGunmetalMaterial();
-
-    // Cyan accent edge — thin emissive ring (the 5px cyan ring in HTML)
-    const cyanGeo = new THREE.TorusGeometry(1, 0.02, 16, 128);
-    cyanGeo.scale(2.48, 1, 1.63);
-    const cyanMat = createCyanEmissiveMaterial(0.6);
-
-    return { railGeo, railMat, cyanGeo, cyanMat };
+  const { geometry, material } = useMemo(() => {
+    // Torus: radius (center of tube), tube radius, radialSegments, tubularSegments
+    const geo = new THREE.TorusGeometry(1, 0.065, 16, 64);
+    // Scale to match table ellipse proportions
+    geo.scale(2.35, 1, 1.55);
+    const mat = createGunmetalMaterial();
+    return { geometry: geo, material: mat };
   }, []);
 
   return (
-    <group position={[0, 0.075, 0]} rotation={[Math.PI / 2, 0, 0]}>
-      <mesh geometry={parts.railGeo} material={parts.railMat} castShadow receiveShadow />
-      <mesh geometry={parts.cyanGeo} material={parts.cyanMat} />
-    </group>
+    <mesh
+      geometry={geometry}
+      material={material}
+      position={[0, 0.02, 0]}
+      rotation={[Math.PI / 2, 0, 0]}
+      castShadow
+      receiveShadow
+    />
   );
 }

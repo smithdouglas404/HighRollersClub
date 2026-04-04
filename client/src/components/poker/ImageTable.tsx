@@ -147,32 +147,34 @@ export function ImageTable({
 
   return (
     <>
-      {/* ══ Poker Table with Avatar Slots ══ */}
+      {/* ══ Poker Table — image-based (GGPoker-style) ══ */}
       <div className="absolute z-[1]" style={{
         left: "50%", top: "50%",
         transform: "translate(-50%, -50%)",
-        width: "min(75%, 75vh)",
-        aspectRatio: "1 / 1",
+        width: "92%",
+        aspectRatio: "1408 / 768",
+        maxHeight: "88%",
       }}>
         <img
-          src="/images/poker-table-felt.png"
+          src="/images/poker-table-felt.webp"
           alt=""
-          className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+          className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none"
           draggable={false}
           style={{
-            filter: "drop-shadow(0 8px 40px rgba(0,0,0,0.7)) drop-shadow(0 0 60px rgba(212,175,55,0.06))",
+            filter: "drop-shadow(0 12px 50px rgba(0,0,0,0.8)) drop-shadow(0 0 80px rgba(0,0,0,0.4))",
           }}
         />
-        {/* Subtle center watermark overlay */}
-        <div className="absolute" style={{ left: "50%", top: "52%", transform: "translate(-50%, -50%)", zIndex: 2 }}>
-          <span className="text-[#d4af37]/[0.10] font-display font-black text-xl tracking-[0.4em] uppercase select-none pointer-events-none" style={{ textShadow: "0 0 15px rgba(212,175,55,0.08)" }}>
-            HIGH ROLLERS
-          </span>
-        </div>
       </div>
 
-      {/* ── Game elements overlay (z-index: 10) ── */}
-      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
+      {/* ── Game elements overlay — matches table image position exactly ── */}
+      <div className="absolute pointer-events-none" style={{
+        left: "50%", top: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "92%",
+        aspectRatio: "1408 / 768",
+        maxHeight: "88%",
+        zIndex: 10,
+      }}>
 
         {/* Seat slots — rendered as HTML squares (never misalign on resize) */}
         {Array.from({ length: maxSeats }).map((_, i) => {
@@ -181,6 +183,7 @@ export function ImageTable({
           const isOccupied = i < occupiedCount;
           // Empty seats are clickable
           if (!isOccupied) {
+            const s = seat.scale;
             return (
               <div
                 key={`empty-${i}`}
@@ -188,19 +191,19 @@ export function ImageTable({
                 style={{
                   left: `${seat.x}%`,
                   top: `${seat.y}%`,
-                  transform: `translate(-50%, -50%)`,
+                  transform: `translate(-50%, -50%) scale(${s})`,
                 }}
               >
                 <div
-                  className="portrait-card rounded-lg border-2 border-dashed flex flex-col items-center justify-center transition-all group-hover:border-cyan-400/60 group-hover:scale-110"
+                  className="w-[68px] h-[68px] rounded-[18px] border-2 border-dashed flex flex-col items-center justify-center transition-all group-hover:border-amber-400/60 group-hover:scale-110"
                   style={{
-                    borderColor: "rgba(0,243,255,0.3)",
-                    background: "rgba(0,243,255,0.06)",
-                    boxShadow: "0 0 15px rgba(0,243,255,0.1), inset 0 0 10px rgba(0,243,255,0.05)",
+                    borderColor: "rgba(212,175,55,0.3)",
+                    background: "rgba(212,175,55,0.04)",
+                    boxShadow: "0 0 8px rgba(212,175,55,0.08)",
                   }}
                 >
-                  <span className="text-[0.5625rem] text-cyan-400/50 font-mono font-bold">#{i + 1}</span>
-                  <span className="text-[0.4375rem] text-cyan-400/30 uppercase tracking-wider mt-0.5 group-hover:text-cyan-400/70 transition-colors">SIT</span>
+                  <span className="text-[0.5625rem] text-amber-400/50 font-mono font-bold">#{i + 1}</span>
+                  <span className="text-[0.4375rem] text-amber-400/30 uppercase tracking-wider mt-0.5 group-hover:text-amber-400/70 transition-colors">SIT</span>
                 </div>
               </div>
             );
@@ -227,11 +230,11 @@ export function ImageTable({
               <div className="w-[50px] h-[70px] rounded-md overflow-hidden"
                 style={{
                   background: "linear-gradient(135deg, #1e3a5f, #0d1b2a)",
-                  border: "2px solid rgba(0,243,255,0.3)",
+                  border: "2px solid rgba(212,175,55,0.3)",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
                 }}
               >
-                <div className="w-full h-full" style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0,243,255,0.08) 4px, rgba(0,243,255,0.08) 8px)" }} />
+                <div className="w-full h-full" style={{ background: "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(212,175,55,0.08) 4px, rgba(212,175,55,0.08) 8px)" }} />
               </div>
             </motion.div>
           )}
@@ -304,8 +307,8 @@ export function ImageTable({
               {/* Phase label */}
               {dealPhase && (
                 <span
-                  className="text-[0.625rem] font-black uppercase tracking-[0.15em] text-[#00f3ff]"
-                  style={{ textShadow: "0 0 10px rgba(0,243,255,0.4)" }}
+                  className="text-[0.625rem] font-black uppercase tracking-[0.15em] text-[#d4af37]"
+                  style={{ textShadow: "0 0 10px rgba(212,175,55,0.4)" }}
                 >
                   {dealPhase === "pre-flop" ? "Pre-Flop" : dealPhase === "flop" ? "Flop" : dealPhase === "turn" ? "Turn" : dealPhase === "river" ? "River" : ""}
                 </span>

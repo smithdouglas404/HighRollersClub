@@ -3,9 +3,8 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Seat } from "../components/poker/Seat";
 import { Card } from "../components/poker/Card";
-import { CSSPokerTable } from "../components/poker/CSSPokerTable";
+import { ImageTable } from "../components/poker/ImageTable";
 import { PokerSceneCanvas } from "../scene/canvas/PokerSceneCanvas";
-import { useWebSocketBridge } from "@/hooks/useWebSocketBridge";
 import { RANK_FRAMES } from "@/lib/game-constants";
 
 // Feature flag: flip to true to use the 3D R3F table scene
@@ -290,9 +289,6 @@ function GameTable({
   onDeclinePlayer?: (playerId: string) => void;
   onUpdateTableSettings?: (settings: { walletLimit?: number; smallBlind?: number; bigBlind?: number }) => void;
 }) {
-  // Bridge game state → Zustand for 3D scene (works for both single-player and multiplayer)
-  useWebSocketBridge({ players, gameState, showdown });
-
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showAddChips, setShowAddChips] = useState(false);
   const [addChipsAmount, setAddChipsAmount] = useState(maxBuyIn || 300);
@@ -492,10 +488,10 @@ function GameTable({
 
   return (
     <div className="h-screen bg-[#0a0a0c] text-white overflow-hidden relative font-sans flex flex-col">
-      {/* Background glow orbs */}
+      {/* Background glow orbs — warm casino atmosphere */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] bg-[#00f3ff]/[0.045] rounded-full blur-[150px]" />
-        <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-purple-600/[0.03] rounded-full blur-[120px]" />
+        <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] bg-[#d4af37]/[0.03] rounded-full blur-[150px]" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-[#8b6914]/[0.025] rounded-full blur-[120px]" />
         <div className="absolute top-[30%] right-[25%] w-[400px] h-[400px] bg-[#c9a84c]/[0.02] rounded-full blur-[130px]" />
       </div>
 
@@ -1146,9 +1142,11 @@ function GameTable({
           {/* Table area */}
           <div className="flex-1 relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute inset-0 bg-[#0a0a0c]" />
-              <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] bg-[#00f3ff]/[0.03] rounded-full blur-[150px] pointer-events-none" />
-              <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-purple-600/[0.02] rounded-full blur-[120px] pointer-events-none" />
+              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 45%, #1a2235 0%, #131a28 40%, #0e1420 70%, #0a0e18 100%)" }} />
+              {/* Atmospheric glow — warm casino lighting */}
+              <div className="absolute top-[-15%] left-[10%] w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(212,175,55,0.03)" }} />
+              <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(139,105,20,0.025)" }} />
+              <div className="absolute top-[20%] right-[20%] w-[350px] h-[350px] rounded-full blur-[110px] pointer-events-none" style={{ background: "rgba(201,168,76,0.025)" }} />
 
               <div
                 ref={tableRef}
@@ -1159,24 +1157,9 @@ function GameTable({
                   <PokerSceneCanvas
                     quality="high"
                     className="absolute inset-0 z-[1]"
-                    activeSeat={(() => {
-                      const heroIdx = players.findIndex(p => p.id === heroId);
-                      const turnIdx = players.findIndex(p => p.status === "thinking");
-                      if (turnIdx < 0 || heroIdx < 0) return undefined;
-                      return (turnIdx - heroIdx + players.length) % players.length;
-                    })()}
-                    winnerSeat={(() => {
-                      if (!showdown?.results) return undefined;
-                      const heroIdx = players.findIndex(p => p.id === heroId);
-                      const winnerResult = showdown.results.find((r: any) => r.isWinner);
-                      if (!winnerResult || heroIdx < 0) return undefined;
-                      const winIdx = players.findIndex((p: any) => p.id === winnerResult.playerId);
-                      if (winIdx < 0) return undefined;
-                      return (winIdx - heroIdx + players.length) % players.length;
-                    })()}
                   />
                 ) : (
-                  <CSSPokerTable
+                  <ImageTable
                     communityCards={gameState.communityCards}
                     pot={gameState.pot}
                     playerCount={players.length}
@@ -1200,36 +1183,46 @@ function GameTable({
                   </div>
                 )}
 
-                {(() => {
-                  // Rotate seating so hero always appears at seat 0 (bottom center / first-person view)
-                  const heroIdx = players.findIndex(p => p.id === heroId);
-                  const totalSeats = players.length;
-                  return players.map((player, index) => {
-                    // Rotate: hero goes to visual seat 0, everyone else shifts accordingly
-                    const visualSeat = (index - heroIdx + totalSeats) % totalSeats;
-                    const seat = TABLE_SEATS[visualSeat] || TABLE_SEATS[visualSeat % TABLE_SEATS.length];
-                    const avatarOpt = player.avatar ? AVATAR_OPTIONS.find(a => a.image === player.avatar) : undefined;
-                    return (
-                      <Seat
-                        key={player.id}
-                        player={player}
-                        position={{ x: seat.x, y: seat.y }}
-                        isHero={player.id === heroId}
-                        isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
-                        seatIndex={visualSeat}
-                        perspectiveScale={seat.scale}
-                        hudStats={player.id !== heroId && hudEnabled ? opponentStats.get(player.id) : undefined}
-                        avatarTier={avatarOpt?.tier}
-                        winStreak={winStreaks.current.get(player.id) || 0}
-                        showVideo={isMultiplayer && !player.isBot}
-                        dealCardCount={dealing.visiblePlayerCards.get(player.id)}
-                        turnDeadline={gameState.turnDeadline}
-                        turnTimerDuration={gameState.turnTimerDuration}
-                        onPlayerClick={(p) => setSelectedPlayerDetail(p)}
-                      />
-                    );
-                  });
-                })()}
+                {/* Seats wrapper — matches table image position so % coordinates align */}
+                <div className="absolute" style={{
+                  left: "50%", top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: "92%",
+                  aspectRatio: "1408 / 768",
+                  maxHeight: "88%",
+                  zIndex: 20,
+                }}>
+                  {(() => {
+                    // Rotate seating so hero always appears at seat 0 (bottom center / first-person view)
+                    const heroIdx = players.findIndex(p => p.id === heroId);
+                    const totalSeats = players.length;
+                    return players.map((player, index) => {
+                      // Rotate: hero goes to visual seat 0, everyone else shifts accordingly
+                      const visualSeat = (index - heroIdx + totalSeats) % totalSeats;
+                      const seat = TABLE_SEATS[visualSeat] || TABLE_SEATS[visualSeat % TABLE_SEATS.length];
+                      const avatarOpt = player.avatar ? AVATAR_OPTIONS.find(a => a.image === player.avatar) : undefined;
+                      return (
+                        <Seat
+                          key={player.id}
+                          player={player}
+                          position={{ x: seat.x, y: seat.y }}
+                          isHero={player.id === heroId}
+                          isWinner={showdown?.results?.some((r: any) => r.playerId === player.id && r.isWinner)}
+                          seatIndex={visualSeat}
+                          perspectiveScale={seat.scale}
+                          hudStats={player.id !== heroId && hudEnabled ? opponentStats.get(player.id) : undefined}
+                          avatarTier={avatarOpt?.tier}
+                          winStreak={winStreaks.current.get(player.id) || 0}
+                          showVideo={isMultiplayer && !player.isBot}
+                          dealCardCount={dealing.visiblePlayerCards.get(player.id)}
+                          turnDeadline={gameState.turnDeadline}
+                          turnTimerDuration={gameState.turnTimerDuration}
+                          onPlayerClick={(p) => setSelectedPlayerDetail(p)}
+                        />
+                      );
+                    });
+                  })()}
+                </div>
               </div>
             </div>
           </div>

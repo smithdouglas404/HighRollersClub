@@ -29,7 +29,7 @@ function getTierRingStyle(tier: AvatarOption["tier"], isActive: boolean): React.
     case "legendary":
       return {
         ...base,
-        background: "conic-gradient(from 0deg, #00d4ff, #66e5ff, #009ec2, #006680, #00d4ff)",
+        background: "conic-gradient(from 0deg, #ffd700, #f2c660, #d4af37, #8b6914, #ffd700)",
         opacity: isActive ? 1 : 0.7,
         padding: "2px",
       };
@@ -43,8 +43,8 @@ function getTierRingStyle(tier: AvatarOption["tier"], isActive: boolean): React.
     case "rare":
       return {
         ...base,
-        border: "2px solid #00d4ff",
-        boxShadow: "0 0 8px rgba(0,212,255,0.3), inset 0 0 4px rgba(0,212,255,0.1)",
+        border: "2px solid #d4af37",
+        boxShadow: "0 0 8px rgba(212,175,55,0.3), inset 0 0 4px rgba(212,175,55,0.1)",
         opacity: isActive ? 1 : 0.5,
       };
     default: // common

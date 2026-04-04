@@ -46,8 +46,8 @@ const CARD_BACK_FALLBACK = "/cards/card_back.webp";
 function CardFace({ card, isHero }: { card: CardType; isHero: boolean }) {
   return (
     <div className="absolute inset-0 rounded-lg overflow-hidden" style={{
-      border: isHero ? "2px solid #00d4ff" : "1.5px solid #c9a84c",
-      boxShadow: isHero ? "inset 0 0 8px rgba(0,212,255,0.1)" : "inset 0 0 4px rgba(201,168,76,0.08)",
+      border: isHero ? "2px solid #d4af37" : "1.5px solid #c9a84c",
+      boxShadow: isHero ? "inset 0 0 8px rgba(212,175,55,0.12)" : "inset 0 0 4px rgba(201,168,76,0.08)",
     }}>
       <img
         src={getCardFaceUrl(card.rank, card.suit)}
@@ -71,7 +71,7 @@ function CardBack({ imageUrl }: { imageUrl?: string }) {
   useEffect(() => { setImgSrc(imageUrl || CARD_BACK_URL); }, [imageUrl]);
   return (
     <div className="absolute inset-0 rounded-lg p-[1.5px]"
-      style={{ background: "linear-gradient(135deg, #00d4ff 0%, #0077aa 25%, #00d4ff 50%, #0077aa 75%, #00d4ff 100%)" }}
+      style={{ background: "linear-gradient(135deg, #d4af37 0%, #8b6914 25%, #d4af37 50%, #8b6914 75%, #d4af37 100%)" }}
     >
       <div className="w-full h-full rounded-[6px] overflow-hidden relative">
         <img

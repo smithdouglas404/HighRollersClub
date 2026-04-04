@@ -92,11 +92,11 @@
 
   --radius: 0.375rem;              /* Sharp, aggressive technical look */
 
-  /* Casino Color Palette (kept for backward compat) */
-  --casino-cyan: #00d4ff;
-  --casino-cyan-light: #66e5ff;
-  --casino-cyan-dark: #009ec2;
-  --casino-gold: #d4a843;
+  /* Casino Color Palette — warm gold theme (GGPoker-style) */
+  --casino-cyan: #d4af37;
+  --casino-cyan-light: #e8cc6a;
+  --casino-cyan-dark: #8b6914;
+  --casino-gold: #d4af37;
   --casino-gold-light: #f0d478;
   --casino-gold-dark: #9c7c2e;
   --casino-emerald: #1b7a4a;
@@ -123,7 +123,7 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3);
-  --shadow-cyan: 0 0 20px rgba(0,212,255,0.15), 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-cyan: 0 0 20px rgba(212,175,55,0.15), 0 4px 12px rgba(0,0,0,0.4);
   --shadow-gold: 0 0 20px rgba(212,168,67,0.15), 0 4px 12px rgba(0,0,0,0.4);
 
   /* Animation timing */
@@ -494,8 +494,8 @@
 
 /* Spinner System */
 .spinner {
-  border: 2px solid rgba(0,212,255,0.30);
-  border-top-color: #00d4ff;
+  border: 2px solid rgba(212,175,55,0.30);
+  border-top-color: #d4af37;
   border-radius: 9999px;
   animation: spin 0.7s linear infinite;
 }
@@ -505,7 +505,7 @@
 
 /* Focus Ring */
 .focus-ring:focus-visible {
-  outline: 2px solid rgba(0,212,255,0.6);
+  outline: 2px solid rgba(212,175,55,0.6);
   outline-offset: 2px;
 }
 
@@ -586,13 +586,16 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .avatar-size {
-  width: clamp(48px, 14cqmin, 120px);
-  height: clamp(48px, 14cqmin, 120px);
+  width: calc(clamp(52px, 14cqmin, 120px) * var(--seat-scale, 1));
+  height: calc(clamp(52px, 14cqmin, 120px) * var(--seat-scale, 1));
 }
 
 .portrait-card {
-  width: clamp(44px, 10cqmin, 78px);
-  height: clamp(62px, 14cqmin, 108px);
+  /* Scale with both container size (cqmin) AND perspective depth (--seat-scale) */
+  --base-w: clamp(48px, 9cqmin, 82px);
+  --base-h: clamp(66px, 12.5cqmin, 114px);
+  width: calc(var(--base-w) * var(--seat-scale, 1));
+  height: calc(var(--base-h) * var(--seat-scale, 1));
 }
 
 .sidebar-responsive {
@@ -604,8 +607,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .nameplate-responsive {
-  min-width: clamp(60px, 17.5cqmin, 150px);
-  max-width: clamp(100px, 29.4cqmin, 252px);
+  min-width: calc(clamp(60px, 17.5cqmin, 150px) * var(--seat-scale, 1));
+  max-width: calc(clamp(100px, 29.4cqmin, 252px) * var(--seat-scale, 1));
 }
 
 @media (prefers-reduced-motion: reduce) {

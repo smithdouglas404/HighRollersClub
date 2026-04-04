@@ -265,6 +265,11 @@ export default function Tournaments() {
                             {tournament.status.replace(/_/g, " ")}
                           </span>
                         )}
+
+                        {/* GTD badge */}
+                        {(tournament.prizePool ?? 0) > 0 && (tournament.status === "registration" || tournament.status === "upcoming") && (
+                          <span className="px-1.5 py-0.5 rounded text-[0.4375rem] font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/20">GTD</span>
+                        )}
                       </div>
 
                       {/* Tournament name */}
@@ -276,6 +281,13 @@ export default function Tournaments() {
                       <div className="flex items-center gap-1.5 mt-1.5 text-[0.6875rem] text-gray-500">
                         <Clock className="w-3.5 h-3.5" />
                         <span>{formatStartTime(tournament.scheduledStartTime)}</span>
+                        {(tournament.status === "registration" || tournament.status === "upcoming") && tournament.scheduledStartTime && (() => {
+                          const msLeft = new Date(tournament.scheduledStartTime).getTime() - Date.now();
+                          if (msLeft <= 0) return null;
+                          const hoursLeft = Math.floor(msLeft / 3600000);
+                          const minsLeft = Math.floor((msLeft % 3600000) / 60000);
+                          return <span className="text-[0.5625rem] text-amber-400">{hoursLeft}h {minsLeft}m</span>;
+                        })()}
                       </div>
                     </div>
 

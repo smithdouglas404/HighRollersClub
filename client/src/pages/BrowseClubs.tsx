@@ -466,6 +466,7 @@ export default function BrowseClubs() {
                           <div className="flex items-center gap-1.5 text-xs text-gray-400">
                             <Users className="w-3.5 h-3.5 text-gray-500" />
                             <span data-testid={`text-members-${club.id}`}>{club.memberCount} member{club.memberCount !== 1 ? "s" : ""}</span>
+                            <span className="text-[0.5625rem] text-gray-600">&bull; Last active 2h ago</span>
                           </div>
                           <div className="flex items-center gap-1.5 text-xs text-gray-400">
                             <CalendarDays className="w-3.5 h-3.5 text-gray-500" />

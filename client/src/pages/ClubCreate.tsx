@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -77,6 +77,8 @@ export default function ClubCreate() {
   const [direction, setDirection] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   // Step 1 — Club Identity
   const [clubName, setClubName] = useState("");
@@ -242,20 +244,35 @@ export default function ClubCreate() {
   const renderStep1 = () => (
     <div className="space-y-6">
       {/* Cover Image Upload Area */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) setCoverPreview(URL.createObjectURL(f));
+        }}
+      />
       <div
         className="relative rounded-xl overflow-hidden cursor-pointer group"
         style={{
           background: "rgba(255,255,255,0.03)",
-          border: "2px dashed rgba(212,175,55,0.2)",
+          border: coverPreview ? "2px solid rgba(212,175,55,0.3)" : "2px dashed rgba(212,175,55,0.2)",
           height: "140px",
         }}
+        onClick={() => fileRef.current?.click()}
       >
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 group-hover:bg-white/[0.02] transition-colors">
-          <Upload className="w-8 h-8 text-gray-500 group-hover:text-[#d4af37] transition-colors" />
-          <span className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
-            Upload Cover Image (1920x480 recommended)
-          </span>
-        </div>
+        {coverPreview ? (
+          <img src={coverPreview} alt="Cover preview" className="w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 group-hover:bg-white/[0.02] transition-colors">
+            <Upload className="w-8 h-8 text-gray-500 group-hover:text-[#d4af37] transition-colors" />
+            <span className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
+              Upload Cover Image (1920x480 recommended)
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Club Name */}

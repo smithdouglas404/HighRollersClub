@@ -112,8 +112,23 @@ function WinningsChart({ data }: { data: number[] }) {
         />
       )}
 
-      {/* End dot */}
-      {points.length > 0 && (
+      {/* Data point dots with tooltips */}
+      {points.map((p, i) => (
+        <circle
+          key={i}
+          cx={p.x}
+          cy={p.y}
+          r={i === points.length - 1 ? 4 : 2.5}
+          fill={isPositive ? "#d4af37" : "#ff3366"}
+          stroke={i === points.length - 1 ? "rgba(10,16,34,0.8)" : "none"}
+          strokeWidth={i === points.length - 1 ? 2 : 0}
+          opacity={i === points.length - 1 ? 1 : 0}
+          className="hover:opacity-100 hover:r-4 transition-opacity cursor-pointer"
+          style={{ pointerEvents: "all" }}
+        >
+          <title>{data[i]} chips</title>
+        </circle>
+      ))}{points.length > 0 && (
         <circle
           cx={points[points.length - 1].x}
           cy={points[points.length - 1].y}
@@ -121,7 +136,9 @@ function WinningsChart({ data }: { data: number[] }) {
           fill={isPositive ? "#d4af37" : "#ff3366"}
           stroke="rgba(10,16,34,0.8)"
           strokeWidth="2"
-        />
+        >
+          <title>{final} chips</title>
+        </circle>
       )}
 
       {/* X-axis labels */}

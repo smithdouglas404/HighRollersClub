@@ -63,6 +63,14 @@ function AvatarCard({
         {/* Gradient overlay at bottom */}
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
 
+        {/* Legendary lock overlay */}
+        {avatar.tier === "legendary" && !isEquipped && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 z-10">
+            <Lock className="w-5 h-5 text-amber-400/80" />
+            <span className="text-[0.5rem] font-bold text-amber-400/80 uppercase tracking-wider">Level 10</span>
+          </div>
+        )}
+
         {/* 3D badge */}
         {avatar.fullBodyImage && (
           <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[0.4375rem] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 backdrop-blur-sm">
@@ -180,7 +188,11 @@ export default function AvatarWardrobe() {
             className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
           >
             <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-medium mb-3">Currently Equipped</div>
-            <div
+            <motion.div
+              key={equippedId}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: [1, 1.02, 1], opacity: 1 }}
+              transition={{ scale: { duration: 3, repeat: Infinity, ease: "easeInOut" }, opacity: { duration: 0.3 } }}
               className="w-44 h-56 rounded-2xl overflow-hidden border-2 mb-4 relative"
               style={{
                 borderColor: equipped.borderColor,
@@ -194,7 +206,7 @@ export default function AvatarWardrobe() {
                 draggable={false}
               />
               <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent" />
-            </div>
+            </motion.div>
             <div className="text-sm font-bold text-white">{equipped.name}</div>
             <div className={`text-[0.625rem] font-bold uppercase tracking-wider mt-1 ${TIER_STYLES[equipped.tier].text}`}>
               {TIER_STYLES[equipped.tier].label}

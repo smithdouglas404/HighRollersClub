@@ -330,7 +330,10 @@ export default function Profile() {
                         animation: "shimmer 3s ease-in-out infinite",
                       } : {}}
                     >
-                      <img src={badge.img} alt={badge.name} className="w-full h-full object-cover" loading="lazy" />
+                      <img src={badge.img} alt={badge.name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      <div className="absolute inset-0 flex items-center justify-center" style={{ display: 'none' }} ref={(el) => { if (el) { const img = el.previousElementSibling as HTMLImageElement; if (img) img.addEventListener('error', () => { el.style.display = 'flex'; }); } }}>
+                        <Trophy className="w-6 h-6 text-gray-500" />
+                      </div>
                       {unlocked && (
                         <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-white/10 pointer-events-none" />
                       )}
@@ -375,6 +378,18 @@ export default function Profile() {
               })}
             </div>
           </motion.div>
+
+          {/* ── View Analytics Link ── */}
+          <Link href="/analytics">
+            <div className="glass rounded-xl p-4 border border-white/5 hover:border-primary/20 transition-all cursor-pointer flex items-center gap-3 mb-6">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              <div>
+                <div className="text-xs font-bold text-white">View Analytics</div>
+                <div className="text-[0.5625rem] text-gray-500">Hand history, performance charts, session results</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-600 ml-auto" />
+            </div>
+          </Link>
 
           {/* ── Recent Sessions (placeholder) ── */}
           <motion.div

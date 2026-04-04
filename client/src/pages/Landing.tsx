@@ -223,6 +223,26 @@ export default function Landing() {
                     </button>
                   </Link>
                 </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.65 }}
+                  className="flex gap-8 mt-8"
+                >
+                  <div className="text-center">
+                    <div className="text-2xl font-black text-primary">10K+</div>
+                    <div className="text-[0.625rem] text-gray-500 uppercase">Players</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-black text-white">1M+</div>
+                    <div className="text-[0.625rem] text-gray-500 uppercase">Hands Dealt</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-black text-green-400">$5M+</div>
+                    <div className="text-[0.625rem] text-gray-500 uppercase">Won</div>
+                  </div>
+                </motion.div>
               </div>
 
               <motion.div

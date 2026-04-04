@@ -709,6 +709,9 @@ export default function Members() {
                         Invite
                       </motion.button>
                     </div>
+                    {inviteUsername.length >= 2 && (
+                      <p className="text-[0.5625rem] text-gray-600 mt-1">Press Enter to send invite to this username</p>
+                    )}
                     <AnimatePresence>
                       {inviteMsg && (
                         <motion.div

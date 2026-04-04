@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { Trophy, Coins, Target, TrendingUp, Loader2, Medal, Crown, Clock } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
 type MetricKey = "chips" | "wins" | "winRate";
@@ -37,6 +38,7 @@ function getRankStyle(rank: number) {
 }
 
 export default function Leaderboard() {
+  const { user } = useAuth();
   const [metric, setMetric] = useState<MetricKey>("chips");
   const [period, setPeriod] = useState<PeriodKey>("all");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
@@ -203,6 +205,10 @@ export default function Leaderboard() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.03 }}
                   className="flex flex-wrap sm:grid sm:grid-cols-12 gap-2 items-center px-5 py-3 border-b border-white/[0.03] hover:bg-primary/[0.06] transition-all"
+                  style={{
+                    background: rank === 1 ? "linear-gradient(90deg, rgba(212,175,55,0.06), transparent)" : rank === 2 ? "linear-gradient(90deg, rgba(148,163,184,0.04), transparent)" : rank === 3 ? "linear-gradient(90deg, rgba(205,127,50,0.04), transparent)" : undefined,
+                    borderLeft: entry.userId === user?.id ? "3px solid #d4af37" : undefined,
+                  }}
                 >
                   {/* Rank */}
                   <div className="col-span-1">
@@ -229,6 +235,9 @@ export default function Leaderboard() {
                     <span className={`text-sm font-bold ${rank <= 3 ? "text-primary" : "text-white"}`}>
                       {metric === "chips" ? entry.value.toLocaleString() : entry.value}{tab.unit}
                     </span>
+                    <div className="h-1 rounded-full bg-white/5 mt-1">
+                      <div className="h-full rounded-full bg-primary/30" style={{ width: `${Math.min(100, (entry.value / (entries[0]?.value || 1)) * 100)}%` }} />
+                    </div>
                   </div>
                   {/* Username */}
                   <div className="col-span-3 text-right">

@@ -993,16 +993,21 @@ export default function Shop() {
                           </>
                         )}
                       </h3>
-                      <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
-                        className="px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/10 outline-none cursor-pointer"
-                      >
-                        <option value="default">Default</option>
-                        <option value="price_asc">Price: Low → High</option>
-                        <option value="price_desc">Price: High → Low</option>
-                        <option value="rarity">Rarity</option>
-                      </select>
+                      <div className="flex items-center gap-1.5">
+                        {(["default", "price_asc", "price_desc", "rarity"] as const).map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => setSortBy(s as any)}
+                            className={`px-2.5 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider border transition-all ${
+                              sortBy === s
+                                ? "bg-primary/15 text-primary border-primary/25"
+                                : "bg-white/5 text-gray-400 border-white/10"
+                            }`}
+                          >
+                            {{ default: "Default", price_asc: "Price \u2191", price_desc: "Price \u2193", rarity: "Rarity" }[s]}
+                          </button>
+                        ))}
+                      </div>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {(isWishlistTab ? filteredItems : remainingItems).map((item, i) => (

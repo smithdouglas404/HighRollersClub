@@ -1334,6 +1334,9 @@ export default function TableSetup() {
           password: config.isPrivate ? config.password : undefined,
           pokerVariant: config.pokerVariant,
           gameType: config.gameType,
+          requireAdminApproval: config.requireAdminApproval,
+          allowSpectators: config.allowSpectators,
+          clubMembersOnly: config.clubMembersOnly,
         }),
       });
       if (res.ok) {

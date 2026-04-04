@@ -23,6 +23,7 @@ interface PlayerStats {
   vpip: number;
   pfr: number;
   showdownCount: number;
+  sngWins: number;
 }
 
 function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: number }) {
@@ -91,12 +92,12 @@ const STAT_CARDS = [
 
 const BADGES = [
   { name: "First Win", img: "/badges/badge_first_win.webp", glow: "#ffd700", criteria: "Win your first pot", check: (s: PlayerStats) => s.potsWon >= 1, progress: (s: PlayerStats) => ({ current: Math.min(s.potsWon, 1), max: 1 }) },
-  { name: "Royal Flush", img: "/badges/badge_royal_flush.webp", glow: "#dc2626", criteria: "Hit a Royal Flush", check: () => false, progress: () => ({ current: 0, max: 1 }) },
+  { name: "Royal Flush", img: "/badges/badge_royal_flush.webp", glow: "#dc2626", criteria: "Play 500 hands to unlock", check: (s: PlayerStats) => s.handsPlayed >= 500, progress: (s: PlayerStats) => ({ current: Math.min(s.handsPlayed, 500), max: 500 }) },
   { name: "High Roller", img: "/badges/badge_high_roller.webp", glow: "#d4af37", criteria: "Win 10,000+ chips total", check: (s: PlayerStats) => s.totalWinnings >= 10000, progress: (s: PlayerStats) => ({ current: Math.min(s.totalWinnings, 10000), max: 10000 }) },
-  { name: "Bluff Master", img: "/badges/badge_bluff_master.webp", glow: "#a855f7", criteria: "Win 50 pots without showdown", check: () => false, progress: () => ({ current: 0, max: 50 }) },
+  { name: "Bluff Master", img: "/badges/badge_bluff_master.webp", glow: "#a855f7", criteria: "Win 50 pots without showdown", check: (s: PlayerStats) => (s.potsWon - s.showdownCount) >= 50, progress: (s: PlayerStats) => ({ current: Math.min(Math.max(s.potsWon - s.showdownCount, 0), 50), max: 50 }) },
   { name: "Iron Player", img: "/badges/badge_iron_player.webp", glow: "#6b7280", criteria: "Play 100 hands", check: (s: PlayerStats) => s.handsPlayed >= 100, progress: (s: PlayerStats) => ({ current: Math.min(s.handsPlayed, 100), max: 100 }) },
   { name: "On Fire", img: "/badges/badge_streak_fire.webp", glow: "#f59e0b", criteria: "Win 5 pots in a row", check: (s: PlayerStats) => s.bestWinStreak >= 5, progress: (s: PlayerStats) => ({ current: Math.min(s.bestWinStreak, 5), max: 5 }) },
-  { name: "Champion", img: "/badges/badge_tournament_champ.webp", glow: "#ffd700", criteria: "Win a tournament", check: () => false, progress: () => ({ current: 0, max: 1 }) },
+  { name: "Champion", img: "/badges/badge_tournament_champ.webp", glow: "#ffd700", criteria: "Win a tournament", check: (s: PlayerStats) => s.sngWins >= 1, progress: (s: PlayerStats) => ({ current: Math.min(s.sngWins, 1), max: 1 }) },
   { name: "Legend", img: "/badges/badge_club_legend.webp", glow: "#a855f7", criteria: "Play 1,000 hands", check: (s: PlayerStats) => s.handsPlayed >= 1000, progress: (s: PlayerStats) => ({ current: Math.min(s.handsPlayed, 1000), max: 1000 }) },
 ];
 

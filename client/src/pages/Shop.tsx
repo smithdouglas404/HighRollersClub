@@ -578,25 +578,43 @@ export default function Shop() {
   const [toast, setToast] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ item: ShopItem } | null>(null);
 
-  // Wishlist state (localStorage-backed)
-  const [wishlist, setWishlist] = useState<Set<string>>(() => {
-    try {
-      const stored = localStorage.getItem("poker-wishlist");
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
+  // Wishlist state (server-persisted with optimistic updates)
+  const [wishlist, setWishlist] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/shop/wishlist", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((ids: string[]) => setWishlist(new Set(ids)))
+      .catch(() => {});
+  }, [user]);
 
   const toggleWishlist = useCallback((itemId: string) => {
     setWishlist((prev) => {
+      const adding = !prev.has(itemId);
       const next = new Set(prev);
-      if (next.has(itemId)) {
-        next.delete(itemId);
-      } else {
+      if (adding) {
         next.add(itemId);
+      } else {
+        next.delete(itemId);
       }
-      localStorage.setItem("poker-wishlist", JSON.stringify([...next]));
+
+      // Fire-and-forget server sync; revert on failure
+      const method = adding ? "POST" : "DELETE";
+      fetch(`/api/shop/wishlist/${itemId}`, { method, credentials: "include" })
+        .then((r) => {
+          if (!r.ok) throw new Error();
+        })
+        .catch(() => {
+          // Revert optimistic update
+          setWishlist((cur) => {
+            const reverted = new Set(cur);
+            if (adding) reverted.delete(itemId);
+            else reverted.add(itemId);
+            return reverted;
+          });
+        });
+
       return next;
     });
   }, []);

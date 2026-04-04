@@ -1142,7 +1142,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.json({
           handsPlayed: 0, potsWon: 0,
           bestWinStreak: 0, currentWinStreak: 0, totalWinnings: 0,
-          vpip: 0, pfr: 0, showdownCount: 0,
+          vpip: 0, pfr: 0, showdownCount: 0, sngWins: 0,
         });
       }
       res.json({
@@ -1154,6 +1154,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         vpip: stats.vpip,
         pfr: stats.pfr,
         showdownCount: stats.showdownCount,
+        sngWins: stats.sngWins,
       });
     } catch (err) {
       next(err);
@@ -1186,12 +1187,11 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ error: "Invalid period. Use today, week, month, or all" });
       }
 
-      const data = await storage.getLeaderboard(metric as "chips" | "wins" | "winRate", 50);
-
-      // The playerStats table tracks cumulative counts without per-event timestamps,
-      // so true period filtering isn't possible without a time-series table.
-      // For now, accept the period param gracefully and return all data for any period.
-      // This prevents the frontend from breaking when it sends period=today/week/month.
+      const data = await storage.getLeaderboard(
+        metric as "chips" | "wins" | "winRate",
+        50,
+        period as "today" | "week" | "month" | "all",
+      );
 
       res.json(data);
     } catch (err) {
@@ -1507,6 +1507,28 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) {
       next(err);
     }
+  });
+
+  // ─── Wishlist Routes ─────────────────────────────────────────────────
+  const wishlists = new Map<number, Set<string>>();
+
+  app.get("/api/shop/wishlist", requireAuth, (req, res) => {
+    const set = wishlists.get(req.user!.id);
+    res.json(set ? [...set] : []);
+  });
+
+  app.post("/api/shop/wishlist/:itemId", requireAuth, (req, res) => {
+    const userId = req.user!.id;
+    if (!wishlists.has(userId)) wishlists.set(userId, new Set());
+    wishlists.get(userId)!.add(req.params.itemId);
+    res.json({ message: "Added" });
+  });
+
+  app.delete("/api/shop/wishlist/:itemId", requireAuth, (req, res) => {
+    const userId = req.user!.id;
+    const set = wishlists.get(userId);
+    if (set) set.delete(req.params.itemId);
+    res.json({ message: "Removed" });
   });
 
   // ─── Tournament Routes ──────────────────────────────────────────────────
@@ -2605,6 +2627,154 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (!user) return res.status(404).json({ message: "User not found" });
       const { password, ...safeUser } = user;
       res.json(safeUser);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ─── Analytics Endpoints ──────────────────────────────────────────────────
+
+  // Club Activity: recent events, member joins, table creations for user's clubs
+  app.get("/api/analytics/club-activity", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const userClubs = await storage.getUserClubs(userId);
+      const clubIds = userClubs.map(c => c.id);
+
+      const activity: { type: string; description: string; timestamp: string; clubId: string }[] = [];
+
+      for (const clubId of clubIds) {
+        const club = await storage.getClub(clubId);
+        const clubName = club?.name ?? "Unknown Club";
+
+        // Club events (tournaments, cash games, etc.)
+        const events = await storage.getClubEvents(clubId);
+        for (const ev of events) {
+          activity.push({
+            type: ev.eventType ?? "event",
+            description: `${ev.name} scheduled in ${clubName}`,
+            timestamp: ev.createdAt ? new Date(ev.createdAt).toISOString() : new Date().toISOString(),
+            clubId,
+          });
+        }
+
+        // Member joins
+        const members = await storage.getClubMembers(clubId);
+        for (const m of members) {
+          const username = m.user?.displayName ?? m.user?.username ?? "A player";
+          activity.push({
+            type: "member_join",
+            description: `${username} joined ${clubName}`,
+            timestamp: m.joinedAt ? new Date(m.joinedAt).toISOString() : new Date().toISOString(),
+            clubId,
+          });
+        }
+
+        // Club announcements
+        const announcements = await storage.getClubAnnouncements(clubId);
+        for (const a of announcements) {
+          activity.push({
+            type: "announcement",
+            description: `Announcement in ${clubName}: ${a.title ?? a.content?.slice(0, 60) ?? "New announcement"}`,
+            timestamp: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString(),
+            clubId,
+          });
+        }
+      }
+
+      // Sort by timestamp descending and take top 20
+      activity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      res.json(activity.slice(0, 20));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Table Volume: tables created per day for the last 30 days
+  app.get("/api/analytics/table-volume", requireAuth, async (_req, res, next) => {
+    try {
+      const allTables = await storage.getTables();
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Build a map of date -> count
+      const countMap: Record<string, number> = {};
+
+      // Pre-fill all 30 days with 0
+      for (let d = 0; d < 30; d++) {
+        const date = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
+        const key = date.toISOString().slice(0, 10);
+        countMap[key] = 0;
+      }
+
+      for (const table of allTables) {
+        if (!table.createdAt) continue;
+        const created = new Date(table.createdAt);
+        if (created < thirtyDaysAgo) continue;
+        const key = created.toISOString().slice(0, 10);
+        if (key in countMap) {
+          countMap[key]++;
+        }
+      }
+
+      // Convert to sorted array (oldest first)
+      const result = Object.entries(countMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, count]) => ({ date, count }));
+
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Retention: active players vs total
+  app.get("/api/analytics/retention", requireAuth, async (_req, res, next) => {
+    try {
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Get all users for total count
+      const allUsers = await storage.getLeaderboard("chips", 999999);
+      const total = allUsers.length;
+
+      // Get all game hands to determine who played recently
+      const allTables = await storage.getTables();
+      const active7dSet = new Set<string>();
+      const active30dSet = new Set<string>();
+
+      for (const table of allTables) {
+        const hands = await storage.getGameHands(table.id, 500);
+        for (const hand of hands) {
+          if (!hand.createdAt) continue;
+          const handDate = new Date(hand.createdAt);
+          const winnerIds = (hand.winnerIds as string[] | null) ?? [];
+          if (handDate >= sevenDaysAgo) {
+            for (const id of winnerIds) active7dSet.add(id);
+          }
+          if (handDate >= thirtyDaysAgo) {
+            for (const id of winnerIds) active30dSet.add(id);
+          }
+        }
+      }
+
+      // Count users created in the last week
+      let newThisWeek = 0;
+      if (hasDatabase()) {
+        const db = getDb();
+        const result = await db.select({ count: sql<number>`count(*)` })
+          .from(users)
+          .where(sql`${users.createdAt} >= ${sevenDaysAgo}`);
+        newThisWeek = Number(result[0]?.count ?? 0);
+      }
+
+      res.json({
+        active7d: active7dSet.size,
+        active30d: active30dSet.size,
+        total,
+        newThisWeek,
+      });
     } catch (err) {
       next(err);
     }

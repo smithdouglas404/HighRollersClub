@@ -174,6 +174,9 @@ export const tables = pgTable("tables", {
   useCentsValues: boolean("use_cents_values").notNull().default(false),
   // Table management
   awayTimeoutMinutes: integer("away_timeout_minutes").notNull().default(5), // 1-60 min
+  requireAdminApproval: boolean("require_admin_approval").notNull().default(false),
+  allowSpectators: boolean("allow_spectators").notNull().default(true),
+  clubMembersOnly: boolean("club_members_only").notNull().default(false),
   inviteCode: varchar("invite_code", { length: 8 }).unique(),
   scheduledStartTime: timestamp("scheduled_start_time"),
   scheduledEndTime: timestamp("scheduled_end_time"),
@@ -229,6 +232,9 @@ export const insertTableSchema = z.object({
   autoTrimExcessBets: z.boolean().default(false),
   pokerVariant: z.enum(["nlhe", "plo", "plo5", "short_deck"]).default("nlhe"),
   useCentsValues: z.boolean().default(false),
+  requireAdminApproval: z.boolean().default(false),
+  allowSpectators: z.boolean().default(true),
+  clubMembersOnly: z.boolean().default(false),
   awayTimeoutMinutes: z.number().int().min(1).max(60).default(5),
   scheduledStartTime: z.string().datetime().optional(),
   scheduledEndTime: z.string().datetime().optional(),

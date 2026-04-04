@@ -21,9 +21,18 @@ import {
   wallets, payments, withdrawalRequests, supportedCurrencies,
   chatMessages, collusionAlerts, playerNotes,
 } from "@shared/schema";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, gte } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { hasDatabase, getDb } from "./db";
+
+/** Return the Date cutoff for a leaderboard period filter */
+function periodCutoff(period: "today" | "week" | "month"): Date {
+  const now = new Date();
+  if (period === "today") return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  if (period === "week") return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  // month
+  return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+}
 
 export interface IStorage {
   // Users
@@ -103,7 +112,7 @@ export interface IStorage {
   // Player Stats
   getPlayerStats(userId: string): Promise<PlayerStat | undefined>;
   getPlayerStatsBatch(userIds: string[]): Promise<Map<string, PlayerStat>>;
-  getLeaderboard(metric: "chips" | "wins" | "winRate", limit?: number): Promise<{ userId: string; username: string; displayName: string | null; avatarId: string | null; value: number }[]>;
+  getLeaderboard(metric: "chips" | "wins" | "winRate", limit?: number, period?: "today" | "week" | "month" | "all"): Promise<{ userId: string; username: string; displayName: string | null; avatarId: string | null; value: number }[]>;
   incrementPlayerStat(userId: string, field: "handsPlayed" | "potsWon" | "sngWins" | "bombPotsPlayed" | "headsUpWins" | "vpip" | "pfr", amount: number): Promise<void>;
   resetDailyStats(userId: string): Promise<void>;
 
@@ -458,6 +467,9 @@ export class MemStorage implements IStorage {
       autoTrimExcessBets: data.autoTrimExcessBets ?? false,
       pokerVariant: data.pokerVariant || "nlhe",
       useCentsValues: data.useCentsValues ?? false,
+      requireAdminApproval: data.requireAdminApproval ?? false,
+      allowSpectators: data.allowSpectators ?? true,
+      clubMembersOnly: data.clubMembersOnly ?? false,
       awayTimeoutMinutes: data.awayTimeoutMinutes ?? 5,
       inviteCode: this.generateMemInviteCode(),
       scheduledStartTime: data.scheduledStartTime ? new Date(data.scheduledStartTime) : null,
@@ -657,9 +669,43 @@ export class MemStorage implements IStorage {
     }
     return result;
   }
-  async getLeaderboard(metric: "chips" | "wins" | "winRate", limit = 50) {
+  async getLeaderboard(metric: "chips" | "wins" | "winRate", limit = 50, period: "today" | "week" | "month" | "all" = "all") {
     const allUsers = Array.from(this.users.values());
     const result: { userId: string; username: string; displayName: string | null; avatarId: string | null; value: number }[] = [];
+
+    // For period-filtered queries, aggregate from handPlayers + gameHands
+    if (period !== "all") {
+      const cutoff = periodCutoff(period);
+      // Build a map of handId -> gameHand for hands within the period
+      const recentHandIds = new Set<string>();
+      for (const gh of this.gameHandsList) {
+        if (gh.createdAt >= cutoff) recentHandIds.add(gh.id);
+      }
+      // Aggregate per-user stats from handPlayers in those hands
+      const userWins = new Map<string, number>();
+      const userHands = new Map<string, number>();
+      const userChips = new Map<string, number>();
+      for (const hp of this.handPlayersList) {
+        if (!recentHandIds.has(hp.handId)) continue;
+        userHands.set(hp.userId, (userHands.get(hp.userId) || 0) + 1);
+        if (hp.isWinner) userWins.set(hp.userId, (userWins.get(hp.userId) || 0) + 1);
+        userChips.set(hp.userId, (userChips.get(hp.userId) || 0) + hp.netResult);
+      }
+      for (const u of allUsers) {
+        let value = 0;
+        const wins = userWins.get(u.id) || 0;
+        const hands = userHands.get(u.id) || 0;
+        if (metric === "chips") value = userChips.get(u.id) || 0;
+        else if (metric === "wins") value = wins;
+        else if (metric === "winRate") value = hands >= 10 ? Math.round((wins / hands) * 100) : 0;
+        if (hands > 0 || metric === "chips") {
+          result.push({ userId: u.id, username: u.username, displayName: u.displayName, avatarId: u.avatarId, value });
+        }
+      }
+      result.sort((a, b) => b.value - a.value);
+      return result.slice(0, limit);
+    }
+
     for (const u of allUsers) {
       const stats = this.playerStatsList.get(u.id);
       let value = 0;
@@ -1257,6 +1303,9 @@ export class DatabaseStorage implements IStorage {
       autoTrimExcessBets: data.autoTrimExcessBets ?? false,
       pokerVariant: data.pokerVariant || "nlhe",
       useCentsValues: data.useCentsValues ?? false,
+      requireAdminApproval: data.requireAdminApproval ?? false,
+      allowSpectators: data.allowSpectators ?? true,
+      clubMembersOnly: data.clubMembersOnly ?? false,
     }).returning();
     return table;
   }
@@ -1447,7 +1496,68 @@ export class DatabaseStorage implements IStorage {
     }
     return result;
   }
-  async getLeaderboard(metric: "chips" | "wins" | "winRate", limit = 50) {
+  async getLeaderboard(metric: "chips" | "wins" | "winRate", limit = 50, period: "today" | "week" | "month" | "all" = "all") {
+    // For period-filtered queries, aggregate directly from handPlayers + gameHands
+    if (period !== "all") {
+      const cutoff = periodCutoff(period);
+      if (metric === "chips") {
+        const rows = await this.db.select({
+          userId: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          avatarId: users.avatarId,
+          value: sql<number>`COALESCE(SUM(${handPlayers.netResult}), 0)`.as("value"),
+        }).from(handPlayers)
+          .innerJoin(gameHands, eq(gameHands.id, handPlayers.handId))
+          .innerJoin(users, eq(users.id, handPlayers.userId))
+          .where(gte(gameHands.createdAt, cutoff))
+          .groupBy(users.id, users.username, users.displayName, users.avatarId)
+          .orderBy(sql`COALESCE(SUM(${handPlayers.netResult}), 0) DESC`)
+          .limit(limit);
+        return rows.map(r => ({ ...r, value: Number(r.value) }));
+      }
+      if (metric === "wins") {
+        const rows = await this.db.select({
+          userId: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          avatarId: users.avatarId,
+          value: sql<number>`SUM(CASE WHEN ${handPlayers.isWinner} THEN 1 ELSE 0 END)`.as("value"),
+        }).from(handPlayers)
+          .innerJoin(gameHands, eq(gameHands.id, handPlayers.handId))
+          .innerJoin(users, eq(users.id, handPlayers.userId))
+          .where(gte(gameHands.createdAt, cutoff))
+          .groupBy(users.id, users.username, users.displayName, users.avatarId)
+          .orderBy(sql`SUM(CASE WHEN ${handPlayers.isWinner} THEN 1 ELSE 0 END) DESC`)
+          .limit(limit);
+        return rows.map(r => ({ ...r, value: Number(r.value) }));
+      }
+      // winRate
+      const rows = await this.db.select({
+        userId: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarId: users.avatarId,
+        handsPlayed: sql<number>`COUNT(*)`.as("hands_played"),
+        wins: sql<number>`SUM(CASE WHEN ${handPlayers.isWinner} THEN 1 ELSE 0 END)`.as("wins"),
+      }).from(handPlayers)
+        .innerJoin(gameHands, eq(gameHands.id, handPlayers.handId))
+        .innerJoin(users, eq(users.id, handPlayers.userId))
+        .where(gte(gameHands.createdAt, cutoff))
+        .groupBy(users.id, users.username, users.displayName, users.avatarId)
+        .having(sql`COUNT(*) >= 10`)
+        .orderBy(sql`(SUM(CASE WHEN ${handPlayers.isWinner} THEN 1 ELSE 0 END)::float / COUNT(*)::float) DESC`)
+        .limit(limit);
+      return rows.map(r => ({
+        userId: r.userId,
+        username: r.username,
+        displayName: r.displayName,
+        avatarId: r.avatarId,
+        value: Math.round((Number(r.wins) / Number(r.handsPlayed)) * 100),
+      }));
+    }
+
+    // period === "all": use cumulative playerStats
     if (metric === "chips") {
       const rows = await this.db.select({
         userId: users.id,
@@ -1458,7 +1568,6 @@ export class DatabaseStorage implements IStorage {
       }).from(users).orderBy(sql`${users.chipBalance} DESC`).limit(limit);
       return rows.map(r => ({ ...r, displayName: r.displayName, avatarId: r.avatarId }));
     }
-    // For wins and winRate, join with playerStats and sort in SQL
     if (metric === "wins") {
       const rows = await this.db.select({
         userId: users.id,
@@ -1470,7 +1579,7 @@ export class DatabaseStorage implements IStorage {
         .orderBy(sql`${playerStats.potsWon} DESC`).limit(limit);
       return rows;
     }
-    // winRate: compute in SQL, sort, then limit
+    // winRate
     const rows = await this.db.select({
       userId: users.id,
       username: users.username,

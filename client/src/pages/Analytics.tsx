@@ -9,7 +9,7 @@ import {
   Coins, Trophy, Loader2, Brain,
   ArrowUpRight, ArrowDownRight, Minus,
   Users, Activity, PieChart, Clock, FileText,
-  Lock
+  AlertCircle, Calendar
 } from "lucide-react";
 
 interface PlayerStats {
@@ -40,6 +40,25 @@ interface SessionEntry {
   sessionStart: string;
   sessionEnd: string;
   handsPlayed: number;
+}
+
+interface ClubActivityEntry {
+  type: string;
+  description: string;
+  timestamp: string;
+  clubId: string;
+}
+
+interface TableVolumeEntry {
+  date: string;
+  count: number;
+}
+
+interface RetentionData {
+  active7d: number;
+  active30d: number;
+  total: number;
+  newThisWeek: number;
 }
 
 /* ── SVG Line Chart ───────────────────────────────────────────────────────── */
@@ -157,25 +176,7 @@ function WinningsChart({ data }: { data: number[] }) {
   );
 }
 
-/* ── Coming Soon Placeholder ─────────────────────────────────────────────── */
-
-function ComingSoonCard({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-white/[0.04] border border-white/[0.08] relative">
-        <Icon className="w-7 h-7 text-gray-500/50" />
-        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center">
-          <Lock className="w-2.5 h-2.5 text-gray-400" />
-        </div>
-      </div>
-      <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">{title}</h3>
-      <p className="text-xs text-muted-foreground/60 max-w-xs">{description}</p>
-      <span className="mt-3 px-3 py-1 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider bg-primary/5 text-primary/50 border border-primary/10">
-        Coming Soon
-      </span>
-    </div>
-  );
-}
+/* ── (Coming Soon placeholder removed — real analytics below) ─────────── */
 
 /* ── Period filter helper ─────────────────────────────────────────────────── */
 
@@ -203,6 +204,12 @@ export default function Analytics() {
 
   const [chartPeriod, setChartPeriod] = useState("all");
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [clubActivity, setClubActivity] = useState<ClubActivityEntry[]>([]);
+  const [tableVolume, setTableVolume] = useState<TableVolumeEntry[]>([]);
+  const [retention, setRetention] = useState<RetentionData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -232,6 +239,26 @@ export default function Analytics() {
     }
     loadData();
   }, [user?.id]);
+
+  useEffect(() => {
+    async function loadAnalytics() {
+      try {
+        const [activityRes, volumeRes, retentionRes] = await Promise.all([
+          fetch("/api/analytics/club-activity", { credentials: "include" }).catch(() => null),
+          fetch("/api/analytics/table-volume", { credentials: "include" }).catch(() => null),
+          fetch("/api/analytics/retention", { credentials: "include" }).catch(() => null),
+        ]);
+        if (activityRes?.ok) setClubActivity(await activityRes.json());
+        if (volumeRes?.ok) setTableVolume(await volumeRes.json());
+        if (retentionRes?.ok) setRetention(await retentionRes.json());
+      } catch (err: any) {
+        setAnalyticsError(err.message || "Failed to load club analytics");
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    }
+    loadAnalytics();
+  }, []);
 
   const winRate = stats && stats.handsPlayed > 0
     ? Math.round((stats.potsWon / stats.handsPlayed) * 100)
@@ -273,6 +300,20 @@ export default function Analytics() {
       return running;
     });
   }, [filteredSessions, handHistory]);
+
+  // Compute table volume summary stats
+  const volumeStats = useMemo(() => {
+    if (tableVolume.length === 0) return { thisWeek: 0, thisMonth: 0, totalTables: 0 };
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    let thisWeek = 0;
+    let thisMonth = 0;
+    for (const entry of tableVolume) {
+      thisMonth += entry.count;
+      if (new Date(entry.date) >= weekAgo) thisWeek += entry.count;
+    }
+    return { thisWeek, thisMonth, totalTables: thisMonth };
+  }, [tableVolume]);
 
   const statCards = [
     {
@@ -563,107 +604,156 @@ export default function Analytics() {
               </div>
             </motion.div>
 
-            {/* ── Club Analytics (Coming Soon) ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Active Members - Coming Soon */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.45 }}
-                className="rounded-xl overflow-hidden"
-                style={{
-                  background: "rgba(15,15,20,0.7)",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  border: "1px solid rgba(212,175,55,0.12)",
-                }}
-              >
-                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#c9a84c]/80" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Active Members</h3>
-                </div>
-                <ComingSoonCard
-                  icon={Users}
-                  title="Member Analytics"
-                  description="Track daily active members and growth trends across your club."
-                />
-              </motion.div>
+            {/* ── Club Analytics ── */}
+            {analyticsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-5 h-5 animate-spin text-primary/60" />
+                <span className="ml-2 text-xs text-gray-500">Loading club analytics...</span>
+              </div>
+            ) : analyticsError ? (
+              <div className="flex items-center justify-center py-8 gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400" />
+                <span className="text-xs text-red-400">{analyticsError}</span>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Player Retention Stats */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.45 }}
+                    className="rounded-xl overflow-hidden"
+                    style={{
+                      background: "rgba(15,15,20,0.7)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)",
+                      border: "1px solid rgba(212,175,55,0.12)",
+                    }}
+                  >
+                    <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                      <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Player Retention</h3>
+                    </div>
+                    {retention ? (
+                      <div className="grid grid-cols-2 gap-px bg-white/[0.03]">
+                        {[
+                          { label: "Active (7d)", value: retention.active7d, color: "text-green-400" },
+                          { label: "Active (30d)", value: retention.active30d, color: "text-blue-400" },
+                          { label: "Total Players", value: retention.total, color: "text-[#d4af37]" },
+                          { label: "New This Week", value: retention.newThisWeek, color: "text-purple-400" },
+                        ].map((item) => (
+                          <div key={item.label} className="p-4 bg-[rgba(15,15,20,0.7)] hover:bg-white/[0.02] transition-colors">
+                            <div className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-1">{item.label}</div>
+                            <div className={`text-2xl font-bold tracking-tight ${item.color}`}>{item.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Users className="w-7 h-7 text-gray-500/40 mb-2" />
+                        <p className="text-xs text-gray-500">No retention data available</p>
+                      </div>
+                    )}
+                  </motion.div>
 
-              {/* Table Volume - Coming Soon */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="rounded-xl overflow-hidden"
-                style={{
-                  background: "rgba(15,15,20,0.7)",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  border: "1px solid rgba(212,175,55,0.12)",
-                }}
-              >
-                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-[#c9a84c]/80" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Table Volume</h3>
+                  {/* Table Volume */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="rounded-xl overflow-hidden"
+                    style={{
+                      background: "rgba(15,15,20,0.7)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)",
+                      border: "1px solid rgba(212,175,55,0.12)",
+                    }}
+                  >
+                    <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-[#c9a84c]/80" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Table Volume</h3>
+                    </div>
+                    <div className="p-5">
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        {[
+                          { label: "This Week", value: volumeStats.thisWeek, icon: Calendar },
+                          { label: "This Month", value: volumeStats.thisMonth, icon: BarChart3 },
+                          { label: "Avg / Day", value: tableVolume.length > 0 ? (volumeStats.thisMonth / Math.min(tableVolume.length, 30)).toFixed(1) : "0", icon: Activity },
+                        ].map((item) => (
+                          <div key={item.label} className="text-center p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                            <item.icon className="w-4 h-4 text-[#c9a84c]/60 mx-auto mb-1.5" />
+                            <div className="text-xl font-bold tracking-tight text-[#d4af37]">{item.value}</div>
+                            <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider mt-0.5">{item.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {tableVolume.length > 0 && (
+                        <div className="text-[0.5625rem] text-gray-500 text-center">
+                          Showing last 30 days of table creation data
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
                 </div>
-                <ComingSoonCard
-                  icon={Activity}
-                  title="Volume Tracking"
-                  description="Monitor monthly table volume and chip flow across all tables."
-                />
-              </motion.div>
-            </div>
 
-            {/* ── Retention & Recent Activity (Coming Soon) ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Player Retention - Coming Soon */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.55 }}
-                className="rounded-xl overflow-hidden"
-                style={{
-                  background: "rgba(15,15,20,0.7)",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  border: "1px solid rgba(212,175,55,0.12)",
-                }}
-              >
-                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                  <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Player Retention</h3>
-                </div>
-                <ComingSoonCard
-                  icon={PieChart}
-                  title="Retention Metrics"
-                  description="See returning vs. new player breakdowns and churn rates."
-                />
-              </motion.div>
-
-              {/* Recent Activity - Coming Soon */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="lg:col-span-2 rounded-xl overflow-hidden"
-                style={{
-                  background: "rgba(15,15,20,0.7)",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  border: "1px solid rgba(212,175,55,0.12)",
-                }}
-              >
-                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#c9a84c]/80" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Recent Activity</h3>
-                </div>
-                <ComingSoonCard
-                  icon={Clock}
-                  title="Activity Feed"
-                  description="View recent member activity, games played, and stakes across the club."
-                />
-              </motion.div>
-            </div>
+                {/* Recent Club Activity */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.55 }}
+                  className="rounded-xl overflow-hidden"
+                  style={{
+                    background: "rgba(15,15,20,0.7)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    border: "1px solid rgba(212,175,55,0.12)",
+                  }}
+                >
+                  <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[#c9a84c]/80" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Recent Club Activity</h3>
+                    </div>
+                    {clubActivity.length > 0 && (
+                      <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{clubActivity.length} items</span>
+                    )}
+                  </div>
+                  {clubActivity.length > 0 ? (
+                    <div className="divide-y divide-white/[0.03]">
+                      {clubActivity.map((item, i) => (
+                        <div key={i} className="px-5 py-3 hover:bg-white/[0.02] transition-colors flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                              item.type === "member_join" ? "bg-green-500/10 border border-green-500/20" :
+                              item.type === "announcement" ? "bg-blue-500/10 border border-blue-500/20" :
+                              "bg-primary/10 border border-primary/20"
+                            }`}>
+                              {item.type === "member_join" ? <Users className="w-3.5 h-3.5 text-green-400" /> :
+                               item.type === "announcement" ? <FileText className="w-3.5 h-3.5 text-blue-400" /> :
+                               <Activity className="w-3.5 h-3.5 text-[#d4af37]" />}
+                            </div>
+                            <div>
+                              <p className="text-xs text-white/80">{item.description}</p>
+                              <p className="text-[0.5625rem] text-gray-500 capitalize">{item.type.replace(/_/g, " ")}</p>
+                            </div>
+                          </div>
+                          <span className="text-[0.5625rem] text-gray-500 whitespace-nowrap ml-4">
+                            {new Date(item.timestamp).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Clock className="w-7 h-7 text-gray-500/40 mb-2" />
+                      <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Club Activity</h3>
+                      <p className="text-xs text-muted-foreground/60 max-w-xs">Join a club to see recent activity here.</p>
+                    </div>
+                  )}
+                </motion.div>
+              </>
+            )}
 
             {/* ── Past AI Analyses ── */}
             <motion.div

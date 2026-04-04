@@ -54,12 +54,27 @@ const SPLASH_IMAGES = [
   "/splash/splash_high_stakes.webp",
 ];
 
+function formatCompact(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1).replace(/\.0$/, "")}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  return n.toLocaleString();
+}
+
+interface GlobalStats {
+  totalPlayers: number;
+  totalHandsDealt: number;
+  totalChipsWon: number;
+}
+
 export default function Landing() {
   const [onlineCount, setOnlineCount] = useState(0);
   const [splashIdx, setSplashIdx] = useState(0);
+  const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
+  const [statsError, setStatsError] = useState(false);
 
   useEffect(() => {
-    async function fetchStats() {
+    async function fetchOnline() {
       try {
         const res = await fetch("/api/online-users");
         if (res.ok) {
@@ -68,9 +83,26 @@ export default function Landing() {
         }
       } catch {}
     }
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000);
+    fetchOnline();
+    const interval = setInterval(fetchOnline, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    async function fetchGlobalStats() {
+      try {
+        const res = await fetch("/api/stats/global");
+        if (res.ok) {
+          const data = await res.json();
+          setGlobalStats(data);
+        } else {
+          setStatsError(true);
+        }
+      } catch {
+        setStatsError(true);
+      }
+    }
+    fetchGlobalStats();
   }, []);
 
   useEffect(() => {
@@ -231,15 +263,21 @@ export default function Landing() {
                   className="flex gap-8 mt-8"
                 >
                   <div className="text-center">
-                    <div className="text-2xl font-black text-primary">10K+</div>
+                    <div className="text-2xl font-black text-primary">
+                      {globalStats ? formatCompact(globalStats.totalPlayers) : statsError ? "\u2014" : <span className="inline-block w-12 h-7 rounded bg-white/10 animate-pulse" />}
+                    </div>
                     <div className="text-[0.625rem] text-gray-500 uppercase">Players</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-black text-white">1M+</div>
+                    <div className="text-2xl font-black text-white">
+                      {globalStats ? formatCompact(globalStats.totalHandsDealt) : statsError ? "\u2014" : <span className="inline-block w-12 h-7 rounded bg-white/10 animate-pulse" />}
+                    </div>
                     <div className="text-[0.625rem] text-gray-500 uppercase">Hands Dealt</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-black text-green-400">$5M+</div>
+                    <div className="text-2xl font-black text-green-400">
+                      {globalStats ? `$${formatCompact(globalStats.totalChipsWon)}` : statsError ? "\u2014" : <span className="inline-block w-12 h-7 rounded bg-white/10 animate-pulse" />}
+                    </div>
                     <div className="text-[0.625rem] text-gray-500 uppercase">Won</div>
                   </div>
                 </motion.div>

@@ -447,6 +447,7 @@ export default function Landing() {
                 <Link href="/terms"><span className="text-gray-500 hover:text-primary transition-colors cursor-pointer">Terms</span></Link>
                 <Link href="/privacy"><span className="text-gray-500 hover:text-primary transition-colors cursor-pointer">Privacy</span></Link>
                 <Link href="/support"><span className="text-gray-500 hover:text-primary transition-colors cursor-pointer">Support</span></Link>
+                <Link href="/responsible-gambling"><span className="text-gray-500 hover:text-primary transition-colors cursor-pointer">Responsible Gambling</span></Link>
               </div>
             </div>
           </div>

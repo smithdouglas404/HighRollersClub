@@ -13,6 +13,13 @@ export interface AuthUser {
   email?: string | null;
   walletAddress?: string | null;
   twoFactorEnabled?: boolean;
+  tier?: string;
+  tierExpiresAt?: string | null;
+  kycStatus?: string;
+  kycVerifiedAt?: string | null;
+  kycRejectionReason?: string | null;
+  memberId?: string | null;
+  kycBlockchainTxHash?: string | null;
   createdAt: string;
 }
 

@@ -6,6 +6,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { seedData } from "./seed";
+import { seedBotTables } from "./seed-bot-tables";
+import { scheduleDailyTournaments } from "./scheduler";
 import { csrfProtection } from "./middleware/csrf";
 import { hasDatabase, getPool } from "./db";
 
@@ -116,6 +118,12 @@ app.use((req, res, next) => {
 
   // Seed default missions and shop items
   await seedData().catch(err => console.error("[seed] Failed:", err));
+
+  // Seed bot tables so the lobby is never empty
+  await seedBotTables().catch(err => console.error("[seed-bot-tables] Failed:", err));
+
+  // Start the recurring daily tournament scheduler
+  scheduleDailyTournaments();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

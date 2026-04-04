@@ -21,11 +21,11 @@ function excludeFromPlugin(plugin: Plugin, excludePattern: RegExp): Plugin {
   const originalTransform = plugin.transform;
 
   if (typeof originalTransform === "function") {
-    const orig: TransformFn = originalTransform;
-    plugin.transform = function (code, id, options) {
+    const orig = originalTransform as TransformFn;
+    plugin.transform = function (this: unknown, code: string, id: string, options?: { ssr?: boolean }) {
       if (excludePattern.test(id)) return null;
       return orig.call(this, code, id, options);
-    };
+    } as any;
   } else if (
     originalTransform &&
     typeof originalTransform === "object" &&
@@ -34,10 +34,10 @@ function excludeFromPlugin(plugin: Plugin, excludePattern: RegExp): Plugin {
   ) {
     const hook = originalTransform as ObjectHook;
     const origHandler = hook.handler;
-    hook.handler = function (code, id, options) {
+    hook.handler = function (this: unknown, code: string, id: string, options?: { ssr?: boolean }) {
       if (excludePattern.test(id)) return null;
       return origHandler.call(this, code, id, options);
-    };
+    } as any;
   }
 
   return plugin;

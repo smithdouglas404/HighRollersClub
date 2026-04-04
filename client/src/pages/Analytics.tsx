@@ -83,6 +83,17 @@ interface CoachingRecommendation {
   detail: string;
 }
 
+interface SessionReport {
+  sessionId: string;
+  handsAnalyzed: number;
+  netResult: number;
+  positionBreakdown: { position: string; hands: number; vpip: number; winRate: number }[];
+  leaks: { description: string; chipsLost: number; frequency: number }[];
+  topWinningHands: string[];
+  topLosingHands: string[];
+  recommendations: string[];
+}
+
 interface CoachingData {
   handsAnalyzed: number;
   overallRating: "Tight-Aggressive" | "Loose-Aggressive" | "Tight-Passive" | "Loose-Passive";
@@ -369,6 +380,37 @@ export default function Analytics() {
   const [sessionHistoryLoading, setSessionHistoryLoading] = useState(true);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
+  const [sessionReport, setSessionReport] = useState<SessionReport | null>(null);
+  const [sessionReportLoading, setSessionReportLoading] = useState(false);
+  const [sessionReportError, setSessionReportError] = useState<string | null>(null);
+  const [reportSections, setReportSections] = useState<Record<string, boolean>>({ positions: true, leaks: true, hands: true, recs: true });
+
+  const handleGenerateSessionReport = async () => {
+    setSessionReportLoading(true);
+    setSessionReportError(null);
+    setSessionReport(null);
+    try {
+      const res = await fetch("/api/coaching/session-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to generate session report");
+      }
+      setSessionReport(await res.json());
+    } catch (err: any) {
+      setSessionReportError(err.message || "Failed to generate report");
+    } finally {
+      setSessionReportLoading(false);
+    }
+  };
+
+  const toggleReportSection = (key: string) => {
+    setReportSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   useEffect(() => {
     async function loadSessionHistory() {
       try {
@@ -595,6 +637,183 @@ export default function Analytics() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Session Report (Premium) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.01 }}
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "rgba(15,15,20,0.7)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(212,175,55,0.12)",
+              }}
+            >
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#c9a84c]/80" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Session Report</h3>
+                <span className="ml-auto text-[0.5625rem] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">PREMIUM</span>
+              </div>
+              <div className="px-5 py-4">
+                {!sessionReport && !sessionReportLoading && (
+                  <div className="text-center space-y-3">
+                    <p className="text-xs text-gray-400">
+                      Get a detailed AI analysis of your last 50 hands including positional breakdown, leak detection, and personalized recommendations.
+                    </p>
+                    <p className="text-[0.5625rem] text-gray-500">
+                      Cost: 500 chips or free with Gold+
+                    </p>
+                    {sessionReportError && (
+                      <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2 border border-red-500/20">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        {sessionReportError}
+                      </div>
+                    )}
+                    <button
+                      onClick={handleGenerateSessionReport}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#c9a84c]/20 text-[#c9a84c] text-xs font-bold border border-[#c9a84c]/30 hover:bg-[#c9a84c]/30 transition-colors"
+                    >
+                      <Brain className="w-3.5 h-3.5" />
+                      Generate Session Report
+                    </button>
+                  </div>
+                )}
+
+                {sessionReportLoading && (
+                  <div className="flex flex-col items-center gap-2 py-6">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#c9a84c]" />
+                    <span className="text-xs text-gray-400">Analyzing your session...</span>
+                  </div>
+                )}
+
+                {sessionReport && (
+                  <div className="space-y-3">
+                    {/* Summary */}
+                    <div className="flex items-center gap-4 text-xs">
+                      <div className="text-gray-400">
+                        <span className="font-bold text-white">{sessionReport.handsAnalyzed}</span> hands analyzed
+                      </div>
+                      <div className={sessionReport.netResult >= 0 ? "text-green-400" : "text-red-400"}>
+                        Net: <span className="font-bold">{sessionReport.netResult >= 0 ? "+" : ""}{sessionReport.netResult.toLocaleString()}</span> chips
+                      </div>
+                    </div>
+
+                    {/* Positional Breakdown */}
+                    <div>
+                      <button onClick={() => toggleReportSection("positions")} className="w-full flex items-center justify-between py-2 text-left">
+                        <span className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-400">Positional Breakdown</span>
+                        {reportSections.positions ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+                      </button>
+                      {reportSections.positions && sessionReport.positionBreakdown.length > 0 && (
+                        <div className="rounded-lg overflow-hidden border border-white/5">
+                          <table className="w-full text-[0.5625rem]">
+                            <thead>
+                              <tr className="bg-white/[0.03]">
+                                <th className="text-left px-3 py-1.5 text-gray-500 font-bold">Position</th>
+                                <th className="text-right px-3 py-1.5 text-gray-500 font-bold">Hands</th>
+                                <th className="text-right px-3 py-1.5 text-gray-500 font-bold">VPIP</th>
+                                <th className="text-right px-3 py-1.5 text-gray-500 font-bold">Win%</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sessionReport.positionBreakdown.map((p) => (
+                                <tr key={p.position} className="border-t border-white/[0.03]">
+                                  <td className="px-3 py-1.5 font-bold text-white">{p.position}</td>
+                                  <td className="px-3 py-1.5 text-right text-gray-400">{p.hands}</td>
+                                  <td className="px-3 py-1.5 text-right text-gray-400">{p.vpip}%</td>
+                                  <td className="px-3 py-1.5 text-right" style={{ color: p.winRate >= 50 ? "#22c55e" : p.winRate >= 30 ? "#d4af37" : "#ef4444" }}>{p.winRate}%</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Leaks */}
+                    {sessionReport.leaks.length > 0 && (
+                      <div>
+                        <button onClick={() => toggleReportSection("leaks")} className="w-full flex items-center justify-between py-2 text-left">
+                          <span className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-400">Leak Detection</span>
+                          {reportSections.leaks ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+                        </button>
+                        {reportSections.leaks && (
+                          <div className="space-y-2">
+                            {sessionReport.leaks.map((leak, i) => (
+                              <div key={i} className="rounded-lg px-3 py-2 bg-red-500/[0.06] border border-red-500/20">
+                                <div className="flex items-start gap-2">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
+                                  <div>
+                                    <div className="text-[0.5625rem] text-red-300">{leak.description}</div>
+                                    <div className="text-[0.5rem] text-red-400/60 mt-0.5">-{leak.chipsLost.toLocaleString()} chips | {leak.frequency} occurrences</div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Hand Rankings */}
+                    <div>
+                      <button onClick={() => toggleReportSection("hands")} className="w-full flex items-center justify-between py-2 text-left">
+                        <span className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-400">Hand Rankings</span>
+                        {reportSections.hands ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+                      </button>
+                      {reportSections.hands && (
+                        <div className="grid grid-cols-2 gap-2">
+                          {sessionReport.topWinningHands.length > 0 && (
+                            <div className="rounded-lg px-3 py-2 bg-green-500/[0.06] border border-green-500/20">
+                              <div className="text-[0.5rem] font-bold text-green-400/60 uppercase mb-1">Top Winners</div>
+                              {sessionReport.topWinningHands.map((h, i) => (
+                                <div key={i} className="text-[0.5625rem] text-green-300 font-mono">{h}</div>
+                              ))}
+                            </div>
+                          )}
+                          {sessionReport.topLosingHands.length > 0 && (
+                            <div className="rounded-lg px-3 py-2 bg-red-500/[0.06] border border-red-500/20">
+                              <div className="text-[0.5rem] font-bold text-red-400/60 uppercase mb-1">Top Losers</div>
+                              {sessionReport.topLosingHands.map((h, i) => (
+                                <div key={i} className="text-[0.5625rem] text-red-300 font-mono">{h}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Recommendations */}
+                    <div>
+                      <button onClick={() => toggleReportSection("recs")} className="w-full flex items-center justify-between py-2 text-left">
+                        <span className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-400">Recommendations</span>
+                        {reportSections.recs ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+                      </button>
+                      {reportSections.recs && (
+                        <div className="space-y-1.5">
+                          {sessionReport.recommendations.map((rec, i) => (
+                            <div key={i} className="flex items-start gap-2 text-[0.5625rem] text-gray-300">
+                              <CheckCircle2 className="w-3 h-3 text-[#c9a84c] mt-0.5 shrink-0" />
+                              <span>{rec}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Regenerate */}
+                    <button
+                      onClick={handleGenerateSessionReport}
+                      className="text-[0.5625rem] text-gray-500 hover:text-gray-300 transition-colors"
+                    >
+                      Regenerate report
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
             {/* Play Style Coach */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}

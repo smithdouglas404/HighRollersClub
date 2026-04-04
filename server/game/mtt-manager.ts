@@ -627,23 +627,23 @@ export class MTTManager {
 
       // Update winner registration
       await this.updateRegistrationStatus(winner.userId, "winner", 1, prizeAmount);
+
+      // Notify the winner with a leaderboard_change notification
+      if (!winner.userId.startsWith("bot-")) {
+        try {
+          await storage.createNotification(
+            winner.userId,
+            "leaderboard_change",
+            "Tournament Victory!",
+            `You won the tournament and earned ${prizeAmount.toLocaleString()} chips! Your leaderboard ranking may have changed.`,
+            { tournamentId: this.tournamentId, place: 1, prizeAmount },
+          );
+        } catch (_) { /* non-critical */ }
+      }
     }
 
     // Update tournament status in DB
     await storage.updateTournament(this.tournamentId, { status: "complete" });
-
-    // Notify the winner with a leaderboard_change notification
-    if (winner && !winner.userId.startsWith("bot-")) {
-      try {
-        await storage.createNotification(
-          winner.userId,
-          "leaderboard_change",
-          "Tournament Victory!",
-          `You won the tournament and earned ${prizeAmount.toLocaleString()} chips! Your leaderboard ranking may have changed.`,
-          { tournamentId: this.tournamentId, place: 1, prizeAmount },
-        );
-      } catch (_) { /* non-critical */ }
-    }
 
     // Notify participants who placed in the money about challenge completion
     try {

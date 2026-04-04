@@ -7,7 +7,7 @@ import { type Express, type Request } from "express";
 import { storage } from "./storage";
 import { hasDatabase, getPool } from "./db";
 import { type User } from "@shared/schema";
-import { randomUUID, scrypt, randomBytes, timingSafeEqual, createHmac } from "crypto";
+import { randomUUID, scrypt, randomBytes, timingSafeEqual, createHmac, createHash } from "crypto";
 import { promisify } from "util";
 import nodemailer from "nodemailer";
 
@@ -187,6 +187,8 @@ export function registerAuthRoutes(app: Express) {
     try {
       const guestName = generateGuestName();
       const randomAvatar = GUEST_AVATAR_IDS[Math.floor(Math.random() * GUEST_AVATAR_IDS.length)];
+      const tempId = randomUUID();
+      const memberId = "HR-" + createHash("sha256").update(tempId + Date.now().toString()).digest("hex").substring(0, 8);
       const user = await storage.createUser({
         username: guestName.toLowerCase(),
         password: await hashPassword(randomUUID()), // random password
@@ -194,6 +196,7 @@ export function registerAuthRoutes(app: Express) {
         role: "guest",
         chipBalance: 10000,
         avatarId: randomAvatar,
+        memberId,
       });
 
       // Create wallets and seed main wallet with starting chips
@@ -256,12 +259,14 @@ export function registerAuthRoutes(app: Express) {
         }
       }
 
+      const regMemberId = "HR-" + createHash("sha256").update(randomUUID() + Date.now().toString()).digest("hex").substring(0, 8);
       const user = await storage.createUser({
         username,
         password: hashedPassword,
         displayName: displayName || username,
         role: "member",
         chipBalance: 10000,
+        memberId: regMemberId,
       });
 
       // Create wallets and seed main wallet with starting chips

@@ -46,6 +46,8 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByWalletAddress(address: string): Promise<User | undefined>;
+  getUserByMemberId(memberId: string): Promise<User | undefined>;
+  getAllUsersByKycStatus(status: string): Promise<User[]>;
   createUser(user: Partial<User> & Pick<User, "username" | "password">): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
 
@@ -308,6 +310,12 @@ export class MemStorage implements IStorage {
   async getUserByWalletAddress(address: string) {
     return Array.from(this.users.values()).find(u => u.walletAddress?.toLowerCase() === address.toLowerCase());
   }
+  async getUserByMemberId(memberId: string) {
+    return Array.from(this.users.values()).find(u => u.memberId === memberId);
+  }
+  async getAllUsersByKycStatus(status: string) {
+    return Array.from(this.users.values()).filter(u => u.kycStatus === status);
+  }
   async createUser(data: Partial<User> & Pick<User, "username" | "password">): Promise<User> {
     const id = randomUUID();
     const user: User = {
@@ -329,6 +337,21 @@ export class MemStorage implements IStorage {
       recoveryCodes: data.recoveryCodes ?? null,
       premiumUntil: data.premiumUntil ?? null,
       lastDailyClaim: null,
+      tier: data.tier || "free",
+      tierExpiresAt: data.tierExpiresAt ?? null,
+      kycStatus: data.kycStatus || "none",
+      kycData: data.kycData ?? null,
+      kycVerifiedAt: data.kycVerifiedAt ?? null,
+      kycRejectionReason: data.kycRejectionReason ?? null,
+      memberId: data.memberId ?? null,
+      kycBlockchainTxHash: data.kycBlockchainTxHash ?? null,
+      selfExcludedUntil: data.selfExcludedUntil ?? null,
+      depositLimitDaily: data.depositLimitDaily ?? 0,
+      depositLimitWeekly: data.depositLimitWeekly ?? 0,
+      depositLimitMonthly: data.depositLimitMonthly ?? 0,
+      sessionTimeLimitMinutes: data.sessionTimeLimitMinutes ?? 0,
+      lossLimitDaily: data.lossLimitDaily ?? 0,
+      coolOffUntil: data.coolOffUntil ?? null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -1351,6 +1374,13 @@ export class DatabaseStorage implements IStorage {
   async getUserByWalletAddress(address: string) {
     const [user] = await this.db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${address})`);
     return user;
+  }
+  async getUserByMemberId(memberId: string) {
+    const [user] = await this.db.select().from(users).where(eq(users.memberId, memberId));
+    return user;
+  }
+  async getAllUsersByKycStatus(status: string) {
+    return await this.db.select().from(users).where(eq(users.kycStatus, status));
   }
   async createUser(data: Partial<User> & Pick<User, "username" | "password">): Promise<User> {
     const [user] = await this.db.insert(users).values({

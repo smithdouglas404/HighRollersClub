@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save } from "lucide-react";
+import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save, ShieldAlert, Loader2, MessageSquare, Ticket } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;
@@ -97,7 +97,42 @@ interface SocialLinks {
   telegram: string;
 }
 
-type Tab = "overview" | "withdrawals" | "collusion" | "system" | "payments" | "settings";
+interface KycApplication {
+  id: string;
+  username: string;
+  displayName: string | null;
+  memberId: string | null;
+  kycStatus: string;
+  kycData: { fullName: string; dateOfBirth: string; country: string; idType: string; submittedAt: string } | null;
+  tier: string;
+  createdAt: string;
+}
+
+interface RiskFlag {
+  userId: string;
+  score: number;
+  reasons: string[];
+}
+
+interface AntiCheatLiveData {
+  activeRiskFlags: RiskFlag[];
+  pendingAlerts: CollusionAlertData[];
+  totalPendingAlerts: number;
+}
+
+interface AdminTicket {
+  id: string;
+  userId: string;
+  subject: string;
+  status: string;
+  priority: string;
+  category: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+}
+
+type Tab = "overview" | "withdrawals" | "collusion" | "system" | "payments" | "settings" | "kyc" | "security" | "support";
 
 export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -116,11 +151,20 @@ export default function AdminDashboard() {
   const [socialLinks, setSocialLinks] = useState<SocialLinks>({ twitter: "", discord: "", telegram: "" });
   const [savingSocial, setSavingSocial] = useState(false);
   const [socialSaved, setSocialSaved] = useState(false);
+  const [kycApplications, setKycApplications] = useState<KycApplication[]>([]);
+  const [kycProcessing, setKycProcessing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [processingRakeback, setProcessingRakeback] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
   const [loading, setLoading] = useState(false);
   const [expandedAlert, setExpandedAlert] = useState<string | null>(null);
+  const [antiCheatData, setAntiCheatData] = useState<AntiCheatLiveData | null>(null);
+  const [antiCheatLoading, setAntiCheatLoading] = useState(false);
+  const [freezingUser, setFreezingUser] = useState<string | null>(null);
+  const [adminTickets, setAdminTickets] = useState<AdminTicket[]>([]);
+  const [adminTicketsLoading, setAdminTicketsLoading] = useState(false);
+  const [ticketStatusFilter, setTicketStatusFilter] = useState<string>("all");
+  const [changingTicketStatus, setChangingTicketStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && user && user.role !== "admin") {
@@ -180,6 +224,12 @@ export default function AdminDashboard() {
         .then(data => setSocialLinks(data))
         .catch(() => {})
         .finally(() => setLoading(false));
+    } else if (activeTab === "kyc") {
+      fetch("/api/admin/kyc/pending", { credentials: "include" })
+        .then(r => r.ok ? r.json() : [])
+        .then(setKycApplications)
+        .catch(err => setError(err.message || "Failed to load KYC applications"))
+        .finally(() => setLoading(false));
     } else if (activeTab === "system") {
       Promise.all([
         fetch("/api/admin/system-status", { credentials: "include" }).then(r => {
@@ -196,8 +246,63 @@ export default function AdminDashboard() {
       }).catch(err => {
         setError(err.message || "Failed to load system data");
       }).finally(() => setLoading(false));
+    } else if (activeTab === "security") {
+      setAntiCheatLoading(true);
+      fetch("/api/admin/anti-cheat/live", { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setAntiCheatData(data); })
+        .catch(err => setError(err.message || "Failed to load anti-cheat data"))
+        .finally(() => { setAntiCheatLoading(false); setLoading(false); });
+    } else if (activeTab === "support") {
+      setAdminTicketsLoading(true);
+      const statusParam = ticketStatusFilter !== "all" ? `?status=${ticketStatusFilter}` : "";
+      fetch(`/api/admin/support/tickets${statusParam}`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : [])
+        .then(setAdminTickets)
+        .catch(err => setError(err.message || "Failed to load tickets"))
+        .finally(() => { setAdminTicketsLoading(false); setLoading(false); });
     }
-  }, [activeTab, user]);
+  }, [activeTab, user, ticketStatusFilter]);
+
+  const handleFreezeAccount = async (userId: string) => {
+    setFreezingUser(userId);
+    try {
+      const res = await fetch(`/api/admin/anti-cheat/freeze/${userId}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setAntiCheatData(prev => prev ? {
+          ...prev,
+          activeRiskFlags: prev.activeRiskFlags.filter(f => f.userId !== userId),
+        } : prev);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to freeze account");
+    } finally {
+      setFreezingUser(null);
+    }
+  };
+
+  const handleChangeTicketStatus = async (ticketId: string, newStatus: string) => {
+    setChangingTicketStatus(ticketId);
+    try {
+      const res = await fetch(`/api/admin/support/tickets/${ticketId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setAdminTickets(prev => prev.map(t => t.id === ticketId ? { ...t, ...updated } : t));
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to update ticket status");
+    } finally {
+      setChangingTicketStatus(null);
+    }
+  };
 
   const handleWithdrawalAction = async (id: string, action: "approve" | "reject") => {
     const res = await fetch(`/api/admin/withdrawals/${id}/${action}`, {
@@ -278,8 +383,11 @@ export default function AdminDashboard() {
     { key: "withdrawals", label: "Withdrawals", icon: <DollarSign className="w-4 h-4" /> },
     { key: "collusion", label: "Collusion", icon: <AlertTriangle className="w-4 h-4" /> },
     { key: "payments", label: "Payments", icon: <Eye className="w-4 h-4" /> },
+    { key: "kyc", label: "KYC", icon: <Shield className="w-4 h-4" /> },
     { key: "system", label: "System", icon: <Server className="w-4 h-4" /> },
     { key: "settings", label: "Settings", icon: <Settings className="w-4 h-4" /> },
+    { key: "security", label: "Security", icon: <ShieldAlert className="w-4 h-4" /> },
+    { key: "support", label: "Support", icon: <Ticket className="w-4 h-4" /> },
   ];
 
   if (authLoading) {
@@ -583,6 +691,75 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* KYC Applications */}
+        {!loading && activeTab === "kyc" && (
+          <div className="space-y-3">
+            {kycApplications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-primary/10 border border-primary/15">
+                  <Shield className="w-7 h-7 text-primary/40" />
+                </div>
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Pending Applications</h3>
+                <p className="text-xs text-muted-foreground/60 max-w-xs">All KYC applications have been processed.</p>
+              </div>
+            ) : kycApplications.map(app => (
+              <div key={app.id} className="glass rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-bold text-white">{app.kycData?.fullName || app.username}</div>
+                    <div className="text-xs text-gray-500">@{app.username} | {app.memberId || "No member ID"}</div>
+                    {app.kycData && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        DOB: {app.kycData.dateOfBirth} | Country: {app.kycData.country} | ID: {app.kycData.idType}
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-600">Tier: {app.tier} | Submitted: {app.kycData?.submittedAt ? new Date(app.kycData.submittedAt).toLocaleString() : "N/A"}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        setKycProcessing(app.id);
+                        try {
+                          const res = await fetch(`/api/admin/kyc/${app.id}/verify`, { method: "POST", credentials: "include" });
+                          if (res.ok) {
+                            setKycApplications(prev => prev.filter(a => a.id !== app.id));
+                          }
+                        } finally { setKycProcessing(null); }
+                      }}
+                      disabled={kycProcessing === app.id}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 text-xs font-bold hover:bg-green-500/30 transition-colors"
+                    >
+                      <CheckCircle className="w-3 h-3" /> Verify
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const reason = prompt("Rejection reason:");
+                        if (reason === null) return;
+                        setKycProcessing(app.id);
+                        try {
+                          const res = await fetch(`/api/admin/kyc/${app.id}/reject`, {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ reason }),
+                          });
+                          if (res.ok) {
+                            setKycApplications(prev => prev.filter(a => a.id !== app.id));
+                          }
+                        } finally { setKycProcessing(null); }
+                      }}
+                      disabled={kycProcessing === app.id}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
+                    >
+                      <XCircle className="w-3 h-3" /> Reject
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* System */}
         {!loading && activeTab === "system" && (
           <div className="space-y-6">
@@ -768,6 +945,233 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Security Tab */}
+        {!loading && activeTab === "security" && (
+          <div className="space-y-6">
+            <h3 className="text-sm font-bold text-white">Live Anti-Cheat Monitor</h3>
+
+            {antiCheatLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              </div>
+            ) : !antiCheatData ? (
+              <div className="glass rounded-xl p-6 text-center text-gray-400 text-sm">
+                Unable to load anti-cheat data
+              </div>
+            ) : (
+              <>
+                {/* Summary */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="glass rounded-xl p-4 text-center">
+                    <div className="text-xs text-gray-500 uppercase mb-1">Active Risk Flags</div>
+                    <div className="text-xl font-bold font-mono text-red-400">{antiCheatData.activeRiskFlags.length}</div>
+                  </div>
+                  <div className="glass rounded-xl p-4 text-center">
+                    <div className="text-xs text-gray-500 uppercase mb-1">Pending Alerts</div>
+                    <div className="text-xl font-bold font-mono text-amber-400">{antiCheatData.totalPendingAlerts}</div>
+                  </div>
+                </div>
+
+                {/* Risk Flags */}
+                {antiCheatData.activeRiskFlags.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-white mb-2 uppercase tracking-wider">Player Risk Scores</h4>
+                    <div className="glass rounded-xl overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-white/10">
+                            <th className="text-left p-3 text-gray-500 uppercase font-bold">User ID</th>
+                            <th className="text-right p-3 text-gray-500 uppercase font-bold">Risk Score</th>
+                            <th className="text-left p-3 text-gray-500 uppercase font-bold">Reasons</th>
+                            <th className="text-right p-3 text-gray-500 uppercase font-bold">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {antiCheatData.activeRiskFlags.map((flag) => (
+                            <tr key={flag.userId} className="border-b border-white/5 hover:bg-white/5">
+                              <td className="p-3 text-gray-400 font-mono">{flag.userId.slice(0, 12)}...</td>
+                              <td className="p-3 text-right">
+                                <span className={`font-bold font-mono px-2 py-0.5 rounded ${
+                                  flag.score >= 70 ? "bg-red-500/20 text-red-400" :
+                                  flag.score >= 40 ? "bg-amber-500/20 text-amber-400" :
+                                  "bg-yellow-500/20 text-yellow-400"
+                                }`}>
+                                  {flag.score}
+                                </span>
+                              </td>
+                              <td className="p-3 text-gray-400 max-w-xs">
+                                <div className="space-y-0.5">
+                                  {flag.reasons.slice(0, 2).map((r, i) => (
+                                    <div key={i} className="text-[0.5625rem] truncate">{r}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="p-3 text-right">
+                                <button
+                                  onClick={() => handleFreezeAccount(flag.userId)}
+                                  disabled={freezingUser === flag.userId}
+                                  className="px-3 py-1 rounded text-[0.5625rem] font-bold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                                >
+                                  {freezingUser === flag.userId ? "Freezing..." : "Freeze Account"}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Alerts */}
+                {antiCheatData.pendingAlerts.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-white mb-2 uppercase tracking-wider">Pending Alerts</h4>
+                    <div className="space-y-2">
+                      {antiCheatData.pendingAlerts.slice(0, 20).map((alert) => (
+                        <div key={alert.id} className={`glass rounded-xl p-4 border ${
+                          alert.severity === "high" ? "border-red-500/30" :
+                          alert.severity === "medium" ? "border-amber-500/30" :
+                          "border-yellow-500/30"
+                        }`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[0.5625rem] font-bold px-2 py-0.5 rounded ${
+                                alert.severity === "high" ? "bg-red-500/20 text-red-400" :
+                                alert.severity === "medium" ? "bg-amber-500/20 text-amber-400" :
+                                "bg-yellow-500/20 text-yellow-400"
+                              }`}>
+                                {alert.severity.toUpperCase()}
+                              </span>
+                              <span className="text-xs font-bold text-white">{alert.alertType.replace(/_/g, " ")}</span>
+                            </div>
+                            <span className="text-[0.5625rem] text-gray-500">{new Date(alert.createdAt).toLocaleString()}</span>
+                          </div>
+                          <div className="text-[0.5625rem] text-gray-400">
+                            Table: {alert.tableId.slice(0, 12)}... | Players: {alert.player1Id.slice(0, 8)}... vs {alert.player2Id.slice(0, 8)}...
+                          </div>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => handleAlertReview(alert.id, "reviewed")}
+                              className="px-2 py-1 text-[0.5625rem] font-bold rounded bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors"
+                            >
+                              Mark Reviewed
+                            </button>
+                            <button
+                              onClick={() => handleAlertReview(alert.id, "dismissed")}
+                              className="px-2 py-1 text-[0.5625rem] font-bold rounded bg-gray-500/20 text-gray-400 border border-gray-500/30 hover:bg-gray-500/30 transition-colors"
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {antiCheatData.activeRiskFlags.length === 0 && antiCheatData.pendingAlerts.length === 0 && (
+                  <div className="glass rounded-xl p-8 text-center">
+                    <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                    <div className="text-sm text-gray-400">No active threats detected</div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Support Tab */}
+        {!loading && activeTab === "support" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white">Support Ticket Queue</h3>
+              <div className="flex gap-2">
+                {["all", "open", "in-progress", "resolved", "closed"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setTicketStatusFilter(s)}
+                    className={`px-3 py-1 text-[0.5625rem] font-bold rounded-lg transition-colors ${
+                      ticketStatusFilter === s
+                        ? "bg-primary/20 text-primary border border-primary/30"
+                        : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
+                    }`}
+                  >
+                    {s === "all" ? "All" : s.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {adminTicketsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              </div>
+            ) : adminTickets.length === 0 ? (
+              <div className="glass rounded-xl p-8 text-center text-gray-400 text-sm">
+                No tickets found
+              </div>
+            ) : (
+              <div className="glass rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">Subject</th>
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">Category</th>
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">Priority</th>
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">Status</th>
+                      <th className="text-left p-3 text-gray-500 uppercase font-bold">Created</th>
+                      <th className="text-right p-3 text-gray-500 uppercase font-bold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminTickets.map((ticket) => (
+                      <tr key={ticket.id} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="p-3 text-white font-medium max-w-xs truncate">{ticket.subject}</td>
+                        <td className="p-3 text-gray-400 capitalize">{ticket.category}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded text-[0.5625rem] font-bold ${
+                            ticket.priority === "urgent" ? "bg-red-500/20 text-red-400" :
+                            ticket.priority === "high" ? "bg-amber-500/20 text-amber-400" :
+                            ticket.priority === "medium" ? "bg-blue-500/20 text-blue-400" :
+                            "bg-gray-500/20 text-gray-400"
+                          }`}>
+                            {ticket.priority}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded text-[0.5625rem] font-bold ${
+                            ticket.status === "open" ? "bg-green-500/20 text-green-400" :
+                            ticket.status === "in-progress" ? "bg-blue-500/20 text-blue-400" :
+                            ticket.status === "resolved" ? "bg-purple-500/20 text-purple-400" :
+                            "bg-gray-500/20 text-gray-400"
+                          }`}>
+                            {ticket.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-gray-400 font-mono">{new Date(ticket.createdAt).toLocaleDateString()}</td>
+                        <td className="p-3 text-right">
+                          <select
+                            value={ticket.status}
+                            onChange={(e) => handleChangeTicketStatus(ticket.id, e.target.value)}
+                            disabled={changingTicketStatus === ticket.id}
+                            className="bg-white/5 border border-white/10 rounded px-2 py-1 text-[0.5625rem] text-gray-300 focus:outline-none focus:border-primary/40"
+                          >
+                            <option value="open">Open</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>

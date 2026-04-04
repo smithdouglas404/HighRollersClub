@@ -1,10 +1,11 @@
-import type { Express, RequestHandler } from "express";
+import type { Express, Request, Response, NextFunction, RequestHandler } from "express";
 import { createServer, type Server } from "http";
+import { createHash } from "crypto";
 import { storage } from "./storage";
 import { registerAuthRoutes, requireAuth } from "./auth";
 import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema, users, gameHands, handPlayers, playerStats, tables } from "@shared/schema";
 import { sql } from "drizzle-orm";
-import { setupWebSocket, sendGameStateToTable, getClients } from "./websocket";
+import { setupWebSocket, sendGameStateToTable, getClients, sendToUser } from "./websocket";
 import { getBlindPreset } from "./game/blind-presets";
 import { tableManager } from "./game/table-manager";
 import { analyzeHand } from "./game/hand-analyzer";
@@ -12,6 +13,56 @@ import { geofenceMiddleware } from "./middleware/geofence";
 import { setAnthropicApiKey, getAnthropicApiKey, hasAIEnabled } from "./game/ai-bot-engine";
 import { hasDatabase, getDb } from "./db";
 import { MTTManager, activeMTTs } from "./game/mtt-manager";
+import { getTournamentSchedule, setTournamentSchedule, type ScheduledTournament } from "./scheduler";
+
+// ─── Tier System Constants ──────────────────────────────────────────────────
+const TIER_ORDER = ["free", "bronze", "silver", "gold", "platinum"] as const;
+type Tier = typeof TIER_ORDER[number];
+
+const TIER_DEFINITIONS = [
+  {
+    id: "free", name: "Free", price: 0,
+    benefits: ["Play cash games", "Basic statistics"],
+  },
+  {
+    id: "bronze", name: "Bronze", price: 1000,
+    benefits: ["Coaching access", "Daily challenges"],
+  },
+  {
+    id: "silver", name: "Silver", price: 5000,
+    benefits: ["Multi-table play", "Replay sharing"],
+  },
+  {
+    id: "gold", name: "Gold", price: 15000,
+    benefits: ["Create clubs", "Host tournaments with rake", "KYC eligible"],
+  },
+  {
+    id: "platinum", name: "Platinum", price: 50000,
+    benefits: ["Marketplace selling", "Priority support", "Advanced API access"],
+  },
+];
+
+function tierRank(tier: string): number {
+  const idx = TIER_ORDER.indexOf(tier as Tier);
+  return idx >= 0 ? idx : 0;
+}
+
+function requireTier(minTier: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) return res.status(401).json({ message: "Authentication required" });
+    const user = await storage.getUser(req.user.id);
+    if (!user) return res.status(401).json({ message: "User not found" });
+    // Check tier expiry — if expired, revert to free
+    if (user.tier !== "free" && user.tierExpiresAt && new Date(user.tierExpiresAt) < new Date()) {
+      await storage.updateUser(user.id, { tier: "free", tierExpiresAt: null });
+      user.tier = "free";
+    }
+    if (tierRank(user.tier) < tierRank(minTier)) {
+      return res.status(403).json({ message: `Requires ${minTier} tier or higher` });
+    }
+    next();
+  };
+}
 
 // Global kill switch — blocks buy-ins and withdrawals if integrity check fails
 let globalSystemLocked = false;
@@ -560,7 +611,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  app.post("/api/clubs", requireAuth, async (req, res, next) => {
+  app.post("/api/clubs", requireAuth, requireTier("gold"), async (req, res, next) => {
     try {
       const parsed = insertClubSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -2473,6 +2524,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         adminFeePercent, timeBankSeconds } = parsed.data;
       const { blindPreset } = req.body;
 
+      // Gate tournament hosting with rake: require Gold+ tier
+      if ((adminFeePercent ?? 0) > 0) {
+        const tourUser = await storage.getUser(req.user!.id);
+        if (!tourUser || tierRank(tourUser.tier) < tierRank("gold")) {
+          return res.status(403).json({ message: "Gold tier or higher required to host tournaments with admin fees" });
+        }
+      }
+
       const blindSchedule = blindPreset ? getBlindPreset(blindPreset) : getBlindPreset("mtt");
 
       // If club tournament, verify user is admin/owner
@@ -4357,6 +4416,769 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         .filter(Boolean);
 
       res.json(active);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Admin: Tournament Schedule ──────────────────────────────────────────
+  app.get("/api/admin/tournament-schedule", requireAuth, async (req, res) => {
+    const schedule = getTournamentSchedule();
+    res.json({ schedule });
+  });
+
+  app.put("/api/admin/tournament-schedule", requireAuth, async (req, res) => {
+    const { schedule } = req.body;
+    if (!Array.isArray(schedule)) {
+      return res.status(400).json({ message: "schedule must be an array" });
+    }
+    for (const entry of schedule) {
+      if (!entry.name || typeof entry.hourUTC !== "number" || typeof entry.buyIn !== "number" ||
+          typeof entry.startingChips !== "number" || typeof entry.maxPlayers !== "number") {
+        return res.status(400).json({ message: "Each entry requires name, hourUTC, buyIn, startingChips, maxPlayers" });
+      }
+    }
+    setTournamentSchedule(schedule as ScheduledTournament[]);
+    res.json({ message: "Schedule updated", schedule: getTournamentSchedule() });
+  });
+
+  // ─── Tier System Routes ──────────────────────────────────────────────────
+
+  app.get("/api/tiers", (_req, res) => {
+    res.json(TIER_DEFINITIONS);
+  });
+
+  app.post("/api/tiers/upgrade", requireAuth, async (req, res, next) => {
+    try {
+      const { tier } = req.body;
+      if (!tier || !TIER_ORDER.includes(tier)) {
+        return res.status(400).json({ message: "Invalid tier" });
+      }
+      if (tier === "free") {
+        return res.status(400).json({ message: "Cannot upgrade to free tier" });
+      }
+      const tierDef = TIER_DEFINITIONS.find(t => t.id === tier);
+      if (!tierDef) return res.status(400).json({ message: "Unknown tier" });
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (tierRank(user.tier) >= tierRank(tier) && user.tierExpiresAt && new Date(user.tierExpiresAt) > new Date()) {
+        return res.status(400).json({ message: "You already have this tier or higher" });
+      }
+
+      if (user.chipBalance < tierDef.price) {
+        return res.status(400).json({ message: "Insufficient chips" });
+      }
+
+      const { success } = await storage.atomicDeductChips(user.id, tierDef.price);
+      if (!success) {
+        return res.status(400).json({ message: "Insufficient chips" });
+      }
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+      const updated = await storage.updateUser(user.id, { tier, tierExpiresAt: expiresAt });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  // ─── KYC Routes ──────────────────────────────────────────────────────────
+
+  app.get("/api/kyc/status", requireAuth, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json({
+        kycStatus: user.kycStatus,
+        kycData: user.kycData,
+        kycVerifiedAt: user.kycVerifiedAt,
+        kycRejectionReason: user.kycRejectionReason,
+        kycBlockchainTxHash: user.kycBlockchainTxHash,
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/kyc/submit", requireAuth, requireTier("gold"), async (req, res, next) => {
+    try {
+      const { fullName, dateOfBirth, country, idType } = req.body;
+      if (!fullName || !dateOfBirth || !country || !idType) {
+        return res.status(400).json({ message: "All fields required: fullName, dateOfBirth, country, idType" });
+      }
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.kycStatus === "pending") {
+        return res.status(400).json({ message: "KYC application already pending" });
+      }
+      if (user.kycStatus === "verified") {
+        return res.status(400).json({ message: "KYC already verified" });
+      }
+
+      const kycData = { fullName, dateOfBirth, country, idType, submittedAt: new Date().toISOString() };
+      const updated = await storage.updateUser(user.id, {
+        kycStatus: "pending",
+        kycData,
+        kycRejectionReason: null,
+      });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  // Admin KYC routes
+  app.get("/api/admin/kyc/pending", requireAuth, async (req, res, next) => {
+    try {
+      if (req.user!.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      const pending = await storage.getAllUsersByKycStatus("pending");
+      const sanitized = pending.map(u => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.displayName,
+        memberId: u.memberId,
+        kycStatus: u.kycStatus,
+        kycData: u.kycData,
+        tier: u.tier,
+        createdAt: u.createdAt,
+      }));
+      res.json(sanitized);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/kyc/:userId/verify", requireAuth, async (req, res, next) => {
+    try {
+      if (req.user!.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      const user = await storage.getUser(req.params.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.kycStatus !== "pending") {
+        return res.status(400).json({ message: "User KYC is not pending" });
+      }
+      const updated = await storage.updateUser(user.id, {
+        kycStatus: "verified",
+        kycVerifiedAt: new Date(),
+      });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/kyc/:userId/reject", requireAuth, async (req, res, next) => {
+    try {
+      if (req.user!.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      const { reason } = req.body;
+      const user = await storage.getUser(req.params.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.kycStatus !== "pending") {
+        return res.status(400).json({ message: "User KYC is not pending" });
+      }
+      const updated = await storage.updateUser(user.id, {
+        kycStatus: "rejected",
+        kycRejectionReason: reason || "Application rejected",
+      });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Blockchain Member ID Routes ──────────────────────────────────────────
+
+  app.get("/api/member/:memberId", async (req, res, next) => {
+    try {
+      const user = await storage.getUserByMemberId(req.params.memberId);
+      if (!user) return res.status(404).json({ message: "Member not found" });
+      res.json({
+        memberId: user.memberId,
+        username: user.username,
+        displayName: user.displayName,
+        avatarId: user.avatarId,
+        tier: user.tier,
+        kycStatus: user.kycStatus,
+        kycVerifiedAt: user.kycVerifiedAt,
+        kycBlockchainTxHash: user.kycBlockchainTxHash,
+        createdAt: user.createdAt,
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/kyc/record-on-chain", requireAuth, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.kycStatus !== "verified") {
+        return res.status(400).json({ message: "KYC must be verified first" });
+      }
+      if (user.kycBlockchainTxHash) {
+        return res.status(400).json({ message: "Already recorded on-chain", txHash: user.kycBlockchainTxHash });
+      }
+
+      // Simulate on-chain recording — in production this would call a smart contract on Base/Polygon
+      const txHash = "0x" + createHash("sha256")
+        .update(user.id + JSON.stringify(user.kycData) + Date.now().toString())
+        .digest("hex");
+
+      await storage.updateUser(user.id, { kycBlockchainTxHash: txHash });
+      res.json({ txHash, message: "KYC verification recorded on-chain (simulated)" });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Responsible Gambling ─────────────────────────────────────────────────
+
+  app.get("/api/responsible-gambling/settings", requireAuth, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json({
+        selfExcludedUntil: user.selfExcludedUntil,
+        depositLimitDaily: user.depositLimitDaily ?? 0,
+        depositLimitWeekly: user.depositLimitWeekly ?? 0,
+        depositLimitMonthly: user.depositLimitMonthly ?? 0,
+        sessionTimeLimitMinutes: user.sessionTimeLimitMinutes ?? 0,
+        lossLimitDaily: user.lossLimitDaily ?? 0,
+        coolOffUntil: user.coolOffUntil,
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.put("/api/responsible-gambling/settings", requireAuth, async (req, res, next) => {
+    try {
+      const { depositLimitDaily, depositLimitWeekly, depositLimitMonthly, sessionTimeLimitMinutes, lossLimitDaily } = req.body;
+      const updates: Record<string, any> = {};
+      if (depositLimitDaily !== undefined) updates.depositLimitDaily = Math.max(0, Math.floor(Number(depositLimitDaily)));
+      if (depositLimitWeekly !== undefined) updates.depositLimitWeekly = Math.max(0, Math.floor(Number(depositLimitWeekly)));
+      if (depositLimitMonthly !== undefined) updates.depositLimitMonthly = Math.max(0, Math.floor(Number(depositLimitMonthly)));
+      if (sessionTimeLimitMinutes !== undefined) updates.sessionTimeLimitMinutes = Math.max(0, Math.floor(Number(sessionTimeLimitMinutes)));
+      if (lossLimitDaily !== undefined) updates.lossLimitDaily = Math.max(0, Math.floor(Number(lossLimitDaily)));
+      if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No valid settings provided" });
+      const updated = await storage.updateUser(req.user!.id, updates);
+      res.json({
+        selfExcludedUntil: updated?.selfExcludedUntil ?? null,
+        depositLimitDaily: updated?.depositLimitDaily ?? 0,
+        depositLimitWeekly: updated?.depositLimitWeekly ?? 0,
+        depositLimitMonthly: updated?.depositLimitMonthly ?? 0,
+        sessionTimeLimitMinutes: updated?.sessionTimeLimitMinutes ?? 0,
+        lossLimitDaily: updated?.lossLimitDaily ?? 0,
+        coolOffUntil: updated?.coolOffUntil ?? null,
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/responsible-gambling/self-exclude", requireAuth, async (req, res, next) => {
+    try {
+      const { days } = req.body;
+      if (!days || days < 1) return res.status(400).json({ message: "days must be >= 1" });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.selfExcludedUntil) {
+        const remainingMs = new Date(user.selfExcludedUntil).getTime() - Date.now();
+        if (remainingMs > 24 * 60 * 60 * 1000) {
+          return res.status(400).json({ message: "Cannot modify self-exclusion. Current exclusion cannot be reversed early.", selfExcludedUntil: user.selfExcludedUntil });
+        }
+      }
+      const daysToAdd = days === 0 ? 3650 : Math.floor(Number(days));
+      const excludeUntil = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+      await storage.updateUser(req.user!.id, { selfExcludedUntil: excludeUntil });
+      res.json({ selfExcludedUntil: excludeUntil, message: `Self-excluded until ${excludeUntil.toISOString()}` });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/responsible-gambling/cool-off", requireAuth, async (req, res, next) => {
+    try {
+      const coolOffUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await storage.updateUser(req.user!.id, { coolOffUntil });
+      res.json({ coolOffUntil, message: "Cool-off period activated for 24 hours" });
+    } catch (err) { next(err); }
+  });
+
+  // Responsible gambling enforcement on game routes
+  function responsibleGamblingCheck(req: any, res: any, next: any) {
+    if (!req.user) return next();
+    const now = new Date();
+    if (req.user.selfExcludedUntil && new Date(req.user.selfExcludedUntil) > now) {
+      return res.status(403).json({ message: `Self-excluded until ${new Date(req.user.selfExcludedUntil).toISOString()}`, reason: "self_exclusion", until: req.user.selfExcludedUntil });
+    }
+    if (req.user.coolOffUntil && new Date(req.user.coolOffUntil) > now) {
+      return res.status(403).json({ message: `Cool-off period active until ${new Date(req.user.coolOffUntil).toISOString()}`, reason: "cool_off", until: req.user.coolOffUntil });
+    }
+    next();
+  }
+  app.use("/api/tables/:id/join", requireAuth, responsibleGamblingCheck);
+
+  // Deposit limit enforcement
+  app.use("/api/payments/deposit", requireAuth, async (req: any, res: any, next: any) => {
+    if (req.method !== "POST" || !req.user) return next();
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) return next();
+      const amount = req.body?.amount || 0;
+      const txns = await storage.getTransactions(req.user.id, 1000, 0);
+      const now = Date.now();
+      const deposits = txns.filter((t: any) => t.type === "deposit");
+      const dailySum = deposits.filter((t: any) => new Date(t.createdAt).getTime() > now - 86400000).reduce((s: number, t: any) => s + t.amount, 0);
+      const weeklySum = deposits.filter((t: any) => new Date(t.createdAt).getTime() > now - 604800000).reduce((s: number, t: any) => s + t.amount, 0);
+      const monthlySum = deposits.filter((t: any) => new Date(t.createdAt).getTime() > now - 2592000000).reduce((s: number, t: any) => s + t.amount, 0);
+      if (user.depositLimitDaily && user.depositLimitDaily > 0 && dailySum + amount > user.depositLimitDaily) {
+        return res.status(400).json({ message: `Daily deposit limit of ${user.depositLimitDaily} would be exceeded` });
+      }
+      if (user.depositLimitWeekly && user.depositLimitWeekly > 0 && weeklySum + amount > user.depositLimitWeekly) {
+        return res.status(400).json({ message: `Weekly deposit limit of ${user.depositLimitWeekly} would be exceeded` });
+      }
+      if (user.depositLimitMonthly && user.depositLimitMonthly > 0 && monthlySum + amount > user.depositLimitMonthly) {
+        return res.status(400).json({ message: `Monthly deposit limit of ${user.depositLimitMonthly} would be exceeded` });
+      }
+      next();
+    } catch (err) { next(err); }
+  });
+
+  // Session time tracking
+  const sessionJoinTimes = new Map<string, { tableId: string; joinedAt: number; warningTimer?: ReturnType<typeof setTimeout>; disconnectTimer?: ReturnType<typeof setTimeout> }>();
+  function startSessionTimers(userId: string, tableId: string, limitMinutes: number) {
+    clearSessionTimers(userId);
+    const entry: typeof sessionJoinTimes extends Map<string, infer V> ? V : never = { tableId, joinedAt: Date.now() };
+    if (limitMinutes > 0) {
+      entry.warningTimer = setTimeout(() => {
+        sendToUser(userId, { type: "info", message: `You've been playing for ${limitMinutes} minutes. Consider taking a break.` });
+      }, limitMinutes * 60 * 1000);
+      entry.disconnectTimer = setTimeout(() => {
+        sendToUser(userId, { type: "error", message: `Session time limit reached (${limitMinutes * 2} minutes). You have been disconnected.` });
+        const client = getClients().get(userId);
+        if (client && client.tableId) { tableManager.leaveTable(client.tableId, userId).catch(() => {}); client.tableId = null; }
+      }, limitMinutes * 2 * 60 * 1000);
+    }
+    sessionJoinTimes.set(userId, entry);
+  }
+  function clearSessionTimers(userId: string) {
+    const entry = sessionJoinTimes.get(userId);
+    if (entry) { if (entry.warningTimer) clearTimeout(entry.warningTimer); if (entry.disconnectTimer) clearTimeout(entry.disconnectTimer); sessionJoinTimes.delete(userId); }
+  }
+  app.use("/api/tables/:id/join", (req: any, res: any, next: any) => {
+    if (req.method !== "POST") return next();
+    const originalJson = res.json.bind(res);
+    res.json = function(body: any) {
+      if (res.statusCode < 400 && req.user?.sessionTimeLimitMinutes > 0) startSessionTimers(req.user.id, req.params.id, req.user.sessionTimeLimitMinutes);
+      return originalJson(body);
+    };
+    next();
+  });
+
+  // ─── AI Premium Session Report ──────────────────────────────────────────
+  app.post("/api/coaching/session-report", requireAuth, async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      // Check Gold+ tier (premiumUntil) or deduct 500 chips
+      const isGoldPlus = user.premiumUntil && new Date(user.premiumUntil) > new Date();
+      if (!isGoldPlus) {
+        if (user.chipBalance < 500) {
+          return res.status(400).json({ message: "Insufficient chips. Session report costs 500 chips or is free with Gold+ tier." });
+        }
+        await storage.atomicDeductChips(userId, 500);
+      }
+
+      if (!hasDatabase()) {
+        return res.json({
+          sessionId: require("crypto").randomUUID(),
+          handsAnalyzed: 0,
+          netResult: 0,
+          positionBreakdown: [],
+          leaks: [],
+          topWinningHands: [],
+          topLosingHands: [],
+          recommendations: ["Play more hands to generate a session report."],
+        });
+      }
+
+      const db = getDb();
+
+      const recentHandPlayers = await db
+        .select()
+        .from(handPlayers)
+        .where(sql`${handPlayers.userId} = ${userId}`)
+        .orderBy(sql`${handPlayers.id} desc`)
+        .limit(50);
+
+      if (recentHandPlayers.length === 0) {
+        return res.json({
+          sessionId: require("crypto").randomUUID(),
+          handsAnalyzed: 0,
+          netResult: 0,
+          positionBreakdown: [],
+          leaks: [],
+          topWinningHands: [],
+          topLosingHands: [],
+          recommendations: ["No hands found. Play some hands first!"],
+        });
+      }
+
+      const handIds = recentHandPlayers.map(hp => hp.handId);
+      const hands = await db
+        .select()
+        .from(gameHands)
+        .where(sql`${gameHands.id} = ANY(${handIds})`);
+
+      const handMap = new Map(hands.map(h => [h.id, h]));
+
+      const seatToPosition = (seatIdx: number, dealerSeat: number | null, maxPlayers: number): string => {
+        if (!dealerSeat && dealerSeat !== 0) return "MP";
+        const positions = maxPlayers <= 6
+          ? ["BTN", "SB", "BB", "EP", "MP", "CO"]
+          : ["BTN", "SB", "BB", "EP", "EP", "MP", "MP", "CO", "CO", "CO"];
+        const offset = (seatIdx - dealerSeat + maxPlayers) % maxPlayers;
+        return positions[offset] ?? "MP";
+      };
+
+      const positionData: Record<string, { hands: number; vpip: number; wins: number; chipsWon: number; chipsLost: number }> = {};
+      const allPositions = ["BTN", "CO", "MP", "EP", "SB", "BB"];
+      for (const pos of allPositions) {
+        positionData[pos] = { hands: 0, vpip: 0, wins: 0, chipsWon: 0, chipsLost: 0 };
+      }
+
+      let totalNet = 0;
+      const handResults: Record<string, { wins: number; losses: number; netChips: number }> = {};
+
+      for (const hp of recentHandPlayers) {
+        const hand = handMap.get(hp.handId);
+        const position = seatToPosition(hp.seatIndex, hand?.dealerSeat ?? 0, 6);
+        const posData = positionData[position] ?? positionData["MP"];
+
+        posData.hands++;
+        totalNet += hp.netResult;
+
+        if (hp.isWinner) posData.wins++;
+        if (hp.finalAction !== "fold") posData.vpip++;
+        if (hp.netResult > 0) posData.chipsWon += hp.netResult;
+        if (hp.netResult < 0) posData.chipsLost += Math.abs(hp.netResult);
+
+        if (hp.holeCards && Array.isArray(hp.holeCards) && hp.holeCards.length >= 2) {
+          const cards = hp.holeCards as string[];
+          const ranks = "23456789TJQKA";
+          const getRank = (c: string) => typeof c === "string" ? c[0] : "";
+          const getSuit = (c: string) => typeof c === "string" ? c[1] : "";
+          const r1 = getRank(cards[0]);
+          const r2 = getRank(cards[1]);
+          const suited = getSuit(cards[0]) === getSuit(cards[1]);
+          const ri1 = ranks.indexOf(r1);
+          const ri2 = ranks.indexOf(r2);
+          const high = ri1 >= ri2 ? r1 : r2;
+          const low = ri1 >= ri2 ? r2 : r1;
+          const handName = high === low ? `${high}${low}` : `${high}${low}${suited ? "s" : "o"}`;
+
+          if (!handResults[handName]) handResults[handName] = { wins: 0, losses: 0, netChips: 0 };
+          handResults[handName].netChips += hp.netResult;
+          if (hp.netResult > 0) handResults[handName].wins++;
+          if (hp.netResult < 0) handResults[handName].losses++;
+        }
+      }
+
+      const positionBreakdown = allPositions
+        .filter(pos => positionData[pos].hands > 0)
+        .map(pos => {
+          const d = positionData[pos];
+          return {
+            position: pos,
+            hands: d.hands,
+            vpip: d.hands > 0 ? Math.round((d.vpip / d.hands) * 100) : 0,
+            winRate: d.hands > 0 ? Math.round((d.wins / d.hands) * 100) : 0,
+          };
+        });
+
+      const leaks: { description: string; chipsLost: number; frequency: number }[] = [];
+
+      const epData = positionData["EP"];
+      if (epData.hands >= 3 && (epData.vpip / epData.hands) > 0.4 && epData.chipsLost > 500) {
+        leaks.push({
+          description: `You lost ${epData.chipsLost.toLocaleString()} chips calling from EP with marginal hands`,
+          chipsLost: epData.chipsLost,
+          frequency: epData.vpip,
+        });
+      }
+
+      const sbData = positionData["SB"];
+      if (sbData.hands >= 3 && (sbData.vpip / sbData.hands) > 0.5 && sbData.chipsLost > 300) {
+        leaks.push({
+          description: `Overplaying from SB: ${sbData.chipsLost.toLocaleString()} chips lost with ${Math.round((sbData.vpip / sbData.hands) * 100)}% VPIP`,
+          chipsLost: sbData.chipsLost,
+          frequency: sbData.vpip,
+        });
+      }
+
+      const totalHands = recentHandPlayers.length;
+      const totalVpip = Object.values(positionData).reduce((s, d) => s + d.vpip, 0);
+      if (totalHands >= 10 && (totalVpip / totalHands) > 0.45) {
+        const totalLost = Object.values(positionData).reduce((s, d) => s + d.chipsLost, 0);
+        leaks.push({
+          description: `Playing too many hands overall (${Math.round((totalVpip / totalHands) * 100)}% VPIP). Tighten your range.`,
+          chipsLost: totalLost,
+          frequency: totalVpip,
+        });
+      }
+
+      const sortedByNet = Object.entries(handResults).sort((a, b) => b[1].netChips - a[1].netChips);
+      const topWinningHands = sortedByNet.filter(([, v]) => v.netChips > 0).slice(0, 5).map(([k]) => k);
+      const topLosingHands = sortedByNet.filter(([, v]) => v.netChips < 0).reverse().slice(0, 5).map(([k]) => k);
+
+      const recommendations: string[] = [];
+      const overallVpipPct = totalHands > 0 ? Math.round((totalVpip / totalHands) * 100) : 0;
+
+      if (epData.hands >= 3 && (epData.vpip / epData.hands) > 0.3) {
+        recommendations.push("Tighten EP range to top 12% of hands");
+      }
+      if (overallVpipPct > 35) {
+        recommendations.push("Reduce overall VPIP to 22-28% range");
+      }
+      if (overallVpipPct < 15 && totalHands >= 20) {
+        recommendations.push("Open up your range, especially from BTN and CO");
+      }
+
+      const bbData = positionData["BB"];
+      if (bbData.hands >= 3 && bbData.chipsLost > bbData.chipsWon * 2) {
+        recommendations.push("Increase 3-bet frequency from BB to defend more effectively");
+      }
+
+      const btnData = positionData["BTN"];
+      if (btnData.hands >= 3 && (btnData.vpip / btnData.hands) < 0.3) {
+        recommendations.push("Play more hands from BTN - this is your most profitable position");
+      }
+
+      if (topLosingHands.length > 0) {
+        recommendations.push(`Consider removing ${topLosingHands.slice(0, 2).join(", ")} from your opening range`);
+      }
+
+      if (recommendations.length === 0) {
+        recommendations.push("Keep playing - you need more data for specific recommendations");
+      }
+
+      res.json({
+        sessionId: require("crypto").randomUUID(),
+        handsAnalyzed: recentHandPlayers.length,
+        netResult: totalNet,
+        positionBreakdown,
+        leaks,
+        topWinningHands,
+        topLosingHands,
+        recommendations,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Anti-Cheat Admin Endpoints ─────────────────────────────────────────
+  app.get("/api/admin/anti-cheat/live", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      const { antiCheatEngine } = await import("./anti-cheat");
+      const riskFlags = antiCheatEngine.getActiveRiskFlags(10);
+      const pendingAlerts = await storage.getCollusionAlerts("pending");
+
+      res.json({
+        activeRiskFlags: riskFlags,
+        pendingAlerts: pendingAlerts.slice(0, 50),
+        totalPendingAlerts: pendingAlerts.length,
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/anti-cheat/freeze/:userId", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const targetUser = await storage.getUser(req.params.userId);
+      if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+      await storage.updateUser(req.params.userId, { role: "frozen" as any });
+
+      res.json({ ok: true, message: `Account ${targetUser.username} has been frozen` });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Support Ticket Routes ─────────────────────────────────────────────
+  app.post("/api/support/tickets", requireAuth, async (req, res, next) => {
+    try {
+      const { subject, message, category, priority } = req.body;
+      if (!subject || !message) return res.status(400).json({ message: "Subject and message are required" });
+
+      const validCategories = ["account", "payment", "game", "technical", "other"];
+      const validPriorities = ["low", "medium", "high", "urgent"];
+      const cat = validCategories.includes(category) ? category : "other";
+      const pri = validPriorities.includes(priority) ? priority : "medium";
+
+      if (!hasDatabase()) {
+        return res.status(503).json({ message: "Database required for ticket system" });
+      }
+
+      const db = getDb();
+      const { supportTickets, ticketMessages } = await import("@shared/schema");
+
+      const ticketId = require("crypto").randomUUID();
+      const now = new Date();
+
+      await db.insert(supportTickets).values({
+        id: ticketId,
+        userId: req.user!.id,
+        subject: subject.trim().slice(0, 200),
+        status: "open",
+        priority: pri,
+        category: cat,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const msgId = require("crypto").randomUUID();
+      await db.insert(ticketMessages).values({
+        id: msgId,
+        ticketId,
+        userId: req.user!.id,
+        message: message.trim().slice(0, 5000),
+        isStaff: false,
+        createdAt: now,
+      });
+
+      res.status(201).json({
+        id: ticketId,
+        subject: subject.trim(),
+        status: "open",
+        priority: pri,
+        category: cat,
+        createdAt: now.toISOString(),
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/support/tickets", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const { supportTickets } = await import("@shared/schema");
+
+      const tickets = await db
+        .select()
+        .from(supportTickets)
+        .where(sql`${supportTickets.userId} = ${req.user!.id}`)
+        .orderBy(sql`${supportTickets.createdAt} desc`)
+        .limit(50);
+
+      res.json(tickets);
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/support/tickets/:id", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(404).json({ message: "Not found" });
+      const db = getDb();
+      const { supportTickets, ticketMessages } = await import("@shared/schema");
+
+      const [ticket] = await db
+        .select()
+        .from(supportTickets)
+        .where(sql`${supportTickets.id} = ${req.params.id}`)
+        .limit(1);
+
+      if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+
+      if (ticket.userId !== req.user!.id && req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const messages = await db
+        .select()
+        .from(ticketMessages)
+        .where(sql`${ticketMessages.ticketId} = ${req.params.id}`)
+        .orderBy(sql`${ticketMessages.createdAt} asc`);
+
+      res.json({ ...ticket, messages });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/support/tickets/:id/messages", requireAuth, async (req, res, next) => {
+    try {
+      const { message } = req.body;
+      if (!message) return res.status(400).json({ message: "Message required" });
+
+      if (!hasDatabase()) return res.status(503).json({ message: "Database required" });
+      const db = getDb();
+      const { supportTickets, ticketMessages } = await import("@shared/schema");
+
+      const [ticket] = await db
+        .select()
+        .from(supportTickets)
+        .where(sql`${supportTickets.id} = ${req.params.id}`)
+        .limit(1);
+
+      if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+
+      if (ticket.userId !== req.user!.id && req.user!.role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const isStaff = req.user!.role === "admin";
+      const msgId = require("crypto").randomUUID();
+      const now = new Date();
+
+      await db.insert(ticketMessages).values({
+        id: msgId,
+        ticketId: req.params.id,
+        userId: req.user!.id,
+        message: message.trim().slice(0, 5000),
+        isStaff,
+        createdAt: now,
+      });
+
+      await db.update(supportTickets)
+        .set({ updatedAt: now })
+        .where(sql`${supportTickets.id} = ${req.params.id}`);
+
+      res.status(201).json({
+        id: msgId,
+        ticketId: req.params.id,
+        userId: req.user!.id,
+        message: message.trim(),
+        isStaff,
+        createdAt: now.toISOString(),
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/support/tickets/:id/status", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const { status } = req.body;
+      const validStatuses = ["open", "in-progress", "resolved", "closed"];
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({ message: `Status must be one of: ${validStatuses.join(", ")}` });
+      }
+
+      if (!hasDatabase()) return res.status(503).json({ message: "Database required" });
+      const db = getDb();
+      const { supportTickets } = await import("@shared/schema");
+
+      const now = new Date();
+      const updateData: any = { status, updatedAt: now };
+      if (status === "resolved") updateData.resolvedAt = now;
+
+      await db.update(supportTickets)
+        .set(updateData)
+        .where(sql`${supportTickets.id} = ${req.params.id}`);
+
+      const [updated] = await db
+        .select()
+        .from(supportTickets)
+        .where(sql`${supportTickets.id} = ${req.params.id}`)
+        .limit(1);
+
+      if (!updated) return res.status(404).json({ message: "Ticket not found" });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/admin/support/tickets", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const { supportTickets } = await import("@shared/schema");
+
+      const status = req.query.status as string | undefined;
+      const priority = req.query.priority as string | undefined;
+
+      let tickets;
+      if (status) {
+        tickets = await db.select().from(supportTickets).where(sql`${supportTickets.status} = ${status}`).orderBy(sql`${supportTickets.createdAt} desc`).limit(100);
+      } else {
+        tickets = await db.select().from(supportTickets).orderBy(sql`${supportTickets.createdAt} desc`).limit(100);
+      }
+
+      const filtered = priority ? tickets.filter(t => t.priority === priority) : tickets;
+      res.json(filtered);
     } catch (err) { next(err); }
   });
 

@@ -1,0 +1,14 @@
+{
+  "name": "High Rollers Poker",
+  "short_name": "High Rollers",
+  "description": "Premium online poker with provably fair shuffles",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0c",
+  "theme_color": "#d4af37",
+  "orientation": "any",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

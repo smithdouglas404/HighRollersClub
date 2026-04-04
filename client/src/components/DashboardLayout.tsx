@@ -41,6 +41,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
   { icon: Shirt, label: "Wardrobe", href: "/wardrobe", match: ["/wardrobe"] },
   { icon: Crown, label: "Premium", href: "/premium", match: ["/premium"] },
+  { icon: Shield, label: "Tiers", href: "/tiers", match: ["/tiers"] },
 ];
 
 const ADMIN_NAV_ITEM: NavItem = { icon: Shield, label: "Admin", href: "/admin", match: ["/admin"] };
@@ -264,8 +265,13 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
                 {user?.displayName || user?.username}
               </div>
             </Link>
-            <div className="text-[0.5rem] text-muted-foreground uppercase tracking-wider">
-              {user?.role}
+            <div className="flex items-center gap-1.5 text-[0.5rem] text-muted-foreground uppercase tracking-wider">
+              <span>{user?.role}</span>
+              {(user as any)?.tier && (user as any).tier !== "free" && (
+                <span className="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 font-bold">
+                  {(user as any).tier}
+                </span>
+              )}
             </div>
           </div>
           <button

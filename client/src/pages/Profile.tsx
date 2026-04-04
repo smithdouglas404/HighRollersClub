@@ -187,6 +187,24 @@ export default function Profile() {
                 </span>
               </div>
               <p className="text-sm text-gray-500 mt-1">@{user?.username}</p>
+              {(user as any)?.memberId && (
+                <p className="text-xs text-gray-500 mt-0.5 font-mono">Member ID: {(user as any).memberId}</p>
+              )}
+              {(user as any)?.tier && (user as any).tier !== "free" && (
+                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                  {(user as any).tier} tier
+                </span>
+              )}
+              {(user as any)?.kycStatus === "verified" && (
+                <span className="inline-flex items-center gap-1 mt-1 ml-1 px-2 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20">
+                  KYC Verified
+                </span>
+              )}
+              {(user as any)?.kycBlockchainTxHash && (
+                <p className="text-[0.5625rem] text-purple-400 mt-1 font-mono truncate max-w-xs" title={(user as any).kycBlockchainTxHash}>
+                  On-chain: {(user as any).kycBlockchainTxHash.substring(0, 10)}...{(user as any).kycBlockchainTxHash.substring(58)}
+                </p>
+              )}
               <div className="flex items-center gap-4 mt-3 justify-center md:justify-start">
                 <span className="flex items-center gap-1.5 text-sm font-bold text-primary" data-testid="text-chip-balance">
                   <Coins className="w-4 h-4" />

@@ -23,6 +23,25 @@ export const users = pgTable("users", {
   recoveryCodes: jsonb("recovery_codes"), // hashed recovery codes [{hash, salt, used}]
   premiumUntil: timestamp("premium_until"), // premium subscription expiry
   lastDailyClaim: timestamp("last_daily_claim"),
+  // Membership tier system
+  tier: text("tier").notNull().default("free"), // free | bronze | silver | gold | platinum
+  tierExpiresAt: timestamp("tier_expires_at"), // null for free tier
+  // KYC verification
+  kycStatus: text("kyc_status").notNull().default("none"), // none | pending | verified | rejected
+  kycData: jsonb("kyc_data"), // { fullName, dateOfBirth, country, idType, submittedAt }
+  kycVerifiedAt: timestamp("kyc_verified_at"),
+  kycRejectionReason: text("kyc_rejection_reason"),
+  // Blockchain member ID
+  memberId: text("member_id").unique(), // HR-XXXXXXXX format
+  kycBlockchainTxHash: text("kyc_blockchain_tx_hash"),
+  // Responsible gambling fields
+  selfExcludedUntil: timestamp("self_excluded_until"),
+  depositLimitDaily: integer("deposit_limit_daily").notNull().default(0),
+  depositLimitWeekly: integer("deposit_limit_weekly").notNull().default(0),
+  depositLimitMonthly: integer("deposit_limit_monthly").notNull().default(0),
+  sessionTimeLimitMinutes: integer("session_time_limit_minutes").notNull().default(0),
+  lossLimitDaily: integer("loss_limit_daily").notNull().default(0),
+  coolOffUntil: timestamp("cool_off_until"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -865,3 +884,35 @@ export const apiKeys = pgTable("api_keys", {
 ]);
 
 export type ApiKey = typeof apiKeys.$inferSelect;
+
+// ─── Support Tickets ──────────────────────────────────────────────────────
+export const supportTickets = pgTable("support_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  subject: text("subject").notNull(),
+  status: text("status").notNull().default("open"), // open | in-progress | resolved | closed
+  priority: text("priority").notNull().default("medium"), // low | medium | high | urgent
+  category: text("category").notNull().default("other"), // account | payment | game | technical | other
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+}, (table) => [
+  index("support_tickets_user_idx").on(table.userId),
+  index("support_tickets_status_idx").on(table.status),
+]);
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+
+// ─── Ticket Messages ──────────────────────────────────────────────────────
+export const ticketMessages = pgTable("ticket_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").notNull().references(() => supportTickets.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  message: text("message").notNull(),
+  isStaff: boolean("is_staff").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("ticket_messages_ticket_idx").on(table.ticketId),
+]);
+
+export type TicketMessage = typeof ticketMessages.$inferSelect;

@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { isIpBlocked } from "./middleware/geofence";
 import { isSystemLocked } from "./routes";
 import { subscribeCommentary, unsubscribeCommentary, setOmniscientMode, getCommentaryState } from "./game/commentary-engine";
+import { antiCheatEngine } from "./anti-cheat";
 
 // Client connection with metadata
 export interface WsClient {
@@ -233,6 +234,11 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
     } catch {} // graceful: allow on error
 
     console.log(`[ws] client connected: ${user.displayName || user.username} (${user.id})`);
+
+    // Track connection for anti-cheat
+    const userAgent = (_req.headers["user-agent"] as string) || "";
+    antiCheatEngine.trackConnection(user.id, clientIp, userAgent);
+
     const client: WsClient = {
       ws,
       userId: user.id,
@@ -277,6 +283,7 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
       if (client.tableId) {
         tableManager.handleDisconnect(client.tableId, client.userId);
       }
+      antiCheatEngine.removeConnection(user.id);
       clients.delete(user.id);
       rateLimitBuckets.delete(user.id);
     });
@@ -335,6 +342,7 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendGameStateToTable(previousTableId);
       }
       client.tableId = msg.tableId;
+      antiCheatEngine.setPlayerTable(client.userId, msg.tableId);
       sendGameStateToTable(msg.tableId);
 
       // Send recent chat history to the joining player

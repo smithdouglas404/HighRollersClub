@@ -19,7 +19,7 @@ import {
   clubAlliances, leagueSeasons,
   handPlayers, handActions,
   wallets, payments, withdrawalRequests, supportedCurrencies,
-  chatMessages, collusionAlerts, playerNotes,
+  chatMessages, collusionAlerts, playerNotes, wishlists,
 } from "@shared/schema";
 import { eq, and, desc, sql, inArray, gte } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -211,6 +211,11 @@ export interface IStorage {
   upsertPlayerNote(authorId: string, targetId: string, note: string, color: string): Promise<PlayerNote>;
   deletePlayerNote(authorId: string, targetId: string): Promise<void>;
   getPlayerNotes(authorId: string): Promise<PlayerNote[]>;
+
+  // Wishlists
+  getWishlist(userId: string): Promise<string[]>;
+  addToWishlist(userId: string, itemId: string): Promise<void>;
+  removeFromWishlist(userId: string, itemId: string): Promise<void>;
 
   // Table Player Chips (atomicity)
   updateTablePlayerChips(tableId: string, odId: string, newChips: number): Promise<void>;
@@ -1095,6 +1100,19 @@ export class MemStorage implements IStorage {
   async updateTablePlayerChips(tableId: string, odId: string, newChips: number) {
     const tp = this.tablePlayersList.find(p => p.tableId === tableId && p.userId === odId);
     if (tp) tp.chipStack = newChips;
+  }
+
+  // ── Wishlists ──────────────────────────────────────────────────────────
+  private wishlistMap = new Map<string, Set<string>>();
+  async getWishlist(userId: string) {
+    return [...(this.wishlistMap.get(userId) || [])];
+  }
+  async addToWishlist(userId: string, itemId: string) {
+    if (!this.wishlistMap.has(userId)) this.wishlistMap.set(userId, new Set());
+    this.wishlistMap.get(userId)!.add(itemId);
+  }
+  async removeFromWishlist(userId: string, itemId: string) {
+    this.wishlistMap.get(userId)?.delete(itemId);
   }
 
   // ── OAuth ──────────────────────────────────────────────────────────────
@@ -2069,6 +2087,23 @@ export class DatabaseStorage implements IStorage {
     await this.db.update(tablePlayers)
       .set({ chipStack: newChips })
       .where(and(eq(tablePlayers.tableId, tableId), eq(tablePlayers.userId, odId)));
+  }
+
+  // ── Wishlists ──────────────────────────────────────────────────────────
+  async getWishlist(userId: string) {
+    const rows = await this.db.select({ itemId: wishlists.itemId })
+      .from(wishlists)
+      .where(eq(wishlists.userId, userId));
+    return rows.map(r => r.itemId);
+  }
+  async addToWishlist(userId: string, itemId: string) {
+    await this.db.insert(wishlists)
+      .values({ userId, itemId })
+      .onConflictDoNothing();
+  }
+  async removeFromWishlist(userId: string, itemId: string) {
+    await this.db.delete(wishlists)
+      .where(and(eq(wishlists.userId, userId), eq(wishlists.itemId, itemId)));
   }
 
   // ── OAuth ──────────────────────────────────────────────────────────────

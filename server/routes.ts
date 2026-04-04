@@ -1516,26 +1516,26 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // ─── Wishlist Routes ─────────────────────────────────────────────────
-  const wishlists = new Map<number, Set<string>>();
-
-  app.get("/api/shop/wishlist", requireAuth, (req, res) => {
-    const set = wishlists.get(req.user!.id);
-    res.json(set ? [...set] : []);
+  // ─── Wishlist Routes (database-persisted) ────────────────────────────
+  app.get("/api/shop/wishlist", requireAuth, async (req, res, next) => {
+    try {
+      const items = await storage.getWishlist(req.user!.id);
+      res.json(items);
+    } catch (err) { next(err); }
   });
 
-  app.post("/api/shop/wishlist/:itemId", requireAuth, (req, res) => {
-    const userId = req.user!.id;
-    if (!wishlists.has(userId)) wishlists.set(userId, new Set());
-    wishlists.get(userId)!.add(req.params.itemId);
-    res.json({ message: "Added" });
+  app.post("/api/shop/wishlist/:itemId", requireAuth, async (req, res, next) => {
+    try {
+      await storage.addToWishlist(req.user!.id, req.params.itemId);
+      res.json({ message: "Added" });
+    } catch (err) { next(err); }
   });
 
-  app.delete("/api/shop/wishlist/:itemId", requireAuth, (req, res) => {
-    const userId = req.user!.id;
-    const set = wishlists.get(userId);
-    if (set) set.delete(req.params.itemId);
-    res.json({ message: "Removed" });
+  app.delete("/api/shop/wishlist/:itemId", requireAuth, async (req, res, next) => {
+    try {
+      await storage.removeFromWishlist(req.user!.id, req.params.itemId);
+      res.json({ message: "Removed" });
+    } catch (err) { next(err); }
   });
 
   // ─── Tournament Routes ──────────────────────────────────────────────────

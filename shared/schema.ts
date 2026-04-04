@@ -541,6 +541,19 @@ export const userInventory = pgTable("user_inventory", {
 
 export type UserInventoryItem = typeof userInventory.$inferSelect;
 
+// ─── Wishlists ──────────────────────────────────────────────────────────────
+export const wishlists = pgTable("wishlists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  itemId: varchar("item_id").notNull().references(() => shopItems.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("wishlists_user_item_idx").on(table.userId, table.itemId),
+  index("wishlists_user_idx").on(table.userId),
+]);
+
+export type WishlistEntry = typeof wishlists.$inferSelect;
+
 // ─── Club Alliances ─────────────────────────────────────────────────────────
 export const clubAlliances = pgTable("club_alliances", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

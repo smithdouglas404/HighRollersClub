@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   Wallet, Mail, KeyRound, Shield,
-  ArrowLeft, Loader2, CheckCircle2
+  ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Info
 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
-/* ── Recovery Method Card ───────────────────────────────────── */
+/* -- Recovery Method Card ------------------------------------------------- */
 
 function RecoveryCard({
   icon: Icon,
@@ -46,21 +47,9 @@ function RecoveryCard({
   );
 }
 
-/* ── Crypto Wallet Verification ─────────────────────────────── */
+/* -- Crypto Wallet Verification (coming soon) ----------------------------- */
 
 function WalletRecovery() {
-  const [verifying, setVerifying] = useState(false);
-  const [verified, setVerified] = useState(false);
-
-  const handleVerify = () => {
-    setVerifying(true);
-    // Simulated verification delay
-    setTimeout(() => {
-      setVerifying(false);
-      setVerified(true);
-    }, 1500);
-  };
-
   return (
     <RecoveryCard
       icon={Wallet}
@@ -70,53 +59,19 @@ function WalletRecovery() {
       accentColor="bg-purple-500/15 text-purple-400"
       accentBorder="border-purple-500/15"
     >
-      <p className="text-[0.625rem] text-gray-400 mb-4">
-        If you previously linked a crypto wallet to your account, you can verify ownership
-        to regain access. Connect the same wallet you used during registration.
-      </p>
-
-      {verified ? (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-          <CheckCircle2 className="w-4 h-4 text-green-400" />
-          <span className="text-[0.625rem] font-medium text-green-400">
-            Wallet verified successfully. Redirecting...
-          </span>
-        </div>
-      ) : (
-        <button
-          onClick={handleVerify}
-          disabled={verifying}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/25 hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          {verifying ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Wallet className="w-3.5 h-3.5" />
-          )}
-          {verifying ? "Verifying..." : "Verify Wallet"}
-        </button>
-      )}
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+        <Info className="w-4 h-4 text-purple-400 shrink-0" />
+        <span className="text-[0.625rem] font-medium text-purple-300">
+          Wallet recovery coming soon. In the meantime, use backup codes or contact support.
+        </span>
+      </div>
     </RecoveryCard>
   );
 }
 
-/* ── Email Recovery ─────────────────────────────────────────── */
+/* -- Email Recovery (requires SMTP) --------------------------------------- */
 
 function EmailRecovery() {
-  const [email, setEmail] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setSending(true);
-    setTimeout(() => {
-      setSending(false);
-      setSent(true);
-    }, 1200);
-  };
-
   return (
     <RecoveryCard
       icon={Mail}
@@ -126,63 +81,59 @@ function EmailRecovery() {
       accentColor="bg-primary/15 text-primary"
       accentBorder="border-primary/15"
     >
-      {sent ? (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-          <CheckCircle2 className="w-4 h-4 text-green-400" />
-          <span className="text-[0.625rem] font-medium text-green-400">
-            Recovery link sent! Check your inbox.
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <span className="text-[0.625rem] font-medium text-amber-300 block">
+            Email recovery requires SMTP configuration.
+          </span>
+          <span className="text-[0.625rem] text-amber-400/70 block">
+            Server administrators can enable this by configuring SMTP_HOST, SMTP_PORT, and SMTP_FROM
+            environment variables. See the deployment documentation for setup details.
           </span>
         </div>
-      ) : (
-        <form onSubmit={handleSend} className="space-y-3">
-          <div>
-            <label className="block text-[0.625rem] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={sending || !email.trim()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {sending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Mail className="w-3.5 h-3.5" />
-            )}
-            {sending ? "Sending..." : "Send Recovery Link"}
-          </button>
-        </form>
-      )}
+      </div>
     </RecoveryCard>
   );
 }
 
-/* ── Backup Codes ───────────────────────────────────────────── */
+/* -- Backup Codes (real API) ---------------------------------------------- */
 
 function BackupCodeRecovery() {
+  const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [result, setResult] = useState<"success" | "error" | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [, navigate] = useLocation();
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) return;
+    if (!username.trim() || !code.trim()) return;
     setVerifying(true);
     setResult(null);
-    setTimeout(() => {
+    setErrorMsg("");
+
+    try {
+      const res = await apiRequest("POST", "/api/auth/recover-with-code", {
+        username: username.trim(),
+        code: code.trim(),
+      });
+      const data = await res.json();
+      setResult("success");
+      // Redirect to dashboard after brief success display
+      setTimeout(() => navigate("/"), 1500);
+    } catch (err: any) {
+      setResult("error");
+      try {
+        const parsed = JSON.parse(err.message.split(": ").slice(1).join(": "));
+        setErrorMsg(parsed.message || "Invalid backup code. Please try again.");
+      } catch {
+        setErrorMsg("Invalid username or backup code. Please try again.");
+      }
+    } finally {
       setVerifying(false);
-      // Simulate: codes starting with "R" succeed for demo
-      setResult(code.toUpperCase().startsWith("R") ? "success" : "error");
-    }, 1000);
+    }
   };
 
   return (
@@ -195,11 +146,24 @@ function BackupCodeRecovery() {
       accentBorder="border-amber-500/15"
     >
       <p className="text-[0.625rem] text-gray-400 mb-4">
-        Enter one of the backup codes you saved when setting up your account.
+        Enter your username and one of the backup codes you saved when setting up your account.
         Each code can only be used once.
       </p>
 
       <form onSubmit={handleVerify} className="space-y-3">
+        <div>
+          <label className="block text-[0.625rem] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">
+            Username
+          </label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => { setUsername(e.target.value); setResult(null); }}
+            placeholder="your username"
+            className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-amber-500/30 transition-all"
+            required
+          />
+        </div>
         <div>
           <label className="block text-[0.625rem] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">
             Backup Code
@@ -208,7 +172,7 @@ function BackupCodeRecovery() {
             type="text"
             value={code}
             onChange={(e) => { setCode(e.target.value); setResult(null); }}
-            placeholder="XXXX-XXXX-XXXX"
+            placeholder="XXXX-XXXX"
             className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-amber-500/30 transition-all tracking-wider"
             required
           />
@@ -227,14 +191,14 @@ function BackupCodeRecovery() {
           <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
             <KeyRound className="w-4 h-4 text-red-400" />
             <span className="text-[0.625rem] font-medium text-red-400">
-              Invalid backup code. Please try again.
+              {errorMsg}
             </span>
           </div>
         )}
 
         <button
           type="submit"
-          disabled={verifying || !code.trim()}
+          disabled={verifying || !code.trim() || !username.trim()}
           className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25 hover:bg-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {verifying ? (
@@ -249,7 +213,7 @@ function BackupCodeRecovery() {
   );
 }
 
-/* ── Main Page ──────────────────────────────────────────────── */
+/* -- Main Page ------------------------------------------------------------ */
 
 export default function AccountRecovery() {
   return (

@@ -2,7 +2,7 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { registerAuthRoutes, requireAuth } from "./auth";
-import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema, users } from "@shared/schema";
+import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema, users, gameHands } from "@shared/schema";
 import { sql } from "drizzle-orm";
 import { setupWebSocket, sendGameStateToTable, getClients } from "./websocket";
 import { getBlindPreset } from "./game/blind-presets";
@@ -10,7 +10,7 @@ import { tableManager } from "./game/table-manager";
 import { analyzeHand } from "./game/hand-analyzer";
 import { geofenceMiddleware } from "./middleware/geofence";
 import { setAnthropicApiKey, getAnthropicApiKey, hasAIEnabled } from "./game/ai-bot-engine";
-import { hasDatabase } from "./db";
+import { hasDatabase, getDb } from "./db";
 import { MTTManager, activeMTTs } from "./game/mtt-manager";
 
 // Global kill switch — blocks buy-ins and withdrawals if integrity check fails
@@ -343,9 +343,21 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (!member || (member.role !== "owner" && member.role !== "admin")) {
         return res.status(403).json({ message: "Not authorized" });
       }
-      const { name, description, isPublic, avatarUrl, ownerId } = req.body;
+      const { name, description, isPublic, avatarUrl, ownerId,
+        timezone, language, rakePercent, maxBuyInCap, creditLimit,
+        require2fa, adminApprovalRequired, antiCollusion, themeColor } = req.body;
       // Ownership transfer: only the current owner can transfer
       const updateData: any = { name, description, isPublic, avatarUrl };
+      // Club settings fields — only set if provided (not undefined)
+      if (timezone !== undefined) updateData.timezone = timezone;
+      if (language !== undefined) updateData.language = language;
+      if (rakePercent !== undefined) updateData.rakePercent = rakePercent;
+      if (maxBuyInCap !== undefined) updateData.maxBuyInCap = maxBuyInCap;
+      if (creditLimit !== undefined) updateData.creditLimit = creditLimit;
+      if (require2fa !== undefined) updateData.require2fa = require2fa;
+      if (adminApprovalRequired !== undefined) updateData.adminApprovalRequired = adminApprovalRequired;
+      if (antiCollusion !== undefined) updateData.antiCollusion = antiCollusion;
+      if (themeColor !== undefined) updateData.themeColor = themeColor;
       if (ownerId && ownerId !== club.ownerId) {
         if (club.ownerId !== req.user!.id) {
           return res.status(403).json({ message: "Only the club owner can transfer ownership" });
@@ -1169,7 +1181,18 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (!["chips", "wins", "winRate"].includes(metric)) {
         return res.status(400).json({ error: "Invalid metric. Use chips, wins, or winRate" });
       }
+      const period = (req.query.period as string) || "all";
+      if (!["today", "week", "month", "all"].includes(period)) {
+        return res.status(400).json({ error: "Invalid period. Use today, week, month, or all" });
+      }
+
       const data = await storage.getLeaderboard(metric as "chips" | "wins" | "winRate", 50);
+
+      // The playerStats table tracks cumulative counts without per-event timestamps,
+      // so true period filtering isn't possible without a time-series table.
+      // For now, accept the period param gracefully and return all data for any period.
+      // This prevents the frontend from breaking when it sends period=today/week/month.
+
       res.json(data);
     } catch (err) {
       next(err);
@@ -1511,7 +1534,9 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     try {
       const parsed = createTournamentSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message || "Invalid input" });
-      const { name, buyIn, startingChips, maxPlayers, clubId, startAt, pokerVariant } = parsed.data;
+      const { name, buyIn, startingChips, maxPlayers, clubId, startAt, pokerVariant,
+        registrationFee, lateRegistration, payoutStructureType, guaranteedPrize,
+        adminFeePercent, timeBankSeconds } = parsed.data;
       const { blindPreset } = req.body;
 
       const blindSchedule = blindPreset ? getBlindPreset(blindPreset) : getBlindPreset("mtt");
@@ -1539,6 +1564,12 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         createdById: req.user!.id,
         clubId: clubId || null,
         startAt: startAt ? new Date(startAt) : null,
+        registrationFee: registrationFee ?? 0,
+        lateRegistration: lateRegistration ?? false,
+        payoutStructureType: payoutStructureType ?? "top_15",
+        guaranteedPrize: guaranteedPrize ?? 0,
+        adminFeePercent: adminFeePercent ?? 0,
+        timeBankSeconds: timeBankSeconds ?? 30,
       });
 
       // Auto-create club event for club tournaments
@@ -2426,6 +2457,156 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) {
       console.error("[translate] Error:", err);
       res.json({ translated: req.body?.text || "", original: req.body?.text || "", detected: "error" });
+    }
+  });
+
+  // ─── Premium Subscription ─────────────────────────────────────────────────
+  const PREMIUM_COST_CHIPS = 5000;
+  const PREMIUM_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+  app.get("/api/subscribe/status", requireAuth, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const now = Date.now();
+      const isPremium = !!user.premiumUntil && new Date(user.premiumUntil).getTime() > now;
+      res.json({
+        isPremium,
+        expiresAt: isPremium ? user.premiumUntil : null,
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/subscribe/premium", requireAuth, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Deduct from main wallet
+      await storage.ensureWallets(user.id);
+      const wallets = await storage.getUserWallets(user.id);
+      const mainWallet = wallets.find(w => w.walletType === "main");
+      if (!mainWallet || mainWallet.balance < PREMIUM_COST_CHIPS) {
+        return res.status(400).json({
+          message: `Insufficient chips. You need ${PREMIUM_COST_CHIPS.toLocaleString()} chips in your main wallet.`,
+          required: PREMIUM_COST_CHIPS,
+          available: mainWallet?.balance ?? 0,
+        });
+      }
+
+      // Deduct chips
+      const result = await storage.atomicAddToWallet(user.id, "main", -PREMIUM_COST_CHIPS);
+      if (!result.success) {
+        return res.status(400).json({ message: "Failed to deduct chips. Try again." });
+      }
+
+      // Set or extend premium
+      const now = Date.now();
+      const currentExpiry = user.premiumUntil ? new Date(user.premiumUntil).getTime() : 0;
+      const baseTime = currentExpiry > now ? currentExpiry : now;
+      const newExpiry = new Date(baseTime + PREMIUM_DURATION_MS);
+
+      await storage.updateUser(user.id, { premiumUntil: newExpiry });
+
+      res.json({
+        message: "Premium activated!",
+        isPremium: true,
+        expiresAt: newExpiry,
+        chipsDeducted: PREMIUM_COST_CHIPS,
+        newBalance: result.newBalance,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Admin Announcements (in-memory) ─────────────────────────────────────
+  const adminAnnouncements: { id: string; title: string; message: string; createdAt: string; createdBy: string }[] = [];
+
+  app.get("/api/admin/announcements", requireAuth, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      res.json(adminAnnouncements);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/announcements", requireAuth, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const { title, message } = req.body;
+      if (!title || !message) {
+        return res.status(400).json({ message: "title and message are required" });
+      }
+      const announcement = {
+        id: require("crypto").randomUUID(),
+        title: String(title).slice(0, 200),
+        message: String(message).slice(0, 2000),
+        createdAt: new Date().toISOString(),
+        createdBy: user.id,
+      };
+      adminAnnouncements.unshift(announcement);
+      // Keep at most 100 announcements in memory
+      if (adminAnnouncements.length > 100) adminAnnouncements.length = 100;
+      res.status(201).json(announcement);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Global Stats ───────────────────────────────────────────────────────────
+  app.get("/api/stats/global", async (_req, res, next) => {
+    try {
+      // Count total players from users table
+      const allUsers = await storage.getLeaderboard("chips", 999999);
+      const totalPlayers = allUsers.length;
+
+      // Count total hands from gameHands table
+      let totalHandsDealt = 0;
+      let totalChipsWon = 0;
+      try {
+        if (hasDatabase()) {
+          const db = getDb();
+          const handsResult = await db.select({ count: sql<number>`count(*)` }).from(gameHands);
+          totalHandsDealt = Number(handsResult[0]?.count ?? 0);
+          const chipsResult = await db.select({ total: sql<number>`coalesce(sum(${gameHands.potTotal}), 0)` }).from(gameHands);
+          totalChipsWon = Number(chipsResult[0]?.total ?? 0);
+        } else {
+          // In-memory: approximate from tables
+          const tables = await storage.getTables();
+          for (const t of tables) {
+            const hands = await storage.getGameHands(t.id, 999999);
+            totalHandsDealt += hands.length;
+            totalChipsWon += hands.reduce((sum, h) => sum + (h.potTotal || 0), 0);
+          }
+        }
+      } catch {
+        // If counting fails, return 0s gracefully
+      }
+
+      res.json({ totalPlayers, totalHandsDealt, totalChipsWon });
+    } catch (err) { next(err); }
+  });
+
+  // ─── PATCH /api/profile (alias for PUT /api/profile/avatar) ──────────────
+  app.patch("/api/profile", requireAuth, async (req, res, next) => {
+    try {
+      const { avatarId, displayName, tauntVoice } = req.body;
+      const updates: Record<string, any> = {};
+      if (avatarId && typeof avatarId === "string") updates.avatarId = avatarId;
+      if (displayName && typeof displayName === "string") updates.displayName = displayName.trim().slice(0, 50);
+      if (tauntVoice && typeof tauntVoice === "string") updates.tauntVoice = tauntVoice.slice(0, 30);
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "avatarId, displayName, or tauntVoice required" });
+      }
+      await storage.updateUser(req.user!.id, updates);
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (err) {
+      next(err);
     }
   });
 

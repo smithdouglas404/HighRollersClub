@@ -257,6 +257,8 @@ export class MemStorage implements IStorage {
       twoFactorSecret: data.twoFactorSecret || null,
       twoFactorEnabled: data.twoFactorEnabled ?? false,
       connectedWallets: data.connectedWallets ?? null,
+      recoveryCodes: data.recoveryCodes ?? null,
+      premiumUntil: data.premiumUntil ?? null,
       lastDailyClaim: null,
       createdAt: new Date(),
     };
@@ -305,6 +307,15 @@ export class MemStorage implements IStorage {
       ownerId: data.ownerId,
       avatarUrl: null,
       isPublic: data.isPublic ?? true,
+      timezone: "UTC",
+      language: "en",
+      rakePercent: 5,
+      maxBuyInCap: 0,
+      creditLimit: 0,
+      require2fa: false,
+      adminApprovalRequired: false,
+      antiCollusion: false,
+      themeColor: "gold",
       createdAt: new Date(),
     };
     this.clubs.set(id, club);

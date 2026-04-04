@@ -412,6 +412,83 @@ export function registerAuthRoutes(app: Express) {
     }
   });
 
+  // ── Recovery Codes ─────────────────────────────────────────────────
+
+  // Generate 8 recovery codes for the authenticated user
+  app.post("/api/auth/generate-recovery-codes", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Generate 8 plaintext codes in XXXX-XXXX format
+      const plaintextCodes: string[] = [];
+      const hashedCodes: Array<{ hash: string; salt: string; used: boolean }> = [];
+
+      for (let i = 0; i < 8; i++) {
+        const code = randomBytes(4).toString("hex").toUpperCase().replace(/(.{4})(.{4})/, "$1-$2");
+        plaintextCodes.push(code);
+
+        const salt = randomBytes(16).toString("hex");
+        const derived = (await scryptAsync(code, salt, 64)) as Buffer;
+        hashedCodes.push({ hash: derived.toString("hex"), salt, used: false });
+      }
+
+      await storage.updateUser(user.id, { recoveryCodes: hashedCodes });
+      res.json({ codes: plaintextCodes });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to generate recovery codes" });
+    }
+  });
+
+  // Recover account using a backup code (unauthenticated)
+  app.post("/api/auth/recover-with-code", async (req, res, next) => {
+    try {
+      const { username, code } = req.body;
+      if (!username || !code) {
+        return res.status(400).json({ message: "Username and recovery code required" });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) return res.status(401).json({ message: "Invalid username or recovery code" });
+
+      const storedCodes: Array<{ hash: string; salt: string; used: boolean }> =
+        Array.isArray(user.recoveryCodes) ? (user.recoveryCodes as any) : [];
+
+      if (storedCodes.length === 0) {
+        return res.status(401).json({ message: "No recovery codes configured for this account" });
+      }
+
+      // Check each unused code
+      let matchIndex = -1;
+      for (let i = 0; i < storedCodes.length; i++) {
+        if (storedCodes[i].used) continue;
+        const derived = (await scryptAsync(code.trim().toUpperCase(), storedCodes[i].salt, 64)) as Buffer;
+        const storedHash = Buffer.from(storedCodes[i].hash, "hex");
+        if (derived.length === storedHash.length && timingSafeEqual(derived, storedHash)) {
+          matchIndex = i;
+          break;
+        }
+      }
+
+      if (matchIndex === -1) {
+        return res.status(401).json({ message: "Invalid username or recovery code" });
+      }
+
+      // Mark code as used
+      storedCodes[matchIndex].used = true;
+      await storage.updateUser(user.id, { recoveryCodes: storedCodes });
+
+      // Log the user in via session
+      const safeUser = sanitizeUser(user);
+      req.login(safeUser, (err) => {
+        if (err) return next(err);
+        res.json({ message: "Recovery successful", user: safeUser });
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Recovery failed" });
+    }
+  });
+
   // ── Wallet Connection Endpoints ────────────────────────────────────
 
   const VALID_WALLET_PROVIDERS = ["metamask", "coinbase", "walletconnect", "phantom"];

@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import {
   Crown, Sparkles, Palette, Gauge, BarChart3,
-  Zap, Headphones, Trophy, Ban, Check
+  Zap, Headphones, Trophy, Ban, Check,
+  Loader2, AlertCircle, CheckCircle2
 } from "lucide-react";
-
-type BillingCycle = "monthly" | "yearly";
+import { apiRequest } from "@/lib/queryClient";
 
 const PERKS = [
   { icon: Sparkles, title: "Exclusive Avatars", description: "Unlock rare and legendary avatar collections" },
@@ -19,15 +19,63 @@ const PERKS = [
   { icon: Ban, title: "Ad-Free Experience", description: "No banners, no interruptions, pure poker" },
 ];
 
-const PRICING: Record<BillingCycle, { price: string; period: string; note?: string }> = {
-  monthly: { price: "$9.99", period: "/month" },
-  yearly: { price: "$89.99", period: "/year", note: "Save 25%" },
-};
+const PREMIUM_COST = 5000;
+
+interface PremiumStatus {
+  isPremium: boolean;
+  expiresAt: string | null;
+}
 
 export default function PremiumUpgrade() {
-  const [billing, setBilling] = useState<BillingCycle>("monthly");
+  const [status, setStatus] = useState<PremiumStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [subscribing, setSubscribing] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const selected = PRICING[billing];
+  const fetchStatus = async () => {
+    try {
+      const res = await apiRequest("GET", "/api/subscribe/status");
+      const data = await res.json();
+      setStatus(data);
+    } catch {
+      // User may not be authenticated yet, ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  const handleSubscribe = async () => {
+    setSubscribing(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const res = await apiRequest("POST", "/api/subscribe/premium");
+      const data = await res.json();
+      setSuccess(`Premium activated! ${data.chipsDeducted.toLocaleString()} chips deducted. New balance: ${data.newBalance.toLocaleString()} chips.`);
+      setStatus({ isPremium: true, expiresAt: data.expiresAt });
+    } catch (err: any) {
+      try {
+        const text = err.message || "";
+        // apiRequest throws "status: body" format
+        const bodyStr = text.includes(": ") ? text.split(": ").slice(1).join(": ") : text;
+        const parsed = JSON.parse(bodyStr);
+        setError(parsed.message || "Failed to subscribe. Please try again.");
+      } catch {
+        setError("Failed to subscribe. Please try again.");
+      }
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  const isCurrentlyPremium = status?.isPremium ?? false;
+  const expiresAt = status?.expiresAt ? new Date(status.expiresAt) : null;
 
   return (
     <DashboardLayout title="Premium">
@@ -42,11 +90,21 @@ export default function PremiumUpgrade() {
             <Crown className="w-8 h-8 text-[#f0d478]" />
           </div>
           <h1 className="text-3xl md:text-4xl font-display font-bold tracking-wider gold-text">
-            UPGRADE TO PREMIUM
+            {isCurrentlyPremium ? "PREMIUM MEMBER" : "UPGRADE TO PREMIUM"}
           </h1>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Unlock the full High Rollers experience with exclusive perks, priority access, and premium features.
+            {isCurrentlyPremium
+              ? "You have access to all premium perks and features."
+              : "Unlock the full High Rollers experience with exclusive perks, priority access, and premium features."}
           </p>
+          {isCurrentlyPremium && expiresAt && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+              <CheckCircle2 className="w-4 h-4 text-green-400" />
+              <span className="text-xs font-medium text-green-400">
+                Active until {expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+              </span>
+            </div>
+          )}
         </motion.div>
 
         {/* Perks Grid */}
@@ -85,49 +143,22 @@ export default function PremiumUpgrade() {
           transition={{ delay: 0.3 }}
           className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 md:p-8 space-y-6"
         >
-          {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={() => setBilling("monthly")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                billing === "monthly"
-                  ? "bg-[#d4a843]/20 text-[#f0d478] border border-[#d4a843]/30"
-                  : "text-muted-foreground hover:text-white hover:bg-white/5 border border-transparent"
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBilling("yearly")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-                billing === "yearly"
-                  ? "bg-[#d4a843]/20 text-[#f0d478] border border-[#d4a843]/30"
-                  : "text-muted-foreground hover:text-white hover:bg-white/5 border border-transparent"
-              }`}
-            >
-              Yearly
-              <span className="text-[0.6rem] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-bold">
-                -25%
-              </span>
-            </button>
-          </div>
-
           {/* Price Display */}
           <div className="text-center space-y-1">
             <div className="flex items-baseline justify-center gap-1">
               <span className="text-4xl md:text-5xl font-display font-bold gold-text">
-                {selected.price}
+                {PREMIUM_COST.toLocaleString()}
               </span>
-              <span className="text-sm text-muted-foreground">{selected.period}</span>
+              <span className="text-sm text-muted-foreground">chips/month</span>
             </div>
-            {selected.note && (
-              <div className="text-xs text-green-400 font-bold">{selected.note}</div>
-            )}
+            <div className="text-xs text-muted-foreground">
+              Deducted from your main wallet
+            </div>
           </div>
 
           {/* Feature summary */}
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-            {["All 8 premium perks", "Cancel anytime", "Instant activation"].map((item) => (
+            {["All 8 premium perks", "30-day duration", "Instant activation"].map((item) => (
               <span key={item} className="flex items-center gap-1.5">
                 <Check className="w-3 h-3 text-[#d4a843]" />
                 {item}
@@ -135,12 +166,40 @@ export default function PremiumUpgrade() {
             ))}
           </div>
 
+          {/* Success message */}
+          {success && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+              <span className="text-xs font-medium text-green-400">{success}</span>
+            </div>
+          )}
+
+          {/* Error message */}
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span className="text-xs font-medium text-red-400">{error}</span>
+            </div>
+          )}
+
           {/* CTA Button */}
           <div className="flex justify-center">
-            <button className="btn-neon gold-gradient px-8 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest text-black shadow-[0_0_20px_rgba(212,168,67,0.3)] hover:shadow-[0_0_30px_rgba(212,168,67,0.5)] transition-all">
+            <button
+              onClick={handleSubscribe}
+              disabled={subscribing || loading}
+              className="btn-neon gold-gradient px-8 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest text-black shadow-[0_0_20px_rgba(212,168,67,0.3)] hover:shadow-[0_0_30px_rgba(212,168,67,0.5)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <span className="flex items-center gap-2">
-                <Crown className="w-4 h-4" />
-                Upgrade Now
+                {subscribing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Crown className="w-4 h-4" />
+                )}
+                {subscribing
+                  ? "Processing..."
+                  : isCurrentlyPremium
+                    ? "Extend 30 Days"
+                    : "Upgrade Now"}
               </span>
             </button>
           </div>

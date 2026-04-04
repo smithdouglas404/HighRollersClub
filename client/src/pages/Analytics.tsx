@@ -8,7 +8,8 @@ import {
   BarChart3, TrendingUp, Target, Gamepad2,
   Coins, Trophy, Loader2, Brain,
   ArrowUpRight, ArrowDownRight, Minus,
-  Users, Activity, PieChart, Clock, FileText
+  Users, Activity, PieChart, Clock, FileText,
+  Lock
 } from "lucide-react";
 
 interface PlayerStats {
@@ -31,6 +32,14 @@ interface AnalysisEntry {
   handId: string;
   result: string;
   createdAt: string;
+}
+
+interface SessionEntry {
+  tableId: string;
+  netResult: number;
+  sessionStart: string;
+  sessionEnd: string;
+  handsPlayed: number;
 }
 
 /* ── SVG Line Chart ───────────────────────────────────────────────────────── */
@@ -148,226 +157,38 @@ function WinningsChart({ data }: { data: number[] }) {
   );
 }
 
-/* ── Active Members Line Chart (S39) ─────────────────────────────────────── */
+/* ── Coming Soon Placeholder ─────────────────────────────────────────────── */
 
-function ActiveMembersChart({ data, labels }: { data: number[]; labels: string[] }) {
-  const W = 600;
-  const H = 200;
-  const PAD_X = 40;
-  const PAD_Y = 20;
-
-  const chartW = W - PAD_X * 2;
-  const chartH = H - PAD_Y * 2;
-
-  const min = Math.min(...data) * 0.9;
-  const max = Math.max(...data) * 1.05;
-  const range = max - min || 1;
-
-  const points = data.map((v, i) => {
-    const x = PAD_X + (i / Math.max(data.length - 1, 1)) * chartW;
-    const y = PAD_Y + chartH - ((v - min) / range) * chartH;
-    return { x, y };
-  });
-
-  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-  const areaD = pathD +
-    ` L ${points[points.length - 1].x.toFixed(1)} ${(PAD_Y + chartH).toFixed(1)}` +
-    ` L ${points[0].x.toFixed(1)} ${(PAD_Y + chartH).toFixed(1)} Z`;
-
-  const yLabels = [max, (max + min) / 2, min].map(v => Math.round(v));
-
+function ComingSoonCard({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) {
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="membersGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
-
-      {/* Grid lines */}
-      {yLabels.map((v) => {
-        const y = PAD_Y + chartH - ((v - min) / range) * chartH;
-        return (
-          <g key={v}>
-            <line x1={PAD_X} y1={y} x2={W - PAD_X} y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 4" />
-            <text x={PAD_X - 6} y={y + 3} textAnchor="end" fill="rgba(255,255,255,0.3)" fontSize="9" fontFamily="monospace">
-              {v}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* Area fill */}
-      <path d={areaD} fill="url(#membersGrad)" />
-
-      {/* Line */}
-      <path d={pathD} fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-
-      {/* Data points */}
-      {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#a78bfa" stroke="rgba(10,16,34,0.8)" strokeWidth="2" />
-      ))}
-
-      {/* X-axis labels */}
-      {labels.map((label, i) => {
-        const x = PAD_X + (i / Math.max(labels.length - 1, 1)) * chartW;
-        return (
-          <text key={i} x={x} y={H - 2} fill="rgba(255,255,255,0.3)" fontSize="9" fontFamily="monospace" textAnchor="middle">
-            {label}
-          </text>
-        );
-      })}
-    </svg>
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-white/[0.04] border border-white/[0.08] relative">
+        <Icon className="w-7 h-7 text-gray-500/50" />
+        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center">
+          <Lock className="w-2.5 h-2.5 text-gray-400" />
+        </div>
+      </div>
+      <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">{title}</h3>
+      <p className="text-xs text-muted-foreground/60 max-w-xs">{description}</p>
+      <span className="mt-3 px-3 py-1 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider bg-primary/5 text-primary/50 border border-primary/10">
+        Coming Soon
+      </span>
+    </div>
   );
 }
 
-/* ── Table Volume Bar Chart (S40) ────────────────────────────────────────── */
+/* ── Period filter helper ─────────────────────────────────────────────────── */
 
-function TableVolumeChart({ data, labels }: { data: number[]; labels: string[] }) {
-  const W = 600;
-  const H = 200;
-  const PAD_X = 44;
-  const PAD_Y = 16;
-  const PAD_BOTTOM = 24;
-
-  const chartW = W - PAD_X * 2;
-  const chartH = H - PAD_Y - PAD_BOTTOM;
-
-  const max = Math.max(...data) * 1.1;
-  const barWidth = chartW / data.length * 0.55;
-  const barGap = chartW / data.length;
-
-  const yLabels = [max, max * 0.5, 0].map(v => Math.round(v));
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#d4af37" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#d4af37" stopOpacity="0.3" />
-        </linearGradient>
-      </defs>
-
-      {/* Grid lines */}
-      {yLabels.map((v) => {
-        const y = PAD_Y + chartH - (v / max) * chartH;
-        return (
-          <g key={v}>
-            <line x1={PAD_X} y1={y} x2={W - PAD_X} y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 4" />
-            <text x={PAD_X - 6} y={y + 3} textAnchor="end" fill="rgba(255,255,255,0.3)" fontSize="9" fontFamily="monospace">
-              {v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* Bars */}
-      {data.map((v, i) => {
-        const barH = (v / max) * chartH;
-        const x = PAD_X + i * barGap + (barGap - barWidth) / 2;
-        const y = PAD_Y + chartH - barH;
-        return (
-          <g key={i}>
-            <rect x={x} y={y} width={barWidth} height={barH} fill="url(#barGrad)" rx="3" />
-            {/* Bar glow */}
-            <rect x={x} y={y} width={barWidth} height={barH} fill="none" stroke="rgba(212,175,55,0.25)" strokeWidth="1" rx="3" />
-            {/* Value on top */}
-            <text x={x + barWidth / 2} y={y - 5} fill="rgba(255,255,255,0.5)" fontSize="8" fontFamily="monospace" textAnchor="middle">
-              {v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* X-axis labels */}
-      {labels.map((label, i) => {
-        const x = PAD_X + i * barGap + barGap / 2;
-        return (
-          <text key={i} x={x} y={H - 4} fill="rgba(255,255,255,0.35)" fontSize="9" fontFamily="monospace" textAnchor="middle">
-            {label}
-          </text>
-        );
-      })}
-    </svg>
-  );
+function getPeriodCutoff(period: string): Date | null {
+  if (period === "all") return null;
+  const now = new Date();
+  switch (period) {
+    case "7days": return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    case "30days": return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    case "3months": return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    default: return null;
+  }
 }
-
-/* ── Donut Chart (S41) ───────────────────────────────────────────────────── */
-
-function RetentionDonut({ segments }: { segments: { label: string; value: number; color: string }[] }) {
-  const total = segments.reduce((s, seg) => s + seg.value, 0);
-  const R = 70;
-  const STROKE = 22;
-  const circumference = 2 * Math.PI * R;
-  const CX = 100;
-  const CY = 100;
-
-  let cumulativeOffset = 0;
-
-  return (
-    <svg viewBox="0 0 200 200" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-      {/* Background ring */}
-      <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={STROKE} />
-
-      {/* Segments */}
-      {segments.map((seg, i) => {
-        const fraction = seg.value / total;
-        const dashLength = fraction * circumference;
-        const gapLength = circumference - dashLength;
-        const offset = -cumulativeOffset * circumference / total;
-        cumulativeOffset += seg.value;
-        return (
-          <circle
-            key={i}
-            cx={CX}
-            cy={CY}
-            r={R}
-            fill="none"
-            stroke={seg.color}
-            strokeWidth={STROKE}
-            strokeDasharray={`${dashLength} ${gapLength}`}
-            strokeDashoffset={-offset + circumference * 0.25}
-            strokeLinecap="butt"
-            style={{ transition: "stroke-dasharray 0.6s ease" }}
-          />
-        );
-      })}
-
-      {/* Center text */}
-      <text x={CX} y={CY - 6} textAnchor="middle" fill="rgba(255,255,255,0.9)" fontSize="18" fontWeight="700" fontFamily="'Space Grotesk', sans-serif">
-        {total}%
-      </text>
-      <text x={CX} y={CY + 10} textAnchor="middle" fill="rgba(255,255,255,0.35)" fontSize="8" fontFamily="monospace" style={{ textTransform: "uppercase" }} letterSpacing="0.1em">
-        RETENTION
-      </text>
-    </svg>
-  );
-}
-
-/* ── Mock Data ───────────────────────────────────────────────────────────── */
-
-const MOCK_ACTIVE_MEMBERS = [42, 38, 51, 47, 55, 49, 62];
-const MOCK_ACTIVE_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-const MOCK_TABLE_VOLUME = [1200, 1850, 2100, 1780, 2450, 2900];
-const MOCK_VOLUME_LABELS = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-
-const MOCK_RETENTION_SEGMENTS = [
-  { label: "Returning", value: 57, color: "#d4af37" },
-  { label: "New", value: 33, color: "#c9a84c" },
-  { label: "Inactive", value: 10, color: "rgba(255,255,255,0.15)" },
-];
-
-const MOCK_RECENT_ACTIVITY = [
-  { name: "AceKing_77", lastActive: "2 hours ago", gamesPlayed: 48, totalStakes: 12400 },
-  { name: "RiverRat_Pro", lastActive: "5 hours ago", gamesPlayed: 35, totalStakes: 8750 },
-  { name: "BluffMaster", lastActive: "1 day ago", gamesPlayed: 62, totalStakes: 21300 },
-  { name: "NitQueen", lastActive: "1 day ago", gamesPlayed: 27, totalStakes: 5400 },
-  { name: "PokerShark99", lastActive: "2 days ago", gamesPlayed: 91, totalStakes: 34200 },
-  { name: "FishOnTilt", lastActive: "3 days ago", gamesPlayed: 19, totalStakes: 3800 },
-  { name: "SetMiner_X", lastActive: "4 days ago", gamesPlayed: 44, totalStakes: 15600 },
-];
 
 /* ── Main Component ───────────────────────────────────────────────────────── */
 
@@ -376,6 +197,7 @@ export default function Analytics() {
   const { balance } = useWallet();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [handHistory, setHandHistory] = useState<HandEntry[]>([]);
+  const [sessions, setSessions] = useState<SessionEntry[]>([]);
   const [analyses, setAnalyses] = useState<AnalysisEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -385,9 +207,10 @@ export default function Analytics() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [statsRes, handsRes, analysesRes] = await Promise.all([
+        const [statsRes, handsRes, sessionsRes, analysesRes] = await Promise.all([
           fetch("/api/stats/me"),
           user?.id ? fetch(`/api/players/${user.id}/hands?limit=200`) : Promise.resolve(null),
+          fetch("/api/wallet/sessions?limit=50").catch(() => null),
           fetch("/api/analyses", { credentials: "include" }).catch(() => null),
         ]);
         if (statsRes.status === 401) {
@@ -397,6 +220,7 @@ export default function Analytics() {
         if (statsRes.ok) setStats(await statsRes.json());
         else setLoadError("Failed to load stats");
         if (handsRes?.ok) setHandHistory(await handsRes.json());
+        if (sessionsRes?.ok) setSessions(await sessionsRes.json());
         if (analysesRes?.ok) {
           setAnalyses(await analysesRes.json());
         }
@@ -420,8 +244,27 @@ export default function Analytics() {
     ? Math.round((stats.pfr / stats.handsPlayed) * 100)
     : 0;
 
-  // Compute cumulative winnings from hand history (reverse since API returns newest first)
+  // Filter sessions by selected time period
+  const filteredSessions = useMemo(() => {
+    const cutoff = getPeriodCutoff(chartPeriod);
+    if (!cutoff) return sessions;
+    return sessions.filter(s => new Date(s.sessionEnd) >= cutoff);
+  }, [sessions, chartPeriod]);
+
+  // Compute cumulative winnings from session data when available, else fall back to hand history
   const cumulativeWinnings = useMemo(() => {
+    if (filteredSessions.length > 0) {
+      // Sort sessions chronologically (oldest first)
+      const sorted = [...filteredSessions].sort(
+        (a, b) => new Date(a.sessionStart).getTime() - new Date(b.sessionStart).getTime()
+      );
+      let running = 0;
+      return sorted.map(s => {
+        running += s.netResult;
+        return running;
+      });
+    }
+    // Fallback: use hand history (no date filtering possible here)
     if (handHistory.length === 0) return [];
     const reversed = [...handHistory].reverse();
     let running = 0;
@@ -429,7 +272,7 @@ export default function Analytics() {
       running += h.netResult;
       return running;
     });
-  }, [handHistory]);
+  }, [filteredSessions, handHistory]);
 
   const statCards = [
     {
@@ -720,9 +563,9 @@ export default function Analytics() {
               </div>
             </motion.div>
 
-            {/* ── S39 & S40: Active Members + Table Volume (side by side) ── */}
+            {/* ── Club Analytics (Coming Soon) ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* S39: Active Members Line Chart */}
+              {/* Active Members - Coming Soon */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -735,36 +578,18 @@ export default function Analytics() {
                   border: "1px solid rgba(212,175,55,0.12)",
                 }}
               >
-                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#c9a84c]/80" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Active Members</h3>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/10 border border-green-500/20">
-                      <ArrowUpRight className="w-3 h-3 text-green-400" />
-                    </span>
-                    <span className="text-xs font-bold text-green-400">+26%</span>
-                  </div>
+                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#c9a84c]/80" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Active Members</h3>
                 </div>
-                <div className="p-4">
-                  <div className="h-[200px] rounded-lg border border-white/[0.04] bg-white/[0.01] p-1">
-                    <ActiveMembersChart data={MOCK_ACTIVE_MEMBERS} labels={MOCK_ACTIVE_LABELS} />
-                  </div>
-                  <div className="flex items-center justify-between mt-3 px-1">
-                    <div>
-                      <div className="text-xl font-bold text-purple-400 tracking-tight">62</div>
-                      <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">Today</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-white/60 tracking-tight">49</div>
-                      <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">7-Day Avg</div>
-                    </div>
-                  </div>
-                </div>
+                <ComingSoonCard
+                  icon={Users}
+                  title="Member Analytics"
+                  description="Track daily active members and growth trends across your club."
+                />
               </motion.div>
 
-              {/* S40: Table Volume Bar Chart */}
+              {/* Table Volume - Coming Soon */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -777,33 +602,21 @@ export default function Analytics() {
                   border: "1px solid rgba(212,175,55,0.12)",
                 }}
               >
-                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-[#c9a84c]/80" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Table Volume</h3>
-                  </div>
-                  <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">Last 6 Months</span>
+                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-[#c9a84c]/80" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Table Volume</h3>
                 </div>
-                <div className="p-4">
-                  <div className="h-[200px] rounded-lg border border-white/[0.04] bg-white/[0.01] p-1">
-                    <TableVolumeChart data={MOCK_TABLE_VOLUME} labels={MOCK_VOLUME_LABELS} />
-                  </div>
-                  <div className="flex items-center justify-between mt-3 px-1">
-                    <div>
-                      <div className="text-xl font-bold text-primary tracking-tight">2,900</div>
-                      <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">This Month</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-white/60 tracking-tight">12,280</div>
-                      <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">6-Mo Total</div>
-                    </div>
-                  </div>
-                </div>
+                <ComingSoonCard
+                  icon={Activity}
+                  title="Volume Tracking"
+                  description="Monitor monthly table volume and chip flow across all tables."
+                />
               </motion.div>
             </div>
 
-            {/* ── S41: New vs Returning Players Donut Chart ── */}
+            {/* ── Retention & Recent Activity (Coming Soon) ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Player Retention - Coming Soon */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -820,24 +633,14 @@ export default function Analytics() {
                   <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Player Retention</h3>
                 </div>
-                <div className="p-4 flex flex-col items-center">
-                  <div className="w-[180px] h-[180px]">
-                    <RetentionDonut segments={MOCK_RETENTION_SEGMENTS} />
-                  </div>
-                  <div className="flex items-center gap-5 mt-4">
-                    {MOCK_RETENTION_SEGMENTS.map((seg) => (
-                      <div key={seg.label} className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: seg.color }} />
-                        <span className="text-[0.625rem] text-gray-400">
-                          {seg.label} <span className="font-bold text-white/80">{seg.value}%</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <ComingSoonCard
+                  icon={PieChart}
+                  title="Retention Metrics"
+                  description="See returning vs. new player breakdowns and churn rates."
+                />
               </motion.div>
 
-              {/* ── S42: Recent Activity Table ── */}
+              {/* Recent Activity - Coming Soon */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -850,54 +653,15 @@ export default function Analytics() {
                   border: "1px solid rgba(212,175,55,0.12)",
                 }}
               >
-                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[#c9a84c]/80" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Recent Activity</h3>
-                  </div>
-                  <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{MOCK_RECENT_ACTIVITY.length} Members</span>
+                <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#c9a84c]/80" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Recent Activity</h3>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-white/[0.04]">
-                        <th className="px-5 py-2.5 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Player</th>
-                        <th className="px-5 py-2.5 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Last Active</th>
-                        <th className="px-5 py-2.5 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 text-right">Games</th>
-                        <th className="px-5 py-2.5 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 text-right">Total Stakes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {MOCK_RECENT_ACTIVITY.map((row, i) => (
-                        <motion.tr
-                          key={row.name}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.65 + i * 0.04 }}
-                          className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
-                        >
-                          <td className="px-5 py-2.5">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 border border-white/[0.08] flex items-center justify-center">
-                                <span className="text-[0.5625rem] font-bold text-primary">{row.name.charAt(0)}</span>
-                              </div>
-                              <span className="text-sm font-medium text-white/90">{row.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-5 py-2.5">
-                            <span className="text-xs text-gray-400">{row.lastActive}</span>
-                          </td>
-                          <td className="px-5 py-2.5 text-right">
-                            <span className="text-sm font-bold text-white/80">{row.gamesPlayed}</span>
-                          </td>
-                          <td className="px-5 py-2.5 text-right">
-                            <span className="text-sm font-bold text-primary">{row.totalStakes.toLocaleString()}</span>
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ComingSoonCard
+                  icon={Clock}
+                  title="Activity Feed"
+                  description="View recent member activity, games played, and stakes across the club."
+                />
               </motion.div>
             </div>
 

@@ -18,6 +18,8 @@ export const users = pgTable("users", {
   twoFactorSecret: text("two_factor_secret"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   connectedWallets: jsonb("connected_wallets"), // [{provider, address}]
+  recoveryCodes: jsonb("recovery_codes"), // hashed recovery codes [{hash, salt, used}]
+  premiumUntil: timestamp("premium_until"), // premium subscription expiry
   lastDailyClaim: timestamp("last_daily_claim"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -44,6 +46,15 @@ export const clubs = pgTable("clubs", {
   ownerId: varchar("owner_id").notNull().references(() => users.id),
   avatarUrl: text("avatar_url"),
   isPublic: boolean("is_public").notNull().default(true),
+  timezone: text("timezone").notNull().default("UTC"),
+  language: text("language").notNull().default("en"),
+  rakePercent: integer("rake_percent").notNull().default(5),
+  maxBuyInCap: integer("max_buy_in_cap").notNull().default(0),
+  creditLimit: integer("credit_limit").notNull().default(0),
+  require2fa: boolean("require_2fa").notNull().default(false),
+  adminApprovalRequired: boolean("admin_approval_required").notNull().default(false),
+  antiCollusion: boolean("anti_collusion").notNull().default(false),
+  themeColor: text("theme_color").notNull().default("gold"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -365,6 +376,12 @@ export const tournaments = pgTable("tournaments", {
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   pokerVariant: text("poker_variant").notNull().default("nlhe"), // nlhe | plo | plo5 | short_deck
   startAt: timestamp("start_at"),
+  registrationFee: integer("registration_fee").notNull().default(0),
+  lateRegistration: boolean("late_registration").notNull().default(false),
+  payoutStructureType: text("payout_structure_type").notNull().default("top_15"), // top_15 | top_10 | top_20 | winner_take_all
+  guaranteedPrize: integer("guaranteed_prize").notNull().default(0),
+  adminFeePercent: integer("admin_fee_percent").notNull().default(0),
+  timeBankSeconds: integer("time_bank_seconds").notNull().default(30),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   index("tournaments_club_idx").on(table.clubId),
@@ -391,6 +408,12 @@ export const createTournamentSchema = z.object({
     place: z.number(),
     percentage: z.number(),
   })).optional(),
+  registrationFee: z.number().int().min(0).default(0),
+  lateRegistration: z.boolean().default(false),
+  payoutStructureType: z.enum(["top_15", "top_10", "top_20", "winner_take_all"]).default("top_15"),
+  guaranteedPrize: z.number().int().min(0).default(0),
+  adminFeePercent: z.number().int().min(0).max(100).default(0),
+  timeBankSeconds: z.number().int().min(0).default(30),
 });
 
 // ─── Tournament Registrations ───────────────────────────────────────────────

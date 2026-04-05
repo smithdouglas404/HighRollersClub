@@ -1282,7 +1282,7 @@ export default function ClubDashboard() {
                     </div>
 
                     {/* Club Chat */}
-                    <ClubChatSidebar clubName={club?.name} className="mt-4" />
+                    <ClubChatSidebar clubId={club?.id} clubName={club?.name} className="mt-4" />
                   </div>
                 </div>
               )}

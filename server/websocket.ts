@@ -426,6 +426,13 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
     const encryptedMapping = getEncryptedSpriteMapping(user.id, cardKey);
     ws.send(JSON.stringify({ type: "session_key", cardKey, spriteMapping: encryptedMapping }));
 
+    // Subscribe to club chat channels for all user's clubs
+    storage.getUserClubs(user.id).then(userClubs => {
+      for (const club of userClubs) {
+        subscribeClientToClubChat(user.id, club.id);
+      }
+    }).catch(() => {});
+
     // If reconnecting to tables, send current game state for each
     for (const tid of client.tableIds) {
       sendGameStateToTable(tid);
@@ -453,6 +460,8 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
         tableManager.handleDisconnect(tid, client.userId);
         if (process.env.REDIS_URL) unsubscribeClientFromTable(user.id, tid);
       }
+      // Unsubscribe from all club chat channels
+      unsubscribeClientFromAllClubChats(user.id);
       antiCheatEngine.removeConnection(user.id);
       clearSessionKey(user.id);
       clearSpriteMapping(user.id);
@@ -1032,6 +1041,49 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         message: `${client.displayName} updated table settings — changes take effect next hand`,
       } as any);
       sendGameStateToTable(adminTableId);
+      break;
+    }
+
+    case "club_chat": {
+      const clubId = (msg as any).clubId;
+      if (!clubId) return;
+      const rawMsg = ((msg as any).message || "").trim();
+      if (!rawMsg || rawMsg.length > 500) return;
+
+      // Sanitize
+      const sanitized = rawMsg.replace(/[<>&"']/g, (c: string) =>
+        ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c] || c)
+      );
+
+      // Verify club membership
+      const members = await storage.getClubMembers(clubId);
+      if (!members.some(m => m.userId === client.userId)) {
+        sendToUser(client.userId, { type: "error", message: "Not a member of this club" });
+        return;
+      }
+
+      // Save to DB
+      const saved = await storage.createClubMessage({ clubId, userId: client.userId, message: sanitized });
+
+      // Get user info
+      const chatUser = await storage.getUser(client.userId);
+      const payload = {
+        type: "club_chat",
+        id: saved.id,
+        clubId: saved.clubId,
+        userId: saved.userId,
+        message: saved.message,
+        createdAt: saved.createdAt,
+        username: chatUser?.username ?? "Unknown",
+        displayName: chatUser?.displayName ?? null,
+        avatarId: chatUser?.avatarId ?? null,
+      };
+
+      // Send to self immediately
+      sendToUser(client.userId, payload as any);
+
+      // Broadcast via pub/sub to all other online club members
+      getPubSub().publish(`club:chat:${clubId}`, payload).catch(() => {});
       break;
     }
 

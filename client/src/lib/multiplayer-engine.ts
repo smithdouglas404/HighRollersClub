@@ -6,6 +6,22 @@ import type { PlayerResult } from "./hand-evaluator";
 import type { ShowdownData } from "./game-engine";
 import { commentaryPlayer } from "./commentary-engine";
 
+// ── Client-to-server message types ──────────────────────────────────────────
+type PlayerStatus = Player["status"];
+
+interface BuyTimeMessage { type: "buy_time"; tableId: string }
+interface AcceptInsuranceMessage { type: "accept_insurance"; tableId: string }
+interface DeclineInsuranceMessage { type: "decline_insurance"; tableId: string }
+interface RunItVoteMessage { type: "run_it_vote"; tableId: string; count: 1 | 2 | 3 }
+interface AddChipsMessage { type: "add_chips"; tableId: string; amount: number }
+
+type TableActionMessage =
+  | BuyTimeMessage
+  | AcceptInsuranceMessage
+  | DeclineInsuranceMessage
+  | RunItVoteMessage
+  | AddChipsMessage;
+
 // Convert server state to client-compatible format
 function serverToClientPlayers(serverPlayers: any[], turnDeadline?: number, turnTimerDuration?: number): Player[] {
   return serverPlayers.map((p) => {
@@ -600,7 +616,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
         if (newChips === hero.chips && newStatus === hero.status) return prev;
         const updated = [...prev];
-        updated[heroIdx] = { ...hero, chips: newChips, currentBet: newCurrentBet, status: newStatus as any };
+        updated[heroIdx] = { ...hero, chips: newChips, currentBet: newCurrentBet, status: newStatus as PlayerStatus };
         return updated;
       });
 
@@ -632,26 +648,26 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
   // Buy extra time
   const buyTime = useCallback(() => {
-    wsClient.send({ type: "buy_time", tableId: tableIdRef.current } as any);
+    wsClient.send({ type: "buy_time", tableId: tableIdRef.current } satisfies BuyTimeMessage);
   }, []);
 
   // Insurance responses
   const acceptInsurance = useCallback(() => {
-    wsClient.send({ type: "accept_insurance", tableId: tableIdRef.current } as any);
+    wsClient.send({ type: "accept_insurance", tableId: tableIdRef.current } satisfies AcceptInsuranceMessage);
   }, []);
 
   const declineInsurance = useCallback(() => {
-    wsClient.send({ type: "decline_insurance", tableId: tableIdRef.current } as any);
+    wsClient.send({ type: "decline_insurance", tableId: tableIdRef.current } satisfies DeclineInsuranceMessage);
   }, []);
 
   // Run it vote
   const voteRunIt = useCallback((count: 1 | 2 | 3) => {
-    wsClient.send({ type: "run_it_vote", tableId: tableIdRef.current, count } as any);
+    wsClient.send({ type: "run_it_vote", tableId: tableIdRef.current, count } satisfies RunItVoteMessage);
   }, []);
 
   // Add chips to table stack (between hands only)
   const addChips = useCallback((amount: number) => {
-    wsClient.send({ type: "add_chips", tableId: tableIdRef.current, amount } as any);
+    wsClient.send({ type: "add_chips", tableId: tableIdRef.current, amount } satisfies AddChipsMessage);
   }, []);
 
   // Join table

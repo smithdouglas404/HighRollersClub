@@ -92,7 +92,14 @@ export interface WsClient {
   ip?: string;
 }
 
-const MAX_TABLES_PER_USER = 4;
+// Multi-table limits per tier
+const TIER_TABLE_LIMITS: Record<string, number> = {
+  free: 1, bronze: 1, silver: 4, gold: 4, platinum: 8,
+};
+
+function getMaxTables(tier: string): number {
+  return TIER_TABLE_LIMITS[tier] || 1;
+}
 
 // Message types: Client → Server
 // All table-scoped messages include tableId so the server knows which table the action targets
@@ -513,9 +520,11 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
           return;
         }
       }
-      // Multi-table limit check
-      if (client.tableIds.size >= MAX_TABLES_PER_USER && !client.tableIds.has(msg.tableId)) {
-        sendToUser(client.userId, { type: "error", message: `Maximum ${MAX_TABLES_PER_USER} tables at once` });
+      // Multi-table limit check (tier-based)
+      const userForTables = await storage.getUser(client.userId);
+      const maxTables = getMaxTables(userForTables?.tier || "free");
+      if (client.tableIds.size >= maxTables && !client.tableIds.has(msg.tableId)) {
+        sendToUser(client.userId, { type: "error", message: `Maximum ${maxTables} table${maxTables === 1 ? "" : "s"} at your tier. Upgrade for more.` });
         return;
       }
       const result = await tableManager.joinTable(

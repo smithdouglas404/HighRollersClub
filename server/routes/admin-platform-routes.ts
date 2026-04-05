@@ -228,12 +228,18 @@ export async function registerAdminPlatformRoutes(
       const rakeByPlayer = await storage.getRakeByPlayer(lookbackDays);
       const payouts: { userId: string; amount: number }[] = [];
 
-      for (const entry of rakeByPlayer) {
-        const rakebackAmount = Math.floor(entry.totalRake * percent / 100);
-        if (rakebackAmount <= 0) continue;
+      // Tier-based rakeback percentages (override admin-set flat rate)
+      const TIER_RAKEBACK: Record<string, number> = { free: 0, bronze: 0, silver: 10, gold: 20, platinum: 30 };
 
+      for (const entry of rakeByPlayer) {
         const user = await storage.getUser(entry.userId);
         if (!user) continue;
+
+        // Use tier-based rakeback if higher than admin-set rate
+        const tierPercent = TIER_RAKEBACK[user.tier] || 0;
+        const effectivePercent = Math.max(percent, tierPercent);
+        const rakebackAmount = Math.floor(entry.totalRake * effectivePercent / 100);
+        if (rakebackAmount <= 0) continue;
 
         await storage.updateUser(entry.userId, { chipBalance: user.chipBalance + rakebackAmount });
         await storage.createTransaction({

@@ -1,13 +1,18 @@
 // Geofencing — IP-based jurisdiction blocking
 import type { Request, Response, NextFunction } from "express";
+import { createCache } from "../infra/cache-adapter";
 
 // Countries where online gambling is explicitly prohibited
 // Configure via environment variable BLOCKED_COUNTRIES (comma-separated ISO codes)
 const BLOCKED_COUNTRIES: string[] = (process.env.BLOCKED_COUNTRIES || "").split(",").map(s => s.trim()).filter(Boolean);
 
-// Cache IP → country lookups for 24 hours
+// Cache IP → country lookups — uses Redis when REDIS_URL is set, otherwise in-memory
+const geoCache = createCache<string>("geo");
+const CACHE_TTL_SECONDS = 24 * 60 * 60; // 24 hours
+
+// Legacy in-memory cache kept as fallback for sync access
 const ipCache = new Map<string, { country: string; expiresAt: number }>();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_TTL_MS = CACHE_TTL_SECONDS * 1000;
 
 function getClientIp(req: Request): string {
   const forwarded = req.headers["x-forwarded-for"];
@@ -17,7 +22,11 @@ function getClientIp(req: Request): string {
 }
 
 async function getCountryFromIP(ip: string): Promise<string | null> {
-  // Check cache first
+  // Check distributed cache first (Redis when available)
+  const redisCached = await geoCache.get(ip);
+  if (redisCached) return redisCached;
+
+  // Fallback: check local in-memory cache
   const cached = ipCache.get(ip);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.country;
@@ -51,6 +60,7 @@ async function getCountryFromIP(ip: string): Promise<string | null> {
 
     if (country) {
       ipCache.set(ip, { country, expiresAt: Date.now() + CACHE_TTL_MS });
+      geoCache.set(ip, country, CACHE_TTL_SECONDS).catch(() => {}); // async write to Redis
     }
     return country;
   } catch {

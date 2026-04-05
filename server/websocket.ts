@@ -12,9 +12,38 @@ import { antiCheatEngine } from "./anti-cheat";
 import { fastFoldManager } from "./game/fast-fold-manager";
 import { generateSessionKey, clearSessionKey, encryptCards, hasSessionKey, getSessionKeyHex } from "./game/card-encryption";
 import { obfuscateCards, getEncryptedSpriteMapping, clearSpriteMapping, getOrCreateSpriteMapping } from "./game/card-obfuscation";
+import { getPubSub } from "./infra/ws-pubsub";
 
 // Rate limiting for table password attempts
 const passwordAttempts = new Map<string, number>();
+
+// Track Redis pub/sub unsubscribe functions per user per table
+const pubsubUnsubs = new Map<string, () => void>();
+
+// Subscribe a client to a table's Redis pub/sub channel
+function subscribeClientToTable(userId: string, tableId: string) {
+  const key = `${userId}:${tableId}`;
+  if (pubsubUnsubs.has(key)) return; // already subscribed
+
+  const unsub = getPubSub().subscribe(`table:${tableId}`, (data: any) => {
+    // Deliver the message to this local client (if they're still connected)
+    const client = clients.get(userId);
+    if (client && client.ws.readyState === WebSocket.OPEN && client.userId !== data.excludeUserId) {
+      client.ws.send(JSON.stringify(data.tagged));
+    }
+  });
+  pubsubUnsubs.set(key, unsub);
+}
+
+// Unsubscribe a client from a table's Redis pub/sub channel
+function unsubscribeClientFromTable(userId: string, tableId: string) {
+  const key = `${userId}:${tableId}`;
+  const unsub = pubsubUnsubs.get(key);
+  if (unsub) {
+    unsub();
+    pubsubUnsubs.delete(key);
+  }
+}
 
 // Client connection with metadata — supports multi-tabling
 export interface WsClient {
@@ -186,9 +215,22 @@ export function clearClientTable(userId: string, tableId?: string) {
   }
 }
 
-// Broadcast to all users at a table
+// Broadcast to all users at a table — uses Redis pub/sub when REDIS_URL is set
+// so multiple server instances can broadcast to each other's WebSocket clients
 export function broadcastToTable(tableId: string, msg: ServerMessage, excludeUserId?: string) {
-  const tagged = { ...msg, tableId } as any; // tag with tableId so client can route
+  const tagged = { ...msg, tableId } as any;
+
+  if (process.env.REDIS_URL) {
+    // Multi-instance: publish to Redis channel, all instances will receive and deliver locally
+    getPubSub().publish(`table:${tableId}`, { tagged, excludeUserId }).catch(() => {});
+  } else {
+    // Single instance: deliver directly to local clients
+    deliverToLocalClients(tableId, tagged, excludeUserId);
+  }
+}
+
+// Deliver a message to local WebSocket clients at a table
+function deliverToLocalClients(tableId: string, tagged: any, excludeUserId?: string) {
   clients.forEach((client) => {
     if (client.tableIds.has(tableId) && client.userId !== excludeUserId) {
       if (client.ws.readyState === WebSocket.OPEN) {
@@ -196,6 +238,15 @@ export function broadcastToTable(tableId: string, msg: ServerMessage, excludeUse
       }
     }
   });
+}
+
+// Subscribe to Redis pub/sub channels for table broadcasts (called once on startup)
+function initPubSubSubscriptions() {
+  if (!process.env.REDIS_URL) return;
+
+  // Global subscription for all table messages — re-subscribe per table as clients join
+  // This is handled dynamically in the join/leave handlers below
+  console.log("[WS] Redis pub/sub active — multi-instance broadcasting enabled");
 }
 
 // Send personalized game state to each player at a table
@@ -355,6 +406,7 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
       // Handle disconnect for ALL tables
       for (const tid of client.tableIds) {
         tableManager.handleDisconnect(tid, client.userId);
+        if (process.env.REDIS_URL) unsubscribeClientFromTable(user.id, tid);
       }
       antiCheatEngine.removeConnection(user.id);
       clearSessionKey(user.id);
@@ -425,6 +477,12 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       }
       client.tableIds.add(msg.tableId);
       antiCheatEngine.setPlayerTable(client.userId, msg.tableId);
+
+      // Subscribe to Redis pub/sub for this table (multi-instance broadcasting)
+      if (process.env.REDIS_URL) {
+        subscribeClientToTable(client.userId, msg.tableId);
+      }
+
       sendGameStateToTable(msg.tableId);
 
       // Send recent chat history to the joining player
@@ -453,6 +511,7 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       const stillAtTable = tableManager.getTable(leaveTableId)?.engine.getPlayer(client.userId);
       if (!stillAtTable) {
         client.tableIds.delete(leaveTableId);
+        if (process.env.REDIS_URL) unsubscribeClientFromTable(client.userId, leaveTableId);
       } else {
         sendToUser(client.userId, { type: "info", message: "You will leave after this hand completes" } as any);
       }

@@ -375,6 +375,16 @@ At high stakes, 1 chip could be significant. Should be configurable.
 | 25 | Move tournament schedule to database | HIGH |
 | 29 | Make SESSION_SECRET throw in production | HIGH |
 
+### THIS SPRINT (Continued — Secrets & Logging)
+| # | Item | Risk |
+|---|------|------|
+| 33 | Remove console.log of email verification tokens (`auth.ts:302`) | CRITICAL — token leak |
+| 34 | Remove console.log of recovery codes (`auth.ts:742`) | CRITICAL — account takeover |
+| 35 | Remove console.log of KYC email content (`routes.ts:75`) | CRITICAL — PII leak |
+| 36 | Replace system user password `"system-no-login"` with random hash (`storage.ts:319,1429`) | HIGH |
+| 37 | Replace direct wallet API key `"direct"` with env var (`payment-service.ts:482`) | HIGH |
+| 38 | Remove Replit/Railway env var fallbacks from payment code | MEDIUM |
+
 ### NEXT SPRINT (Polish)
 | # | Item | Risk |
 |---|------|------|
@@ -382,3 +392,52 @@ At high stakes, 1 chip could be significant. Should be configurable.
 | 26 | Add shop item images or remove imageless items | MEDIUM |
 | 28 | Move blind presets to database | MEDIUM |
 | 30-32 | Fix geofence HTTPS, legal dates, ledger tolerance | MEDIUM |
+
+---
+
+## ADDITIONAL FINDINGS (From Mock/Fake Data Audit)
+
+### 33. Security Tokens Logged to Console
+**File:** `server/auth.ts:302`
+```typescript
+console.log(`[DEV] Email verification token for ${username}: ${token}`);
+```
+**File:** `server/auth.ts:742`
+```typescript
+console.log(`[DEV] Recovery code for ${user.username}: ${code}`);
+```
+**File:** `server/routes.ts:75`
+```typescript
+console.log(`[DEV] KYC email to ${to}: ${subject}`);
+```
+**Risk:** CRITICAL — verification tokens and recovery codes are direct account takeover vectors. Console logs can be captured in log aggregators, CI/CD outputs, and monitoring systems. These must be removed entirely, not gated behind `NODE_ENV`.
+
+### 34. System User Has Hardcoded Password
+**File:** `server/storage.ts:319,1429`
+```typescript
+password: "system-no-login",
+memberId: "HR-SYSTEM00",
+```
+**Risk:** HIGH — If an attacker can enumerate users or access the database, this known password is a vector. System user should use `crypto.randomBytes(64).toString("hex")` as password (never needs to log in).
+
+### 35. Direct Wallet API Key is Literal String "direct"
+**File:** `server/payments/payment-service.ts:482`
+```typescript
+apiKey: "direct",
+```
+**Risk:** HIGH — placeholder that bypasses authentication to the direct wallet gateway. Must be replaced with `process.env.DIRECT_WALLET_API_KEY` with production throw.
+
+### 36. Client Debug Logs Gated on DEV But Still Present
+**File:** `client/src/lib/game-engine.ts:391,402,414,427`
+```typescript
+if (import.meta.env.DEV) console.log(`[BET] ${player.name} action=${action} amount=${amount}...`);
+```
+**Risk:** MEDIUM — These are properly gated behind `import.meta.env.DEV` now (fixed from earlier). Verify Vite strips them in production build. If not, chip amounts and player actions leak to browser console.
+
+### 37. Replit/Railway Platform Dependencies in Payment Code
+**File:** `server/payments/stripe-gateway.ts:113-114`, `server/payments/payment-service.ts:464-465`
+```typescript
+|| (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
+|| (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
+```
+**Risk:** MEDIUM — Hardcoded dependency on specific hosting platforms. In production, these won't exist. Remove and require `WEBHOOK_BASE_URL` everywhere.

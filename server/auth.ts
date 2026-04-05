@@ -412,7 +412,20 @@ export function registerAuthRoutes(app: Express) {
 
   // Get current user (also checks Firebase token if no session)
   app.get("/api/auth/me", async (req, res) => {
-    if (req.user) return res.json(req.user);
+    if (req.user) {
+      // Add derived tier fields not stored in DB
+      const { getTierDef } = require("./tier-config");
+      const tierDef = getTierDef((req.user as any).tier || "free");
+      return res.json({
+        ...req.user,
+        multiTableLimit: tierDef.multiTableLimit,
+        depositLimitDaily: tierDef.depositLimitDaily,
+        withdrawLimitWeekly: tierDef.withdrawLimitWeekly,
+        maxBigBlind: tierDef.maxBigBlind,
+        dailyBonus: tierDef.dailyBonus,
+        rakebackPercent: tierDef.rakebackPercent,
+      });
+    }
 
     // Try Firebase token fallback
     const authHeader = req.headers.authorization;

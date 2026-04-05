@@ -22,7 +22,13 @@ export interface AuthUser {
   kycRejectionReason?: string | null;
   memberId?: string | null;
   kycBlockchainTxHash?: string | null;
+  kycLevel?: string;
   firebaseUid?: string | null;
+  loyaltyPoints?: number;
+  loyaltyLevel?: number;
+  loyaltyStreakDays?: number;
+  tierPlan?: string | null;
+  premiumUntil?: string | null;
   createdAt: string;
 }
 

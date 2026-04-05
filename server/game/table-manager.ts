@@ -458,6 +458,64 @@ class TableManager {
         }
       }
 
+      // ─── Award High Roller Points (HRP) ─────────────────────────────────
+      {
+        const { HRP_EARN_RATES } = require("../loyalty-config");
+        const isTournament = gameFormat === "tournament" || gameFormat === "sng" || gameFormat === "lottery_sng";
+        const humanPlayers = summary.players.filter(p => !p.id.startsWith("bot-"));
+        const humanWinnerIds = new Set(summary.winners.filter(w => !w.playerId.startsWith("bot-")).map(w => w.playerId));
+
+        for (const p of humanPlayers) {
+          // Base HRP: 1 per hand played, +1 extra for tournament hands (total 2)
+          let baseHrp = HRP_EARN_RATES.handPlayed;
+          if (isTournament) {
+            baseHrp += HRP_EARN_RATES.tournamentHand - HRP_EARN_RATES.handPlayed; // +1 extra
+          }
+          // Pot winner bonus: +2 HRP
+          if (humanWinnerIds.has(p.id)) {
+            baseHrp += HRP_EARN_RATES.potWon;
+          }
+
+          // Get player's subscription tier for multiplier
+          storage.getUser(p.id).then(user => {
+            if (!user) return;
+            const tier = user.tier || "free";
+            const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+            // Award base HRP for the hand
+            storage.awardLoyaltyPoints(p.id, baseHrp, humanWinnerIds.has(p.id) ? "potWon" : (isTournament ? "tournamentHand" : "handPlayed"), tier).catch(() => {});
+
+            // Check grinder bonus: 100 hands in a day
+            storage.getPlayerStats(p.id).then(stats => {
+              if (!stats) return;
+              // Use handsPlayed modulo to detect crossing the 100-hand threshold today
+              // Simple heuristic: award once when handsPlayed crosses a 100 boundary
+              if (stats.handsPlayed > 0 && stats.handsPlayed % 100 === 0) {
+                storage.awardLoyaltyPoints(p.id, HRP_EARN_RATES.grinderBonus, "grinderBonus", tier).catch(() => {});
+              }
+            }).catch(() => {});
+
+            // Check and update play streak
+            const lastPlayDate = user.loyaltyLastPlayDate;
+            if (lastPlayDate !== today) {
+              // New day of play — update streak
+              const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+              const newStreak = (lastPlayDate === yesterday) ? user.loyaltyStreakDays + 1 : 1;
+
+              storage.updateUser(p.id, {
+                loyaltyLastPlayDate: today,
+                loyaltyStreakDays: newStreak,
+              }).catch(() => {});
+
+              // Award streak bonus at 7 consecutive days, then every 7 after
+              if (newStreak > 0 && newStreak % 7 === 0) {
+                storage.awardLoyaltyPoints(p.id, HRP_EARN_RATES.streakBonus, "streakBonus", tier).catch(() => {});
+              }
+            }
+          }).catch(() => {});
+        }
+      }
+
       // Update league standings for club tables
       if (tableRow.clubId) {
         this.updateLeagueStandings(tableRow.clubId, summary.winners.map(w => w.playerId)).catch(() => {});

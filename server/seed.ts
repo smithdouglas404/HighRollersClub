@@ -103,6 +103,49 @@ async function seedShopItems() {
     { name: "Elite Player's Pass", description: "7-day premium access: 2x daily bonus, exclusive tables, priority support", category: "premium", rarity: "legendary", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
     { name: "VIP Chip Bundle", description: "Bonus 2,000 chips added to your balance", category: "premium", rarity: "epic", price: 1500, currency: "chips", imageUrl: "/avatars/avatar_merchant_boss.webp" },
     { name: "Lucky Charm", description: "Cosmetic lucky charm shown at your seat", category: "premium", rarity: "rare", price: 2500, currency: "chips", imageUrl: "/avatars/avatar_oracle_seer.webp" },
+
+    // ─── Card Backs ──────────────────────────────────────────────────────
+    { name: "Classic Red", description: "Traditional red card back design", category: "card_back", rarity: "common", price: 0, currency: "chips", imageUrl: "/avatars/avatar_red_wolf.webp" },
+    { name: "Midnight Black", description: "Sleek black card back with subtle shimmer", category: "card_back", rarity: "common", price: 300, currency: "chips", imageUrl: "/avatars/avatar_dark_ace.webp" },
+    { name: "Royal Blue", description: "Deep blue card back with royal crest", category: "card_back", rarity: "uncommon", price: 800, currency: "chips", imageUrl: "/avatars/avatar_ice_queen.webp" },
+    { name: "Gold Foil", description: "Luxurious gold foil card back", category: "card_back", rarity: "rare", price: 2500, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
+    { name: "Carbon Fiber", description: "Modern carbon fiber texture card back", category: "card_back", rarity: "rare", price: 3000, currency: "chips", imageUrl: "/avatars/avatar_steel_ghost.webp" },
+    { name: "Holographic", description: "Shimmering holographic card back", category: "card_back", rarity: "epic", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_chrome_siren.webp" },
+    { name: "Animated Fire", description: "Card back with animated fire effect", category: "card_back", rarity: "epic", price: 7500, currency: "chips", imageUrl: "/avatars/avatar_iron_bull.webp" },
+    { name: "Animated Lightning", description: "Card back with crackling lightning animation", category: "card_back", rarity: "legendary", price: 12000, currency: "chips", imageUrl: "/avatars/avatar_bolt_runner.webp" },
+    { name: "Animated Galaxy", description: "Card back with swirling galaxy animation", category: "card_back", rarity: "mythic", price: 25000, currency: "chips", imageUrl: "/avatars/avatar_void_witch.webp" },
+
+    // ─── Profile Frames ─────────────────────────────────────────────────
+    { name: "Simple Silver", description: "Clean silver profile frame", category: "frame", rarity: "common", price: 200, currency: "chips", imageUrl: "/avatars/avatar_tech_monk.webp" },
+    { name: "Bronze Laurel", description: "Bronze laurel wreath profile frame", category: "frame", rarity: "uncommon", price: 600, currency: "chips", imageUrl: "/avatars/avatar_mech_pilot.webp" },
+    { name: "Gold Crown", description: "Regal gold crown profile frame", category: "frame", rarity: "rare", price: 2000, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
+    { name: "Diamond Ring", description: "Sparkling diamond ring profile frame", category: "frame", rarity: "epic", price: 4000, currency: "chips", imageUrl: "/avatars/avatar_chrome_siren.webp" },
+    { name: "Animated Flame Ring", description: "Profile frame with animated flames", category: "frame", rarity: "legendary", price: 8000, currency: "chips", imageUrl: "/avatars/avatar_iron_bull.webp" },
+    { name: "Animated Neon Pulse", description: "Pulsing neon profile frame", category: "frame", rarity: "legendary", price: 10000, currency: "chips", imageUrl: "/avatars/avatar_neon_viper.webp" },
+    { name: "Holographic Prism", description: "Prismatic holographic profile frame", category: "frame", rarity: "mythic", price: 20000, currency: "chips", imageUrl: "/avatars/avatar_oracle_seer.webp" },
+
+    // ─── Seat Effects ───────────────────────────────────────────────────
+    { name: "Subtle Glow", description: "Soft ambient glow around your seat", category: "seat_effect", rarity: "common", price: 500, currency: "chips", imageUrl: "/avatars/avatar_neon_medic.webp" },
+    { name: "Smoke Trail", description: "Wispy smoke effect around your seat", category: "seat_effect", rarity: "uncommon", price: 1500, currency: "chips", imageUrl: "/avatars/avatar_shadow_king.webp" },
+    { name: "Electric Sparks", description: "Crackling electric sparks at your seat", category: "seat_effect", rarity: "rare", price: 3000, currency: "chips", imageUrl: "/avatars/avatar_bolt_runner.webp" },
+    { name: "Flame Aura", description: "Fiery aura surrounding your seat", category: "seat_effect", rarity: "epic", price: 6000, currency: "chips", imageUrl: "/avatars/avatar_iron_bull.webp" },
+    { name: "Ice Crystal", description: "Frozen crystal effect at your seat", category: "seat_effect", rarity: "epic", price: 6000, currency: "chips", imageUrl: "/avatars/avatar_ice_queen.webp" },
+    { name: "Golden Crown Glow", description: "Majestic golden crown glow effect", category: "seat_effect", rarity: "legendary", price: 15000, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
+
+    // ─── Win Celebrations ───────────────────────────────────────────────
+    { name: "Chip Cascade", description: "Chips cascade across the screen", category: "win_celebration", rarity: "common", price: 0, currency: "chips", imageUrl: "/avatars/avatar_merchant_boss.webp" },
+    { name: "Confetti Burst", description: "Colorful confetti explosion", category: "win_celebration", rarity: "uncommon", price: 1000, currency: "chips", imageUrl: "/avatars/avatar_punk_duchess.webp" },
+    { name: "Gold Rain", description: "Golden coins rain from above", category: "win_celebration", rarity: "rare", price: 3000, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
+    { name: "Fireworks", description: "Spectacular fireworks display", category: "win_celebration", rarity: "epic", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_neon_fox.webp" },
+    { name: "Lightning Strike", description: "Dramatic lightning strike celebration", category: "win_celebration", rarity: "legendary", price: 10000, currency: "chips", imageUrl: "/avatars/avatar_bolt_runner.webp" },
+    { name: "Nuclear Explosion", description: "Massive nuclear explosion effect", category: "win_celebration", rarity: "mythic", price: 20000, currency: "chips", imageUrl: "/avatars/avatar_cyber_samurai.webp" },
+
+    // ─── Entrance Animations ────────────────────────────────────────────
+    { name: "Slide In", description: "Smooth slide-in entrance animation", category: "entrance_animation", rarity: "common", price: 300, currency: "chips", imageUrl: "/avatars/avatar_street_racer.webp" },
+    { name: "Smoke Appear", description: "Appear from a cloud of smoke", category: "entrance_animation", rarity: "uncommon", price: 1200, currency: "chips", imageUrl: "/avatars/avatar_shadow_king.webp" },
+    { name: "Portal Open", description: "Step through a glowing portal", category: "entrance_animation", rarity: "rare", price: 3500, currency: "chips", imageUrl: "/avatars/avatar_void_witch.webp" },
+    { name: "Lightning Strike Entry", description: "Arrive with a bolt of lightning", category: "entrance_animation", rarity: "epic", price: 7000, currency: "chips", imageUrl: "/avatars/avatar_bolt_runner.webp" },
+    { name: "Holographic Materialize", description: "Materialize as a hologram", category: "entrance_animation", rarity: "mythic", price: 15000, currency: "chips", imageUrl: "/avatars/avatar_chrome_siren.webp" },
   ];
 
   for (const item of items) {

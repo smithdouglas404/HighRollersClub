@@ -13,7 +13,7 @@ import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
   BarChart3, LogOut, Search, Wallet, Medal,
   Shield, ChevronDown, Check, Menu, X, Coins, Crown, Shirt,
-  Store, Handshake, FileSearch, Link as LinkChain
+  Store, Handshake, FileSearch, Link as LinkChain, Star
 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
@@ -31,6 +31,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { icon: Trophy, label: "Games & Tables", href: "/lobby", match: ["/lobby", "/game", "/table"] },
   { icon: Medal, label: "Tournaments", href: "/tournaments", match: ["/tournaments"] },
   { icon: ShoppingBag, label: "Shop", href: "/shop", match: ["/shop"] },
+  { icon: Star, label: "Loyalty", href: "/loyalty", match: ["/loyalty"] },
   { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
   { icon: FileSearch, label: "Explorer", href: "/explorer", match: ["/explorer"] },
   { icon: LinkChain, label: "Blockchain", href: "/blockchain", match: ["/blockchain"] },

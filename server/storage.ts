@@ -15,6 +15,7 @@ import {
   type MarketplaceListing, type Stake,
   type ApiKey,
   type ClubMessage,
+  type LoyaltyLog,
   walletTypeEnum,
   users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, tournamentRegistrations, playerStats,
   clubInvitations, clubAnnouncements, clubEvents,
@@ -28,7 +29,9 @@ import {
   marketplaceListings, stakes,
   apiKeys,
   clubMessages,
+  loyaltyLogs,
 } from "@shared/schema";
+import { getLoyaltyLevel } from "./loyalty-config";
 import { eq, and, desc, sql, inArray, gte, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { hasDatabase, getDb } from "./db";
@@ -280,6 +283,10 @@ export interface IStorage {
   // Club Messages (Club Chat)
   getClubMessages(clubId: string, limit?: number): Promise<ClubMessage[]>;
   createClubMessage(data: { clubId: string; userId: string; message: string }): Promise<ClubMessage>;
+
+  // Loyalty (HRP)
+  awardLoyaltyPoints(userId: string, baseAmount: number, reason: string, tier?: string): Promise<{ newTotal: number; newLevel: number; leveledUp: boolean }>;
+  getLoyaltyHistory(userId: string, limit?: number): Promise<LoyaltyLog[]>;
 }
 
 // ─── In-Memory Storage (fallback when no DATABASE_URL) ───────────────────────
@@ -388,6 +395,10 @@ export class MemStorage implements IStorage {
       sessionTimeLimitMinutes: data.sessionTimeLimitMinutes ?? 0,
       lossLimitDaily: data.lossLimitDaily ?? 0,
       coolOffUntil: data.coolOffUntil ?? null,
+      loyaltyPoints: data.loyaltyPoints ?? 0,
+      loyaltyLevel: data.loyaltyLevel ?? 1,
+      loyaltyStreakDays: data.loyaltyStreakDays ?? 0,
+      loyaltyLastPlayDate: data.loyaltyLastPlayDate ?? null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -1412,6 +1423,46 @@ export class MemStorage implements IStorage {
   // ── OAuth ──────────────────────────────────────────────────────────────
   async getUserByProvider(provider: string, providerId: string) {
     return Array.from(this.users.values()).find(u => u.provider === provider && u.providerId === providerId);
+  }
+
+  // ── Loyalty (HRP) ─────────────────────────────────────────────────────
+  private loyaltyLogsList: LoyaltyLog[] = [];
+
+  async awardLoyaltyPoints(userId: string, baseAmount: number, reason: string, tier?: string) {
+    const { calculateHRP } = await import("./loyalty-config");
+    const multiplier = tier ? (await import("./loyalty-config")).TIER_HRP_MULTIPLIER[tier] ?? 1.0 : 1.0;
+    const finalAmount = calculateHRP(baseAmount, tier ?? "free");
+
+    const user = this.users.get(userId);
+    if (!user) return { newTotal: 0, newLevel: 1, leveledUp: false };
+
+    const oldLevel = user.loyaltyLevel;
+    const newTotal = user.loyaltyPoints + finalAmount;
+    const newLevelDef = getLoyaltyLevel(newTotal);
+
+    user.loyaltyPoints = newTotal;
+    user.loyaltyLevel = newLevelDef.level;
+
+    this.loyaltyLogsList.push({
+      id: randomUUID(),
+      userId,
+      amount: finalAmount,
+      reason,
+      multiplier: Math.round(multiplier * 100),
+      baseAmount,
+      newTotal,
+      newLevel: newLevelDef.level,
+      createdAt: new Date(),
+    } as any);
+
+    return { newTotal, newLevel: newLevelDef.level, leveledUp: newLevelDef.level > oldLevel };
+  }
+
+  async getLoyaltyHistory(userId: string, limit = 20) {
+    return this.loyaltyLogsList
+      .filter(l => l.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
   }
 }
 
@@ -2628,6 +2679,58 @@ export class DatabaseStorage implements IStorage {
     const [user] = await this.db.select().from(users)
       .where(and(eq(users.provider, provider), eq(users.providerId, providerId)));
     return user;
+  }
+
+  // ── Loyalty (HRP) ─────────────────────────────────────────────────────
+  async awardLoyaltyPoints(userId: string, baseAmount: number, reason: string, tier?: string) {
+    const { calculateHRP, TIER_HRP_MULTIPLIER } = await import("./loyalty-config");
+    const multiplier = tier ? (TIER_HRP_MULTIPLIER[tier] ?? 1.0) : 1.0;
+    const finalAmount = calculateHRP(baseAmount, tier ?? "free");
+
+    // Atomically increment loyalty_points and update level
+    const [updated] = await this.db.update(users)
+      .set({
+        loyaltyPoints: sql`${users.loyaltyPoints} + ${finalAmount}`,
+      })
+      .where(eq(users.id, userId))
+      .returning({
+        loyaltyPoints: users.loyaltyPoints,
+        loyaltyLevel: users.loyaltyLevel,
+      });
+
+    if (!updated) return { newTotal: 0, newLevel: 1, leveledUp: false };
+
+    const newTotal = updated.loyaltyPoints;
+    const newLevelDef = getLoyaltyLevel(newTotal);
+    const oldLevel = updated.loyaltyLevel;
+    const leveledUp = newLevelDef.level > oldLevel;
+
+    // Update level if changed
+    if (leveledUp) {
+      await this.db.update(users)
+        .set({ loyaltyLevel: newLevelDef.level })
+        .where(eq(users.id, userId));
+    }
+
+    // Log the award
+    await this.db.insert(loyaltyLogs).values({
+      userId,
+      amount: finalAmount,
+      reason,
+      multiplier: Math.round(multiplier * 100),
+      baseAmount,
+      newTotal,
+      newLevel: newLevelDef.level,
+    });
+
+    return { newTotal, newLevel: newLevelDef.level, leveledUp };
+  }
+
+  async getLoyaltyHistory(userId: string, limit = 20) {
+    return this.db.select().from(loyaltyLogs)
+      .where(eq(loyaltyLogs.userId, userId))
+      .orderBy(desc(loyaltyLogs.createdAt))
+      .limit(limit);
   }
 }
 

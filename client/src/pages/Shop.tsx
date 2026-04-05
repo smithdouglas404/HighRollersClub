@@ -12,12 +12,16 @@ import {
 } from "lucide-react";
 import chipPile from "@assets/generated_images/chip_stack_gold_pile.webp";
 
-const TABS = ["Avatars", "Table Themes", "Frames", "Emotes", "Taunts", "Premium", "Wishlist", "Inventory"];
+const TABS = ["Avatars", "Table Themes", "Frames", "Card Backs", "Seat Effects", "Win Celebrations", "Entrance Animations", "Emotes", "Taunts", "Premium", "Wishlist", "Inventory"];
 
 const TAB_CATEGORY_MAP: Record<string, string> = {
   Avatars: "avatar",
   "Table Themes": "table_theme",
   Frames: "frame",
+  "Card Backs": "card_back",
+  "Seat Effects": "seat_effect",
+  "Win Celebrations": "win_celebration",
+  "Entrance Animations": "entrance_animation",
   Emotes: "emote",
   Taunts: "taunt",
   Premium: "premium",

@@ -723,10 +723,65 @@ export async function registerPlayerRoutes(
         });
       }
 
+      // Award HRP for mission completion
+      {
+        const { HRP_EARN_RATES } = await import("../loyalty-config");
+        const user = await storage.getUser(req.user!.id);
+        const tier = user?.tier || "free";
+        const isWeekly = mission.periodType === "weekly";
+        const hrpAmount = isWeekly ? HRP_EARN_RATES.weeklyMission : HRP_EARN_RATES.dailyMission;
+        const reason = isWeekly ? "weeklyMission" : "dailyMission";
+        await storage.awardLoyaltyPoints(req.user!.id, hrpAmount, reason, tier);
+      }
+
       res.json({ message: "Reward claimed", reward: mission.reward });
     } catch (err) {
       next(err);
     }
+  });
+
+  // ─── Loyalty (HRP) Routes ─────────────────────────────────────────────
+  app.get("/api/loyalty/status", requireAuth, async (req, res, next) => {
+    try {
+      const { LOYALTY_LEVELS, getLoyaltyLevel } = await import("../loyalty-config");
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const currentLevel = getLoyaltyLevel(user.loyaltyPoints);
+      const nextLevel = LOYALTY_LEVELS.find(l => l.level === currentLevel.level + 1) || null;
+
+      res.json({
+        hrp: user.loyaltyPoints,
+        level: currentLevel.level,
+        levelName: currentLevel.name,
+        badge: currentLevel.badge,
+        nextLevel: nextLevel ? {
+          level: nextLevel.level,
+          name: nextLevel.name,
+          hrpRequired: nextLevel.hrpRequired,
+          hrpRemaining: nextLevel.hrpRequired - user.loyaltyPoints,
+          badge: nextLevel.badge,
+        } : null,
+        streakDays: user.loyaltyStreakDays,
+        lastPlayDate: user.loyaltyLastPlayDate,
+        tier: user.tier,
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/loyalty/levels", async (_req, res, next) => {
+    try {
+      const { LOYALTY_LEVELS } = await import("../loyalty-config");
+      res.json(LOYALTY_LEVELS);
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/loyalty/history", requireAuth, async (req, res, next) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const history = await storage.getLoyaltyHistory(req.user!.id, limit);
+      res.json(history);
+    } catch (err) { next(err); }
   });
 
   // ─── Player Notes ─────────────────���────────────────────────────────────

@@ -57,6 +57,7 @@ import ClubRevenueReports from "@/pages/ClubRevenueReports";
 import ClubMemberAnalytics from "@/pages/ClubMemberAnalytics";
 import ClubTournamentAnalytics from "@/pages/ClubTournamentAnalytics";
 import AvatarCustomizer from "@/pages/AvatarCustomizer";
+import LoyaltyDashboard from "@/pages/LoyaltyDashboard";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -217,6 +218,10 @@ function ProtectedAvatarCustomizer() {
   return <AuthGate><AvatarCustomizer /></AuthGate>;
 }
 
+function ProtectedLoyalty() {
+  return <AuthGate><LoyaltyDashboard /></AuthGate>;
+}
+
 function GameWithTable({ params }: { params: { tableId: string } }) {
   return <AuthGate><ErrorBoundary fallbackTitle="Game Error"><Game tableId={params.tableId} /></ErrorBoundary></AuthGate>;
 }
@@ -312,6 +317,7 @@ function Router() {
       <Route path="/clubs/:id/analytics">{(params) => <ProtectedClubMemberAnalytics params={params} />}</Route>
       <Route path="/clubs/:id/tournament-analytics">{(params) => <ProtectedClubTournamentAnalytics params={params} />}</Route>
       <Route path="/avatar-customizer" component={ProtectedAvatarCustomizer} />
+      <Route path="/loyalty" component={ProtectedLoyalty} />
       <Route path="/avatar-render">{() => <Redirect to="/wardrobe" />}</Route>
       <Route component={NotFound} />
     </Switch>

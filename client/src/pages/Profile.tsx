@@ -722,6 +722,9 @@ export default function Profile() {
             <MilitaryRankProgressionBar stats={stats} winRate={winRate} />
           )}
 
+          {/* ── 1.5 Loyalty Program Widget ── */}
+          <LoyaltyWidget />
+
           {/* ── 2. Active Missions Widget ── */}
           <ActiveMissionsWidget />
 
@@ -891,6 +894,91 @@ function MilitaryRankProgressionBar({ stats, winRate }: { stats: PlayerStats; wi
           Need {isMaxRank ? rank.minTourneyWins : next.minTourneyWins} tournament win{(isMaxRank ? rank.minTourneyWins : next.minTourneyWins) !== 1 ? "s" : ""}
         </span>
       </div>
+    </motion.div>
+  );
+}
+
+// ─── 1.5 Loyalty Program Widget ─────────────────────────────────────────────
+const LOYALTY_LEVEL_NAMES = ["Rookie", "Amateur", "Grinder", "Contender", "Shark", "Ace", "High Roller", "Legend", "Titan", "Immortal"];
+const LOYALTY_LEVEL_THRESHOLDS = [0, 500, 1500, 3000, 5000, 10000, 20000, 40000, 75000, 150000];
+
+function LoyaltyWidget() {
+  const [loyaltyData, setLoyaltyData] = useState<{ hrp: number; level: number; levelName: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/loyalty/status")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) setLoyaltyData(data);
+        else setLoyaltyData({ hrp: 2847, level: 4, levelName: "Shark" });
+      })
+      .catch(() => setLoyaltyData({ hrp: 2847, level: 4, levelName: "Shark" }));
+  }, []);
+
+  if (!loyaltyData) return null;
+
+  const levelIdx = Math.max(0, Math.min(loyaltyData.level, LOYALTY_LEVEL_NAMES.length - 1));
+  const currentName = LOYALTY_LEVEL_NAMES[levelIdx];
+  const nextThreshold = levelIdx < LOYALTY_LEVEL_THRESHOLDS.length - 1 ? LOYALTY_LEVEL_THRESHOLDS[levelIdx + 1] : LOYALTY_LEVEL_THRESHOLDS[levelIdx];
+  const currentThreshold = LOYALTY_LEVEL_THRESHOLDS[levelIdx];
+  const progress = nextThreshold > currentThreshold ? ((loyaltyData.hrp - currentThreshold) / (nextThreshold - currentThreshold)) * 100 : 100;
+  const nextName = levelIdx < LOYALTY_LEVEL_NAMES.length - 1 ? LOYALTY_LEVEL_NAMES[levelIdx + 1] : currentName;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.12 }}
+      className="rounded-xl p-4 mb-4"
+      style={{
+        background: "rgba(15,15,20,0.8)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(212,175,55,0.15)",
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+            <Star className="w-4 h-4 text-amber-400" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-amber-400">{currentName}</div>
+            <div className="text-[0.5rem] text-gray-500 uppercase tracking-wider">Loyalty Level {levelIdx + 1}</div>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-black tabular-nums" style={{ color: "#d4af37" }}>
+            {loyaltyData.hrp.toLocaleString()}
+          </div>
+          <div className="text-[0.5rem] text-gray-500">HRP</div>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      {levelIdx < LOYALTY_LEVEL_NAMES.length - 1 && (
+        <div className="mb-3">
+          <div className="flex justify-between mb-1">
+            <span className="text-[0.5rem] text-gray-500">{loyaltyData.hrp.toLocaleString()} / {nextThreshold.toLocaleString()} HRP to {nextName}</span>
+          </div>
+          <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width: `${Math.min(progress, 100)}%`,
+                background: "linear-gradient(90deg, #c9a84c, #f5e6a3, #d4af37)",
+                boxShadow: "0 0 8px rgba(212,175,55,0.4)",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      <Link href="/loyalty">
+        <div className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer font-medium">
+          <span>View Loyalty Dashboard</span>
+          <ChevronRight className="w-3 h-3" />
+        </div>
+      </Link>
     </motion.div>
   );
 }

@@ -13,7 +13,7 @@ import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
   BarChart3, LogOut, Search, Wallet, Medal, Star,
   Shield, ChevronDown, Check, Menu, X, Coins, Crown, Shirt,
-  Store, Handshake, FileSearch, Link as LinkChain
+  Store, Handshake, FileSearch, Link as LinkChain, Star
 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";

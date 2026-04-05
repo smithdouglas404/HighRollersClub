@@ -46,7 +46,7 @@ export const users = pgTable("users", {
   sessionTimeLimitMinutes: integer("session_time_limit_minutes").notNull().default(0),
   lossLimitDaily: integer("loss_limit_daily").notNull().default(0),
   coolOffUntil: timestamp("cool_off_until"),
-  // Loyalty program fields
+// Loyalty program fields
   loyaltyPoints: integer("loyalty_points").notNull().default(0),
   loyaltyLevel: integer("loyalty_level").notNull().default(1),
   loyaltyMultiplier: numeric("loyalty_multiplier", { precision: 3, scale: 1 }).notNull().default("1.0"),
@@ -54,6 +54,9 @@ export const users = pgTable("users", {
   lastLoginRewardAt: timestamp("last_login_reward_at"),
   referredBy: varchar("referred_by"),
   referralCode: varchar("referral_code").unique(),
+// High Roller Points (HRP) loyalty program
+  loyaltyStreakDays: integer("loyalty_streak_days").notNull().default(0),
+  loyaltyLastPlayDate: text("loyalty_last_play_date"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -1294,3 +1297,14 @@ export const hrpTransactions = pgTable("hrp_transactions", {
 ]);
 
 export type HrpTransaction = typeof hrpTransactions.$inferSelect;
+// ─── Loyalty Log (HRP earning history) ────────────────────────────────────────
+export const loyaltyLogs = pgTable("loyalty_logs", {
+  amount: integer("amount").notNull(), // HRP earned (after multiplier)
+  reason: text("reason").notNull(), // handPlayed, potWon, tournamentHand, dailyMission, weeklyMission, grinderBonus, streakBonus, etc.
+  multiplier: integer("multiplier_x100").notNull().default(100), // stored as x100 (e.g., 150 = 1.5x)
+  baseAmount: integer("base_amount").notNull(), // HRP before multiplier
+  newTotal: integer("new_total").notNull(), // total HRP after this award
+  newLevel: integer("new_level").notNull(), // loyalty level after this award
+  index("idx_loyalty_logs_user").on(table.userId),
+  index("idx_loyalty_logs_created").on(table.createdAt),
+export type LoyaltyLog = typeof loyaltyLogs.$inferSelect;

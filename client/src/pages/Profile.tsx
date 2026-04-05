@@ -495,6 +495,47 @@ export default function Profile() {
             )}
           </motion.div>
 
+          {/* ── Performance Dashboard ── */}
+          {stats && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+              <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(15,15,20,0.7)", border: "1px solid rgba(212,175,55,0.12)" }}>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" /> Performance Dashboard
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="rounded-lg p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <div className="text-lg font-black text-green-400">{(stats.totalWinnings || 0).toLocaleString()}</div>
+                    <div className="text-[10px] text-gray-500 uppercase">Total Winnings</div>
+                  </div>
+                  <div className="rounded-lg p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <div className="text-lg font-black text-cyan-400">{stats.handsPlayed || 0}</div>
+                    <div className="text-[10px] text-gray-500 uppercase">Hands Played</div>
+                  </div>
+                  <div className="rounded-lg p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <div className="text-lg font-black text-amber-400">{stats.bestWinStreak || 0}</div>
+                    <div className="text-[10px] text-gray-500 uppercase">Best Win Streak</div>
+                  </div>
+                  <div className="rounded-lg p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <div className="text-lg font-black text-purple-400">{stats.sngWins || 0}</div>
+                    <div className="text-[10px] text-gray-500 uppercase">Tournament Wins</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <div className="flex justify-between mb-1.5"><span className="text-[10px] text-gray-500 uppercase">VPIP</span><span className="text-xs font-bold text-primary">{stats.vpip || 0}%</span></div>
+                    <div className="w-full h-2 rounded-full bg-white/5"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(stats.vpip || 0, 100)}%` }} /></div>
+                    <p className="text-[9px] text-gray-600 mt-1">Voluntarily put $ in pot</p>
+                  </div>
+                  <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <div className="flex justify-between mb-1.5"><span className="text-[10px] text-gray-500 uppercase">PFR</span><span className="text-xs font-bold text-purple-400">{stats.pfr || 0}%</span></div>
+                    <div className="w-full h-2 rounded-full bg-white/5"><div className="h-full rounded-full bg-purple-400 transition-all" style={{ width: `${Math.min(stats.pfr || 0, 100)}%` }} /></div>
+                    <p className="text-[9px] text-gray-600 mt-1">Pre-flop raise frequency</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* ── Achievement Badges ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

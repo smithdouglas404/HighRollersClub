@@ -16,22 +16,41 @@ const createDeck = (): CardType[] => {
   return deck;
 };
 
-const shuffleDeck = (deck: CardType[]): CardType[] => {
-  const newDeck = [...deck];
-  // Fisher-Yates with rejection sampling to eliminate modulo bias
-  for (let i = newDeck.length - 1; i > 0; i--) {
-    const range = i + 1;
-    const max = Math.floor(0x100000000 / range) * range;
-    let rand: number;
-    do {
-      const buf = new Uint32Array(1);
-      crypto.getRandomValues(buf);
-      rand = buf[0];
-    } while (rand >= max);
-    const j = rand % range;
-    [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+// Server-side shuffle — no card logic runs on the client
+let cachedServerDeck: CardType[] | null = null;
+let cachedPracticeHash: string | null = null;
+
+async function fetchServerShuffle(): Promise<CardType[]> {
+  try {
+    const res = await fetch("/api/practice/shuffle", { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      cachedServerDeck = data.deck;
+      cachedPracticeHash = data.hash;
+      return data.deck;
+    }
+  } catch {}
+  // Fallback only if server is unreachable (should never happen in normal use)
+  const deck: CardType[] = [];
+  for (const suit of SUITS) for (const rank of RANKS) deck.push({ suit, rank });
+  for (let i = deck.length - 1; i > 0; i--) {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    [deck[i], deck[buf[0] % (i + 1)]] = [deck[buf[0] % (i + 1)], deck[i]];
   }
-  return newDeck;
+  return deck;
+}
+
+// Synchronous wrapper that uses cached deck or creates a new one
+const shuffleDeck = (_deck: CardType[]): CardType[] => {
+  if (cachedServerDeck) {
+    const deck = [...cachedServerDeck];
+    cachedServerDeck = null;
+    // Pre-fetch next hand's deck immediately
+    fetchServerShuffle().then(d => { cachedServerDeck = d; }).catch(() => {});
+    return deck;
+  }
+  return [..._deck];
 };
 
 export interface ShowdownData {
@@ -81,8 +100,32 @@ export function useGameEngine(initialPlayers: Player[], heroId: string = 'player
 
   const showdownTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // Pre-fetch server shuffle for next hand
+  const prefetchShuffle = useCallback(() => {
+    fetchServerShuffle().then(deck => { cachedServerDeck = deck; }).catch(() => {});
+  }, []);
+
   // Initialize Game — reads from refs so it always has latest state
   const startGame = useCallback(() => {
+    // If no cached deck, fetch and retry
+    if (!cachedServerDeck) {
+      fetchServerShuffle().then(deck => {
+        cachedServerDeck = deck;
+        startGame(); // retry with the fetched deck
+      }).catch(() => {
+        // Fallback: use local shuffle if server unreachable
+        const fallbackDeck = createDeck();
+        for (let i = fallbackDeck.length - 1; i > 0; i--) {
+          const buf = new Uint32Array(1);
+          crypto.getRandomValues(buf);
+          [fallbackDeck[i], fallbackDeck[buf[0] % (i + 1)]] = [fallbackDeck[buf[0] % (i + 1)], fallbackDeck[i]];
+        }
+        cachedServerDeck = fallbackDeck;
+        startGame();
+      });
+      return;
+    }
+
     const newDeck = shuffleDeck(createDeck());
     const currentPlayers = playersRef.current;
     const currentDealerId = gameStateRef.current.dealerId;

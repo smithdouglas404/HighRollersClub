@@ -184,6 +184,38 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     });
   });
 
+  // ─── Practice Mode Shuffle (server-side, no auth needed) ───────────────
+  app.post("/api/practice/shuffle", (_req, res) => {
+    const { randomBytes, createHash } = require("crypto");
+    const suits = ["hearts", "diamonds", "clubs", "spades"];
+    const ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+    const deck: Array<{ suit: string; rank: string }> = [];
+    for (const suit of suits) for (const rank of ranks) deck.push({ suit, rank });
+
+    // Server-side Fisher-Yates with rejection sampling
+    const seed = randomBytes(32);
+    for (let i = deck.length - 1; i > 0; i--) {
+      const range = i + 1;
+      const max = Math.floor(0x100000000 / range) * range;
+      let rand: number;
+      let attempt = 0;
+      do {
+        const hmac = require("crypto").createHmac("sha256", seed);
+        hmac.update(`practice-${i}-${attempt}`);
+        rand = hmac.digest().readUInt32BE(0);
+        attempt++;
+      } while (rand >= max);
+      const j = rand % range;
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+
+    // Generate a practice hash (not blockchain — just SHA-256 for transparency)
+    const deckString = deck.map(c => `${c.rank}${c.suit[0]}`).join(",");
+    const practiceHash = createHash("sha256").update(deckString).digest("hex");
+
+    res.json({ deck, hash: practiceHash });
+  });
+
   // ─── Online Users ──────────────────────────────────────────────────────
   app.get("/api/online-users", requireAuth, (_req, res) => {
     const clients = getClients();

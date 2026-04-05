@@ -198,6 +198,7 @@ export interface IStorage {
   getPaymentByGatewayId(provider: string, gatewayPaymentId: string): Promise<Payment | undefined>;
   getUserPayments(userId: string, limit?: number, offset?: number): Promise<Payment[]>;
   getAllPayments(limit?: number, offset?: number): Promise<Payment[]>;
+  getPendingPayments(): Promise<Payment[]>;
   updatePayment(id: string, data: Partial<Payment>): Promise<Payment | undefined>;
 
   // Withdrawal Requests
@@ -1114,6 +1115,10 @@ export class MemStorage implements IStorage {
     return [...this.paymentsList]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(offset, offset + limit);
+  }
+  async getPendingPayments() {
+    const pendingStatuses = ["pending", "confirming", "waiting"];
+    return this.paymentsList.filter(p => p.direction === "deposit" && pendingStatuses.includes(p.status));
   }
   async updatePayment(id: string, data: Partial<Payment>) {
     const p = this.paymentsList.find(p => p.id === id);
@@ -2280,6 +2285,15 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(payments.createdAt))
       .limit(limit)
       .offset(offset);
+  }
+  async getPendingPayments() {
+    return this.db.select().from(payments)
+      .where(
+        and(
+          eq(payments.direction, "deposit"),
+          inArray(payments.status, ["pending", "confirming", "waiting"]),
+        ),
+      );
   }
   async updatePayment(id: string, data: Partial<Payment>) {
     const [p] = await this.db.update(payments).set({ ...data, updatedAt: new Date() })

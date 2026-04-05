@@ -6,8 +6,16 @@
   "scripts": {
     "dev:client": "vite dev --port 5000",
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "vite build && esbuild server/index.ts server/game-server.ts server/payment-worker.ts server/jobs-worker.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
+    "start:api": "SERVICE_MODE=api NODE_ENV=production node dist/index.js",
+    "start:game": "SERVICE_MODE=game NODE_ENV=production node dist/game-server.js",
+    "start:payments": "SERVICE_MODE=payments NODE_ENV=production node dist/payment-worker.js",
+    "start:jobs": "SERVICE_MODE=jobs NODE_ENV=production node dist/jobs-worker.js",
+    "start:all": "NODE_ENV=production node dist/index.js",
+    "game-server": "NODE_ENV=production tsx server/game-server.ts",
+    "payment-worker": "NODE_ENV=production tsx server/payment-worker.ts",
+    "jobs-worker": "NODE_ENV=production tsx server/jobs-worker.ts",
     "check": "tsc",
     "db:push": "drizzle-kit push"
   },

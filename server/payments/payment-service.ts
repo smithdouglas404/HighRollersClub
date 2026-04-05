@@ -56,9 +56,45 @@ export class PaymentService {
     currency: string,
     gatewayName: string,
     allocation: AllocationEntry[],
+    idempotencyKey?: string,
   ): Promise<DepositResult> {
     const gateway = this.gateways.get(gatewayName);
     if (!gateway) throw new Error(`Payment gateway '${gatewayName}' not configured`);
+
+    // ── Idempotency: deduplicate by client-provided key or by userId+amount+currency within 5 minutes ──
+    const allPayments = await storage.getAllPayments(20, 0);
+    const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+    const recentPayments = allPayments.filter((p: any) => p.userId === userId && new Date(p.createdAt || 0).getTime() > fiveMinAgo);
+    if (idempotencyKey) {
+      const existing = recentPayments.find(
+        (p: any) => p.direction === "deposit" && (p.gatewayData as any)?.idempotencyKey === idempotencyKey
+      );
+      if (existing) {
+        return {
+          paymentId: existing.id,
+          payAddress: existing.depositAddress || "",
+          payAmount: existing.amountCrypto || "",
+          currency: existing.currency,
+          expiresAt: existing.expiresAt ? new Date(existing.expiresAt) : new Date(),
+          gatewayProvider: existing.gatewayProvider || gatewayName,
+        };
+      }
+    } else {
+      // No idempotency key — deduplicate by userId + amount + currency within 5 minutes
+      const duplicate = recentPayments.find(
+        (p: any) => p.direction === "deposit" && p.amountFiat === amountCents && p.currency === currency && p.status === "pending"
+      );
+      if (duplicate) {
+        return {
+          paymentId: duplicate.id,
+          payAddress: duplicate.depositAddress || "",
+          payAmount: duplicate.amountCrypto || "",
+          currency: duplicate.currency,
+          expiresAt: duplicate.expiresAt ? new Date(duplicate.expiresAt) : new Date(),
+          gatewayProvider: duplicate.gatewayProvider || gatewayName,
+        };
+      }
+    }
 
     // Validate allocation sums
     const chipAmount = amountCents; // 1 cent = 1 chip (configurable)
@@ -86,7 +122,7 @@ export class PaymentService {
       allocation: allocation as any,
       gatewayProvider: gatewayName,
       gatewayPaymentId: null,
-      gatewayData: null,
+      gatewayData: idempotencyKey ? { idempotencyKey } as any : null,
       depositAddress: null,
       txHash: null,
       confirmations: 0,

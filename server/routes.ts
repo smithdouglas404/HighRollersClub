@@ -20,6 +20,18 @@ import { MTTManager, activeMTTs } from "./game/mtt-manager";
 import { getTournamentSchedule, setTournamentSchedule, type ScheduledTournament } from "./scheduler";
 import { fastFoldManager, type FastFoldPoolConfig } from "./game/fast-fold-manager";
 import { blockchainConfig } from "./blockchain/config";
+import { registerGameRoutes } from "./routes/game-routes";
+import { registerClubRoutes } from "./routes/club-routes";
+import { registerTournamentRoutes } from "./routes/tournament-routes";
+import { registerWalletRoutes } from "./routes/wallet-routes";
+import { registerMarketplaceRoutes } from "./routes/marketplace-routes";
+import { registerPlayerRoutes } from "./routes/player-routes";
+
+// ─── ILIKE Wildcard Escape Helper ─────────────────────────────────────────
+/** Escape special characters in user input before using in ILIKE patterns */
+function escapeIlike(str: string): string {
+  return str.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
 
 // ─── File Upload Setup (KYC documents) ────────────────────────────────────
 const KYC_UPLOAD_DIR = path.join(process.cwd(), "uploads", "kyc");
@@ -68,16 +80,19 @@ async function sendKycEmail(to: string, subject: string, html: string) {
 }
 
 // ─── Admin Audit Logger ────────────────────────────────────────────────────
+// Always reads admin ID from req.user.id to prevent spoofing.
+// For system/webhook callers that have no request, use logSystemAction instead.
 async function logAdminAction(
-  adminId: string,
+  req: import("express").Request,
   action: string,
   targetType: string | null,
   targetId: string | null,
   details: Record<string, any> | null,
-  ipAddress?: string
 ) {
   try {
     if (!hasDatabase()) return;
+    const adminId = req.user?.id;
+    if (!adminId) return;
     const db = getDb();
     await db.insert(adminAuditLogs).values({
       adminId,
@@ -85,7 +100,31 @@ async function logAdminAction(
       targetType,
       targetId,
       details,
-      ipAddress: ipAddress || null,
+      ipAddress: req.ip || req.socket?.remoteAddress || null,
+    });
+  } catch (err: any) {
+    console.error("Audit log error:", err.message);
+  }
+}
+
+// For automated system actions (webhooks, cron) where there is no authenticated request
+async function logSystemAction(
+  systemId: string,
+  action: string,
+  targetType: string | null,
+  targetId: string | null,
+  details: Record<string, any> | null,
+) {
+  try {
+    if (!hasDatabase()) return;
+    const db = getDb();
+    await db.insert(adminAuditLogs).values({
+      adminId: systemId,
+      action,
+      targetType,
+      targetId,
+      details,
+      ipAddress: null,
     });
   } catch (err: any) {
     console.error("Audit log error:", err.message);
@@ -216,6 +255,12 @@ export function isSystemLocked(): boolean {
 export async function registerRoutes(app: Express, sessionMiddleware: RequestHandler): Promise<Server> {
   // Auth routes
   registerAuthRoutes(app);
+
+  // ─── Extracted Route Modules ────────────────────────────────────────────
+  const sharedHelpers = { hasDatabase, getDb, sql };
+  await registerWalletRoutes(app, requireAuth, sharedHelpers);
+  await registerPlayerRoutes(app, requireAuth, sharedHelpers);
+  // Marketplace routes registered after requireAdmin is defined (below)
 
   // ─── Server Info ───────────────────────────────────────────────────────
   app.get("/api/health", (_req, res) => {
@@ -1606,468 +1651,9 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) { next(err); }
   });
 
-  // ─── Profile Routes ──────────────────────────────────────────────────────
-  app.put("/api/profile/avatar", requireAuth, async (req, res, next) => {
-    try {
-      const { avatarId, displayName, tauntVoice } = req.body;
-      const updates: Record<string, any> = {};
-      if (avatarId && typeof avatarId === "string") updates.avatarId = avatarId;
-      if (displayName && typeof displayName === "string") updates.displayName = displayName.trim().slice(0, 50);
-      if (tauntVoice && typeof tauntVoice === "string") updates.tauntVoice = tauntVoice.slice(0, 30);
-      if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ message: "avatarId, displayName, or tauntVoice required" });
-      }
-      await storage.updateUser(req.user!.id, updates);
-      const user = await storage.getUser(req.user!.id);
-      if (!user) return res.status(404).json({ message: "User not found" });
-      const { password, ...safeUser } = user;
-      res.json(safeUser);
-    } catch (err) {
-      next(err);
-    }
-  });
+  // ─── Profile Routes ── (moved to routes/player-routes.ts)
 
-  // ─── Wallet Routes ───────────────────────────────────────────────────────
-  app.get("/api/wallet/balance", requireAuth, async (req, res, next) => {
-    try {
-      const userWallets = await storage.getUserWallets(req.user!.id);
-      const balances: Record<string, number> = {};
-      let total = 0;
-      for (const w of userWallets) {
-        balances[w.walletType] = w.balance;
-        total += w.balance;
-      }
-      // Backward compat: also return flat balance
-      res.json({ balance: total, balances, wallets: userWallets });
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.get("/api/wallet/balances", requireAuth, async (req, res, next) => {
-    try {
-      await storage.ensureWallets(req.user!.id);
-      const userWallets = await storage.getUserWallets(req.user!.id);
-      const balances: Record<string, number> = { main: 0, cash_game: 0, sng: 0, tournament: 0, bonus: 0 };
-      let total = 0;
-      for (const w of userWallets) {
-        balances[w.walletType] = w.balance;
-        total += w.balance;
-      }
-      res.json({ balances, total, wallets: userWallets });
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.get("/api/wallet/daily-status", requireAuth, async (req, res, next) => {
-    try {
-      const user = await storage.getUser(req.user!.id);
-      if (!user) return res.status(404).json({ message: "User not found" });
-
-      // Determine bonus amount (2x with Elite Pass)
-      const inv = await storage.getUserInventory(user.id);
-      const items = await storage.getShopItems();
-      const elitePass = items.find(i => i.category === "premium" && i.rarity === "legendary");
-      const hasElitePass = elitePass ? inv.some(i => i.itemId === elitePass.id) : false;
-      const bonusAmount = hasElitePass ? 2000 : 1000;
-
-      if (user.lastDailyClaim) {
-        const nextClaimAt = new Date(user.lastDailyClaim.getTime() + 24 * 60 * 60 * 1000);
-        if (nextClaimAt.getTime() > Date.now()) {
-          return res.json({ canClaim: false, nextClaimAt, bonusAmount });
-        }
-      }
-      res.json({ canClaim: true, nextClaimAt: null, bonusAmount });
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // In-memory lock to prevent daily bonus race condition
-  const dailyClaimLocks = new Set<string>();
-
-  app.post("/api/wallet/claim-daily", requireAuth, async (req, res, next) => {
-    try {
-      const userId = req.user!.id;
-
-      // Prevent concurrent claims with in-memory lock
-      if (dailyClaimLocks.has(userId)) {
-        return res.status(429).json({ message: "Claim already in progress" });
-      }
-      dailyClaimLocks.add(userId);
-
-      try {
-        const user = await storage.getUser(userId);
-        if (!user) { dailyClaimLocks.delete(userId); return res.status(404).json({ message: "User not found" }); }
-
-        const now = new Date();
-        if (user.lastDailyClaim) {
-          const hoursSince = (now.getTime() - user.lastDailyClaim.getTime()) / (1000 * 60 * 60);
-          if (hoursSince < 24) {
-            dailyClaimLocks.delete(userId);
-            return res.status(429).json({
-              message: "Daily bonus already claimed",
-              nextClaimAt: new Date(user.lastDailyClaim.getTime() + 24 * 60 * 60 * 1000),
-            });
-          }
-        }
-
-        // Set lastDailyClaim immediately to prevent race conditions
-        await storage.updateUser(userId, { lastDailyClaim: now });
-
-      // Check if user has Elite Pass for 2x bonus
-      const userInventory = await storage.getUserInventory(user.id);
-      const allShopItems = await storage.getShopItems();
-      const elitePass = allShopItems.find(i => i.category === "premium" && i.rarity === "legendary");
-      const hasElitePass = elitePass ? userInventory.some(inv => inv.itemId === elitePass.id) : false;
-      const bonus = hasElitePass ? 2000 : 1000;
-
-      // Credit bonus wallet (ensure wallets exist first)
-      await storage.ensureWallets(user.id);
-      const { success, newBalance } = await storage.atomicAddToWallet(user.id, "bonus", bonus);
-      if (!success) return res.status(500).json({ message: "Failed to credit bonus" });
-
-      // Also update legacy chipBalance for backward compat
-      await storage.atomicAddChips(user.id, bonus);
-
-      await storage.createTransaction({
-        userId: user.id,
-        type: "bonus",
-        amount: bonus,
-        balanceBefore: newBalance - bonus,
-        balanceAfter: newBalance,
-        tableId: null,
-        description: "Daily login bonus",
-        walletType: "bonus",
-        relatedTransactionId: null,
-        paymentId: null,
-        metadata: null,
-      });
-
-      const totalBal = await storage.getUserTotalBalance(userId);
-      res.json({ balance: totalBal, bonus, nextClaimAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) });
-      } finally {
-        dailyClaimLocks.delete(userId);
-      }
-    } catch (err) {
-      dailyClaimLocks.delete(req.user!.id);
-      next(err);
-    }
-  });
-
-  app.get("/api/wallet/transactions", requireAuth, async (req, res, next) => {
-    try {
-      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100);
-      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
-      const txs = await storage.getTransactions(req.user!.id, limit, offset);
-
-      // Add human-readable display types for the frontend
-      const displayTypeMap: Record<string, string> = {
-        buyin: "Table Buy-in",
-        cashout: "Table Exit",
-        deposit: "Funds Added",
-        withdraw: "Added Chips to Table",
-        bonus: "Bonus",
-        rake: "Rake Collected",
-        prize: "Tournament Prize",
-      };
-
-      const formatted = txs.map(tx => ({
-        ...tx,
-        displayType: displayTypeMap[tx.type] || "Adjustment",
-        status: "Completed",
-      }));
-
-      res.json(formatted);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // Session profit/loss summaries — grouped by table
-  app.get("/api/wallet/sessions", requireAuth, async (req, res, next) => {
-    try {
-      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 20, 1), 50);
-      const sessions = await storage.getSessionSummaries(req.user!.id, limit);
-      res.json(sessions);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // ─── Session History (stack-over-time) ─────────────────────────────────────
-  app.get("/api/sessions/history", requireAuth, async (req, res, next) => {
-    try {
-      const userId = req.user!.id;
-      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 10, 1), 50);
-
-      if (!hasDatabase()) {
-        return res.json([]);
-      }
-
-      const db = getDb();
-
-      // Fetch all hands for this user, joined with game_hands and tables
-      const rows = await db.execute(sql`
-        SELECT
-          gh.id AS hand_id,
-          gh.table_id,
-          gh.hand_number,
-          gh.created_at,
-          t.name AS table_name,
-          hp.start_stack,
-          hp.end_stack,
-          hp.net_result
-        FROM hand_players hp
-        INNER JOIN game_hands gh ON gh.id = hp.hand_id
-        INNER JOIN tables t ON t.id = gh.table_id
-        WHERE hp.user_id = ${userId}
-        ORDER BY gh.created_at ASC
-      `);
-
-      const allHands = (rows as any).rows ?? rows;
-      if (!allHands || allHands.length === 0) {
-        return res.json([]);
-      }
-
-      // Group hands into sessions: same table, gap <= 30 min
-      const SESSION_GAP_MS = 30 * 60 * 1000;
-      interface HandRow {
-        hand_id: string;
-        table_id: string;
-        hand_number: number;
-        created_at: string | Date;
-        table_name: string;
-        start_stack: number;
-        end_stack: number;
-        net_result: number;
-      }
-
-      interface Session {
-        tableId: string;
-        tableName: string;
-        hands: HandRow[];
-      }
-
-      const sessions: Session[] = [];
-      let current: Session | null = null;
-      let lastTime = 0;
-
-      for (const row of allHands as HandRow[]) {
-        const t = new Date(row.created_at).getTime();
-        const sameTable = current && row.table_id === current.tableId;
-        const withinGap = current && (t - lastTime) <= SESSION_GAP_MS;
-
-        if (sameTable && withinGap) {
-          current!.hands.push(row);
-        } else {
-          current = {
-            tableId: row.table_id,
-            tableName: row.table_name,
-            hands: [row],
-          };
-          sessions.push(current);
-        }
-        lastTime = t;
-      }
-
-      // Build response: newest sessions first, limited
-      const result = sessions
-        .slice(-limit)
-        .reverse()
-        .map((s) => {
-          const firstHand = s.hands[0];
-          const lastHand = s.hands[s.hands.length - 1];
-          const startingStack = Number(firstHand.start_stack);
-          const endingStack = Number(lastHand.end_stack);
-          return {
-            sessionId: `${s.tableId}-${new Date(firstHand.created_at).getTime()}`,
-            tableName: s.tableName,
-            startTime: new Date(firstHand.created_at).toISOString(),
-            endTime: new Date(lastHand.created_at).toISOString(),
-            handsPlayed: s.hands.length,
-            startingStack,
-            endingStack,
-            netResult: endingStack - startingStack,
-            stackHistory: s.hands.map(h => ({
-              handNumber: Number(h.hand_number),
-              chips: Number(h.end_stack),
-            })),
-          };
-        });
-
-      res.json(result);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // ─── Wallet Transfer ─────────────────────────────────────────────────────
-  app.post("/api/wallet/transfer", requireAuth, async (req, res, next) => {
-    try {
-      const { from, to, amount } = req.body;
-      if (!from || !to || !amount || amount <= 0) {
-        return res.status(400).json({ message: "Invalid transfer: from, to, and amount > 0 required" });
-      }
-      const validTypes = ["main", "cash_game", "sng", "tournament", "bonus"];
-      if (!validTypes.includes(from) || !validTypes.includes(to)) {
-        return res.status(400).json({ message: "Invalid wallet type" });
-      }
-      if (from === to) return res.status(400).json({ message: "Cannot transfer to the same wallet" });
-      if (from === "bonus") return res.status(400).json({ message: "Cannot transfer from bonus wallet" });
-
-      await storage.ensureWallets(req.user!.id);
-      const { success, fromBalance, toBalance } = await storage.atomicTransferBetweenWallets(
-        req.user!.id, from, to, amount
-      );
-      if (!success) return res.status(400).json({ message: "Insufficient funds or wallet locked" });
-
-      // Log both sides of the transfer
-      const txId1 = require("crypto").randomUUID();
-      const txId2 = require("crypto").randomUUID();
-      await storage.createTransaction({
-        userId: req.user!.id, type: "transfer", amount: -amount,
-        balanceBefore: fromBalance + amount, balanceAfter: fromBalance,
-        tableId: null, description: `Transfer to ${to} wallet`,
-        walletType: from, relatedTransactionId: txId2, paymentId: null, metadata: null,
-      });
-      await storage.createTransaction({
-        userId: req.user!.id, type: "transfer", amount: amount,
-        balanceBefore: toBalance - amount, balanceAfter: toBalance,
-        tableId: null, description: `Transfer from ${from} wallet`,
-        walletType: to, relatedTransactionId: txId1, paymentId: null, metadata: null,
-      });
-
-      const allWallets = await storage.getUserWallets(req.user!.id);
-      const balances: Record<string, number> = {};
-      for (const w of allWallets) balances[w.walletType] = w.balance;
-
-      res.json({ success: true, balances });
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // ─── Payment / Deposit Routes ─────────────────────────────────────────────
-  app.get("/api/payments/currencies", async (_req, res, next) => {
-    try {
-      const currencies = await storage.getSupportedCurrencies();
-      res.json(currencies);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.get("/api/payments/gateways", async (_req, res, next) => {
-    try {
-      const { getPaymentService } = await import("./payments/payment-service");
-      const svc = getPaymentService();
-      res.json(svc.getAvailableGateways());
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.post("/api/payments/deposit", requireAuth, async (req, res, next) => {
-    try {
-      const { amount, currency, gateway, allocation } = req.body;
-      if (!amount || !currency || !gateway || !allocation || !Array.isArray(allocation)) {
-        return res.status(400).json({ message: "amount, currency, gateway, and allocation[] required" });
-      }
-      if (amount < 100) return res.status(400).json({ message: "Minimum deposit is $1.00 (100 cents)" });
-
-      const allocSum = allocation.reduce((s: number, a: any) => s + (a.amount || 0), 0);
-      if (allocSum !== amount) {
-        return res.status(400).json({ message: `Allocation sum (${allocSum}) must equal deposit amount (${amount})` });
-      }
-
-      const { getPaymentService } = await import("./payments/payment-service");
-      const svc = getPaymentService();
-      const result = await svc.initiateDeposit(req.user!.id, amount, currency, gateway, allocation);
-      res.json(result);
-    } catch (err: any) {
-      if (err.message?.includes("not configured")) {
-        return res.status(400).json({ message: err.message });
-      }
-      next(err);
-    }
-  });
-
-  app.get("/api/payments/:id", requireAuth, async (req, res, next) => {
-    try {
-      const payment = await storage.getPayment(req.params.id);
-      if (!payment || payment.userId !== req.user!.id) {
-        return res.status(404).json({ message: "Payment not found" });
-      }
-      res.json(payment);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.get("/api/payments", requireAuth, async (req, res, next) => {
-    try {
-      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100);
-      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
-      const userPayments = await storage.getUserPayments(req.user!.id, limit, offset);
-      res.json(userPayments);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // ─── Payment Webhooks (no auth — verified by signature) ───────────────────
-  app.post("/api/payments/webhook/:provider", async (req, res, next) => {
-    try {
-      const provider = req.params.provider;
-      const { getPaymentService } = await import("./payments/payment-service");
-      const svc = getPaymentService();
-      const headers: Record<string, string> = {};
-      for (const [k, v] of Object.entries(req.headers)) {
-        if (typeof v === "string") headers[k.toLowerCase()] = v;
-      }
-      // For Stripe, pass raw body (Buffer) for signature verification
-      const webhookBody = provider === "stripe" && (req as any).rawBody
-        ? (req as any).rawBody
-        : req.body;
-      const result = await svc.processWebhook(provider, webhookBody, headers);
-      res.json({ ok: true, ...result });
-    } catch (err: any) {
-      console.error(`[Webhook] Error processing ${req.params.provider} webhook:`, err.message);
-      res.status(400).json({ error: err.message });
-    }
-  });
-
-  // ─── Withdrawal Routes ────────────────────────────────────────────────────
-  app.post("/api/wallet/withdraw", requireAuth, async (req, res, next) => {
-    try {
-      const { amount, currency, address } = req.body;
-      if (!amount || !currency || !address) {
-        return res.status(400).json({ message: "amount, currency, and address required" });
-      }
-      if (amount <= 0) return res.status(400).json({ message: "Amount must be positive" });
-
-      const { getPaymentService } = await import("./payments/payment-service");
-      const svc = getPaymentService();
-      const result = await svc.initiateWithdrawal(req.user!.id, amount, currency, address);
-      res.json(result);
-    } catch (err: any) {
-      if (err.message?.includes("Insufficient") || err.message?.includes("Invalid")) {
-        return res.status(400).json({ message: err.message });
-      }
-      next(err);
-    }
-  });
-
-  app.get("/api/wallet/withdrawals", requireAuth, async (req, res, next) => {
-    try {
-      const requests = await storage.getUserWithdrawalRequests(req.user!.id);
-      res.json(requests);
-    } catch (err) {
-      next(err);
-    }
-  });
+  // ─── Wallet / Session / Transfer / Payment / Withdrawal Routes ── (moved to routes/wallet-routes.ts)
 
   // ─── Hand Routes ─────────────────────────────────────────────────────────
   // ─── Secure Hand History Routes ──────────────────────────────────────────
@@ -2204,32 +1790,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // ─── Player Stats Routes ──────────────────────────────────────────────
-  app.get("/api/stats/me", requireAuth, async (req, res, next) => {
-    try {
-      const stats = await storage.getPlayerStats(req.user!.id);
-      if (!stats) {
-        return res.json({
-          handsPlayed: 0, potsWon: 0,
-          bestWinStreak: 0, currentWinStreak: 0, totalWinnings: 0,
-          vpip: 0, pfr: 0, showdownCount: 0, sngWins: 0,
-        });
-      }
-      res.json({
-        handsPlayed: stats.handsPlayed,
-        potsWon: stats.potsWon,
-        bestWinStreak: stats.bestWinStreak,
-        currentWinStreak: stats.currentWinStreak,
-        totalWinnings: stats.totalWinnings,
-        vpip: stats.vpip,
-        pfr: stats.pfr,
-        showdownCount: stats.showdownCount,
-        sngWins: stats.sngWins,
-      });
-    } catch (err) {
-      next(err);
-    }
-  });
+  // ─── Player Stats / Military Rank / Stats Breakdown / Head-to-Head / Play Style Coach ── (moved to routes/player-routes.ts)
 
   // ─── Military Rank System ──────────────────────────────────────────────
   const MILITARY_RANKS = [
@@ -3694,6 +3255,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     next();
   };
 
+  // Register marketplace routes (needs requireAdmin + requireTier + tierRank)
+  await registerMarketplaceRoutes(app, requireAuth, { requireTier, tierRank, requireAdmin });
+
+  // Register extracted route modules
+  await registerGameRoutes(app, requireAuth, requireAdmin, { logAdminAction });
+  await registerClubRoutes(app, requireAuth, requireAdmin, { hasDatabase, getDb, sql });
+  await registerTournamentRoutes(app, requireAuth, requireAdmin);
+
   // Daily rake report by table
   app.get("/api/admin/rake-report", requireAuth, requireAdmin, async (req, res, next) => {
     try {
@@ -3968,7 +3537,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const tierFilter = req.query.tier as string | undefined;
 
       const conds: ReturnType<typeof sql>[] = [];
-      if (search) conds.push(sql`(${users.username} ILIKE ${"%" + search + "%"} OR ${users.displayName} ILIKE ${"%" + search + "%"} OR ${users.email} ILIKE ${"%" + search + "%"} OR ${users.id} ILIKE ${"%" + search + "%"})`);
+      if (search) { const s = escapeIlike(search); conds.push(sql`(${users.username} ILIKE ${"%" + s + "%"} OR ${users.displayName} ILIKE ${"%" + s + "%"} OR ${users.email} ILIKE ${"%" + s + "%"} OR ${users.id} ILIKE ${"%" + s + "%"})`); }
       if (roleFilter) conds.push(sql`${users.role} = ${roleFilter}`);
       if (tierFilter) conds.push(sql`${users.tier} = ${tierFilter}`);
 
@@ -4017,8 +3586,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No fields to update" });
 
       const updated = await storage.updateUser(req.params.id, updates);
-      await logAdminAction(req.user!.id, "user_edit", "user", req.params.id,
-        { changes: updates, username: user.username }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "user_edit", "user", req.params.id,
+        { changes: updates, username: user.username });
       res.json(updated);
     } catch (err) { next(err); }
   });
@@ -4031,8 +3600,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const { reason } = req.body;
       // Set self-exclusion far in the future as a ban
       await storage.updateUser(req.params.id, { selfExcludedUntil: new Date("2099-12-31") });
-      await logAdminAction(req.user!.id, "user_ban", "user", req.params.id,
-        { username: user.username, reason }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "user_ban", "user", req.params.id,
+        { username: user.username, reason });
       await storage.createNotification(req.params.id, "account_action", "Account Suspended",
         reason || "Your account has been suspended by an administrator.", {});
       res.json({ success: true });
@@ -4044,8 +3613,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const user = await storage.getUser(req.params.id);
       if (!user) return res.status(404).json({ message: "User not found" });
       await storage.updateUser(req.params.id, { selfExcludedUntil: null });
-      await logAdminAction(req.user!.id, "user_unban", "user", req.params.id,
-        { username: user.username }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "user_unban", "user", req.params.id,
+        { username: user.username });
       res.json({ success: true });
     } catch (err) { next(err); }
   });
@@ -4085,8 +3654,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const club = await storage.getClub(req.params.id);
       if (!club) return res.status(404).json({ message: "Club not found" });
       await storage.deleteClub(req.params.id);
-      await logAdminAction(req.user!.id, "club_delete", "club", req.params.id,
-        { clubName: club.name }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "club_delete", "club", req.params.id,
+        { clubName: club.name });
       res.json({ success: true });
     } catch (err) { next(err); }
   });
@@ -4118,8 +3687,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (!table) return res.status(404).json({ message: "Table not found" });
       // Close the table — update status in storage
       await storage.updateTable(req.params.id, { status: "closed" });
-      await logAdminAction(req.user!.id, "table_close", "table", req.params.id,
-        { tableName: table.name }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "table_close", "table", req.params.id,
+        { tableName: table.name });
       res.json({ success: true });
     } catch (err) { next(err); }
   });
@@ -4213,9 +3782,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       process.env[key] = value;
     }
 
-    await logAdminAction(req.user!.id, "env_key_change", "system", key,
-      { description: def.description, sensitive: def.sensitive },
-      req.ip || req.socket.remoteAddress);
+    await logAdminAction(req, "env_key_change", "system", key,
+      { description: def.description, sensitive: def.sensitive });
 
     res.json({ success: true, key, isSet: !!process.env[key] });
   });
@@ -4356,8 +3924,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         isAdmin: true,
       }).returning();
 
-      await logAdminAction(req.user!.id, "music_upload", "music", track.id,
-        { title: track.title, artist: track.artist }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "music_upload", "music", track.id,
+        { title: track.title, artist: track.artist });
 
       res.json({ ...track, url: `/api/music/file/${track.filename}` });
     } catch (err) { next(err); }
@@ -4393,8 +3961,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
       await db.delete(musicTracks).where(sql`${musicTracks.id} = ${req.params.id}`);
-      await logAdminAction(req.user!.id, "music_delete", "music", track.id,
-        { title: track.title }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "music_delete", "music", track.id,
+        { title: track.title });
       res.json({ success: true });
     } catch (err) { next(err); }
   });
@@ -4435,9 +4003,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   app.post("/api/admin/encryption/anchor", requireAuth, requireAdmin, async (req, res) => {
     const result = await cardEncryption.forceAnchor();
     if (!result) return res.json({ message: "No pending commitments to anchor" });
-    await logAdminAction(req.user!.id, "force_anchor", "system", null,
-      { merkleRoot: result.merkleRoot, txHash: result.txHash, count: result.count },
-      req.ip || req.socket.remoteAddress);
+    await logAdminAction(req, "force_anchor", "system", null,
+      { merkleRoot: result.merkleRoot, txHash: result.txHash, count: result.count });
     res.json(result);
   });
 
@@ -4487,7 +4054,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       const conds: ReturnType<typeof sql>[] = [sql`${users.kycStatus} = 'verified'`];
       if (onChainOnly) conds.push(sql`${users.kycBlockchainTxHash} is not null`);
-      if (search) conds.push(sql`(${users.username} ILIKE ${"%" + search + "%"} OR ${users.memberId} ILIKE ${"%" + search + "%"} OR ${users.kycBlockchainTxHash} ILIKE ${"%" + search + "%"})`);
+      if (search) { const s = escapeIlike(search); conds.push(sql`(${users.username} ILIKE ${"%" + s + "%"} OR ${users.memberId} ILIKE ${"%" + s + "%"} OR ${users.kycBlockchainTxHash} ILIKE ${"%" + s + "%"})`); }
 
       const where = conds.reduce((a, b) => sql`${a} AND ${b}`);
       const rows = await db.select({
@@ -4511,7 +4078,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       const conds: ReturnType<typeof sql>[] = [];
       if (onChainOnly) conds.push(sql`(${gameHands.onChainCommitTx} is not null or ${gameHands.onChainRevealTx} is not null or ${gameHands.vrfRequestId} is not null)`);
-      if (search) conds.push(sql`(${gameHands.commitmentHash} ILIKE ${"%" + search + "%"} OR ${gameHands.onChainCommitTx} ILIKE ${"%" + search + "%"} OR ${gameHands.onChainRevealTx} ILIKE ${"%" + search + "%"} OR ${gameHands.id} ILIKE ${"%" + search + "%"})`);
+      if (search) { const s = escapeIlike(search); conds.push(sql`(${gameHands.commitmentHash} ILIKE ${"%" + s + "%"} OR ${gameHands.onChainCommitTx} ILIKE ${"%" + s + "%"} OR ${gameHands.onChainRevealTx} ILIKE ${"%" + s + "%"} OR ${gameHands.id} ILIKE ${"%" + s + "%"})`); }
 
       const where = conds.length > 0 ? conds.reduce((a, b) => sql`${a} AND ${b}`) : sql`1=1`;
 
@@ -4639,7 +4206,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }).returning();
 
       await securityEngine.refreshIpRules(db, ipRulesTable, sql);
-      await logAdminAction(req.user!.id, `ip_${type}`, "ip", ip, { reason }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, `ip_${type}`, "ip", ip, { reason });
       res.json(rule);
     } catch (err) { next(err); }
   });
@@ -4687,7 +4254,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       // Update cache
       securityEngine.updatePlatformSettingsCache([{ key, value }]);
-      await logAdminAction(req.user!.id, "platform_setting", "system", key, { value }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "platform_setting", "system", key, { value });
       res.json({ success: true });
     } catch (err) { next(err); }
   });
@@ -4710,7 +4277,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
           message: reason || "Session terminated by administrator", automated: false,
         });
       }
-      await logAdminAction(req.user!.id, "force_logout", "user", req.params.userId, { reason }, req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "force_logout", "user", req.params.userId, { reason });
       res.json({ success: true, wasConnected: !!client });
     } catch (err) { next(err); }
   });
@@ -6381,9 +5948,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       });
 
       // Audit log
-      await logAdminAction(req.user!.id, "kyc_approve", "user", user.id,
-        { username: user.username, kycData: user.kycData },
-        req.ip || req.socket.remoteAddress
+      await logAdminAction(req, "kyc_approve", "user", user.id,
+        { username: user.username, kycData: user.kycData }
       );
 
       // Email notification
@@ -6420,9 +5986,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       });
 
       // Audit log
-      await logAdminAction(req.user!.id, "kyc_reject", "user", user.id,
-        { username: user.username, reason: rejectReason },
-        req.ip || req.socket.remoteAddress
+      await logAdminAction(req, "kyc_reject", "user", user.id,
+        { username: user.username, reason: rejectReason }
       );
 
       // Email notification
@@ -6673,9 +6238,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         .where(sql`${tableSessions.tableId} = ${req.params.id} AND ${tableSessions.endedAt} IS NOT NULL AND ${tableSessions.settled} = false`);
 
       // Log the settlement action
-      await logAdminAction(req.user!.id, "ledger_settle", "table", req.params.id,
-        { settlementHash, settlementTxHash, playerCount: summary.playerCount, totalPot: summary.totalPot },
-        req.ip || req.socket.remoteAddress);
+      await logAdminAction(req, "ledger_settle", "table", req.params.id,
+        { settlementHash, settlementTxHash, playerCount: summary.playerCount, totalPot: summary.totalPot });
 
       res.json({
         settled: sessions.length,
@@ -6787,7 +6351,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       const conds: ReturnType<typeof sql>[] = [];
       if (onChainOnly) conds.push(sql`${tableLedgerEntries.settlementTxHash} IS NOT NULL`);
-      if (search) conds.push(sql`(${tableLedgerEntries.settlementHash} ILIKE ${"%" + search + "%"} OR ${tableLedgerEntries.settlementTxHash} ILIKE ${"%" + search + "%"} OR ${tableLedgerEntries.id} ILIKE ${"%" + search + "%"})`);
+      if (search) { const s = escapeIlike(search); conds.push(sql`(${tableLedgerEntries.settlementHash} ILIKE ${"%" + s + "%"} OR ${tableLedgerEntries.settlementTxHash} ILIKE ${"%" + s + "%"} OR ${tableLedgerEntries.id} ILIKE ${"%" + s + "%"})`); }
 
       const where = conds.length > 0 ? conds.reduce((a, b) => sql`${a} AND ${b}`) : sql`1=1`;
 
@@ -6842,7 +6406,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
 
       if (search) {
-        const searchWhere = sql`(${sponsorshipPayouts.transactionId} ILIKE ${'%' + search + '%'} OR ${sponsorshipPayouts.recipientWallet} ILIKE ${'%' + search + '%'} OR ${sponsorshipPayouts.notes} ILIKE ${'%' + search + '%'})`;
+        const se = escapeIlike(search);
+        const searchWhere = sql`(${sponsorshipPayouts.transactionId} ILIKE ${'%' + se + '%'} OR ${sponsorshipPayouts.recipientWallet} ILIKE ${'%' + se + '%'} OR ${sponsorshipPayouts.notes} ILIKE ${'%' + se + '%'})`;
         where = status || clubId ? sql`${where} AND ${searchWhere}` : searchWhere;
       }
 
@@ -6960,7 +6525,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         createdBy: req.user!.id,
       }).returning();
-      await logAdminAction(req.user!.id, "announcement_create", "announcement", row.id, { title, targetAudience, deliveryStyle }, req.ip);
+      await logAdminAction(req, "announcement_create", "announcement", row.id, { title, targetAudience, deliveryStyle });
       res.json(row);
     } catch (err) { next(err); }
   });
@@ -6973,7 +6538,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const { id } = req.params;
       const [deleted] = await db.delete(announcements).where(sql`${announcements.id} = ${id}`).returning();
       if (!deleted) return res.status(404).json({ message: "Announcement not found" });
-      await logAdminAction(req.user!.id, "announcement_delete", "announcement", id, null, req.ip);
+      await logAdminAction(req, "announcement_delete", "announcement", id, null);
       res.json({ message: "Announcement deleted", id });
     } catch (err) { next(err); }
   });
@@ -7007,7 +6572,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         }
       }
 
-      await logAdminAction(req.user!.id, "announcement_broadcast", "announcement", id, { recipientCount: sentUserIds.size }, req.ip);
+      await logAdminAction(req, "announcement_broadcast", "announcement", id, { recipientCount: sentUserIds.size });
       res.json({ message: "Broadcast sent", recipientCount: sentUserIds.size });
     } catch (err) { next(err); }
   });
@@ -7098,7 +6663,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (walletFilter && walletFilter !== "all") conds.push(sql`${transactions.walletType} = ${walletFilter}`);
       if (dateFrom) conds.push(sql`${transactions.createdAt} >= ${dateFrom}::timestamp`);
       if (dateTo) conds.push(sql`${transactions.createdAt} <= ${dateTo + "T23:59:59Z"}::timestamp`);
-      if (search) conds.push(sql`(${transactions.id} ILIKE ${"%" + search + "%"} OR ${transactions.description} ILIKE ${"%" + search + "%"})`);
+      if (search) { const s = escapeIlike(search); conds.push(sql`(${transactions.id} ILIKE ${"%" + s + "%"} OR ${transactions.description} ILIKE ${"%" + s + "%"})`); }
 
       const where = buildSqlConditions(conds);
 
@@ -7142,7 +6707,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (direction) conds.push(sql`${payments.direction} = ${direction}`);
       if (statusFilter) conds.push(sql`${payments.status} = ${statusFilter}`);
       if (currency) conds.push(sql`${payments.currency} = ${currency}`);
-      if (search) conds.push(sql`(${payments.id} ILIKE ${"%" + search + "%"} OR ${payments.txHash} ILIKE ${"%" + search + "%"})`);
+      if (search) { const s = escapeIlike(search); conds.push(sql`(${payments.id} ILIKE ${"%" + s + "%"} OR ${payments.txHash} ILIKE ${"%" + s + "%"})`); }
 
       const where = buildSqlConditions(conds);
 
@@ -7181,7 +6746,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
       const conds: ReturnType<typeof sql>[] = [];
       if (tableIdFilter) conds.push(sql`${gameHands.tableId} = ${tableIdFilter}`);
-      if (search) conds.push(sql`(${gameHands.id} ILIKE ${"%" + search + "%"} OR ${gameHands.commitmentHash} ILIKE ${"%" + search + "%"})`);
+      if (search) { const s = escapeIlike(search); conds.push(sql`(${gameHands.id} ILIKE ${"%" + s + "%"} OR ${gameHands.commitmentHash} ILIKE ${"%" + s + "%"})`); }
       if (onChainOnly) conds.push(sql`(${gameHands.onChainCommitTx} IS NOT NULL OR ${gameHands.onChainRevealTx} IS NOT NULL)`);
 
       const where = buildSqlConditions(conds);
@@ -7313,6 +6878,11 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         if (webhookSecret && sig) {
           const expected = createHash("sha256").update(JSON.stringify(req.body) + webhookSecret).digest("hex");
           if (sig !== expected) return res.status(401).json({ message: "Invalid signature" });
+        } else if (process.env.NODE_ENV === "production") {
+          // In production, reject unsigned webhooks
+          if (!webhookSecret) console.error("[kyc-webhook] REJECTING: no KYC_WEBHOOK_SECRET configured in production");
+          else if (!sig) console.error("[kyc-webhook] REJECTING: missing x-sha2-signature header");
+          return res.status(401).json({ message: "Webhook signature verification required in production" });
         }
 
         const { payload } = req.body;
@@ -7336,7 +6906,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
               `<h2>Identity Verified!</h2><p>Your identity has been automatically verified. You now have full access.</p>`);
           }
           await storage.createNotification(user.id, "kyc_status", "KYC Approved", "Your identity has been verified!", { status: "verified" });
-          await logAdminAction("system:onfido", "kyc_auto_approve", "user", user.id, { applicantId, result });
+          await logSystemAction("system:onfido", "kyc_auto_approve", "user", user.id, { applicantId, result });
         } else {
           await storage.updateUser(user.id, { kycStatus: "rejected", kycRejectionReason: `Auto-review: ${result}` });
           if (user.email) {
@@ -7344,7 +6914,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
               `<h2>Verification Update</h2><p>Your application requires manual review. We'll notify you when complete.</p>`);
           }
           await storage.createNotification(user.id, "kyc_status", "KYC Review", "Your documents need additional review.", { status: "review" });
-          await logAdminAction("system:onfido", "kyc_auto_reject", "user", user.id, { applicantId, result });
+          await logSystemAction("system:onfido", "kyc_auto_reject", "user", user.id, { applicantId, result });
         }
         return res.json({ received: true, processed: true });
 
@@ -7353,6 +6923,10 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         if (webhookSecret && sig) {
           const hmac = createHash("sha256").update(JSON.stringify(req.body) + webhookSecret).digest("hex");
           if (sig !== hmac) return res.status(401).json({ message: "Invalid signature" });
+        } else if (process.env.NODE_ENV === "production") {
+          if (!webhookSecret) console.error("[kyc-webhook] REJECTING: no KYC_WEBHOOK_SECRET configured in production");
+          else if (!sig) console.error("[kyc-webhook] REJECTING: missing x-payload-digest header");
+          return res.status(401).json({ message: "Webhook signature verification required in production" });
         }
 
         const { applicantId, reviewResult, type: eventType } = req.body;
@@ -7370,7 +6944,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
               `<h2>Identity Verified!</h2><p>Your identity has been verified successfully.</p>`);
           }
           await storage.createNotification(user.id, "kyc_status", "KYC Approved", "Your identity has been verified!", { status: "verified" });
-          await logAdminAction("system:sumsub", "kyc_auto_approve", "user", user.id, { applicantId, reviewResult });
+          await logSystemAction("system:sumsub", "kyc_auto_approve", "user", user.id, { applicantId, reviewResult });
         } else {
           const rejectReason = reviewResult?.rejectLabels?.join(", ") || "Verification failed";
           await storage.updateUser(user.id, { kycStatus: "rejected", kycRejectionReason: rejectReason });
@@ -7379,7 +6953,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
               `<h2>Verification Update</h2><p>Your application was not approved: ${rejectReason}</p>`);
           }
           await storage.createNotification(user.id, "kyc_status", "KYC Update", `Verification not approved: ${rejectReason}`, { status: "rejected" });
-          await logAdminAction("system:sumsub", "kyc_auto_reject", "user", user.id, { applicantId, reviewResult });
+          await logSystemAction("system:sumsub", "kyc_auto_reject", "user", user.id, { applicantId, reviewResult });
         }
         return res.json({ received: true, processed: true });
       }

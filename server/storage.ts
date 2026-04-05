@@ -41,6 +41,9 @@ function periodCutoff(period: "today" | "week" | "month"): Date {
 }
 
 export interface IStorage {
+  // System
+  ensureSystemUser(): Promise<void>;
+
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -299,6 +302,23 @@ export class MemStorage implements IStorage {
   private chatMessagesList: ChatMessage[] = [];
   private collusionAlertsList: CollusionAlert[] = [];
   private playerNotesList: PlayerNote[] = [];
+
+  // Ensure "system" user exists (required for FK constraints on bot tables, scheduler, etc.)
+  async ensureSystemUser(): Promise<void> {
+    if (this.users.has("system")) return;
+    const systemUser = await this.createUser({
+      username: "system",
+      password: "system-no-login",
+      displayName: "System",
+      role: "admin",
+      chipBalance: 0,
+      memberId: "HR-SYSTEM00",
+    });
+    // Override the auto-generated ID with "system"
+    this.users.delete(systemUser.id);
+    (systemUser as any).id = "system";
+    this.users.set("system", systemUser);
+  }
 
   // Users
   async getUser(id: string) { return this.users.get(id); }
@@ -1372,6 +1392,24 @@ export class MemStorage implements IStorage {
 // ─── Database Storage (when DATABASE_URL is set) ─────────────────────────────
 export class DatabaseStorage implements IStorage {
   private get db() { return getDb(); }
+
+  async ensureSystemUser(): Promise<void> {
+    const existing = await this.getUser("system");
+    if (existing) return;
+    try {
+      await this.db.insert(users).values({
+        id: "system",
+        username: "system",
+        password: "system-no-login",
+        displayName: "System",
+        role: "admin",
+        chipBalance: 0,
+        memberId: "HR-SYSTEM00",
+      });
+    } catch {
+      // May already exist from concurrent startup
+    }
+  }
 
   // Users
   async getUser(id: string) {

@@ -114,6 +114,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Ensure "system" user exists before any tables/tournaments are created
+  const { storage } = await import("./storage");
+  await storage.ensureSystemUser().catch(err => console.warn("[init] System user creation:", err.message));
+
   const server = await registerRoutes(app, sessionMiddleware);
 
   // Seed default missions and shop items

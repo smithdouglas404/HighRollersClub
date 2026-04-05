@@ -150,9 +150,10 @@ function sanitizeUser(user: User): Express.User {
 function generateGuestName(): string {
   const adjectives = ["Lucky", "Bold", "Swift", "Dark", "Neon", "Cyber", "Shadow", "Royal", "Iron", "Ghost"];
   const nouns = ["Ace", "King", "Shark", "Wolf", "Hawk", "Fox", "Tiger", "Viper", "Phoenix", "Dragon"];
-  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  const num = Math.floor(Math.random() * 999);
+  const { randomInt } = require("crypto");
+  const adj = adjectives[randomInt(adjectives.length)];
+  const noun = nouns[randomInt(nouns.length)];
+  const num = randomInt(999);
   return `${adj}${noun}${num}`;
 }
 
@@ -685,7 +686,7 @@ export function registerAuthRoutes(app: Express) {
       }
 
       // Generate 6-digit code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = require("crypto").randomInt(100000, 999999).toString();
       const expiresAt = Date.now() + 15 * 60 * 1000; // 15 min
       recoveryCodeStore.set(user.id, { code, expiresAt });
 

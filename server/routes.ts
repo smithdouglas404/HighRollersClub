@@ -327,7 +327,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   app.post("/api/tables/:id/video-token", requireAuth, async (req, res, next) => {
     try {
       if (!process.env.DAILY_API_KEY) {
-        return res.status(503).json({ message: "Video not configured" });
+        return res.status(200).json({ available: false, message: "Video chat is not currently available. Contact the platform administrator to enable this feature." });
       }
       const tableId = req.params.id;
       const user = req.user!;
@@ -6490,8 +6490,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "recipientWallet and amount are required" });
       }
 
-      // Auto-generate TX-XXXXXX transaction ID
-      const txNum = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+      // Auto-generate TX-XXXXXXXX transaction ID (collision-resistant)
+      const txNum = randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
       const transactionId = `TX-${txNum}`;
 
       const [payout] = await db.insert(sponsorshipPayouts).values({

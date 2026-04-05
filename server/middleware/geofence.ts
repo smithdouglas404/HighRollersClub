@@ -36,7 +36,11 @@ async function getCountryFromIP(ip: string): Promise<string | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
+    // NOTE: ip-api.com free tier only supports HTTP. For HTTPS, upgrade to pro.ip-api.com
+    // or switch to MaxMind GeoIP2. The security-engine.ts module provides additional
+    // VPN/proxy detection via the same API.
+    const apiBase = process.env.IP_API_URL || "http://ip-api.com";
+    const res = await fetch(`${apiBase}/json/${ip}?fields=countryCode`, {
       signal: controller.signal,
     });
     clearTimeout(timeout);

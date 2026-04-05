@@ -1079,7 +1079,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
   // ─── KYC Routes ── (moved to routes/kyc-routes.ts)
 
-  // ─── Onfido SDK Integration (Professional KYC) ── (moved to routes/kyc-routes.ts)
+  // ─── Didit SDK Integration (Professional KYC) ── (moved to routes/kyc-routes.ts)
 
   // ─── Blockchain Member ID Routes ── (moved to routes/kyc-routes.ts)
 

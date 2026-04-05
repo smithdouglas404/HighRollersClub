@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
@@ -35,12 +35,10 @@ export default function KYC() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Onfido SDK state
-  const [kycMode, setKycMode] = useState<"loading" | "onfido" | "manual">("loading");
-  const [onfidoToken, setOnfidoToken] = useState<string | null>(null);
-  const [onfidoStarting, setOnfidoStarting] = useState(false);
-  const onfidoContainerRef = useRef<HTMLDivElement>(null);
-  const onfidoInstanceRef = useRef<any>(null);
+  // Didit verification state
+  const [kycMode, setKycMode] = useState<"loading" | "didit" | "manual">("loading");
+  const [diditStarting, setDiditStarting] = useState(false);
+  const [pollingStatus, setPollingStatus] = useState(false);
 
   // Form fields (manual fallback)
   const [fullName, setFullName] = useState("");
@@ -134,12 +132,12 @@ export default function KYC() {
     }
   };
 
-  // Start Onfido verification flow
-  const startOnfido = useCallback(async () => {
-    setOnfidoStarting(true);
+  // Start Didit verification flow — redirects user to Didit hosted page
+  const startDidit = useCallback(async () => {
+    setDiditStarting(true);
     setError(null);
     try {
-      const res = await fetch("/api/kyc/onfido/start", {
+      const res = await fetch("/api/kyc/didit/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName: fullName || user?.displayName, dateOfBirth }),
@@ -152,93 +150,62 @@ export default function KYC() {
         return;
       }
 
-      setOnfidoToken(data.sdkToken);
-      setKycMode("onfido");
-
-      // Load Onfido SDK dynamically
-      if (!document.getElementById("onfido-sdk-script")) {
-        const script = document.createElement("script");
-        script.id = "onfido-sdk-script";
-        script.src = "https://sdk.onfido.com/v14";
-        script.async = true;
-        document.head.appendChild(script);
-
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = "https://sdk.onfido.com/v14/style.css";
-        document.head.appendChild(link);
-
-        await new Promise<void>((resolve) => {
-          script.onload = () => resolve();
-          setTimeout(resolve, 5000); // timeout fallback
-        });
-      }
-
-      // Wait for container to render
-      await new Promise(r => setTimeout(r, 100));
-
-      // Initialize Onfido SDK
-      if ((window as any).Onfido && onfidoContainerRef.current) {
-        onfidoInstanceRef.current = (window as any).Onfido.init({
-          token: data.sdkToken,
-          containerId: "onfido-mount",
-          steps: [
-            { type: "document", options: { documentTypes: { passport: true, driving_licence: true, national_identity_card: true } } },
-            { type: "face", options: { requestedVariant: "video" } }, // liveness detection
-          ],
-          onComplete: async () => {
-            // SDK complete — trigger server-side check
-            try {
-              const checkRes = await fetch("/api/kyc/onfido/check", { method: "POST" });
-              const checkData = await checkRes.json();
-              if (checkRes.ok) {
-                setSuccess("Verification submitted! AI is checking your identity. You'll be notified when complete.");
-                setStatus(prev => prev ? { ...prev, kycStatus: "pending" } : prev);
-                await refreshUser();
-              } else {
-                setError(checkData.message || "Check creation failed");
-              }
-            } catch {
-              setError("Network error creating check");
-            }
-            // Teardown SDK
-            if (onfidoInstanceRef.current?.tearDown) onfidoInstanceRef.current.tearDown();
-          },
-          onError: (err: any) => {
-            console.error("Onfido SDK error:", err);
-            setError("Verification error. Please try again.");
-          },
-        });
+      // Redirect user to Didit hosted verification page
+      if (data.sessionUrl) {
+        window.location.href = data.sessionUrl;
       } else {
-        // SDK failed to load — fall back to manual
+        setError("No verification URL returned");
         setKycMode("manual");
-        setError("Verification SDK failed to load. Using manual form.");
       }
     } catch (err: any) {
       setError(err.message || "Failed to start verification");
       setKycMode("manual");
     } finally {
-      setOnfidoStarting(false);
+      setDiditStarting(false);
     }
-  }, [fullName, dateOfBirth, user, refreshUser]);
+  }, [fullName, dateOfBirth, user]);
 
-  // Check if Onfido is configured on first load
+  // Check Didit verification status (called when user returns from Didit)
+  const checkDiditStatus = useCallback(async () => {
+    setPollingStatus(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/kyc/didit/status", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.status === "verified") {
+          setSuccess("Identity verified successfully!");
+          setStatus(prev => prev ? { ...prev, kycStatus: "verified" } : prev);
+          await refreshUser();
+        } else if (data.status === "rejected") {
+          setError("Verification was not approved. You may try again.");
+          setStatus(prev => prev ? { ...prev, kycStatus: "rejected" } : prev);
+        } else {
+          setSuccess("Verification is still being processed. You'll be notified when complete.");
+        }
+      }
+    } catch {
+      setError("Failed to check verification status");
+    } finally {
+      setPollingStatus(false);
+    }
+  }, [refreshUser]);
+
+  // Check if Didit is configured on first load
   useEffect(() => {
     if (status && (status.kycStatus === "none" || status.kycStatus === "rejected")) {
-      // Pre-check if Onfido is available
-      fetch("/api/kyc/onfido/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
+      // Pre-check if Didit is available
+      fetch("/api/kyc/didit/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
         .then(r => r.json())
-        .then(data => { setKycMode(data.mode === "onfido" ? "onfido" : "manual"); })
+        .then(data => { setKycMode(data.mode === "didit" ? "didit" : "manual"); })
         .catch(() => setKycMode("manual"));
+    } else if (status?.kycStatus === "pending") {
+      // User might have returned from Didit — check status
+      setKycMode("didit");
     } else {
       setKycMode("manual"); // Already submitted, show status
     }
   }, [status]);
-
-  // Cleanup Onfido SDK on unmount
-  useEffect(() => {
-    return () => { if (onfidoInstanceRef.current?.tearDown) onfidoInstanceRef.current.tearDown(); };
-  }, []);
 
   const userTier = user?.tier || "free";
   const tierOrder = ["free", "bronze", "silver", "gold", "platinum"];
@@ -341,6 +308,14 @@ export default function KYC() {
                 <p className="text-gray-400">Submitted: <span className="text-white">{new Date(status.kycData.submittedAt).toLocaleString()}</span></p>
               </div>
             )}
+            <button
+              onClick={checkDiditStatus}
+              disabled={pollingStatus}
+              className="mt-4 px-6 py-2.5 rounded-lg bg-yellow-500/20 text-yellow-300 font-bold text-sm border border-yellow-500/30 hover:bg-yellow-500/30 transition-all disabled:opacity-50 inline-flex items-center gap-2"
+            >
+              {pollingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+              Check Verification Status
+            </button>
           </div>
         )}
 
@@ -357,9 +332,9 @@ export default function KYC() {
             </div>
 
             {kycMode !== "manual" ? (
-              <button onClick={startOnfido} disabled={onfidoStarting}
+              <button onClick={startDidit} disabled={diditStarting}
                 className="w-full py-3 rounded-lg bg-purple-500/20 text-purple-400 font-bold text-sm border border-purple-500/30 hover:bg-purple-500/30 flex items-center justify-center gap-2">
-                {onfidoStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
+                {diditStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
                 Retry Identity Verification
               </button>
             ) : (
@@ -373,14 +348,13 @@ export default function KYC() {
                 onSubmit={handleSubmit} submitting={submitting}
               />
             )}
-            <div id="onfido-mount" ref={onfidoContainerRef} className="rounded-lg overflow-hidden" />
           </div>
         )}
 
-        {/* None — show Onfido or manual form */}
+        {/* None — show Didit or manual form */}
         {isGoldPlus && (status?.kycStatus === "none" || !status?.kycStatus) && (
           <div className="space-y-4">
-            {/* Professional Onfido flow */}
+            {/* Professional Didit flow */}
             {kycMode !== "manual" && (
               <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-6 space-y-4">
                 <div className="flex items-center gap-3">
@@ -389,7 +363,30 @@ export default function KYC() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-white">AI-Powered Identity Verification</h3>
-                    <p className="text-xs text-gray-400">Powered by Onfido — instant ID check with liveness detection</p>
+                    <p className="text-xs text-gray-400">Powered by Didit — instant ID check with liveness detection</p>
+                  </div>
+                </div>
+
+                {/* Tier-based verification features */}
+                <div className="rounded-lg bg-black/20 p-4 space-y-3">
+                  <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Verification Features by Tier</h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg bg-amber-500/5 border border-amber-500/10 p-2">
+                      <div className="text-amber-400 font-bold mb-1">Bronze</div>
+                      <div className="text-gray-500">Passive Liveness + Face Match</div>
+                    </div>
+                    <div className="rounded-lg bg-gray-500/5 border border-gray-500/10 p-2">
+                      <div className="text-gray-300 font-bold mb-1">Silver</div>
+                      <div className="text-gray-500">+ Phone Verification + Age Check</div>
+                    </div>
+                    <div className="rounded-lg bg-yellow-500/5 border border-yellow-500/10 p-2">
+                      <div className="text-yellow-400 font-bold mb-1">Gold</div>
+                      <div className="text-gray-500">+ ID Verification + AML Screening</div>
+                    </div>
+                    <div className="rounded-lg bg-cyan-500/5 border border-cyan-500/10 p-2">
+                      <div className="text-cyan-400 font-bold mb-1">Platinum</div>
+                      <div className="text-gray-500">+ NFC Passport + Active Liveness</div>
+                    </div>
                   </div>
                 </div>
 
@@ -411,7 +408,7 @@ export default function KYC() {
                   </div>
                 </div>
 
-                {/* Name + DOB for applicant creation */}
+                {/* Name + DOB for session creation */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Full Legal Name</label>
@@ -425,18 +422,15 @@ export default function KYC() {
                   </div>
                 </div>
 
-                <button onClick={startOnfido} disabled={onfidoStarting || !fullName}
+                <button onClick={startDidit} disabled={diditStarting || !fullName}
                   className="w-full py-3 rounded-lg bg-purple-500/20 text-purple-400 font-bold text-sm border border-purple-500/30 hover:bg-purple-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                  {onfidoStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
-                  {onfidoStarting ? "Starting Verification..." : "Start Identity Verification"}
+                  {diditStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
+                  {diditStarting ? "Starting Verification..." : "Start Identity Verification"}
                 </button>
 
-                {/* Onfido SDK mounts here */}
-                <div id="onfido-mount" ref={onfidoContainerRef} className="rounded-lg overflow-hidden" />
-
                 <p className="text-[10px] text-gray-600 text-center">
-                  Your documents are processed securely by Onfido and never stored on our servers.
-                  <a href="https://onfido.com/privacy" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 ml-1 inline-flex items-center gap-0.5">
+                  Your documents are processed securely by Didit and never stored on our servers.
+                  <a href="https://didit.me/privacy" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 ml-1 inline-flex items-center gap-0.5">
                     Privacy Policy <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 </p>

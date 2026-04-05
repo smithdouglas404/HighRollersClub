@@ -58,16 +58,17 @@ export async function registerKycRoutes(
     } catch (err) { next(err); }
   });
 
-  // ─── Onfido SDK Integration (Professional KYC) ──────────────────────────
-  // Creates an Onfido applicant + SDK token for the client-side verification flow.
-  // Onfido handles: ID capture, liveness detection, face matching, document authenticity.
-  // We NEVER see or store the actual ID documents — they live on Onfido's infrastructure.
+  // ─── Didit SDK Integration (Professional KYC) ───────────────────────────
+  // Creates a Didit verification session and returns a hosted URL for the user.
+  // Didit handles: ID capture, liveness detection, face matching, document authenticity.
+  // We NEVER see or store the actual ID documents — they live on Didit's infrastructure.
 
-  app.post("/api/kyc/onfido/start", requireAuth, requireTier("silver"), async (req, res, next) => {
+  app.post("/api/kyc/didit/start", requireAuth, requireTier("silver"), async (req, res, next) => {
     try {
-      const onfidoApiToken = process.env.ONFIDO_API_TOKEN;
-      if (!onfidoApiToken) {
-        // Fallback to manual KYC mode if Onfido not configured
+      const diditApiKey = process.env.DIDIT_API_KEY;
+      const diditWorkflowId = process.env.DIDIT_WORKFLOW_ID;
+      if (!diditApiKey || !diditWorkflowId) {
+        // Fallback to manual KYC mode if Didit not configured
         return res.json({ mode: "manual", message: "Use the manual KYC form" });
       }
 
@@ -77,100 +78,158 @@ export async function registerKycRoutes(
       if (user.kycStatus === "pending") return res.status(400).json({ message: "Verification already in progress" });
 
       const { fullName, dateOfBirth } = req.body;
-      const onfidoBaseUrl = process.env.ONFIDO_REGION === "eu" ? "https://api.eu.onfido.com/v3.6" : "https://api.us.onfido.com/v3.6";
+      const callbackUrl = process.env.DIDIT_CALLBACK_URL || `${req.protocol}://${req.get("host")}/api/webhooks/kyc-verification`;
 
-      // Step 1: Create applicant on Onfido
-      const nameParts = (fullName || user.displayName || "User").split(" ");
-      const applicantRes = await fetch(`${onfidoBaseUrl}/applicants`, {
+      // Create a Didit verification session
+      const sessionRes = await fetch("https://verification.didit.me/v3/session/", {
         method: "POST",
-        headers: { "Authorization": `Token token=${onfidoApiToken}`, "Content-Type": "application/json" },
+        headers: { "Authorization": `Bearer ${diditApiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          first_name: nameParts[0] || "User",
-          last_name: nameParts.slice(1).join(" ") || "Unknown",
-          email: user.email || undefined,
-          dob: dateOfBirth || undefined,
+          workflow_id: diditWorkflowId,
+          vendor_data: user.id,
+          callback_url: callbackUrl,
+          metadata: {
+            fullName: fullName || user.displayName || "User",
+            dateOfBirth: dateOfBirth || undefined,
+            email: user.email || undefined,
+          },
         }),
       });
-      if (!applicantRes.ok) {
-        const err = await applicantRes.json();
-        return res.status(500).json({ message: "Failed to create Onfido applicant", error: err });
+      if (!sessionRes.ok) {
+        const err = await sessionRes.json().catch(() => ({ message: sessionRes.statusText }));
+        return res.status(500).json({ message: "Failed to create Didit session", error: err });
       }
-      const applicant = await applicantRes.json();
+      const session = await sessionRes.json() as { session_id: string; url: string };
 
-      // Step 2: Generate SDK token for client-side verification
-      const tokenRes = await fetch(`${onfidoBaseUrl}/sdk_token`, {
-        method: "POST",
-        headers: { "Authorization": `Token token=${onfidoApiToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          applicant_id: applicant.id,
-          referrer: process.env.ONFIDO_REFERRER || "*://*/*",
-        }),
-      });
-      if (!tokenRes.ok) {
-        return res.status(500).json({ message: "Failed to generate SDK token" });
-      }
-      const tokenData = await tokenRes.json();
-
-      // Step 3: Store applicant ID on the user for webhook matching
+      // Store session ID on the user for webhook matching
       await storage.updateUser(user.id, {
         kycStatus: "pending",
         kycData: {
           ...(user.kycData as any || {}),
           fullName: fullName || user.displayName,
           dateOfBirth,
-          providerApplicantId: applicant.id,
-          provider: "onfido",
+          providerSessionId: session.session_id,
+          provider: "didit",
           submittedAt: new Date().toISOString(),
         },
       });
 
       res.json({
-        mode: "onfido",
-        sdkToken: tokenData.token,
-        applicantId: applicant.id,
+        mode: "didit",
+        sessionUrl: session.url,
+        sessionId: session.session_id,
       });
     } catch (err) { next(err); }
   });
 
-  // Onfido check creation — called after client-side SDK completes
-  app.post("/api/kyc/onfido/check", requireAuth, async (req, res, next) => {
+  // Didit status check — called after user returns from Didit hosted verification
+  app.post("/api/kyc/didit/status", requireAuth, async (req, res, next) => {
     try {
-      const onfidoApiToken = process.env.ONFIDO_API_TOKEN;
-      if (!onfidoApiToken) return res.status(400).json({ message: "Onfido not configured" });
+      const diditApiKey = process.env.DIDIT_API_KEY;
+      if (!diditApiKey) return res.status(400).json({ message: "Didit not configured" });
 
       const user = await storage.getUser(req.user!.id);
       if (!user) return res.status(404).json({ message: "User not found" });
       const kycData = user.kycData as any;
-      if (!kycData?.providerApplicantId) return res.status(400).json({ message: "No Onfido applicant found" });
+      if (!kycData?.providerSessionId) return res.status(400).json({ message: "No Didit session found" });
 
-      const onfidoBaseUrl = process.env.ONFIDO_REGION === "eu" ? "https://api.eu.onfido.com/v3.6" : "https://api.us.onfido.com/v3.6";
-
-      // Create a check (triggers Onfido's AI verification)
-      const checkRes = await fetch(`${onfidoBaseUrl}/checks`, {
-        method: "POST",
-        headers: { "Authorization": `Token token=${onfidoApiToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          applicant_id: kycData.providerApplicantId,
-          report_names: ["document", "facial_similarity_photo"],
-        }),
+      // Fetch the decision from Didit
+      const decisionRes = await fetch(`https://verification.didit.me/v3/session/${kycData.providerSessionId}/decision/`, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${diditApiKey}` },
       });
-      if (!checkRes.ok) {
-        const err = await checkRes.json();
-        return res.status(500).json({ message: "Failed to create check", error: err });
+      if (!decisionRes.ok) {
+        const err = await decisionRes.json().catch(() => ({ message: decisionRes.statusText }));
+        return res.status(500).json({ message: "Failed to fetch verification decision", error: err });
       }
-      const check = await checkRes.json();
+      const decision = await decisionRes.json();
 
-      // Update KYC data with check ID
-      await storage.updateUser(user.id, {
-        kycData: { ...kycData, checkId: check.id, checkStatus: "in_progress" },
-      });
+      // Map Didit status to our internal status
+      const diditStatus = decision.status as string;
+      let mappedStatus = kycData.checkStatus || "pending";
+      if (diditStatus === "Approved") mappedStatus = "verified";
+      else if (diditStatus === "Declined") mappedStatus = "rejected";
+      else if (diditStatus === "In Progress" || diditStatus === "In Review") mappedStatus = "pending";
 
-      // Result will arrive via webhook (POST /api/webhooks/kyc-verification)
-      res.json({ checkId: check.id, status: "processing", message: "Verification in progress. You'll be notified when complete." });
+      // Update user if status changed
+      if (mappedStatus === "verified" && user.kycStatus !== "verified") {
+        await storage.updateUser(user.id, { kycStatus: "verified", kycVerifiedAt: new Date() });
+      } else if (mappedStatus === "rejected" && user.kycStatus !== "rejected") {
+        await storage.updateUser(user.id, { kycStatus: "rejected", kycRejectionReason: `Didit: ${diditStatus}` });
+      }
+
+      res.json({ status: mappedStatus, diditStatus, decision });
     } catch (err) { next(err); }
   });
 
-  // Manual KYC submit (fallback when Onfido is not configured)
+  // Didit tier-specific verification — creates session with tier-appropriate workflow
+  app.post("/api/kyc/didit/tier-verify", requireAuth, async (req, res, next) => {
+    try {
+      const diditApiKey = process.env.DIDIT_API_KEY;
+      if (!diditApiKey) {
+        return res.json({ mode: "manual", message: "Use the manual KYC form" });
+      }
+
+      const { tier } = req.body;
+      if (!tier) return res.status(400).json({ message: "Tier parameter is required" });
+
+      // Select workflow ID based on tier level
+      const tierWorkflows: Record<string, string | undefined> = {
+        bronze: process.env.DIDIT_WORKFLOW_BRONZE,
+        silver: process.env.DIDIT_WORKFLOW_SILVER,
+        gold: process.env.DIDIT_WORKFLOW_GOLD,
+        platinum: process.env.DIDIT_WORKFLOW_PLATINUM,
+      };
+      const workflowId = tierWorkflows[tier] || process.env.DIDIT_WORKFLOW_ID;
+      if (!workflowId) {
+        return res.status(400).json({ message: `No workflow configured for tier: ${tier}` });
+      }
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const callbackUrl = process.env.DIDIT_CALLBACK_URL || `${req.protocol}://${req.get("host")}/api/webhooks/kyc-verification`;
+
+      const sessionRes = await fetch("https://verification.didit.me/v3/session/", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${diditApiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workflow_id: workflowId,
+          vendor_data: user.id,
+          callback_url: callbackUrl,
+          metadata: {
+            tier,
+            fullName: (user.kycData as any)?.fullName || user.displayName || "User",
+            email: user.email || undefined,
+          },
+        }),
+      });
+      if (!sessionRes.ok) {
+        const err = await sessionRes.json().catch(() => ({ message: sessionRes.statusText }));
+        return res.status(500).json({ message: "Failed to create Didit tier session", error: err });
+      }
+      const session = await sessionRes.json() as { session_id: string; url: string };
+
+      await storage.updateUser(user.id, {
+        kycData: {
+          ...(user.kycData as any || {}),
+          providerSessionId: session.session_id,
+          provider: "didit",
+          tierVerification: tier,
+          submittedAt: new Date().toISOString(),
+        },
+      });
+
+      res.json({
+        mode: "didit",
+        sessionUrl: session.url,
+        sessionId: session.session_id,
+        tier,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Manual KYC submit (fallback when Didit is not configured)
   app.post("/api/kyc/submit", requireAuth, requireTier("silver"), kycUpload.fields([
     { name: "idDocument", maxCount: 1 },
     { name: "selfie", maxCount: 1 },
@@ -405,17 +464,18 @@ export async function registerKycRoutes(
   });
 
   // ─── Third-Party KYC Verification Webhook ─────────────────────────────────
-  // Supports Onfido / Sumsub webhook callbacks
-  // Provider configured via KYC_PROVIDER env var (onfido | sumsub | manual)
+  // Supports Didit / Sumsub webhook callbacks
+  // Provider configured via KYC_PROVIDER env var (didit | sumsub | manual)
 
   app.post("/api/webhooks/kyc-verification", async (req, res, next) => {
     try {
       const provider = process.env.KYC_PROVIDER || "manual";
       const webhookSecret = process.env.KYC_WEBHOOK_SECRET;
 
-      // Verify webhook signature based on provider — mandatory in production
-      if (provider === "onfido") {
-        const sig = req.headers["x-sha2-signature"] as string;
+      // Didit webhook handler
+      if (provider === "didit") {
+        // Verify webhook signature — mandatory in production
+        const sig = req.headers["x-signature"] as string;
         if (!webhookSecret && process.env.NODE_ENV === "production") {
           return res.status(401).json({ message: "KYC webhook secret not configured — rejecting in production" });
         }
@@ -427,37 +487,36 @@ export async function registerKycRoutes(
           if (sig !== expected) return res.status(401).json({ message: "Invalid signature" });
         }
 
-        const { payload } = req.body;
-        if (!payload?.resource_type || payload.resource_type !== "check") {
-          return res.json({ received: true });
-        }
+        const { session_id, status: diditStatus, decision } = req.body;
+        if (!session_id) return res.json({ received: true });
 
-        const applicantId = payload.object?.applicant_id;
-        const result = payload.object?.result; // "clear" | "consider"
-        if (!applicantId) return res.json({ received: true });
-
-        // Look up user by kycData.providerApplicantId
+        // Look up user by kycData.providerSessionId
         const allPending = await storage.getAllUsersByKycStatus("pending");
-        const user = allPending.find(u => (u.kycData as any)?.providerApplicantId === applicantId);
+        const user = allPending.find(u => (u.kycData as any)?.providerSessionId === session_id);
         if (!user) return res.json({ received: true, matched: false });
 
-        if (result === "clear") {
+        if (diditStatus === "Approved") {
           await storage.updateUser(user.id, { kycStatus: "verified", kycVerifiedAt: new Date() });
           if (user.email) {
             sendKycEmail(user.email, "KYC Verified - HighRollers Club",
               `<h2>Identity Verified!</h2><p>Your identity has been automatically verified. You now have full access.</p>`);
           }
           await storage.createNotification(user.id, "kyc_status", "KYC Approved", "Your identity has been verified!", { status: "verified" });
-          await logAdminAction("system:onfido", "kyc_auto_approve", "user", user.id, { applicantId, result });
-        } else {
-          await storage.updateUser(user.id, { kycStatus: "rejected", kycRejectionReason: `Auto-review: ${result}` });
+          await logAdminAction("system:didit", "kyc_auto_approve", "user", user.id, { session_id, status: diditStatus, decision });
+        } else if (diditStatus === "Declined") {
+          const reason = decision?.reason || "Verification declined";
+          await storage.updateUser(user.id, { kycStatus: "rejected", kycRejectionReason: `Auto-review: ${reason}` });
           if (user.email) {
             sendKycEmail(user.email, "KYC Update - HighRollers Club",
-              `<h2>Verification Update</h2><p>Your application requires manual review. We'll notify you when complete.</p>`);
+              `<h2>Verification Update</h2><p>Your application was not approved: ${reason}</p>`);
           }
+          await storage.createNotification(user.id, "kyc_status", "KYC Update", `Verification not approved: ${reason}`, { status: "rejected" });
+          await logAdminAction("system:didit", "kyc_auto_reject", "user", user.id, { session_id, status: diditStatus, decision });
+        } else if (diditStatus === "In Review") {
+          // Keep as pending, notify user
           await storage.createNotification(user.id, "kyc_status", "KYC Review", "Your documents need additional review.", { status: "review" });
-          await logAdminAction("system:onfido", "kyc_auto_reject", "user", user.id, { applicantId, result });
         }
+        // Statuses "Not Started", "In Progress", "Abandoned" — no action needed
         return res.json({ received: true, processed: true });
 
       } else if (provider === "sumsub") {

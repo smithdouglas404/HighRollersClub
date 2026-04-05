@@ -625,6 +625,74 @@ function DailyChallenges() {
   );
 }
 
+// ─── Fast-Fold Pool Browser ─────────────────────────────────────────────────
+function FastFoldPoolBrowser() {
+  const [pools, setPools] = useState<any[]>([]);
+  const [joining, setJoining] = useState<string | null>(null);
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    fetch("/api/fast-fold/pools").then(r => r.ok ? r.json() : []).then(setPools).catch(() => {});
+  }, []);
+
+  const joinPool = async (poolId: string, minBuyIn: number) => {
+    setJoining(poolId);
+    try {
+      const res = await fetch(`/api/fast-fold/pools/${poolId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buyIn: minBuyIn }),
+      });
+      const data = await res.json();
+      if (res.ok && data.tableId) {
+        navigate(`/game/${data.tableId}`);
+      }
+    } catch {} finally { setJoining(null); }
+  };
+
+  if (pools.length === 0) {
+    return (
+      <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
+        <Zap className="w-6 h-6 text-amber-400 mx-auto mb-2" />
+        <h3 className="text-sm font-bold text-white">Rush Poker Pools</h3>
+        <p className="text-xs text-gray-500 mt-1">No fast-fold pools are currently active. An admin can create one from the admin dashboard.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6 space-y-3">
+      <div className="flex items-center gap-2">
+        <Zap className="w-4 h-4 text-amber-400" />
+        <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">Rush Poker Pools — Instant Action</h3>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {pools.map((pool: any) => (
+          <div key={pool.poolId} className="rounded-xl border border-amber-500/15 p-4" style={{ background: "rgba(212,175,55,0.03)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-white">{pool.name || "Rush Pool"}</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400">RUSH</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-400 mb-3">
+              <div>Blinds: <span className="text-white">{pool.smallBlind}/{pool.bigBlind}</span></div>
+              <div>Players: <span className="text-cyan-400">{pool.totalPlayers || 0}</span></div>
+              <div>Tables: <span className="text-white">{pool.activeTables || 0}</span></div>
+            </div>
+            <div className="text-[10px] text-gray-500 mb-3">Buy-in: {pool.minBuyIn}–{pool.maxBuyIn}</div>
+            <button
+              onClick={() => joinPool(pool.poolId, pool.minBuyIn)}
+              disabled={joining === pool.poolId}
+              className="w-full py-2 rounded-lg bg-amber-500/15 text-amber-400 font-bold text-xs border border-amber-500/25 hover:bg-amber-500/25 transition-all disabled:opacity-50"
+            >
+              {joining === pool.poolId ? "Joining..." : "Join Pool — Instant Seat"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Lobby() {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
@@ -1332,6 +1400,9 @@ export default function Lobby() {
           <>
             <div className="flex items-center gap-2 mb-3">
               <LayoutGrid className="w-3.5 h-3.5 text-muted-foreground" />
+              {/* Fast-Fold Pool Browser */}
+              {activeFormat === "fast_fold" && <FastFoldPoolBrowser />}
+
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">All Tables</h3>
               <div className="flex-1 h-px bg-gradient-to-r from-white/[0.06] to-transparent" />
             </div>

@@ -114,6 +114,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Auto-migrate database schema (add missing columns/tables)
+  const { autoMigrate } = await import("./db");
+  await autoMigrate().catch(err => console.warn("[init] Auto-migrate:", err.message));
+
   // Ensure "system" user exists before any tables/tournaments are created
   const { storage } = await import("./storage");
   await storage.ensureSystemUser().catch(err => console.warn("[init] System user creation:", err.message));

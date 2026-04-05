@@ -414,19 +414,23 @@ function ShopItemCard({
   owned,
   wishlisted,
   onToggleWishlist,
+  onPreview,
 }: {
   item: ShopItem;
   onPurchase: (item: ShopItem) => void;
   owned: boolean;
   wishlisted?: boolean;
   onToggleWishlist?: (itemId: string) => void;
+  onPreview?: (item: ShopItem) => void;
 }) {
   return (
     <motion.div
       whileHover={{ scale: 1.03, y: -4, boxShadow: `0 0 24px ${getRarityGlow(item.rarity)}` }}
       className="rounded-xl overflow-hidden transition-all cursor-pointer group card-hover"
-      style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
-      onClick={() => !owned && onPurchase(item)}
+      style={item.rarity?.toLowerCase() === "mythic"
+        ? { background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.5)", boxShadow: "0 0 16px rgba(212,175,55,0.4), 0 0 32px rgba(212,175,55,0.15)" }
+        : { background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
+      onClick={() => { onPreview?.(item); if (!owned) onPurchase(item); }}
       role="button"
       aria-label={owned ? `${item.name} - owned` : `Purchase ${item.name}`}
     >
@@ -436,6 +440,11 @@ function ShopItemCard({
         <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider border ${getRarityColor(item.rarity)}`}>
           {item.rarity}
         </div>
+        {item.rarity?.toLowerCase() === "mythic" && (
+          <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full text-[0.5rem] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500/90 to-yellow-400/90 text-black border border-amber-300/60" style={{ boxShadow: "0 0 10px rgba(212,175,55,0.5)" }}>
+            1/1 Exclusive
+          </div>
+        )}
         {owned && (
           <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider border bg-green-500/15 border-green-500/30 text-green-400">
             Owned
@@ -556,6 +565,8 @@ function InventoryItemCard({
 
 export default function Shop() {
   const [activeTab, setActiveTab] = useState("Avatars");
+  const [avatarSubTab, setAvatarSubTab] = useState<"all" | "premium" | "basic">("all");
+  const [previewItem, setPreviewItem] = useState<ShopItem | null>(null);
   const { user, refreshUser } = useAuth();
   const [, navigate] = useLocation();
   const [claimResult, setClaimResult] = useState<{ bonus: number } | null>(null);
@@ -739,10 +750,16 @@ export default function Shop() {
   const isInventoryTab = activeTab === "Inventory";
 
   const RARITY_RANK: Record<string, number> = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
+  const premiumRarities = new Set(["legendary", "mythic"]);
   const unsortedItems = isWishlistTab
     ? shopItems.filter((item) => wishlist.has(item.id))
     : activeCategory
-      ? shopItems.filter((item) => item.category === activeCategory)
+      ? shopItems.filter((item) => {
+          if (item.category !== activeCategory) return false;
+          if (activeTab === "Avatars" && avatarSubTab === "premium") return premiumRarities.has(item.rarity?.toLowerCase());
+          if (activeTab === "Avatars" && avatarSubTab === "basic") return !premiumRarities.has(item.rarity?.toLowerCase());
+          return true;
+        })
       : shopItems;
   const filteredItems = [...unsortedItems].sort((a, b) => {
     if (sortBy === "price_asc") return a.price - b.price;
@@ -814,6 +831,28 @@ export default function Shop() {
             </button>
           ))}
         </div>
+
+        {/* Avatar Sub-Tabs */}
+        {activeTab === "Avatars" && (
+          <div className="flex items-center gap-2 mb-6">
+            {([["all", "All Avatars"], ["premium", "Premium Avatars"], ["basic", "Basic Avatars"]] as const).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setAvatarSubTab(key as "all" | "premium" | "basic")}
+                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${
+                  avatarSubTab === key
+                    ? key === "premium"
+                      ? "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/25"
+                      : "bg-primary/15 text-primary border-primary/25"
+                    : "bg-white/5 text-gray-500 border-white/10 hover:text-gray-300"
+                }`}
+              >
+                {key === "premium" && <Crown className="w-3 h-3 inline mr-1.5" />}
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Content (3 cols) */}
@@ -957,6 +996,7 @@ export default function Shop() {
                                 owned={ownedItemIds.has(item.id)}
                                 wishlisted={wishlist.has(item.id)}
                                 onToggleWishlist={toggleWishlist}
+                                onPreview={setPreviewItem}
                               />
                             </motion.div>
                           ))}
@@ -988,6 +1028,7 @@ export default function Shop() {
                                 owned={ownedItemIds.has(item.id)}
                                 wishlisted={wishlist.has(item.id)}
                                 onToggleWishlist={toggleWishlist}
+                                onPreview={setPreviewItem}
                               />
                             </motion.div>
                           ))}
@@ -1240,6 +1281,66 @@ export default function Shop() {
                 </motion.div>
               );
             })()}
+
+            {/* Purchase Summary Panel */}
+            {previewItem && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="glass rounded-xl border overflow-hidden relative"
+                style={{ borderColor: previewItem.rarity?.toLowerCase() === "mythic" ? "rgba(212,175,55,0.4)" : "rgba(255,255,255,0.08)" }}
+              >
+                <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Purchase Summary</h3>
+                  <button onClick={() => setPreviewItem(null)} className="text-gray-500 hover:text-white transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="aspect-square rounded-lg overflow-hidden border border-white/10">
+                    <ItemImage item={previewItem} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white">{previewItem.name}</div>
+                    <div className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider border ${getRarityColor(previewItem.rarity)}`}>
+                      {previewItem.rarity?.toLowerCase() === "mythic" && <Crown className="w-2.5 h-2.5" />}
+                      {previewItem.rarity}
+                    </div>
+                    {previewItem.rarity?.toLowerCase() === "mythic" && (
+                      <div className="mt-1.5 px-2 py-0.5 rounded-full text-[0.5rem] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500/90 to-yellow-400/90 text-black inline-block" style={{ boxShadow: "0 0 10px rgba(212,175,55,0.5)" }}>
+                        1/1 Exclusive
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 pt-2 border-t border-white/5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[0.625rem] text-gray-500 uppercase tracking-wider">Price</span>
+                      <span className="text-sm font-bold flex items-center gap-1" style={{ color: "#d4af37" }}>
+                        <Coins className="w-3 h-3" /> {previewItem.price.toLocaleString()} chips
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[0.625rem] text-gray-500 uppercase tracking-wider">ETH Equiv.</span>
+                      <span className="text-[0.6875rem] font-medium text-gray-400">~0.05 ETH</span>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setSelectedItem(previewItem);
+                      setPreviewItem(null);
+                    }}
+                    disabled={ownedItemIds.has(previewItem.id)}
+                    className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                    {ownedItemIds.has(previewItem.id) ? "Already Owned" : "Complete Purchase"}
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
 
             {/* Wallet Actions */}
             <div className="flex gap-2">

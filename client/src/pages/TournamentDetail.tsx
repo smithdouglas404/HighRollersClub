@@ -4,8 +4,9 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Trophy, Users, Layers, Coins, ArrowLeft, Loader2, Clock, RefreshCw,
+  Trophy, Users, Layers, Coins, ArrowLeft, Loader2, Clock, RefreshCw, BarChart2,
 } from "lucide-react";
+import { TournamentAnalytics } from "@/components/tournament/TournamentAnalytics";
 
 interface TournamentTableInfo {
   tableId: string;
@@ -337,6 +338,15 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                 </div>
               </motion.div>
             )}
+          </div>
+        )}
+        {/* Tournament Analytics Section */}
+        {tournamentId && (
+          <div className="mt-6">
+            <h2 className="text-lg font-display font-black text-white mb-4 flex items-center gap-2">
+              <BarChart2 className="w-5 h-5 text-primary" /> Prize Pool & Analytics
+            </h2>
+            <TournamentAnalytics tournamentId={tournamentId} />
           </div>
         )}
       </div>

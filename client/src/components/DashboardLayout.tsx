@@ -34,6 +34,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
   { icon: FileSearch, label: "Explorer", href: "/explorer", match: ["/explorer"] },
   { icon: LinkChain, label: "Blockchain", href: "/blockchain", match: ["/blockchain"] },
+  { icon: Crown, label: "Premium Table", href: "/premium-table", match: ["/premium-table"] },
   { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse", "/clubs/create"] },
   { icon: Swords, label: "League & Alliances", href: "/leagues" },
   { icon: Swords, label: "Club Wars", href: "/club-wars", match: ["/club-wars"] },

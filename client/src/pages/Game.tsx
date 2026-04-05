@@ -29,6 +29,9 @@ import { TauntPicker, setTauntVoice } from "../components/poker/TauntSystem";
 import { ChatPanel } from "../components/poker/ChatPanel";
 import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
 import { TableLedger } from "../components/poker/TableLedger";
+import { PlayerGameReport } from "../components/poker/PlayerGameReport";
+import { ElaborateHandHistory } from "../components/poker/ElaborateHandHistory";
+import BreakingNewsModal from "../components/poker/BreakingNewsModal";
 import { VideoControlBar, VideoThumbnail } from "../components/poker/VideoOverlay";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { HandBadge } from "../components/poker/HandBadge";
@@ -414,6 +417,9 @@ function GameTable({
   const [use3D, setUse3D] = useState(get3DPreference);
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
+  const [showPlayerReport, setShowPlayerReport] = useState(false);
+  const [showFullHistory, setShowFullHistory] = useState(false);
+  const [breakingNews, setBreakingNews] = useState<{ title: string; message: string } | null>(null);
   const [showAddChips, setShowAddChips] = useState(false);
   const [addChipsAmount, setAddChipsAmount] = useState(maxBuyIn || 300);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
@@ -451,6 +457,14 @@ function GameTable({
 
   // Sync game state → Zustand stores for the 3D scene
   useWebSocketBridge({ players, gameState, showdown });
+
+  // Listen for breaking news announcements
+  useEffect(() => {
+    const unsub = wsClient.on("breaking_news" as any, (msg: any) => {
+      if (msg.title && msg.message) setBreakingNews({ title: msg.title, message: msg.message });
+    });
+    return unsub;
+  }, []);
 
   // Animated pot counter for the top bar (smooth count-up/down)
   const { value: topBarPot } = useAnimatedCounter(gameState.pot || 0, 400);
@@ -1117,6 +1131,18 @@ function GameTable({
             </button>
           )}
 
+          {/* Player report */}
+          <button onClick={() => setShowPlayerReport(true)} className="p-1.5 rounded hover:bg-white/5 transition-colors" title="My Game Report">
+            <BarChart2 className="w-3.5 h-3.5 text-gray-500" />
+          </button>
+
+          {/* Full hand history */}
+          {tableId && (
+            <button onClick={() => setShowFullHistory(true)} className="p-1.5 rounded hover:bg-white/5 transition-colors" title="Hand History Log">
+              <Trophy className="w-3.5 h-3.5 text-gray-500" />
+            </button>
+          )}
+
           {/* Next hand starts automatically after showdown — show countdown instead of decorative button */}
         </div>
       </div>
@@ -1729,6 +1755,27 @@ function GameTable({
             </div>
             <TableLedger tableId={tableId} isOwner={isAdmin || false} />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ PLAYER GAME REPORT ═══ */}
+      <AnimatePresence>
+        {showPlayerReport && heroId && tableId && (
+          <PlayerGameReport tableId={tableId} playerId={heroId} playerName={hero?.name || "You"} onClose={() => setShowPlayerReport(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* ═══ FULL HAND HISTORY LOG ═══ */}
+      <AnimatePresence>
+        {showFullHistory && tableId && (
+          <ElaborateHandHistory tableId={tableId} onClose={() => setShowFullHistory(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* ═══ BREAKING NEWS MODAL ═══ */}
+      <AnimatePresence>
+        {breakingNews && (
+          <BreakingNewsModal title={breakingNews.title} message={breakingNews.message} onDismiss={() => setBreakingNews(null)} />
         )}
       </AnimatePresence>
 

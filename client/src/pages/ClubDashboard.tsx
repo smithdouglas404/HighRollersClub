@@ -12,13 +12,15 @@ import {
   Settings, Search, Check, X,
   Shield, Medal, Gamepad2, Activity,
   Layers, Wifi, Image, Megaphone, LayoutDashboard,
-  Target, Clock, CheckCircle2, Sparkles
+  Target, Clock, CheckCircle2, Sparkles,
+  Mail, Send, RefreshCw
 } from "lucide-react";
 import { ClubTournaments } from "@/components/club/ClubTournaments";
 import { ClubChatSidebar } from "@/components/shared/ClubChatSidebar";
 import { ClubLeaderboard } from "@/components/club/ClubLeaderboard";
 import { cn } from "@/lib/utils";
 import { NeonButton } from "@/components/ui/neon";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 
 export const CLUB_LOGO_OPTIONS = [
@@ -64,7 +66,7 @@ export default function ClubDashboard() {
     clubTournaments,
   } = useClub();
 
-  const [activeTab, setActiveTab] = useState<"overview" | "members" | "tournaments" | "leaderboard">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "members" | "tournaments" | "leaderboard" | "financials">("overview");
   const [creatingTable, setCreatingTable] = useState(false);
   const [clubTables, setClubTables] = useState<any[]>([]);
   const [clubTablesLoading, setClubTablesLoading] = useState(false);
@@ -74,6 +76,10 @@ export default function ClubDashboard() {
   const [clubChallenges, setClubChallenges] = useState<any[]>([]);
   const [challengesLoading, setChallengesLoading] = useState(false);
   const [generatingChallenges, setGeneratingChallenges] = useState(false);
+
+  // Financials chart data
+  const [chartData, setChartData] = useState<{ date: string; activePlayers: number }[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
 
   // Quick Stats state
   interface QuickStats {
@@ -179,6 +185,17 @@ export default function ClubDashboard() {
       .finally(() => setChallengesLoading(false));
   }, [club]);
 
+  // Fetch financials chart data
+  useEffect(() => {
+    if (!club || activeTab !== "financials") return;
+    setChartLoading(true);
+    fetch(`/api/clubs/${club.id}/charts/activity`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(setChartData)
+      .catch(() => setChartData([]))
+      .finally(() => setChartLoading(false));
+  }, [club, activeTab]);
+
   const handleGenerateChallenges = async () => {
     if (generatingChallenges || !club) return;
     setGeneratingChallenges(true);
@@ -194,6 +211,60 @@ export default function ClubDashboard() {
     } catch {} finally {
       setGeneratingChallenges(false);
     }
+  };
+
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
+  const [initialGameCredit, setInitialGameCredit] = useState(1000);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [sentInvites, setSentInvites] = useState<Array<{
+    id: string;
+    email: string;
+    role: string;
+    sentDate: string;
+    status: "Pending" | "Accepted" | "Expired";
+  }>>(() => {
+    try {
+      const saved = localStorage.getItem(`club-sent-invites`);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const handleSendInvite = () => {
+    if (!inviteEmail.trim() || sendingInvite) return;
+    setSendingInvite(true);
+    const newInvite = {
+      id: `inv-${Date.now()}`,
+      email: inviteEmail.trim(),
+      role: inviteRole,
+      sentDate: new Date().toISOString(),
+      status: "Pending" as const,
+    };
+    setTimeout(() => {
+      setSentInvites(prev => {
+        const updated = [newInvite, ...prev];
+        localStorage.setItem(`club-sent-invites`, JSON.stringify(updated));
+        return updated;
+      });
+      setInviteEmail("");
+      setSendingInvite(false);
+    }, 500);
+  };
+
+  const handleResendInvite = (id: string) => {
+    setSentInvites(prev => {
+      const updated = prev.map(inv => inv.id === id ? { ...inv, sentDate: new Date().toISOString() } : inv);
+      localStorage.setItem(`club-sent-invites`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleCancelInvite = (id: string) => {
+    setSentInvites(prev => {
+      const updated = prev.filter(inv => inv.id !== id);
+      localStorage.setItem(`club-sent-invites`, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const [newClubName, setNewClubName] = useState("");
@@ -270,6 +341,7 @@ export default function ClubDashboard() {
     { key: "members" as const, label: "Members", icon: Users, count: members.length },
     { key: "tournaments" as const, label: "Tournaments", icon: Trophy, count: clubTournaments.length },
     { key: "leaderboard" as const, label: "Leaderboard", icon: Medal, count: null },
+    { key: "financials" as const, label: "Financials", icon: TrendingUp, count: null },
   ];
 
   const statsCards = [
@@ -1034,6 +1106,56 @@ export default function ClubDashboard() {
 
               {activeTab === "leaderboard" && club && <ClubLeaderboard clubId={club.id} />}
 
+              {activeTab === "financials" && club && (
+                <div className="space-y-6">
+                  {/* Stats row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Users className="w-4 h-4 text-[#c9a84c]" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Count</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{club.memberCount ?? members.length}</p>
+                    </div>
+                    <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Coins className="w-4 h-4 text-[#c9a84c]" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Chips</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{totalChips.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Chart */}
+                  <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-[#c9a84c]" />
+                      Daily Active Players (30 Days)
+                    </h3>
+                    {chartLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      </div>
+                    ) : chartData.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-12">No activity data available yet.</p>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                          <XAxis dataKey="date" stroke="#666" tick={{ fontSize: 10 }} />
+                          <YAxis stroke="#666" tick={{ fontSize: 10 }} />
+                          <Tooltip
+                            contentStyle={{ background: "rgba(15,15,20,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "12px" }}
+                            labelStyle={{ color: "#999" }}
+                          />
+                          <Line type="monotone" dataKey="activePlayers" stroke="#c9a84c" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {activeTab === "members" && <div>
                 <div className="rounded-md overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <div className="hidden sm:grid grid-cols-[1fr_100px_100px_80px] gap-4 px-4 py-2 border-b border-white/[0.04] text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
@@ -1138,6 +1260,153 @@ export default function ClubDashboard() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Welcome Card Preview */}
+                {isAdminOrOwner && (
+                  <div className="mt-6 space-y-6">
+                    <div className="rounded-xl border-2 border-[#c9a84c]/30 p-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0d0b08 0%, #1a1510 50%, #0d0b08 100%)" }}>
+                      <div className="absolute inset-0 border border-[#c9a84c]/10 rounded-xl pointer-events-none" />
+                      <div className="text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c9a84c]/20 to-[#c9a84c]/5 border border-[#c9a84c]/20 flex items-center justify-center mx-auto mb-4">
+                          {clubLogo ? (
+                            <img src={clubLogo.url} alt={clubLogo.label} className="w-10 h-10 rounded-lg object-cover" />
+                          ) : (
+                            <Shield className="w-8 h-8 text-[#c9a84c]/60" />
+                          )}
+                        </div>
+                        <p className="text-[10px] text-[#c9a84c]/50 uppercase tracking-[0.2em] mb-1">You have been invited to</p>
+                        <h3 className="text-xl font-display font-bold text-[#c9a84c]">Welcome to {club?.name || "Club"}</h3>
+                        <p className="text-xs text-gray-400 mt-2 max-w-xs mx-auto">{club?.description || "Join us for exclusive poker games and tournaments"}</p>
+                        <div className="mt-4 inline-block px-4 py-1.5 rounded-full bg-[#c9a84c]/10 border border-[#c9a84c]/20">
+                          <span className="text-[10px] text-[#c9a84c] font-bold uppercase tracking-wider">Welcome Card Preview</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Initial Game Credit */}
+                    <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}>
+                      <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                        <Coins className="w-4 h-4 text-[#c9a84c]" />
+                        Initial Game Credit
+                      </h3>
+                      <p className="text-[10px] text-gray-400 mb-3">Chips given to new members when they join your club</p>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          value={initialGameCredit}
+                          onChange={(e) => setInitialGameCredit(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#c9a84c]/40"
+                          min={0}
+                          step={100}
+                        />
+                        <span className="text-xs text-gray-400">chips</span>
+                      </div>
+                    </div>
+
+                    {/* Invite by Email */}
+                    <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}>
+                      <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-[#c9a84c]" />
+                        Invite New Member
+                      </h3>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="email"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          placeholder="Enter email address"
+                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#c9a84c]/40"
+                        />
+                        <select
+                          value={inviteRole}
+                          onChange={(e) => setInviteRole(e.target.value as "member" | "admin")}
+                          className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#c9a84c]/40"
+                        >
+                          <option value="member">Member</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <NeonButton
+                          variant="gold"
+                          size="sm"
+                          onClick={handleSendInvite}
+                          disabled={sendingInvite || !inviteEmail.trim()}
+                          className="gap-1.5 whitespace-nowrap"
+                        >
+                          {sendingInvite ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                          Send Invite
+                        </NeonButton>
+                      </div>
+                    </div>
+
+                    {/* Pending Invitations Table */}
+                    {sentInvites.length > 0 && (
+                      <div className="rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}>
+                        <div className="px-4 py-3 border-b border-white/[0.06]">
+                          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-[#c9a84c]" />
+                            Pending Invitations ({sentInvites.length})
+                          </h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left">
+                            <thead>
+                              <tr className="border-b border-white/[0.04]">
+                                <th className="px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Email</th>
+                                <th className="px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Role</th>
+                                <th className="px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Sent Date</th>
+                                <th className="px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Status</th>
+                                <th className="px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sentInvites.map((inv) => (
+                                <tr key={inv.id} className="border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-2.5 text-sm text-white truncate max-w-[180px]">{inv.email}</td>
+                                  <td className="px-4 py-2.5 text-xs text-gray-400 capitalize">{inv.role}</td>
+                                  <td className="px-4 py-2.5 text-xs text-gray-400">
+                                    {new Date(inv.sentDate).toLocaleDateString()}
+                                  </td>
+                                  <td className="px-4 py-2.5">
+                                    <span className={cn(
+                                      "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full",
+                                      inv.status === "Pending" && "bg-yellow-500/10 text-yellow-400",
+                                      inv.status === "Accepted" && "bg-green-500/10 text-green-400",
+                                      inv.status === "Expired" && "bg-red-500/10 text-red-400",
+                                    )}>
+                                      {inv.status}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2.5">
+                                    <div className="flex gap-1.5">
+                                      {inv.status === "Pending" && (
+                                        <>
+                                          <button
+                                            onClick={() => handleResendInvite(inv.id)}
+                                            className="p-1.5 rounded-md bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                            title="Resend"
+                                          >
+                                            <RefreshCw className="w-3 h-3" />
+                                          </button>
+                                          <button
+                                            onClick={() => handleCancelInvite(inv.id)}
+                                            className="p-1.5 rounded-md bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
+                                            title="Cancel"
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>}

@@ -49,6 +49,7 @@ import Privacy from "@/pages/Privacy";
 import Support from "@/pages/Support";
 import ResponsibleGambling from "@/pages/ResponsibleGambling";
 import PremiumTable from "@/pages/PremiumTable";
+import DyeShop from "@/pages/DyeShop";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -177,6 +178,10 @@ function ProtectedResponsibleGambling() {
   return <AuthGate><ResponsibleGambling /></AuthGate>;
 }
 
+function ProtectedDyeShop() {
+  return <AuthGate><DyeShop /></AuthGate>;
+}
+
 function GameWithTable({ params }: { params: { tableId: string } }) {
   return <AuthGate><ErrorBoundary fallbackTitle="Game Error"><Game tableId={params.tableId} /></ErrorBoundary></AuthGate>;
 }
@@ -264,7 +269,7 @@ function Router() {
       <Route path="/explorer" component={ProtectedTransactionExplorer} />
       <Route path="/blockchain" component={ProtectedBlockchainDashboard} />
       <Route path="/premium-table" component={ProtectedPremiumTable} />
-      <Route path="/dye-shop">{() => <Redirect to="/shop" />}</Route>
+      <Route path="/dye-shop" component={ProtectedDyeShop} />
       <Route path="/avatar-customizer">{() => <Redirect to="/wardrobe" />}</Route>
       <Route path="/avatar-render">{() => <Redirect to="/wardrobe" />}</Route>
       <Route component={NotFound} />

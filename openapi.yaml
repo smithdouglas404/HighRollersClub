@@ -1,351 +1,1222 @@
-openapi: 3.1.0
+openapi: "3.0.3"
 info:
-  title: High Rollers Club API
-  version: 1.0.0
-  description: |
-    REST API for the High Rollers Club online poker platform.
-    Supports cash games, sit-and-go, tournaments, clubs, wallets, and more.
-
+  title: High Rollers Poker API
+  version: "1.0.0"
+  description: Full-stack poker platform API
 servers:
   - url: /api
-    description: Application API server
 
 tags:
   - name: auth
-    description: Authentication and session management
-  - name: users
-    description: User profiles and player stats
+    description: Authentication, 2FA, wallet, and recovery operations
   - name: tables
-    description: Poker table management and gameplay
-  - name: games
-    description: Hand history, actions, and analysis
-  - name: tournaments
-    description: Multi-table tournament management
+    description: Poker table CRUD, join/leave, and hand history
+  - name: fast-fold
+    description: Fast-fold pool management
+  - name: lottery-sng
+    description: Lottery Sit-and-Go registration and tier listing
   - name: clubs
-    description: Club management, members, announcements, and events
-  - name: wallet
-    description: Wallet balances, transfers, daily bonus, and payments
-  - name: shop
-    description: In-game shop, purchases, and inventory
-  - name: analytics
-    description: Leaderboards, missions, and player notes
-  - name: admin
-    description: Admin-only reports, rake, withdrawals, and system controls
-  - name: leagues
-    description: Alliances and league seasons
+    description: Club CRUD, membership, announcements, events, and challenges
 
+# ─── Security Schemes ──────────────────────────────────────────────────────────
+security: []
+
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: Express-session cookie
+
+  schemas:
+    # ── Core user object returned by auth endpoints ──
+    AuthUser:
+      type: object
+      required:
+        - id
+        - username
+        - chipBalance
+        - role
+        - provider
+        - twoFactorEnabled
+        - tier
+        - kycStatus
+        - createdAt
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        avatarId:
+          type: string
+          nullable: true
+        tauntVoice:
+          type: string
+          nullable: true
+        chipBalance:
+          type: integer
+        role:
+          type: string
+          enum: [guest, member, admin]
+        provider:
+          type: string
+          enum: [local, google]
+        lastDailyClaim:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        walletAddress:
+          type: string
+          nullable: true
+        twoFactorEnabled:
+          type: boolean
+        tier:
+          type: string
+          enum: [free, bronze, silver, gold, platinum]
+        tierExpiresAt:
+          type: string
+          nullable: true
+        kycStatus:
+          type: string
+          enum: [none, pending, verified, rejected]
+        memberId:
+          type: string
+          nullable: true
+        firebaseUid:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    # ── Table ──
+    Table:
+      type: object
+      required:
+        - id
+        - name
+        - smallBlind
+        - bigBlind
+        - ante
+        - minBuyIn
+        - maxBuyIn
+        - maxPlayers
+        - timeBankSeconds
+        - gameFormat
+        - gameSpeed
+        - isPrivate
+        - createdById
+        - playerCount
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        smallBlind:
+          type: integer
+        bigBlind:
+          type: integer
+        ante:
+          type: integer
+        minBuyIn:
+          type: integer
+        maxBuyIn:
+          type: integer
+        maxPlayers:
+          type: integer
+        timeBankSeconds:
+          type: integer
+        gameFormat:
+          type: string
+          enum: [cash, sng, heads_up, tournament, bomb_pot, fast_fold, lottery_sng]
+        gameSpeed:
+          type: string
+        isPrivate:
+          type: boolean
+        createdById:
+          type: string
+        playerCount:
+          type: integer
+        createdAt:
+          type: string
+
+    InsertTable:
+      type: object
+      required:
+        - name
+        - smallBlind
+        - bigBlind
+        - minBuyIn
+        - maxBuyIn
+        - maxPlayers
+      properties:
+        name:
+          type: string
+        smallBlind:
+          type: integer
+        bigBlind:
+          type: integer
+        ante:
+          type: integer
+          default: 0
+        minBuyIn:
+          type: integer
+        maxBuyIn:
+          type: integer
+        maxPlayers:
+          type: integer
+        timeBankSeconds:
+          type: integer
+          default: 30
+        gameFormat:
+          type: string
+          enum: [cash, sng, heads_up, tournament, bomb_pot, fast_fold, lottery_sng]
+          default: cash
+        gameSpeed:
+          type: string
+          default: normal
+        isPrivate:
+          type: boolean
+          default: false
+
+    GameHand:
+      type: object
+      properties:
+        id:
+          type: string
+        tableId:
+          type: string
+        handNumber:
+          type: integer
+        communityCards:
+          type: array
+          items:
+            type: string
+        potSize:
+          type: integer
+        winners:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+
+    # ── Fast-Fold ──
+    FastFoldPool:
+      type: object
+      required:
+        - id
+        - name
+        - smallBlind
+        - bigBlind
+        - minBuyIn
+        - maxBuyIn
+        - playerCount
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        smallBlind:
+          type: integer
+        bigBlind:
+          type: integer
+        minBuyIn:
+          type: integer
+        maxBuyIn:
+          type: integer
+        maxPlayersPerTable:
+          type: integer
+        playerCount:
+          type: integer
+        createdAt:
+          type: string
+
+    # ── Lottery SNG ──
+    LotterySNGTier:
+      type: object
+      properties:
+        id:
+          type: string
+        buyIn:
+          type: integer
+        prizeMultipliers:
+          type: array
+          items:
+            type: number
+        probabilities:
+          type: array
+          items:
+            type: number
+        maxPlayers:
+          type: integer
+
+    # ── Club ──
+    Club:
+      type: object
+      required:
+        - id
+        - name
+        - ownerId
+        - isPublic
+        - timezone
+        - language
+        - rakePercent
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        ownerId:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        isPublic:
+          type: boolean
+        timezone:
+          type: string
+        language:
+          type: string
+        rakePercent:
+          type: integer
+        createdAt:
+          type: string
+
+    ClubRanking:
+      type: object
+      properties:
+        clubId:
+          type: string
+        name:
+          type: string
+        eloRating:
+          type: integer
+        memberCount:
+          type: integer
+
+    ClubMember:
+      type: object
+      properties:
+        id:
+          type: string
+        clubId:
+          type: string
+        userId:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member]
+        joinedAt:
+          type: string
+
+    MemberStats:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        handsPlayed:
+          type: integer
+        totalWinnings:
+          type: integer
+        winRate:
+          type: number
+
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+        clubId:
+          type: string
+        userId:
+          type: string
+        type:
+          type: string
+          enum: [invite, request]
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        createdAt:
+          type: string
+
+    FeedItem:
+      type: object
+      properties:
+        id:
+          type: string
+        clubId:
+          type: string
+        clubName:
+          type: string
+        type:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+
+    ActiveClub:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        role:
+          type: string
+        activePlayers:
+          type: integer
+
+    Announcement:
+      type: object
+      properties:
+        id:
+          type: string
+        clubId:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        authorId:
+          type: string
+        createdAt:
+          type: string
+
+    ClubEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        clubId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        startTime:
+          type: string
+        endTime:
+          type: string
+          nullable: true
+        type:
+          type: string
+        createdAt:
+          type: string
+
+    Challenge:
+      type: object
+      properties:
+        id:
+          type: string
+        clubId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        goal:
+          type: integer
+        reward:
+          type: integer
+        expiresAt:
+          type: string
+
+    Tournament:
+      type: object
+      properties:
+        id:
+          type: string
+        clubId:
+          type: string
+        name:
+          type: string
+        buyIn:
+          type: integer
+        prizePool:
+          type: integer
+        maxPlayers:
+          type: integer
+        startTime:
+          type: string
+        status:
+          type: string
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        score:
+          type: number
+        rank:
+          type: integer
+
+    Alliance:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        clubs:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+
+    QuickStats:
+      type: object
+      properties:
+        topWinner:
+          type: string
+        mostActiveTable:
+          type: string
+        totalHands:
+          type: integer
+        activePlayers:
+          type: integer
+
+    WalletInfo:
+      type: object
+      properties:
+        provider:
+          type: string
+        address:
+          type: string
+
+    # ── Generic wrappers ──
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    # ── Auth request bodies ──
+    RegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 20
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+        displayName:
+          type: string
+          maxLength: 30
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    FirebaseSyncRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        username:
+          type: string
+        avatarUrl:
+          type: string
+        email:
+          type: string
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+
+    TwoFactorCodeRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+
+    RecoverWithCodeRequest:
+      type: object
+      required: [username, code]
+      properties:
+        username:
+          type: string
+        code:
+          type: string
+
+    RequestRecoveryEmailRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        username:
+          type: string
+
+    VerifyRecoveryEmailRequest:
+      type: object
+      required: [username, code]
+      properties:
+        username:
+          type: string
+        code:
+          type: string
+
+    VerifyWalletRequest:
+      type: object
+      required: [address, signature, token]
+      properties:
+        address:
+          type: string
+        signature:
+          type: string
+        token:
+          type: string
+
+    WalletConnectRequest:
+      type: object
+      required: [provider, address]
+      properties:
+        provider:
+          type: string
+        address:
+          type: string
+
+    WalletDisconnectRequest:
+      type: object
+      required: [provider]
+      properties:
+        provider:
+          type: string
+
+    # ── Table request bodies ──
+    JoinTableRequest:
+      type: object
+      required: [buyIn]
+      properties:
+        buyIn:
+          type: integer
+        seatIndex:
+          type: integer
+        password:
+          type: string
+
+    # ── Fast-fold request bodies ──
+    CreateFastFoldPoolRequest:
+      type: object
+      required: [name, smallBlind, bigBlind, minBuyIn, maxBuyIn]
+      properties:
+        name:
+          type: string
+        smallBlind:
+          type: integer
+        bigBlind:
+          type: integer
+        minBuyIn:
+          type: integer
+        maxBuyIn:
+          type: integer
+        maxPlayersPerTable:
+          type: integer
+
+    JoinFastFoldRequest:
+      type: object
+      required: [buyIn]
+      properties:
+        buyIn:
+          type: integer
+
+    # ── Lottery SNG request bodies ──
+    RegisterLotterySNGRequest:
+      type: object
+      required: [buyIn]
+      properties:
+        buyIn:
+          type: integer
+
+    # ── Club request bodies ──
+    CreateClubRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        isPublic:
+          type: boolean
+
+    UpdateClubRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        isPublic:
+          type: boolean
+        timezone:
+          type: string
+        language:
+          type: string
+        rakePercent:
+          type: integer
+
+    InviteRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        type:
+          type: string
+          enum: [invite, request]
+
+    UpdateInvitationRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [accepted, rejected]
+
+    UpdateMemberRoleRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [admin, member]
+
+    CreateAnnouncementRequest:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+
+    CreateClubEventRequest:
+      type: object
+      required: [title, startTime]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        type:
+          type: string
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Paths
+# ═══════════════════════════════════════════════════════════════════════════════
 paths:
-  # ── Auth ──────────────────────────────────────────────────────────────────────
+
+  # ─── Auth ────────────────────────────────────────────────────────────────────
 
   /auth/guest:
     post:
-      operationId: createGuest
       tags: [auth]
-      summary: Create a guest account
-      description: Creates a new guest user with a random name, avatar, and 10,000 starting chips.
+      summary: Create a guest session
+      operationId: createGuest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
-          description: Guest user created and logged in
+          description: Guest account created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SafeUser"
-        "429":
-          description: Rate limit exceeded
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/AuthUser"
 
   /auth/register:
     post:
-      operationId: register
       tags: [auth]
       summary: Register a new account
-      description: |
-        Creates a new member account with username and password.
-        If called while logged in as a guest, upgrades the guest account.
+      operationId: register
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [username, password]
-              properties:
-                username:
-                  type: string
-                  minLength: 3
-                  maxLength: 20
-                password:
-                  type: string
-                  minLength: 6
-                  maxLength: 100
-                displayName:
-                  type: string
-                  minLength: 1
-                  maxLength: 30
+              $ref: "#/components/schemas/RegisterRequest"
       responses:
         "200":
-          description: User registered and logged in
+          description: Account created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SafeUser"
-        "400":
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "409":
-          description: Username already taken
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "429":
-          description: Rate limit exceeded
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/AuthUser"
 
   /auth/login:
     post:
-      operationId: login
       tags: [auth]
       summary: Log in with username and password
+      operationId: login
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [username, password]
-              properties:
-                username:
-                  type: string
-                password:
-                  type: string
+              $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: Login successful
+          description: Logged in
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SafeUser"
-        "401":
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "429":
-          description: Too many login attempts
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/AuthUser"
 
   /auth/logout:
     post:
-      operationId: logout
       tags: [auth]
-      summary: Log out the current session
+      summary: Log out current session
+      operationId: logout
+      security:
+        - session: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
           description: Logged out
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                $ref: "#/components/schemas/MessageResponse"
 
   /auth/me:
     get:
-      operationId: getCurrentUser
       tags: [auth]
-      summary: Get the currently authenticated user
+      summary: Get current authenticated user
+      operationId: getMe
+      security:
+        - session: []
       responses:
         "200":
           description: Current user
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SafeUser"
-        "401":
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/AuthUser"
 
-  # ── Server Info ───────────────────────────────────────────────────────────────
-
-  /health:
-    get:
-      operationId: healthCheck
-      tags: [users]
-      summary: Health check
-      responses:
-        "200":
-          description: Server health status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                  storage:
-                    type: string
-                    enum: [database, memory]
-                  warning:
-                    type: string
-                    nullable: true
-
-  /online-users:
-    get:
-      operationId: getOnlineUsers
-      tags: [users]
-      summary: Get list of online user IDs
+  /auth/firebase-sync:
+    post:
+      tags: [auth]
+      summary: Sync or create account from Firebase token
+      operationId: firebaseSync
       security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Array of online user IDs
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
-
-  # ── Profile ───────────────────────────────────────────────────────────────────
-
-  /profile/avatar:
-    put:
-      operationId: updateProfile
-      tags: [users]
-      summary: Update avatar, display name, or taunt voice
-      security:
-        - cookieAuth: []
+        - session: []
       requestBody:
         required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FirebaseSyncRequest"
+      responses:
+        "200":
+          description: Account synced
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+
+  /auth/change-password:
+    post:
+      tags: [auth]
+      summary: Change password for current user
+      operationId: changePassword
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/2fa/setup:
+    post:
+      tags: [auth]
+      summary: Generate 2FA secret and QR URL
+      operationId: setup2FA
+      security:
+        - session: []
+      requestBody:
         content:
           application/json:
             schema:
               type: object
-              properties:
-                avatarId:
-                  type: string
-                displayName:
-                  type: string
-                  maxLength: 50
-                tauntVoice:
-                  type: string
-                  maxLength: 30
       responses:
         "200":
-          description: Updated user
+          description: 2FA setup data
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SafeUser"
-        "400":
-          description: No valid fields provided
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                type: object
+                required: [secret, otpauthUrl]
+                properties:
+                  secret:
+                    type: string
+                  otpauthUrl:
+                    type: string
 
-  # ── Stats ─────────────────────────────────────────────────────────────────────
-
-  /stats/me:
-    get:
-      operationId: getMyStats
-      tags: [users]
-      summary: Get current user's player statistics
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Player stats
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlayerStats"
-
-  /leaderboard:
-    get:
-      operationId: getLeaderboard
-      tags: [analytics]
-      summary: Get global leaderboard
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: metric
-          in: query
-          schema:
-            type: string
-            enum: [chips, wins, winRate]
-            default: chips
-      responses:
-        "200":
-          description: Leaderboard entries
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/LeaderboardEntry"
-
-  # ── Tables ────────────────────────────────────────────────────────────────────
-
-  /tables:
-    get:
-      operationId: listTables
-      tags: [tables]
-      summary: List all visible tables
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: format
-          in: query
-          description: Filter by game format
-          schema:
-            type: string
-            enum: [all, cash, sng, heads_up, tournament, bomb_pot]
-        - name: variant
-          in: query
-          description: Filter by poker variant
-          schema:
-            type: string
-            enum: [all, nlhe, plo, plo5, short_deck]
-      responses:
-        "200":
-          description: List of tables
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/TableSummary"
+  /auth/2fa/verify:
     post:
-      operationId: createTable
-      tags: [tables]
-      summary: Create a new table
+      tags: [auth]
+      summary: Verify and enable 2FA with TOTP code
+      operationId: verify2FA
       security:
-        - cookieAuth: []
+        - session: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateTableRequest"
+              $ref: "#/components/schemas/TwoFactorCodeRequest"
+      responses:
+        "200":
+          description: 2FA enabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/2fa/disable:
+    post:
+      tags: [auth]
+      summary: Disable 2FA for current user
+      operationId: disable2FA
+      security:
+        - session: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: 2FA disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/generate-recovery-codes:
+    post:
+      tags: [auth]
+      summary: Generate one-time recovery codes
+      operationId: generateRecoveryCodes
+      security:
+        - session: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Recovery codes generated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codes]
+                properties:
+                  codes:
+                    type: array
+                    items:
+                      type: string
+
+  /auth/recover-with-code:
+    post:
+      tags: [auth]
+      summary: Log in using a recovery code
+      operationId: recoverWithCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecoverWithCodeRequest"
+      responses:
+        "200":
+          description: Recovery successful
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, user]
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/AuthUser"
+
+  /auth/request-recovery-email:
+    post:
+      tags: [auth]
+      summary: Send a recovery code to user email
+      operationId: requestRecoveryEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestRecoveryEmailRequest"
+      responses:
+        "200":
+          description: Email sent status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sent]
+                properties:
+                  sent:
+                    type: boolean
+
+  /auth/verify-recovery-email:
+    post:
+      tags: [auth]
+      summary: Verify recovery code from email
+      operationId: verifyRecoveryEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyRecoveryEmailRequest"
+      responses:
+        "200":
+          description: Recovery verified
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, user]
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/AuthUser"
+
+  /auth/wallet-challenge:
+    post:
+      tags: [auth]
+      summary: Request a wallet signature challenge
+      operationId: walletChallenge
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Challenge issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [challenge, token]
+                properties:
+                  challenge:
+                    type: string
+                  token:
+                    type: string
+
+  /auth/verify-wallet:
+    post:
+      tags: [auth]
+      summary: Verify wallet signature and authenticate
+      operationId: verifyWallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyWalletRequest"
+      responses:
+        "200":
+          description: Wallet verified
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/AuthUser"
+
+  /auth/wallet/connect:
+    post:
+      tags: [auth]
+      summary: Connect an external wallet provider
+      operationId: connectWallet
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalletConnectRequest"
+      responses:
+        "200":
+          description: Wallet connected
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, provider, address]
+                properties:
+                  message:
+                    type: string
+                  provider:
+                    type: string
+                  address:
+                    type: string
+
+  /auth/wallet/disconnect:
+    post:
+      tags: [auth]
+      summary: Disconnect a wallet provider
+      operationId: disconnectWallet
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalletDisconnectRequest"
+      responses:
+        "200":
+          description: Wallet disconnected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/wallets:
+    get:
+      tags: [auth]
+      summary: List connected wallets
+      operationId: getWallets
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Connected wallets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [wallets]
+                properties:
+                  wallets:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WalletInfo"
+
+  # ─── Tables ──────────────────────────────────────────────────────────────────
+
+  /tables:
+    get:
+      tags: [tables]
+      summary: List all tables with optional filters
+      operationId: listTables
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+        - name: variant
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Table list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Table"
+    post:
+      tags: [tables]
+      summary: Create a new table
+      operationId: createTable
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsertTable"
       responses:
         "201":
           description: Table created
@@ -353,18 +1224,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Table"
-        "400":
-          description: Invalid table configuration
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
 
   /tables/invite/{code}:
     get:
-      operationId: resolveInviteCode
       tags: [tables]
-      summary: Resolve an invite code to a table
+      summary: Resolve an invite code to a table ID
+      operationId: resolveInviteCode
       parameters:
         - name: code
           in: path
@@ -373,30 +1238,21 @@ paths:
             type: string
       responses:
         "200":
-          description: Table info for the invite code
+          description: Resolved table
           content:
             application/json:
               schema:
                 type: object
+                required: [tableId]
                 properties:
                   tableId:
                     type: string
-                  name:
-                    type: string
-                  inviteCode:
-                    type: string
-        "404":
-          description: Invalid invite code
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
 
   /tables/{id}:
     get:
-      operationId: getTable
       tags: [tables]
-      summary: Get a single table with players and seat info
+      summary: Get a single table by ID
+      operationId: getTable
       parameters:
         - name: id
           in: path
@@ -405,37 +1261,17 @@ paths:
             type: string
       responses:
         "200":
-          description: Table details with players
+          description: Table details
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/Table"
-                  - type: object
-                    properties:
-                      players:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/TablePlayer"
-                      occupiedSeats:
-                        type: array
-                        items:
-                          type: integer
-                      returnMinBuyIn:
-                        type: integer
-                        nullable: true
-        "404":
-          description: Table not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/Table"
     delete:
-      operationId: deleteTable
       tags: [tables]
-      summary: Delete a table (creator only)
+      summary: Delete a table
+      operationId: deleteTable
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
@@ -448,30 +1284,15 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-        "403":
-          description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "404":
-          description: Table not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/MessageResponse"
 
   /tables/{id}/join:
     post:
-      operationId: joinTable
       tags: [tables]
       summary: Join a table with a buy-in
+      operationId: joinTable
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
@@ -483,106 +1304,80 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [buyIn]
-              properties:
-                buyIn:
-                  type: integer
-                  minimum: 1
-                seatIndex:
-                  type: integer
-                password:
-                  type: string
+              $ref: "#/components/schemas/JoinTableRequest"
       responses:
         "200":
-          description: Joined successfully
+          description: Joined table
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-        "400":
-          description: Invalid buy-in or table full
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "403":
-          description: Incorrect table password
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/SuccessResponse"
 
   /tables/{id}/leave:
     post:
-      operationId: leaveTable
       tags: [tables]
       summary: Leave a table
+      operationId: leaveTable
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
-          description: Left the table
+          description: Left table
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
+                $ref: "#/components/schemas/SuccessResponse"
 
   /tables/{id}/video-token:
     post:
-      operationId: getVideoToken
       tags: [tables]
-      summary: Get a video chat token for a table
+      summary: Get a video call token for the table
+      operationId: getVideoToken
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
-          description: Video token
+          description: Video token issued
           content:
             application/json:
               schema:
                 type: object
+                required: [token, roomName]
                 properties:
                   token:
                     type: string
-        "404":
-          description: Table not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "503":
-          description: Video not configured
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                  roomName:
+                    type: string
 
   /tables/{id}/hands:
     get:
-      operationId: getTableHands
-      tags: [games]
+      tags: [tables]
       summary: Get hand history for a table
+      operationId: getTableHands
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
@@ -593,10 +1388,9 @@ paths:
           in: query
           schema:
             type: integer
-            default: 20
       responses:
         "200":
-          description: List of hands
+          description: Hand history
           content:
             application/json:
               schema:
@@ -604,283 +1398,167 @@ paths:
                 items:
                   $ref: "#/components/schemas/GameHand"
 
-  # ── Hand History & Verification ───────────────────────────────────────────────
+  # ─── Fast-Fold ───────────────────────────────────────────────────────────────
 
-  /hands/{id}:
+  /fast-fold/pools:
     get:
-      operationId: getHand
-      tags: [games]
-      summary: Get a specific hand
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      tags: [fast-fold]
+      summary: List all fast-fold pools
+      operationId: listFastFoldPools
       responses:
         "200":
-          description: Hand details
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GameHand"
-        "404":
-          description: Hand not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /hands/{id}/verify:
-    get:
-      operationId: verifyHand
-      tags: [games]
-      summary: Get provably fair verification data for a hand
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Verification data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  serverSeed:
-                    type: string
-                  commitmentHash:
-                    type: string
-                  deckOrder:
-                    type: string
-                  handNumber:
-                    type: integer
-                  tableId:
-                    type: string
-        "404":
-          description: Hand or proof data not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /hands/{id}/players:
-    get:
-      operationId: getHandPlayers
-      tags: [games]
-      summary: Get players who participated in a hand
-      description: Hole cards are only revealed for the requesting user or players who went to showdown.
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: List of hand players
+          description: Pool list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/HandPlayer"
-
-  /hands/{id}/actions:
-    get:
-      operationId: getHandActions
-      tags: [games]
-      summary: Get action-by-action replay log for a hand
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: List of hand actions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/HandAction"
-
-  /players/{id}/hands:
-    get:
-      operationId: getPlayerHands
-      tags: [games]
-      summary: Get hand history for a specific player
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-      responses:
-        "200":
-          description: Player hand history
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/HandPlayer"
-
-  # ── Hand Analysis ─────────────────────────────────────────────────────────────
-
-  /analyze-hand:
+                  $ref: "#/components/schemas/FastFoldPool"
     post:
-      operationId: analyzeHand
-      tags: [games]
-      summary: Analyze a poker hand
+      tags: [fast-fold]
+      summary: Create a fast-fold pool (admin only)
+      operationId: createFastFoldPool
       security:
-        - cookieAuth: []
+        - session: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [holeCards]
-              properties:
-                holeCards:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/Card"
-                communityCards:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/Card"
-                pot:
-                  type: integer
-                  default: 0
-                position:
-                  type: string
-                  enum: [early, middle, late, blind]
-                handId:
-                  type: string
+              $ref: "#/components/schemas/CreateFastFoldPoolRequest"
+      responses:
+        "201":
+          description: Pool created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FastFoldPool"
+
+  /fast-fold/pools/{poolId}/join:
+    post:
+      tags: [fast-fold]
+      summary: Join a fast-fold pool
+      operationId: joinFastFoldPool
+      security:
+        - session: []
+      parameters:
+        - name: poolId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinFastFoldRequest"
       responses:
         "200":
-          description: Hand analysis result
+          description: Joined pool
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /fast-fold/pools/{poolId}/leave:
+    post:
+      tags: [fast-fold]
+      summary: Leave a fast-fold pool
+      operationId: leaveFastFoldPool
+      security:
+        - session: []
+      parameters:
+        - name: poolId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Left pool
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ─── Lottery SNG ─────────────────────────────────────────────────────────────
+
+  /lottery-sng/tiers:
+    get:
+      tags: [lottery-sng]
+      summary: List available lottery SNG tiers
+      operationId: listLotterySNGTiers
+      responses:
+        "200":
+          description: Tier list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LotterySNGTier"
+
+  /lottery-sng/register:
+    post:
+      tags: [lottery-sng]
+      summary: Register for a lottery SNG
+      operationId: registerLotterySNG
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterLotterySNGRequest"
+      responses:
+        "200":
+          description: Registered for lottery SNG
           content:
             application/json:
               schema:
                 type: object
+                required: [tableId, message]
                 properties:
-                  rating:
+                  tableId:
                     type: string
-                  ev:
-                    type: number
-                  leaks:
-                    type: array
-                    items:
-                      type: string
-                  recommendations:
-                    type: array
-                    items:
-                      type: string
+                  message:
+                    type: string
 
-  /analyses:
-    get:
-      operationId: getMyAnalyses
-      tags: [games]
-      summary: Get current user's hand analyses
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: List of analyses
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/HandAnalysis"
-
-  # ── Clubs ─────────────────────────────────────────────────────────────────────
-
-  /me/clubs:
-    get:
-      operationId: getMyClubs
-      tags: [clubs]
-      summary: Get clubs the current user is a member of
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: User's clubs with member counts
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  allOf:
-                    - $ref: "#/components/schemas/Club"
-                    - type: object
-                      properties:
-                        memberCount:
-                          type: integer
+  # ─── Clubs ───────────────────────────────────────────────────────────────────
 
   /clubs:
     get:
-      operationId: listClubs
       tags: [clubs]
-      summary: List all clubs (private clubs hidden for unauthenticated users)
+      summary: List all public clubs
+      operationId: listClubs
       responses:
         "200":
-          description: List of clubs
+          description: Club list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  allOf:
-                    - $ref: "#/components/schemas/Club"
-                    - type: object
-                      properties:
-                        memberCount:
-                          type: integer
+                  $ref: "#/components/schemas/Club"
     post:
-      operationId: createClub
       tags: [clubs]
       summary: Create a new club
+      operationId: createClub
       security:
-        - cookieAuth: []
+        - session: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [name]
-              properties:
-                name:
-                  type: string
-                description:
-                  type: string
-                isPublic:
-                  type: boolean
-                  default: true
+              $ref: "#/components/schemas/CreateClubRequest"
       responses:
         "201":
           description: Club created
@@ -888,35 +1566,95 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Club"
-        "400":
-          description: Invalid club data
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
 
-  /clubs/my-pending-requests:
+  /clubs/rankings:
     get:
-      operationId: getMyPendingClubRequests
       tags: [clubs]
-      summary: Get current user's pending club join requests
-      security:
-        - cookieAuth: []
+      summary: Get club ELO rankings
+      operationId: getClubRankings
       responses:
         "200":
-          description: List of pending requests
+          description: Club rankings
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ClubInvitation"
+                  $ref: "#/components/schemas/ClubRanking"
+
+  /me/clubs:
+    get:
+      tags: [clubs]
+      summary: List clubs the current user belongs to
+      operationId: getMyClubs
+      security:
+        - session: []
+      responses:
+        "200":
+          description: User clubs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Club"
+
+  /clubs/my-pending-requests:
+    get:
+      tags: [clubs]
+      summary: List pending club invitations for current user
+      operationId: getMyPendingRequests
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Pending invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invitation"
+
+  /clubs/my-feed:
+    get:
+      tags: [clubs]
+      summary: Aggregated activity feed across user clubs
+      operationId: getMyClubFeed
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Feed items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeedItem"
+
+  /clubs/my-active:
+    get:
+      tags: [clubs]
+      summary: List clubs with active tables for current user
+      operationId: getMyActiveClubs
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Active clubs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveClub"
 
   /clubs/{id}:
     get:
-      operationId: getClub
       tags: [clubs]
-      summary: Get a single club
+      summary: Get a single club by ID
+      operationId: getClub
       parameters:
         - name: id
           in: path
@@ -929,24 +1667,13 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/Club"
-                  - type: object
-                    properties:
-                      memberCount:
-                        type: integer
-        "404":
-          description: Club not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/Club"
     put:
-      operationId: updateClub
       tags: [clubs]
-      summary: Update club settings (owner/admin only)
+      summary: Update club settings
+      operationId: updateClub
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
@@ -958,38 +1685,20 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                description:
-                  type: string
-                isPublic:
-                  type: boolean
-                avatarUrl:
-                  type: string
-                ownerId:
-                  type: string
-                  description: Transfer ownership to another member
+              $ref: "#/components/schemas/UpdateClubRequest"
       responses:
         "200":
-          description: Updated club
+          description: Club updated
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Club"
-        "403":
-          description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
     delete:
-      operationId: deleteClub
       tags: [clubs]
-      summary: Delete a club (owner only)
+      summary: Delete a club
+      operationId: deleteClub
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
@@ -1002,24 +1711,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-        "403":
-          description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/MessageResponse"
 
   /clubs/{id}/members:
     get:
-      operationId: getClubMembers
       tags: [clubs]
-      summary: Get club members with user data
-      security:
-        - cookieAuth: []
+      summary: List club members
+      operationId: getClubMembers
       parameters:
         - name: id
           in: path
@@ -1028,33 +1726,19 @@ paths:
             type: string
       responses:
         "200":
-          description: Enriched club members
+          description: Member list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  allOf:
-                    - $ref: "#/components/schemas/ClubMember"
-                    - type: object
-                      properties:
-                        username:
-                          type: string
-                        displayName:
-                          type: string
-                        avatarId:
-                          type: string
-                          nullable: true
-                        chipBalance:
-                          type: integer
+                  $ref: "#/components/schemas/ClubMember"
 
   /clubs/{id}/members/stats:
     get:
-      operationId: getClubMembersStats
       tags: [clubs]
-      summary: Get stats for all club members
-      security:
-        - cookieAuth: []
+      summary: Get member statistics for a club
+      operationId: getClubMemberStats
       parameters:
         - name: id
           in: path
@@ -1063,21 +1747,153 @@ paths:
             type: string
       responses:
         "200":
-          description: Stats keyed by user ID
+          description: Member stats
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties:
-                  $ref: "#/components/schemas/PlayerStats"
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberStats"
+
+  /clubs/{id}/join:
+    post:
+      tags: [clubs]
+      summary: Join a public club or request membership
+      operationId: joinClub
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Joined or request submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /clubs/{id}/leave:
+    post:
+      tags: [clubs]
+      summary: Leave a club
+      operationId: leaveClub
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Left club
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /clubs/{id}/invite:
+    post:
+      tags: [clubs]
+      summary: Invite a user to the club
+      operationId: inviteToClub
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteRequest"
+      responses:
+        "200":
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /clubs/{id}/invitations:
+    get:
+      tags: [clubs]
+      summary: List club invitations and join requests
+      operationId: getClubInvitations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invitation"
+
+  /clubs/{id}/invitations/{invId}:
+    put:
+      tags: [clubs]
+      summary: Accept or reject an invitation
+      operationId: updateInvitation
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: invId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInvitationRequest"
+      responses:
+        "200":
+          description: Invitation updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
 
   /clubs/{id}/members/{userId}/role:
     put:
-      operationId: updateClubMemberRole
       tags: [clubs]
-      summary: Promote or demote a club member
+      summary: Change a member role
+      operationId: updateMemberRole
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
@@ -1094,36 +1910,22 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [role]
-              properties:
-                role:
-                  type: string
-                  enum: [admin, member]
+              $ref: "#/components/schemas/UpdateMemberRoleRequest"
       responses:
         "200":
           description: Role updated
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-        "403":
-          description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
+                $ref: "#/components/schemas/MessageResponse"
 
   /clubs/{id}/members/{userId}:
     delete:
-      operationId: kickClubMember
       tags: [clubs]
-      summary: Kick a member from the club (admin/owner only)
+      summary: Remove a member from the club
+      operationId: removeClubMember
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
@@ -1141,207 +1943,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-        "400":
-          description: Cannot kick the owner
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "403":
-          description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /clubs/{id}/join:
-    post:
-      operationId: joinClub
-      tags: [clubs]
-      summary: Join a public club directly
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Joined club
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-        "403":
-          description: Private club requires invitation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "409":
-          description: Already a member
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /clubs/{id}/leave:
-    post:
-      operationId: leaveClub
-      tags: [clubs]
-      summary: Leave a club (owner cannot leave)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Left club
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-        "400":
-          description: Owner cannot leave
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /clubs/{id}/invite:
-    post:
-      operationId: sendClubInvite
-      tags: [clubs]
-      summary: Send an invite or request to join a club
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                userId:
-                  type: string
-                username:
-                  type: string
-                  description: Alternative to userId -- invite by username
-                type:
-                  type: string
-                  enum: [invite, request]
-                  default: invite
-      responses:
-        "201":
-          description: Invitation created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ClubInvitation"
-        "409":
-          description: Duplicate pending invitation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /clubs/{id}/invitations:
-    get:
-      operationId: getClubInvitations
-      tags: [clubs]
-      summary: Get club invitations (members only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Enriched invitations
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  allOf:
-                    - $ref: "#/components/schemas/ClubInvitation"
-                    - type: object
-                      properties:
-                        username:
-                          type: string
-                        displayName:
-                          type: string
-                        avatarId:
-                          type: string
-                          nullable: true
-
-  /clubs/{id}/invitations/{invId}:
-    put:
-      operationId: respondToClubInvitation
-      tags: [clubs]
-      summary: Accept or decline an invitation
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: invId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [status]
-              properties:
-                status:
-                  type: string
-                  enum: [accepted, declined]
-      responses:
-        "200":
-          description: Invitation updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ClubInvitation"
+                $ref: "#/components/schemas/MessageResponse"
 
   /clubs/{id}/announcements:
     get:
-      operationId: getClubAnnouncements
       tags: [clubs]
-      summary: Get club announcements
+      summary: List club announcements
+      operationId: getClubAnnouncements
       parameters:
         - name: id
           in: path
@@ -1350,19 +1958,19 @@ paths:
             type: string
       responses:
         "200":
-          description: Club announcements
+          description: Announcement list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ClubAnnouncement"
+                  $ref: "#/components/schemas/Announcement"
     post:
-      operationId: createClubAnnouncement
       tags: [clubs]
-      summary: Create a club announcement (admin/owner only)
+      summary: Create a club announcement
+      operationId: createAnnouncement
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
@@ -1374,29 +1982,20 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [title, content]
-              properties:
-                title:
-                  type: string
-                content:
-                  type: string
-                pinned:
-                  type: boolean
-                  default: false
+              $ref: "#/components/schemas/CreateAnnouncementRequest"
       responses:
         "201":
           description: Announcement created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ClubAnnouncement"
+                $ref: "#/components/schemas/Announcement"
 
   /clubs/{id}/events:
     get:
-      operationId: getClubEvents
       tags: [clubs]
-      summary: Get club events
+      summary: List club events
+      operationId: getClubEvents
       parameters:
         - name: id
           in: path
@@ -1405,7 +2004,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Club events
+          description: Event list
           content:
             application/json:
               schema:
@@ -1413,11 +2012,11 @@ paths:
                 items:
                   $ref: "#/components/schemas/ClubEvent"
     post:
-      operationId: createClubEvent
       tags: [clubs]
-      summary: Create a club event (admin/owner only)
+      summary: Create a club event
+      operationId: createClubEvent
       security:
-        - cookieAuth: []
+        - session: []
       parameters:
         - name: id
           in: path
@@ -1429,21 +2028,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [eventType, name]
-              properties:
-                eventType:
-                  type: string
-                  enum: [tournament, cash_game, special]
-                name:
-                  type: string
-                description:
-                  type: string
-                startTime:
-                  type: string
-                  format: date-time
-                tableId:
-                  type: string
+              $ref: "#/components/schemas/CreateClubEventRequest"
       responses:
         "201":
           description: Event created
@@ -1452,13 +2037,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ClubEvent"
 
-  /clubs/{id}/tournaments:
+  /clubs/{id}/challenges:
     get:
-      operationId: getClubTournaments
       tags: [clubs]
-      summary: Get tournaments for a club
-      security:
-        - cookieAuth: []
+      summary: List active club challenges
+      operationId: getClubChallenges
       parameters:
         - name: id
           in: path
@@ -1467,30 +2050,68 @@ paths:
             type: string
       responses:
         "200":
-          description: Club tournaments with registration counts
+          description: Challenge list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  allOf:
-                    - $ref: "#/components/schemas/Tournament"
-                    - type: object
-                      properties:
-                        registeredCount:
-                          type: integer
-                        registrations:
-                          type: array
-                          items:
-                            $ref: "#/components/schemas/TournamentRegistration"
+                  $ref: "#/components/schemas/Challenge"
+
+  /clubs/{id}/challenges/generate:
+    post:
+      tags: [clubs]
+      summary: Auto-generate challenges for the club
+      operationId: generateClubChallenges
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Challenges generated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Challenge"
+
+  /clubs/{id}/tournaments:
+    get:
+      tags: [clubs]
+      summary: List club tournaments
+      operationId: getClubTournaments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tournament list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tournament"
 
   /clubs/{id}/leaderboard:
     get:
-      operationId: getClubLeaderboard
       tags: [clubs]
       summary: Get club leaderboard
-      security:
-        - cookieAuth: []
+      operationId: getClubLeaderboard
       parameters:
         - name: id
           in: path
@@ -1501,8 +2122,6 @@ paths:
           in: query
           schema:
             type: string
-            enum: [chips, wins, winRate, handsPlayed, tournamentsWon]
-            default: chips
       responses:
         "200":
           description: Leaderboard entries
@@ -1513,11 +2132,30 @@ paths:
                 items:
                   $ref: "#/components/schemas/LeaderboardEntry"
 
+  /clubs/{id}/quick-stats:
+    get:
+      tags: [clubs]
+      summary: Get quick statistics for a club
+      operationId: getClubQuickStats
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Quick stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuickStats"
+
   /clubs/{id}/alliance:
     get:
+      tags: [clubs]
+      summary: Get the alliance this club belongs to
       operationId: getClubAlliance
-      tags: [leagues]
-      summary: Get the alliance a club belongs to
       parameters:
         - name: id
           in: path
@@ -1530,3078 +2168,6 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: "#/components/schemas/Alliance"
-                  - type: "null"
-
-  # ── Wallet ────────────────────────────────────────────────────────────────────
-
-  /wallet/balance:
-    get:
-      operationId: getWalletBalance
-      tags: [wallet]
-      summary: Get total wallet balance (backward-compatible)
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Balance info
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  balance:
-                    type: integer
-                    description: Total balance across all wallets
-                  balances:
-                    type: object
-                    additionalProperties:
-                      type: integer
-                  wallets:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Wallet"
-
-  /wallet/balances:
-    get:
-      operationId: getWalletBalances
-      tags: [wallet]
-      summary: Get detailed wallet balances by type
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Wallet balances
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  balances:
-                    type: object
-                    properties:
-                      main:
-                        type: integer
-                      cash_game:
-                        type: integer
-                      sng:
-                        type: integer
-                      tournament:
-                        type: integer
-                      bonus:
-                        type: integer
-                  total:
-                    type: integer
-                  wallets:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Wallet"
-
-  /wallet/daily-status:
-    get:
-      operationId: getDailyBonusStatus
-      tags: [wallet]
-      summary: Check if daily bonus can be claimed
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Daily bonus status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  canClaim:
-                    type: boolean
-                  nextClaimAt:
-                    type: string
-                    format: date-time
-                    nullable: true
-                  bonusAmount:
-                    type: integer
-
-  /wallet/claim-daily:
-    post:
-      operationId: claimDailyBonus
-      tags: [wallet]
-      summary: Claim the daily login bonus
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Bonus claimed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  balance:
-                    type: integer
-                  bonus:
-                    type: integer
-                  nextClaimAt:
-                    type: string
-                    format: date-time
-        "429":
-          description: Already claimed today
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /wallet/transactions:
-    get:
-      operationId: getTransactions
-      tags: [wallet]
-      summary: Get transaction history
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-            maximum: 100
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
-      responses:
-        "200":
-          description: Transactions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  allOf:
-                    - $ref: "#/components/schemas/Transaction"
-                    - type: object
-                      properties:
-                        displayType:
-                          type: string
-                        status:
-                          type: string
-
-  /wallet/sessions:
-    get:
-      operationId: getSessionSummaries
-      tags: [wallet]
-      summary: Get session profit/loss summaries grouped by table
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-            maximum: 50
-      responses:
-        "200":
-          description: Session summaries
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-
-  /wallet/transfer:
-    post:
-      operationId: transferBetweenWallets
-      tags: [wallet]
-      summary: Transfer chips between wallets
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [from, to, amount]
-              properties:
-                from:
-                  type: string
-                  enum: [main, cash_game, sng, tournament, bonus]
-                to:
-                  type: string
-                  enum: [main, cash_game, sng, tournament, bonus]
-                amount:
-                  type: integer
-                  minimum: 1
-      responses:
-        "200":
-          description: Transfer successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  balances:
-                    type: object
-                    additionalProperties:
-                      type: integer
-        "400":
-          description: Invalid transfer or insufficient funds
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /wallet/withdraw:
-    post:
-      operationId: requestWithdrawal
-      tags: [wallet]
-      summary: Initiate a chip withdrawal
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [amount, currency, address]
-              properties:
-                amount:
-                  type: integer
-                  minimum: 1
-                currency:
-                  type: string
-                address:
-                  type: string
-      responses:
-        "200":
-          description: Withdrawal initiated
-          content:
-            application/json:
-              schema:
-                type: object
-        "400":
-          description: Insufficient funds or invalid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /wallet/withdrawals:
-    get:
-      operationId: getMyWithdrawals
-      tags: [wallet]
-      summary: Get current user's withdrawal requests
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: List of withdrawal requests
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/WithdrawalRequest"
-
-  # ── Payments ──────────────────────────────────────────────────────────────────
-
-  /payments/currencies:
-    get:
-      operationId: getSupportedCurrencies
-      tags: [wallet]
-      summary: Get supported deposit/withdrawal currencies
-      responses:
-        "200":
-          description: List of currencies
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/SupportedCurrency"
-
-  /payments/gateways:
-    get:
-      operationId: getPaymentGateways
-      tags: [wallet]
-      summary: Get available payment gateways
-      responses:
-        "200":
-          description: Available gateways
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-
-  /payments/deposit:
-    post:
-      operationId: initiateDeposit
-      tags: [wallet]
-      summary: Initiate a crypto deposit
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [amount, currency, gateway, allocation]
-              properties:
-                amount:
-                  type: integer
-                  minimum: 100
-                  description: Amount in USD cents
-                currency:
-                  type: string
-                gateway:
-                  type: string
-                  enum: [nowpayments, coinpayments, direct]
-                allocation:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      walletType:
-                        type: string
-                        enum: [main, cash_game, sng, tournament, bonus]
-                      amount:
-                        type: integer
-      responses:
-        "200":
-          description: Deposit initiated
-          content:
-            application/json:
-              schema:
-                type: object
-        "400":
-          description: Invalid deposit request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /payments/{id}:
-    get:
-      operationId: getPayment
-      tags: [wallet]
-      summary: Get a specific payment
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Payment details
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Payment"
-        "404":
-          description: Payment not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /payments:
-    get:
-      operationId: getMyPayments
-      tags: [wallet]
-      summary: Get current user's payment history
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-            maximum: 100
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
-      responses:
-        "200":
-          description: Payment history
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Payment"
-
-  /payments/webhook/{provider}:
-    post:
-      operationId: processPaymentWebhook
-      tags: [wallet]
-      summary: Payment gateway webhook (no auth, verified by signature)
-      parameters:
-        - name: provider
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        "200":
-          description: Webhook processed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-
-  # ── Shop ──────────────────────────────────────────────────────────────────────
-
-  /shop/items:
-    get:
-      operationId: getShopItems
-      tags: [shop]
-      summary: Get shop items
-      parameters:
-        - name: category
-          in: query
-          schema:
-            type: string
-            enum: [avatar, table_theme, emote, premium]
-      responses:
-        "200":
-          description: List of shop items
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ShopItem"
-
-  /shop/purchase:
-    post:
-      operationId: purchaseItem
-      tags: [shop]
-      summary: Purchase a shop item
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [itemId]
-              properties:
-                itemId:
-                  type: string
-      responses:
-        "200":
-          description: Purchase successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  item:
-                    type: object
-        "400":
-          description: Already owned or insufficient chips
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "404":
-          description: Item not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /shop/inventory:
-    get:
-      operationId: getMyInventory
-      tags: [shop]
-      summary: Get current user's inventory
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Inventory items with shop item data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    userId:
-                      type: string
-                    itemId:
-                      type: string
-                    equippedAt:
-                      type: string
-                      format: date-time
-                      nullable: true
-                    purchasedAt:
-                      type: string
-                      format: date-time
-                    item:
-                      $ref: "#/components/schemas/ShopItem"
-
-  /shop/equip:
-    post:
-      operationId: equipItem
-      tags: [shop]
-      summary: Equip an inventory item
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [inventoryId]
-              properties:
-                inventoryId:
-                  type: string
-      responses:
-        "200":
-          description: Item equipped
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-
-  # ── Tournaments ───────────────────────────────────────────────────────────────
-
-  /tournaments:
-    get:
-      operationId: listTournaments
-      tags: [tournaments]
-      summary: List all tournaments
-      responses:
-        "200":
-          description: List of tournaments
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Tournament"
-    post:
-      operationId: createTournament
-      tags: [tournaments]
-      summary: Create a new tournament
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateTournamentRequest"
-      responses:
-        "201":
-          description: Tournament created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Tournament"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /tournaments/{id}:
-    get:
-      operationId: getTournament
-      tags: [tournaments]
-      summary: Get tournament details with registrations
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Tournament with registrations
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/Tournament"
-                  - type: object
-                    properties:
-                      registrations:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/TournamentRegistration"
-        "404":
-          description: Tournament not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /tournaments/{id}/register:
-    post:
-      operationId: registerForTournament
-      tags: [tournaments]
-      summary: Register for a tournament (deducts buy-in)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "201":
-          description: Registered
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TournamentRegistration"
-        "400":
-          description: Registration closed, full, already registered, or insufficient chips
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /tournaments/{id}/start:
-    post:
-      operationId: startTournament
-      tags: [tournaments]
-      summary: Start a multi-table tournament
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Tournament started
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  tournamentId:
-                    type: string
-                  tables:
-                    type: array
-                    items:
-                      type: object
-                  totalPlayers:
-                    type: integer
-        "400":
-          description: Not enough players or already started
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "403":
-          description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /tournaments/{id}/status:
-    get:
-      operationId: getTournamentStatus
-      tags: [tournaments]
-      summary: Get live tournament status
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Tournament status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  tournamentId:
-                    type: string
-                  status:
-                    type: string
-                    enum: [registering, running, final_table, complete]
-                  totalPlayers:
-                    type: integer
-                  remainingPlayers:
-                    type: integer
-                  tables:
-                    type: array
-                    items:
-                      type: object
-                  standings:
-                    type: array
-                    items:
-                      type: object
-                  prizePool:
-                    type: integer
-        "404":
-          description: Tournament not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  # ── Missions ──────────────────────────────────────────────────────────────────
-
-  /missions:
-    get:
-      operationId: getMissions
-      tags: [analytics]
-      summary: Get all missions with current user's progress
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Missions with progress
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  allOf:
-                    - $ref: "#/components/schemas/Mission"
-                    - type: object
-                      properties:
-                        progress:
-                          type: integer
-                        completed:
-                          type: boolean
-                        claimed:
-                          type: boolean
-                        userMissionId:
-                          type: string
-                          nullable: true
-
-  /missions/{id}/claim:
-    post:
-      operationId: claimMissionReward
-      tags: [analytics]
-      summary: Claim a completed mission reward
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Reward claimed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  reward:
-                    type: integer
-        "400":
-          description: Not completed or already claimed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  # ── Player Notes ──────────────────────────────────────────────────────────────
-
-  /player-notes:
-    get:
-      operationId: getAllPlayerNotes
-      tags: [analytics]
-      summary: Get all player notes by current user
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Player notes
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/PlayerNote"
-
-  /player-notes/{targetId}:
-    get:
-      operationId: getPlayerNote
-      tags: [analytics]
-      summary: Get note for a specific player
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: targetId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Player note or null
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/PlayerNote"
-                  - type: "null"
-    put:
-      operationId: upsertPlayerNote
-      tags: [analytics]
-      summary: Create or update a player note
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: targetId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [note]
-              properties:
-                note:
-                  type: string
-                  maxLength: 500
-                color:
-                  type: string
-                  default: gray
-      responses:
-        "200":
-          description: Note saved
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlayerNote"
-    delete:
-      operationId: deletePlayerNote
-      tags: [analytics]
-      summary: Delete a player note
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: targetId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Note deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-
-  # ── Alliances ─────────────────────────────────────────────────────────────────
-
-  /alliances:
-    get:
-      operationId: listAlliances
-      tags: [leagues]
-      summary: List all alliances
-      responses:
-        "200":
-          description: List of alliances
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Alliance"
-    post:
-      operationId: createAlliance
-      tags: [leagues]
-      summary: Create an alliance with a founding club
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name, clubId]
-              properties:
-                name:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                clubId:
-                  type: string
-      responses:
-        "201":
-          description: Alliance created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Alliance"
-        "409":
-          description: Club already in an alliance
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /alliances/{id}:
-    get:
-      operationId: getAlliance
-      tags: [leagues]
-      summary: Get alliance with enriched club data
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Alliance with clubs
-          content:
-            application/json:
-              schema:
+                nullable: true
                 allOf:
                   - $ref: "#/components/schemas/Alliance"
-                  - type: object
-                    properties:
-                      clubs:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            ownerId:
-                              type: string
-                              nullable: true
-                            memberCount:
-                              type: integer
-        "404":
-          description: Alliance not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-    put:
-      operationId: updateAlliance
-      tags: [leagues]
-      summary: Update alliance name (founding club leaders only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name]
-              properties:
-                name:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-      responses:
-        "200":
-          description: Alliance updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Alliance"
-    delete:
-      operationId: deleteAlliance
-      tags: [leagues]
-      summary: Delete an alliance (founding club leaders only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Alliance deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-
-  /alliances/{id}/join:
-    post:
-      operationId: joinAlliance
-      tags: [leagues]
-      summary: Join an alliance with a club
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clubId]
-              properties:
-                clubId:
-                  type: string
-      responses:
-        "200":
-          description: Joined alliance
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Alliance"
-        "409":
-          description: Club already in an alliance
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /alliances/{id}/remove-club:
-    post:
-      operationId: removeClubFromAlliance
-      tags: [leagues]
-      summary: Remove a club from an alliance
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clubId]
-              properties:
-                clubId:
-                  type: string
-      responses:
-        "200":
-          description: Club removed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Alliance"
-        "400":
-          description: Cannot remove founding club
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  # ── Leagues ───────────────────────────────────────────────────────────────────
-
-  /leagues:
-    get:
-      operationId: listLeagues
-      tags: [leagues]
-      summary: List all league seasons
-      responses:
-        "200":
-          description: League seasons
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/LeagueSeason"
-    post:
-      operationId: createLeagueSeason
-      tags: [leagues]
-      summary: Create a league season (admin only)
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name, startDate, endDate]
-              properties:
-                name:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                startDate:
-                  type: string
-                  format: date-time
-                endDate:
-                  type: string
-                  format: date-time
-      responses:
-        "201":
-          description: League season created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LeagueSeason"
-        "403":
-          description: Admin access required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /leagues/{id}:
-    get:
-      operationId: getLeagueSeason
-      tags: [leagues]
-      summary: Get a league season
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: League season
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LeagueSeason"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-    put:
-      operationId: updateLeagueSeason
-      tags: [leagues]
-      summary: Update a league season (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                startDate:
-                  type: string
-                  format: date-time
-                endDate:
-                  type: string
-                  format: date-time
-      responses:
-        "200":
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LeagueSeason"
-    delete:
-      operationId: deleteLeagueSeason
-      tags: [leagues]
-      summary: Delete a league season (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-
-  /leagues/{id}/standings:
-    post:
-      operationId: updateLeagueStandings
-      tags: [leagues]
-      summary: Update league standings (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [standings]
-              properties:
-                standings:
-                  type: array
-                  items:
-                    type: object
-                    required: [clubId]
-                    properties:
-                      clubId:
-                        type: string
-                      points:
-                        type: integer
-                        default: 0
-                      wins:
-                        type: integer
-                        default: 0
-                      losses:
-                        type: integer
-                        default: 0
-      responses:
-        "200":
-          description: Standings updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LeagueSeason"
-
-  /leagues/{id}/complete:
-    post:
-      operationId: completeLeagueSeason
-      tags: [leagues]
-      summary: Complete a league season (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Season completed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LeagueSeason"
-
-  # ── AI Settings ───────────────────────────────────────────────────────────────
-
-  /ai-settings:
-    get:
-      operationId: getAISettings
-      tags: [admin]
-      summary: Get AI bot configuration status
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: AI settings
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  aiEnabled:
-                    type: boolean
-                  hasKey:
-                    type: boolean
-    post:
-      operationId: updateAISettings
-      tags: [admin]
-      summary: Update AI bot API key (admin only)
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                apiKey:
-                  type: string
-                  nullable: true
-                  description: Anthropic API key (must start with sk-) or null to disable
-      responses:
-        "200":
-          description: Settings updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  aiEnabled:
-                    type: boolean
-        "400":
-          description: Invalid key format
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-        "403":
-          description: Admin access required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  # ── Admin Reports ─────────────────────────────────────────────────────────────
-
-  /admin/rake-report:
-    get:
-      operationId: getRakeReport
-      tags: [admin]
-      summary: Daily rake report by table (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: days
-          in: query
-          schema:
-            type: integer
-            default: 30
-            maximum: 365
-      responses:
-        "200":
-          description: Rake report
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-        "403":
-          description: Admin access required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  /admin/rake-by-player:
-    get:
-      operationId: getRakeByPlayer
-      tags: [admin]
-      summary: Rake contributed by each player (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: days
-          in: query
-          schema:
-            type: integer
-            default: 30
-            maximum: 365
-      responses:
-        "200":
-          description: Rake by player
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    userId:
-                      type: string
-                    totalRake:
-                      type: integer
-
-  /admin/revenue-summary:
-    get:
-      operationId: getRevenueSummary
-      tags: [admin]
-      summary: Revenue summary (admin only)
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Revenue breakdown
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  grossRake:
-                    type: integer
-                  rakebackPaid:
-                    type: integer
-                  netRevenue:
-                    type: integer
-                  totalDeposits:
-                    type: integer
-                  totalBonuses:
-                    type: integer
-                  totalBuyins:
-                    type: integer
-                  totalCashouts:
-                    type: integer
-                  totalPrizes:
-                    type: integer
-
-  /admin/trial-balance:
-    get:
-      operationId: getTrialBalance
-      tags: [admin]
-      summary: Audit trial balance -- golden equation check (admin only)
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Trial balance audit
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  playerBalanceSum:
-                    type: integer
-                  escrowedAtTables:
-                    type: integer
-                  moneyIn:
-                    type: integer
-                  totalWithdrawals:
-                    type: integer
-                  totalRake:
-                    type: integer
-                  totalRakeback:
-                    type: integer
-                  totalPrizes:
-                    type: integer
-                  expectedBalance:
-                    type: integer
-                  discrepancy:
-                    type: integer
-                  healthy:
-                    type: boolean
-                  breakdown:
-                    type: object
-                    additionalProperties:
-                      type: integer
-
-  /admin/process-rakeback:
-    post:
-      operationId: processRakeback
-      tags: [admin]
-      summary: Process rakeback for all players (admin only)
-      security:
-        - cookieAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                rakebackPercent:
-                  type: integer
-                  default: 20
-                  minimum: 1
-                  maximum: 100
-                days:
-                  type: integer
-                  default: 7
-                  minimum: 1
-                  maximum: 90
-      responses:
-        "200":
-          description: Rakeback processed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  processed:
-                    type: integer
-                  totalPaid:
-                    type: integer
-                  payouts:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        userId:
-                          type: string
-                        amount:
-                          type: integer
-
-  /admin/system-status:
-    get:
-      operationId: getSystemStatus
-      tags: [admin]
-      summary: Get global system lock status (admin only)
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: System status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  locked:
-                    type: boolean
-                  reason:
-                    type: string
-
-  /admin/system-lock:
-    post:
-      operationId: toggleSystemLock
-      tags: [admin]
-      summary: Toggle global system lock (admin only)
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                locked:
-                  type: boolean
-                reason:
-                  type: string
-      responses:
-        "200":
-          description: Lock toggled
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  locked:
-                    type: boolean
-                  reason:
-                    type: string
-
-  /admin/payments:
-    get:
-      operationId: getAdminPayments
-      tags: [admin]
-      summary: Get all payments (admin only)
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: All payments
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Payment"
-
-  /admin/withdrawals:
-    get:
-      operationId: getAdminWithdrawals
-      tags: [admin]
-      summary: Get withdrawal requests by status (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            default: pending
-      responses:
-        "200":
-          description: Withdrawal requests
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/WithdrawalRequest"
-
-  /admin/withdrawals/{id}/approve:
-    post:
-      operationId: approveWithdrawal
-      tags: [admin]
-      summary: Approve a withdrawal request (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Approved
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-
-  /admin/withdrawals/{id}/reject:
-    post:
-      operationId: rejectWithdrawal
-      tags: [admin]
-      summary: Reject a withdrawal request (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                note:
-                  type: string
-                  maxLength: 500
-      responses:
-        "200":
-          description: Rejected
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-
-  /admin/stats:
-    get:
-      operationId: getAdminStats
-      tags: [admin]
-      summary: Get platform-wide statistics (admin only)
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Admin stats
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  totalUsers:
-                    type: integer
-                  activeTables:
-                    type: integer
-                  totalDeposits:
-                    type: integer
-                  totalWithdrawals:
-                    type: integer
-                  totalTables:
-                    type: integer
-
-  /admin/collusion-alerts:
-    get:
-      operationId: getCollusionAlerts
-      tags: [admin]
-      summary: Get collusion alerts (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [pending, reviewed, dismissed]
-      responses:
-        "200":
-          description: Collusion alerts
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/CollusionAlert"
-
-  /admin/collusion-alerts/{id}/review:
-    post:
-      operationId: reviewCollusionAlert
-      tags: [admin]
-      summary: Review or dismiss a collusion alert (admin only)
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [status]
-              properties:
-                status:
-                  type: string
-                  enum: [reviewed, dismissed]
-      responses:
-        "200":
-          description: Alert updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CollusionAlert"
-        "404":
-          description: Alert not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-  # ── Translation ───────────────────────────────────────────────────────────────
-
-  /translate:
-    post:
-      operationId: translateText
-      tags: [users]
-      summary: Translate text to English
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [text]
-              properties:
-                text:
-                  type: string
-                  maxLength: 500
-      responses:
-        "200":
-          description: Translation result
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  translated:
-                    type: string
-                  original:
-                    type: string
-                  detected:
-                    type: string
-
-  # ── Commentary Audio ──────────────────────────────────────────────────────────
-
-  /commentary-audio/{segmentId}/{lineIndex}:
-    get:
-      operationId: getCommentaryAudio
-      tags: [games]
-      summary: Get TTS commentary audio for a game segment
-      security:
-        - cookieAuth: []
-      parameters:
-        - name: segmentId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: lineIndex
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: MP3 audio buffer
-          content:
-            audio/mpeg:
-              schema:
-                type: string
-                format: binary
-        "404":
-          description: Audio not found or expired
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorMessage"
-
-components:
-  securitySchemes:
-    cookieAuth:
-      type: apiKey
-      in: cookie
-      name: connect.sid
-      description: Session cookie set after login
-
-  schemas:
-    # ── Error ────────────────────────────────────────────────────────────────────
-
-    ErrorMessage:
-      type: object
-      properties:
-        message:
-          type: string
-
-    # ── User ─────────────────────────────────────────────────────────────────────
-
-    SafeUser:
-      type: object
-      description: User object with password omitted
-      properties:
-        id:
-          type: string
-          format: uuid
-        username:
-          type: string
-        displayName:
-          type: string
-          nullable: true
-        avatarId:
-          type: string
-          nullable: true
-        tauntVoice:
-          type: string
-          default: default
-        chipBalance:
-          type: integer
-          default: 10000
-        role:
-          type: string
-          enum: [guest, member, admin]
-        provider:
-          type: string
-          enum: [local, google, discord]
-        lastDailyClaim:
-          type: string
-          format: date-time
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-
-    # ── Table ────────────────────────────────────────────────────────────────────
-
-    Table:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        clubId:
-          type: string
-          nullable: true
-        name:
-          type: string
-        maxPlayers:
-          type: integer
-          minimum: 2
-          maximum: 10
-        smallBlind:
-          type: integer
-        bigBlind:
-          type: integer
-        minBuyIn:
-          type: integer
-        maxBuyIn:
-          type: integer
-        ante:
-          type: integer
-        timeBankSeconds:
-          type: integer
-        isPrivate:
-          type: boolean
-        status:
-          type: string
-          enum: [waiting, playing]
-        createdById:
-          type: string
-        allowBots:
-          type: boolean
-        replaceBots:
-          type: boolean
-        gameFormat:
-          type: string
-          enum: [cash, sng, heads_up, tournament, bomb_pot]
-        blindSchedule:
-          type: array
-          nullable: true
-          items:
-            $ref: "#/components/schemas/BlindLevel"
-        bombPotFrequency:
-          type: integer
-        bombPotAnte:
-          type: integer
-        buyInAmount:
-          type: integer
-        startingChips:
-          type: integer
-        payoutStructure:
-          type: array
-          nullable: true
-          items:
-            type: object
-            properties:
-              place:
-                type: integer
-              percentage:
-                type: number
-        rakePercent:
-          type: integer
-        rakeCap:
-          type: integer
-        straddleEnabled:
-          type: boolean
-        bigBlindAnte:
-          type: boolean
-        gameSpeed:
-          type: string
-          enum: [normal, fast, turbo]
-        showAllHands:
-          type: boolean
-        runItTwice:
-          type: string
-          enum: [always, ask, "no"]
-        showdownSpeed:
-          type: string
-          enum: [fast, normal, slow]
-        dealToAwayPlayers:
-          type: boolean
-        timeBankRefillHands:
-          type: integer
-        spectatorMode:
-          type: boolean
-        doubleBoard:
-          type: boolean
-        sevenTwoBounty:
-          type: integer
-        guestChatEnabled:
-          type: boolean
-        autoTrimExcessBets:
-          type: boolean
-        pokerVariant:
-          type: string
-          enum: [nlhe, plo, plo5, short_deck]
-        useCentsValues:
-          type: boolean
-        awayTimeoutMinutes:
-          type: integer
-        inviteCode:
-          type: string
-          nullable: true
-        scheduledStartTime:
-          type: string
-          format: date-time
-          nullable: true
-        scheduledEndTime:
-          type: string
-          format: date-time
-          nullable: true
-        recurringSchedule:
-          type: object
-          nullable: true
-          properties:
-            days:
-              type: array
-              items:
-                type: string
-                enum: [mon, tue, wed, thu, fri, sat, sun]
-            startTime:
-              type: string
-              pattern: '^\d{2}:\d{2}$'
-            endTime:
-              type: string
-              pattern: '^\d{2}:\d{2}$'
-        createdAt:
-          type: string
-          format: date-time
-
-    TableSummary:
-      type: object
-      description: Table listed in the lobby, includes live player count
-      allOf:
-        - $ref: "#/components/schemas/Table"
-        - type: object
-          properties:
-            playerCount:
-              type: integer
-
-    CreateTableRequest:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 50
-        maxPlayers:
-          type: integer
-          minimum: 2
-          maximum: 10
-          default: 6
-        smallBlind:
-          type: integer
-          minimum: 1
-          default: 10
-        bigBlind:
-          type: integer
-          minimum: 2
-          default: 20
-        minBuyIn:
-          type: integer
-          default: 200
-        maxBuyIn:
-          type: integer
-          default: 2000
-        ante:
-          type: integer
-          default: 0
-        timeBankSeconds:
-          type: integer
-          minimum: 5
-          maximum: 120
-          default: 30
-        isPrivate:
-          type: boolean
-          default: false
-        password:
-          type: string
-        clubId:
-          type: string
-        allowBots:
-          type: boolean
-          default: true
-        replaceBots:
-          type: boolean
-          default: true
-        gameFormat:
-          type: string
-          enum: [cash, sng, heads_up, tournament, bomb_pot]
-          default: cash
-        blindPreset:
-          type: string
-          description: Named blind schedule preset (resolved server-side)
-        blindSchedule:
-          type: array
-          items:
-            $ref: "#/components/schemas/BlindLevel"
-        bombPotFrequency:
-          type: integer
-          default: 0
-        bombPotAnte:
-          type: integer
-          default: 0
-        buyInAmount:
-          type: integer
-          default: 0
-        startingChips:
-          type: integer
-          minimum: 100
-          default: 1500
-        payoutStructure:
-          type: array
-          items:
-            type: object
-            properties:
-              place:
-                type: integer
-              percentage:
-                type: number
-        rakePercent:
-          type: integer
-          minimum: 0
-          maximum: 10
-          default: 0
-        rakeCap:
-          type: integer
-          default: 0
-        straddleEnabled:
-          type: boolean
-          default: false
-        gameSpeed:
-          type: string
-          enum: [normal, fast, turbo]
-          default: normal
-        showAllHands:
-          type: boolean
-          default: true
-        runItTwice:
-          type: string
-          enum: [always, ask, "no"]
-          default: ask
-        showdownSpeed:
-          type: string
-          enum: [fast, normal, slow]
-          default: normal
-        dealToAwayPlayers:
-          type: boolean
-          default: false
-        timeBankRefillHands:
-          type: integer
-          default: 0
-        spectatorMode:
-          type: boolean
-          default: true
-        doubleBoard:
-          type: boolean
-          default: false
-        sevenTwoBounty:
-          type: integer
-          default: 0
-        guestChatEnabled:
-          type: boolean
-          default: true
-        autoTrimExcessBets:
-          type: boolean
-          default: false
-        pokerVariant:
-          type: string
-          enum: [nlhe, plo, plo5, short_deck]
-          default: nlhe
-        useCentsValues:
-          type: boolean
-          default: false
-        awayTimeoutMinutes:
-          type: integer
-          minimum: 1
-          maximum: 60
-          default: 5
-        scheduledStartTime:
-          type: string
-          format: date-time
-        scheduledEndTime:
-          type: string
-          format: date-time
-        recurringSchedule:
-          type: object
-          properties:
-            days:
-              type: array
-              items:
-                type: string
-                enum: [mon, tue, wed, thu, fri, sat, sun]
-            startTime:
-              type: string
-              pattern: '^\d{2}:\d{2}$'
-            endTime:
-              type: string
-              pattern: '^\d{2}:\d{2}$'
-
-    BlindLevel:
-      type: object
-      properties:
-        level:
-          type: integer
-        sb:
-          type: integer
-        bb:
-          type: integer
-        ante:
-          type: integer
-          default: 0
-        durationSeconds:
-          type: integer
-
-    TablePlayer:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        tableId:
-          type: string
-        userId:
-          type: string
-        seatIndex:
-          type: integer
-        chipStack:
-          type: integer
-        isConnected:
-          type: boolean
-        isSittingOut:
-          type: boolean
-        joinedAt:
-          type: string
-          format: date-time
-
-    # ── Game / Hand ──────────────────────────────────────────────────────────────
-
-    Card:
-      type: string
-      description: "Card notation, e.g. 'As' (Ace of spades), 'Kh' (King of hearts)"
-      pattern: '^[2-9TJQKA][shdc]$'
-
-    GameHand:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        tableId:
-          type: string
-        handNumber:
-          type: integer
-        dealerSeat:
-          type: integer
-          nullable: true
-        communityCards:
-          type: array
-          nullable: true
-          items:
-            $ref: "#/components/schemas/Card"
-        potTotal:
-          type: integer
-        totalRake:
-          type: integer
-        winnerIds:
-          type: array
-          nullable: true
-          items:
-            type: string
-        summary:
-          type: object
-          nullable: true
-          description: Full hand history for replay
-        serverSeed:
-          type: string
-          nullable: true
-        commitmentHash:
-          type: string
-          nullable: true
-        deckOrder:
-          type: string
-          nullable: true
-        playerSeeds:
-          type: object
-          nullable: true
-        vrfRequestId:
-          type: string
-          nullable: true
-        vrfRandomWord:
-          type: string
-          nullable: true
-        onChainCommitTx:
-          type: string
-          nullable: true
-        onChainRevealTx:
-          type: string
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-
-    HandPlayer:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        handId:
-          type: string
-        userId:
-          type: string
-        seatIndex:
-          type: integer
-        holeCards:
-          type: array
-          nullable: true
-          items:
-            $ref: "#/components/schemas/Card"
-        startStack:
-          type: integer
-        endStack:
-          type: integer
-        netResult:
-          type: integer
-        isWinner:
-          type: boolean
-        finalAction:
-          type: string
-          nullable: true
-          enum: [fold, showdown, all-in]
-
-    HandAction:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        handId:
-          type: string
-        playerId:
-          type: string
-        street:
-          type: string
-          enum: [preflop, flop, turn, river, showdown]
-        actionType:
-          type: string
-          enum: [fold, check, call, raise, all_in, blind, ante]
-        amount:
-          type: integer
-          nullable: true
-        timeSpent:
-          type: integer
-          nullable: true
-          description: Milliseconds taken to act
-        sequenceNum:
-          type: integer
-
-    HandAnalysis:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        userId:
-          type: string
-        handId:
-          type: string
-          nullable: true
-        holeCards:
-          type: array
-          items:
-            $ref: "#/components/schemas/Card"
-        communityCards:
-          type: array
-          nullable: true
-          items:
-            $ref: "#/components/schemas/Card"
-        pot:
-          type: integer
-        position:
-          type: string
-          nullable: true
-        analysis:
-          type: object
-          nullable: true
-          properties:
-            rating:
-              type: string
-            ev:
-              type: number
-            leaks:
-              type: array
-              items:
-                type: string
-            recommendations:
-              type: array
-              items:
-                type: string
-        createdAt:
-          type: string
-          format: date-time
-
-    # ── Club ─────────────────────────────────────────────────────────────────────
-
-    Club:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: string
-          nullable: true
-        ownerId:
-          type: string
-        avatarUrl:
-          type: string
-          nullable: true
-        isPublic:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-
-    ClubMember:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        clubId:
-          type: string
-        userId:
-          type: string
-        role:
-          type: string
-          enum: [owner, admin, member]
-        joinedAt:
-          type: string
-          format: date-time
-
-    ClubInvitation:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        clubId:
-          type: string
-        userId:
-          type: string
-        type:
-          type: string
-          enum: [invite, request]
-        status:
-          type: string
-          enum: [pending, accepted, declined]
-        createdAt:
-          type: string
-          format: date-time
-
-    ClubAnnouncement:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        clubId:
-          type: string
-        authorId:
-          type: string
-        title:
-          type: string
-        content:
-          type: string
-        pinned:
-          type: boolean
-        authorName:
-          type: string
-          description: Enriched from user data
-        createdAt:
-          type: string
-          format: date-time
-
-    ClubEvent:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        clubId:
-          type: string
-        eventType:
-          type: string
-          enum: [tournament, cash_game, special]
-        tableId:
-          type: string
-          nullable: true
-        name:
-          type: string
-        description:
-          type: string
-          nullable: true
-        startTime:
-          type: string
-          format: date-time
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-
-    # ── Tournament ───────────────────────────────────────────────────────────────
-
-    Tournament:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        clubId:
-          type: string
-          nullable: true
-        name:
-          type: string
-        buyIn:
-          type: integer
-        startingChips:
-          type: integer
-        blindSchedule:
-          type: array
-          nullable: true
-          items:
-            $ref: "#/components/schemas/BlindLevel"
-        maxPlayers:
-          type: integer
-        status:
-          type: string
-          enum: [registering, running, final_table, complete]
-        prizePool:
-          type: integer
-        createdById:
-          type: string
-        pokerVariant:
-          type: string
-          enum: [nlhe, plo, plo5, short_deck]
-        startAt:
-          type: string
-          format: date-time
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-
-    CreateTournamentRequest:
-      type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 100
-        clubId:
-          type: string
-        buyIn:
-          type: integer
-          minimum: 0
-          default: 100
-        startingChips:
-          type: integer
-          minimum: 100
-          default: 1500
-        maxPlayers:
-          type: integer
-          minimum: 2
-          maximum: 1000
-          default: 50
-        pokerVariant:
-          type: string
-          enum: [nlhe, plo, plo5, short_deck]
-          default: nlhe
-        startAt:
-          type: string
-          format: date-time
-        blindPreset:
-          type: string
-          description: Named blind schedule preset
-        blindSchedule:
-          type: array
-          items:
-            $ref: "#/components/schemas/BlindLevel"
-        payoutStructure:
-          type: array
-          items:
-            type: object
-            properties:
-              place:
-                type: integer
-              percentage:
-                type: number
-
-    TournamentRegistration:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        tournamentId:
-          type: string
-        userId:
-          type: string
-        status:
-          type: string
-          enum: [registered, playing, eliminated, winner]
-        finishPlace:
-          type: integer
-          nullable: true
-        prizeAmount:
-          type: integer
-        registeredAt:
-          type: string
-          format: date-time
-
-    # ── Wallet & Transactions ────────────────────────────────────────────────────
-
-    Wallet:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        userId:
-          type: string
-        walletType:
-          type: string
-          enum: [main, cash_game, sng, tournament, bonus]
-        balance:
-          type: integer
-        isLocked:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    Transaction:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        userId:
-          type: string
-        type:
-          type: string
-          enum: [deposit, withdraw, buyin, cashout, bonus, rake, prize, transfer, rakeback, purchase, refund]
-        amount:
-          type: integer
-        balanceBefore:
-          type: integer
-        balanceAfter:
-          type: integer
-        tableId:
-          type: string
-          nullable: true
-        description:
-          type: string
-          nullable: true
-        walletType:
-          type: string
-          nullable: true
-          enum: [main, cash_game, sng, tournament, bonus]
-        relatedTransactionId:
-          type: string
-          nullable: true
-        paymentId:
-          type: string
-          nullable: true
-        metadata:
-          type: object
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-
-    Payment:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        userId:
-          type: string
-        direction:
-          type: string
-          enum: [deposit, withdrawal]
-        status:
-          type: string
-          enum: [pending, confirming, confirmed, credited, failed, expired]
-        amountFiat:
-          type: integer
-          description: Amount in USD cents
-        amountCrypto:
-          type: string
-          nullable: true
-        currency:
-          type: string
-        exchangeRate:
-          type: string
-          nullable: true
-        chipAmount:
-          type: integer
-        allocation:
-          type: array
-          nullable: true
-          items:
-            type: object
-            properties:
-              walletType:
-                type: string
-              amount:
-                type: integer
-        gatewayProvider:
-          type: string
-          nullable: true
-        gatewayPaymentId:
-          type: string
-          nullable: true
-        depositAddress:
-          type: string
-          nullable: true
-        txHash:
-          type: string
-          nullable: true
-        confirmations:
-          type: integer
-        requiredConfirmations:
-          type: integer
-        withdrawalAddress:
-          type: string
-          nullable: true
-        confirmedAt:
-          type: string
-          format: date-time
-          nullable: true
-        creditedAt:
-          type: string
-          format: date-time
-          nullable: true
-        expiresAt:
-          type: string
-          format: date-time
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    WithdrawalRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        userId:
-          type: string
-        paymentId:
-          type: string
-          nullable: true
-        amount:
-          type: integer
-        amountFiat:
-          type: integer
-          nullable: true
-        currency:
-          type: string
-        withdrawalAddress:
-          type: string
-        status:
-          type: string
-          enum: [pending, processing, completed, failed, cancelled]
-        reviewedBy:
-          type: string
-          nullable: true
-        reviewNote:
-          type: string
-          nullable: true
-        processedAt:
-          type: string
-          format: date-time
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-
-    SupportedCurrency:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Currency code (BTC, ETH, USDT, SOL)
-        name:
-          type: string
-        symbol:
-          type: string
-        network:
-          type: string
-          nullable: true
-        minDeposit:
-          type: string
-        minWithdrawal:
-          type: string
-        confirmationsRequired:
-          type: integer
-        isActive:
-          type: boolean
-        sortOrder:
-          type: integer
-
-    # ── Shop ─────────────────────────────────────────────────────────────────────
-
-    ShopItem:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: string
-          nullable: true
-        category:
-          type: string
-          enum: [avatar, table_theme, emote, premium]
-        rarity:
-          type: string
-          enum: [common, uncommon, rare, epic, legendary]
-        price:
-          type: integer
-        currency:
-          type: string
-          enum: [chips, premium]
-        imageUrl:
-          type: string
-          nullable: true
-        isActive:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-
-    # ── Analytics ────────────────────────────────────────────────────────────────
-
-    PlayerStats:
-      type: object
-      properties:
-        handsPlayed:
-          type: integer
-        potsWon:
-          type: integer
-        bestWinStreak:
-          type: integer
-        currentWinStreak:
-          type: integer
-        totalWinnings:
-          type: integer
-        vpip:
-          type: integer
-        pfr:
-          type: integer
-        showdownCount:
-          type: integer
-
-    LeaderboardEntry:
-      type: object
-      properties:
-        userId:
-          type: string
-        username:
-          type: string
-        displayName:
-          type: string
-          nullable: true
-        avatarId:
-          type: string
-          nullable: true
-        value:
-          type: integer
-
-    Mission:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        type:
-          type: string
-          enum: [hands_played, pots_won, win_streak, sng_win, bomb_pot, heads_up_win, consecutive_wins]
-        label:
-          type: string
-        description:
-          type: string
-          nullable: true
-        target:
-          type: integer
-        reward:
-          type: integer
-        periodType:
-          type: string
-          enum: [daily, weekly]
-        isActive:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-
-    PlayerNote:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        authorUserId:
-          type: string
-        targetUserId:
-          type: string
-        note:
-          type: string
-        color:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    CollusionAlert:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        tableId:
-          type: string
-        player1Id:
-          type: string
-        player2Id:
-          type: string
-        alertType:
-          type: string
-        severity:
-          type: string
-          enum: [low, medium, high]
-        details:
-          type: object
-          nullable: true
-        status:
-          type: string
-          enum: [pending, reviewed, dismissed]
-        reviewedBy:
-          type: string
-          nullable: true
-        reviewedAt:
-          type: string
-          format: date-time
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-
-    # ── Leagues & Alliances ──────────────────────────────────────────────────────
-
-    Alliance:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        clubIds:
-          type: array
-          items:
-            type: string
-        createdAt:
-          type: string
-          format: date-time
-
-    LeagueSeason:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        startDate:
-          type: string
-          format: date-time
-        endDate:
-          type: string
-          format: date-time
-        standings:
-          type: array
-          nullable: true
-          items:
-            type: object
-            properties:
-              clubId:
-                type: string
-              points:
-                type: integer
-              wins:
-                type: integer
-              losses:
-                type: integer
-        createdAt:
-          type: string
-          format: date-time

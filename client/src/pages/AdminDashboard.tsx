@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save, ShieldAlert, Loader2, MessageSquare, Ticket, Users, Search, Edit3, Ban, UserCheck, Building2, Table2, FileText, X, Trash2, Key, Music, Upload } from "lucide-react";
+import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save, ShieldAlert, Loader2, MessageSquare, Ticket, Users, Search, Edit3, Ban, UserCheck, Building2, Table2, FileText, X, Trash2, Key, Music, Upload, Megaphone } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;
@@ -133,7 +133,28 @@ interface AdminTicket {
   resolvedAt: string | null;
 }
 
-type Tab = "overview" | "users" | "clubs" | "tables" | "withdrawals" | "collusion" | "system" | "payments" | "settings" | "kyc" | "security" | "support" | "audit" | "env" | "music";
+type Tab = "overview" | "users" | "clubs" | "tables" | "withdrawals" | "collusion" | "system" | "payments" | "settings" | "kyc" | "security" | "support" | "audit" | "env" | "music" | "sponsorship" | "announcements_ctrl";
+
+interface SponsorshipPayout {
+  id: string;
+  txId: string;
+  recipient: string;
+  amount: number;
+  currency: string;
+  clubId: string | null;
+  notes: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  createdAt: string;
+}
+
+interface AdminAnnouncement {
+  id: string;
+  title: string;
+  message: string;
+  targetAudience: string;
+  deliveryStyle: string;
+  createdAt: string;
+}
 
 export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -197,6 +218,21 @@ export default function AdminDashboard() {
   const [envEditing, setEnvEditing] = useState<string | null>(null);
   const [envEditValue, setEnvEditValue] = useState("");
   const [envSaving, setEnvSaving] = useState(false);
+
+  // Sponsorship state
+  const [sponsorshipPayouts, setSponsorshipPayouts] = useState<SponsorshipPayout[]>([]);
+  const [sponsorshipLoading, setSponsorshipLoading] = useState(false);
+  const [sponsorForm, setSponsorForm] = useState({ recipient: "", amount: "", currency: "USDT", clubId: "", notes: "" });
+  const [sponsorSubmitting, setSponsorSubmitting] = useState(false);
+  const [sponsorActionLoading, setSponsorActionLoading] = useState<string | null>(null);
+
+  // Announcements state
+  const [adminAnnouncements, setAdminAnnouncements] = useState<AdminAnnouncement[]>([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState({ title: "", message: "", targetAudience: "all", deliveryStyle: "notification" });
+  const [announcementSubmitting, setAnnouncementSubmitting] = useState(false);
+  const [announcementDeleting, setAnnouncementDeleting] = useState<string | null>(null);
+
   const [expandedAlert, setExpandedAlert] = useState<string | null>(null);
   const [antiCheatData, setAntiCheatData] = useState<AntiCheatLiveData | null>(null);
   const [antiCheatLoading, setAntiCheatLoading] = useState(false);
@@ -499,6 +535,82 @@ export default function AdminDashboard() {
     } catch {} finally { setEnvSaving(false); }
   };
 
+  // Sponsorship fetch
+  const fetchSponsorshipPayouts = async () => {
+    setSponsorshipLoading(true);
+    try {
+      const res = await fetch("/api/admin/sponsorship/payouts", { credentials: "include" });
+      if (res.ok) setSponsorshipPayouts(await res.json());
+    } catch {} finally { setSponsorshipLoading(false); }
+  };
+
+  const handleSponsorshipSubmit = async () => {
+    if (!sponsorForm.recipient || !sponsorForm.amount) return;
+    setSponsorSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/sponsorship/payouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...sponsorForm, amount: parseFloat(sponsorForm.amount) }),
+      });
+      if (res.ok) {
+        setSponsorForm({ recipient: "", amount: "", currency: "USDT", clubId: "", notes: "" });
+        fetchSponsorshipPayouts();
+      }
+    } catch {} finally { setSponsorSubmitting(false); }
+  };
+
+  const handleSponsorshipAction = async (id: string, action: "approve" | "process") => {
+    setSponsorActionLoading(id);
+    try {
+      const res = await fetch(`/api/admin/sponsorship/payouts/${id}/${action}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) fetchSponsorshipPayouts();
+    } catch {} finally { setSponsorActionLoading(null); }
+  };
+
+  // Announcements fetch
+  const fetchAdminAnnouncements = async () => {
+    setAnnouncementsLoading(true);
+    try {
+      const res = await fetch("/api/admin/announcements", { credentials: "include" });
+      if (res.ok) setAdminAnnouncements(await res.json());
+    } catch {} finally { setAnnouncementsLoading(false); }
+  };
+
+  const handleAnnouncementBroadcast = async () => {
+    if (!announcementForm.title || !announcementForm.message) return;
+    setAnnouncementSubmitting(true);
+    try {
+      const createRes = await fetch("/api/admin/announcements/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(announcementForm),
+      });
+      if (createRes.ok) {
+        const created = await createRes.json();
+        await fetch(`/api/admin/announcements/${created.id}/broadcast`, {
+          method: "POST",
+          credentials: "include",
+        });
+        setAnnouncementForm({ title: "", message: "", targetAudience: "all", deliveryStyle: "notification" });
+        fetchAdminAnnouncements();
+      }
+    } catch {} finally { setAnnouncementSubmitting(false); }
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    setAnnouncementDeleting(id);
+    try {
+      await fetch(`/api/admin/announcements/${id}`, { method: "DELETE", credentials: "include" });
+      setAdminAnnouncements(prev => prev.filter(a => a.id !== id));
+    } catch {} finally { setAnnouncementDeleting(null); }
+  };
+
   // Auto-fetch when switching to new tabs
   useEffect(() => {
     if (activeTab === "users" && userResults.length === 0) fetchUsers();
@@ -507,6 +619,8 @@ export default function AdminDashboard() {
     if (activeTab === "audit" && auditLogs.length === 0) fetchAuditLogs();
     if (activeTab === "env" && envKeys.length === 0) fetchEnvKeys();
     if (activeTab === "music" && adminMusic.length === 0) fetchAdminMusic();
+    if (activeTab === "sponsorship" && sponsorshipPayouts.length === 0) fetchSponsorshipPayouts();
+    if (activeTab === "announcements_ctrl" && adminAnnouncements.length === 0) fetchAdminAnnouncements();
   }, [activeTab]);
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
@@ -525,6 +639,8 @@ export default function AdminDashboard() {
     { key: "music", label: "Music", icon: <Music className="w-4 h-4" /> },
     { key: "audit", label: "Audit Log", icon: <FileText className="w-4 h-4" /> },
     { key: "env", label: "Env Keys", icon: <Key className="w-4 h-4" /> },
+    { key: "sponsorship", label: "Sponsorship", icon: <DollarSign className="w-4 h-4" /> },
+    { key: "announcements_ctrl", label: "Announcements", icon: <MessageSquare className="w-4 h-4" /> },
   ];
 
   if (authLoading) {
@@ -1793,6 +1909,264 @@ export default function AdminDashboard() {
             )}
           </div>
         )}
+        {/* ── Sponsorship Tab ── */}
+        {activeTab === "sponsorship" && (
+          <div className="space-y-6">
+            {/* Upload Form */}
+            <div className="rounded-lg border border-white/10 p-6 bg-black/20">
+              <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Upload className="w-4 h-4 text-primary" /> New Sponsorship Payout</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Recipient wallet address"
+                  value={sponsorForm.recipient}
+                  onChange={e => setSponsorForm(p => ({ ...p, recipient: e.target.value }))}
+                  className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs focus:outline-none focus:border-primary/40"
+                />
+                <input
+                  type="number"
+                  placeholder="Amount"
+                  value={sponsorForm.amount}
+                  onChange={e => setSponsorForm(p => ({ ...p, amount: e.target.value }))}
+                  className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs focus:outline-none focus:border-primary/40"
+                />
+                <select
+                  value={sponsorForm.currency}
+                  onChange={e => setSponsorForm(p => ({ ...p, currency: e.target.value }))}
+                  className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs"
+                >
+                  <option value="USDT">USDT</option>
+                  <option value="ETH">ETH</option>
+                  <option value="SOL">SOL</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Club ID (optional)"
+                  value={sponsorForm.clubId}
+                  onChange={e => setSponsorForm(p => ({ ...p, clubId: e.target.value }))}
+                  className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs focus:outline-none focus:border-primary/40"
+                />
+                <input
+                  type="text"
+                  placeholder="Notes (optional)"
+                  value={sponsorForm.notes}
+                  onChange={e => setSponsorForm(p => ({ ...p, notes: e.target.value }))}
+                  className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs focus:outline-none focus:border-primary/40 md:col-span-2"
+                />
+              </div>
+              <button
+                onClick={handleSponsorshipSubmit}
+                disabled={sponsorSubmitting || !sponsorForm.recipient || !sponsorForm.amount}
+                className="mt-3 px-4 py-2 rounded-lg bg-primary/20 text-primary font-bold text-xs border border-primary/30 hover:bg-primary/30 disabled:opacity-50"
+              >
+                {sponsorSubmitting ? <Loader2 className="w-3 h-3 animate-spin inline mr-1" /> : null}
+                Submit Payout
+              </button>
+            </div>
+
+            {/* Payouts Table */}
+            <div className="rounded-lg border border-white/10 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/5">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">All Sponsorship Payouts</h3>
+                <button onClick={fetchSponsorshipPayouts} className="px-3 py-1.5 rounded bg-white/5 border border-white/10 text-gray-400 text-xs font-bold hover:bg-white/10">
+                  <RefreshCw className="w-3 h-3 inline mr-1" />Refresh
+                </button>
+              </div>
+              {sponsorshipLoading ? (
+                <div className="py-8 text-center"><Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" /></div>
+              ) : sponsorshipPayouts.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-8">No sponsorship payouts found.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-white/5">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-gray-400 font-bold">TX ID</th>
+                        <th className="px-3 py-2 text-left text-gray-400 font-bold">Recipient</th>
+                        <th className="px-3 py-2 text-left text-gray-400 font-bold">Amount</th>
+                        <th className="px-3 py-2 text-left text-gray-400 font-bold">Status</th>
+                        <th className="px-3 py-2 text-left text-gray-400 font-bold">Date</th>
+                        <th className="px-3 py-2 text-left text-gray-400 font-bold">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {sponsorshipPayouts.map(p => (
+                        <tr key={p.id} className="hover:bg-white/[0.02]">
+                          <td className="px-3 py-2 text-gray-400 font-mono">{p.txId?.slice(0, 12) || p.id.slice(0, 12)}...</td>
+                          <td className="px-3 py-2 text-white font-mono">{p.recipient.slice(0, 10)}...{p.recipient.slice(-4)}</td>
+                          <td className="px-3 py-2 text-white font-bold">{p.amount} {p.currency}</td>
+                          <td className="px-3 py-2">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              p.status === "pending" ? "bg-yellow-500/10 text-yellow-400" :
+                              p.status === "processing" ? "bg-blue-500/10 text-blue-400" :
+                              p.status === "completed" ? "bg-green-500/10 text-green-400" :
+                              "bg-red-500/10 text-red-400"
+                            }`}>
+                              {p.status.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</td>
+                          <td className="px-3 py-2">
+                            {(p.status === "pending" || p.status === "failed") && (
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => handleSponsorshipAction(p.id, "approve")}
+                                  disabled={sponsorActionLoading === p.id}
+                                  className="px-2 py-1 rounded bg-green-500/10 text-green-400 text-[10px] font-bold border border-green-500/20 hover:bg-green-500/20 disabled:opacity-50"
+                                >
+                                  {sponsorActionLoading === p.id ? "..." : "Approve"}
+                                </button>
+                                <button
+                                  onClick={() => handleSponsorshipAction(p.id, "process")}
+                                  disabled={sponsorActionLoading === p.id}
+                                  className="px-2 py-1 rounded bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/20 hover:bg-blue-500/20 disabled:opacity-50"
+                                >
+                                  {sponsorActionLoading === p.id ? "..." : "Process"}
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Announcements Control Center Tab ── */}
+        {activeTab === "announcements_ctrl" && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Create Form */}
+              <div className="rounded-lg border border-white/10 p-6 bg-black/20">
+                <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><MessageSquare className="w-4 h-4 text-primary" /> Create Announcement</h3>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Title"
+                    value={announcementForm.title}
+                    onChange={e => setAnnouncementForm(p => ({ ...p, title: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs focus:outline-none focus:border-primary/40"
+                  />
+                  <textarea
+                    placeholder="Message"
+                    rows={4}
+                    value={announcementForm.message}
+                    onChange={e => setAnnouncementForm(p => ({ ...p, message: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs focus:outline-none focus:border-primary/40 resize-none"
+                  />
+                  <select
+                    value={announcementForm.targetAudience}
+                    onChange={e => setAnnouncementForm(p => ({ ...p, targetAudience: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs"
+                  >
+                    <option value="all">All Players</option>
+                    <option value="private_tables">Private Tables Only</option>
+                    <option value="tournament_players">Tournament Players Only</option>
+                    <option value="club_members">Club Members Only</option>
+                  </select>
+                  <select
+                    value={announcementForm.deliveryStyle}
+                    onChange={e => setAnnouncementForm(p => ({ ...p, deliveryStyle: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs"
+                  >
+                    <option value="notification">Notification</option>
+                    <option value="breaking_news">Breaking News Modal</option>
+                    <option value="table_chat">Table Chat Blast</option>
+                  </select>
+                  <button
+                    onClick={handleAnnouncementBroadcast}
+                    disabled={announcementSubmitting || !announcementForm.title || !announcementForm.message}
+                    className="w-full px-4 py-2 rounded-lg bg-primary/20 text-primary font-bold text-xs border border-primary/30 hover:bg-primary/30 disabled:opacity-50"
+                  >
+                    {announcementSubmitting ? <Loader2 className="w-3 h-3 animate-spin inline mr-1" /> : <Megaphone className="w-3 h-3 inline mr-1" />}
+                    Broadcast Now
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Preview */}
+              <div className="rounded-lg border border-white/10 p-6 bg-black/20">
+                <h3 className="text-sm font-bold text-white mb-4">Live Preview</h3>
+                <div className="rounded-lg border border-white/10 bg-black/40 p-4 min-h-[200px]">
+                  {announcementForm.deliveryStyle === "breaking_news" ? (
+                    <div className="text-center py-6">
+                      <div className="inline-block px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider mb-3">Breaking News</div>
+                      <h4 className="text-lg font-bold text-white mb-2">{announcementForm.title || "Announcement Title"}</h4>
+                      <p className="text-sm text-gray-400">{announcementForm.message || "Your message will appear here..."}</p>
+                    </div>
+                  ) : announcementForm.deliveryStyle === "table_chat" ? (
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2">
+                        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <Megaphone className="w-3 h-3 text-primary" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-primary uppercase">System</span>
+                          <p className="text-xs text-white font-bold">{announcementForm.title || "Title"}</p>
+                          <p className="text-xs text-gray-400">{announcementForm.message || "Message preview..."}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <MessageSquare className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">{announcementForm.title || "Announcement Title"}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{announcementForm.message || "Your message will appear here..."}</p>
+                        <p className="text-[9px] text-gray-600 mt-1">Target: {announcementForm.targetAudience.replace("_", " ")}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Active Announcements List */}
+            <div className="rounded-lg border border-white/10 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/5">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Active Announcements</h3>
+                <button onClick={fetchAdminAnnouncements} className="px-3 py-1.5 rounded bg-white/5 border border-white/10 text-gray-400 text-xs font-bold hover:bg-white/10">
+                  <RefreshCw className="w-3 h-3 inline mr-1" />Refresh
+                </button>
+              </div>
+              {announcementsLoading ? (
+                <div className="py-8 text-center"><Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" /></div>
+              ) : adminAnnouncements.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-8">No active announcements.</p>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {adminAnnouncements.map(a => (
+                    <div key={a.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02]">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-white">{a.title}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{a.message}</p>
+                        <div className="flex gap-2 mt-1">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/10 text-blue-400">{a.targetAudience}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-400">{a.deliveryStyle}</span>
+                          <span className="text-[9px] text-gray-600">{new Date(a.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteAnnouncement(a.id)}
+                        disabled={announcementDeleting === a.id}
+                        className="ml-3 p-1.5 rounded hover:bg-red-500/10 text-gray-500 hover:text-red-400 disabled:opacity-50"
+                      >
+                        {announcementDeleting === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
     </DashboardLayout>
   );

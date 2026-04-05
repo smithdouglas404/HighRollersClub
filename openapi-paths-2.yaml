@@ -1,0 +1,4001 @@
+# ── Wallet & Payments ────────────────────────────────────────────────────────
+
+/wallet/balance:
+  get:
+    operationId: getWalletBalance
+    tags: [wallet]
+    summary: Get combined wallet balance
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Balance summary
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                balance:
+                  type: number
+                wallets:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      balance:
+                        type: number
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/wallet/balances:
+  get:
+    operationId: getWalletBalances
+    tags: [wallet]
+    summary: Get per-wallet balances with lock status
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Wallet balances
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  walletType:
+                    type: string
+                  balance:
+                    type: number
+                  isLocked:
+                    type: boolean
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/wallet/daily-status:
+  get:
+    operationId: getDailyStatus
+    tags: [wallet]
+    summary: Check daily bonus claim status
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Daily claim status
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                canClaim:
+                  type: boolean
+                nextClaimAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+                streak:
+                  type: integer
+                  nullable: true
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/wallet/claim-daily:
+  post:
+    operationId: claimDailyBonus
+    tags: [wallet]
+    summary: Claim daily bonus chips
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Bonus claimed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                newBalance:
+                  type: number
+                streak:
+                  type: integer
+      "400":
+        description: Already claimed today
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/wallet/transactions:
+  get:
+    operationId: getWalletTransactions
+    tags: [wallet]
+    summary: List wallet transactions
+    security: [{ session: [] }]
+    parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+    responses:
+      "200":
+        description: Transaction list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Transaction"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/wallet/sessions:
+  get:
+    operationId: getWalletSessions
+    tags: [wallet]
+    summary: List session summaries with profit/loss
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Session summaries
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/SessionSummary"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/wallet/transfer:
+  post:
+    operationId: transferBetweenWallets
+    tags: [wallet]
+    summary: Transfer chips between wallets
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [fromWallet, toWallet, amount]
+            properties:
+              fromWallet:
+                type: string
+              toWallet:
+                type: string
+              amount:
+                type: number
+    responses:
+      "200":
+        description: Transfer completed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+      "400":
+        description: Invalid transfer
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/wallet/withdraw:
+  post:
+    operationId: requestWithdrawal
+    tags: [wallet]
+    summary: Request a withdrawal
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [amount, currency, address]
+            properties:
+              amount:
+                type: number
+              currency:
+                type: string
+              address:
+                type: string
+    responses:
+      "200":
+        description: Withdrawal requested
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                requestId:
+                  type: integer
+      "400":
+        description: Invalid withdrawal request
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/wallet/withdrawals:
+  get:
+    operationId: getMyWithdrawals
+    tags: [wallet]
+    summary: List my withdrawal requests
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Withdrawal requests
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/WithdrawalRequest"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/payments/currencies:
+  get:
+    operationId: getPaymentCurrencies
+    tags: [wallet]
+    summary: List supported payment currencies
+    responses:
+      "200":
+        description: Currency list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Currency"
+
+/payments/gateways:
+  get:
+    operationId: getPaymentGateways
+    tags: [wallet]
+    summary: List available payment gateways
+    responses:
+      "200":
+        description: Gateway list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Gateway"
+
+/payments/deposit:
+  post:
+    operationId: createDeposit
+    tags: [wallet]
+    summary: Initiate a deposit
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [amount, currency, gateway]
+            properties:
+              amount:
+                type: number
+              currency:
+                type: string
+              gateway:
+                type: string
+              allocation:
+                type: object
+                description: Optional wallet allocation split
+    responses:
+      "200":
+        description: Deposit initiated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositResult"
+      "400":
+        description: Invalid deposit request
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/payments/{id}:
+  get:
+    operationId: getPaymentById
+    tags: [wallet]
+    summary: Get a single payment by ID
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Payment details
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Payment"
+      "404":
+        description: Payment not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/payments:
+  get:
+    operationId: getPayments
+    tags: [wallet]
+    summary: List my payments
+    security: [{ session: [] }]
+    parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+    responses:
+      "200":
+        description: Payment list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Payment"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/payments/webhook/{provider}:
+  post:
+    operationId: handlePaymentWebhook
+    tags: [wallet]
+    summary: Receive payment provider webhook
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+    responses:
+      "200":
+        description: Webhook acknowledged
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                received:
+                  type: boolean
+
+/sessions/history:
+  get:
+    operationId: getSessionHistory
+    tags: [wallet]
+    summary: Get full session history
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Session history
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/SessionHistory"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Hands & Stats ────────────────────────────────────────────────────────────
+
+/hands/{id}:
+  get:
+    operationId: getHand
+    tags: [games]
+    summary: Get a hand by ID
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Hand details
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameHand"
+      "404":
+        description: Hand not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/hands/{id}/verify:
+  get:
+    operationId: verifyHand
+    tags: [games]
+    summary: Get hand verification / fairness data
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Verification data
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerificationData"
+      "404":
+        description: Hand not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/hands/{id}/players:
+  get:
+    operationId: getHandPlayers
+    tags: [games]
+    summary: List players in a hand
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Hand players
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/HandPlayer"
+      "404":
+        description: Hand not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/hands/{id}/actions:
+  get:
+    operationId: getHandActions
+    tags: [games]
+    summary: List actions in a hand
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Hand actions
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/HandAction"
+      "404":
+        description: Hand not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/players/{id}/hands:
+  get:
+    operationId: getPlayerHands
+    tags: [games]
+    summary: List hands for a player
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+    responses:
+      "200":
+        description: Player hand history
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/GameHand"
+
+/stats/me:
+  get:
+    operationId: getMyStats
+    tags: [games]
+    summary: Get my player statistics
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Player stats
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlayerStats"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/stats/me/breakdown:
+  get:
+    operationId: getMyStatsBreakdown
+    tags: [games]
+    summary: Get detailed stats breakdown by stake/game type
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Stats breakdown
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatsBreakdown"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/stats/head-to-head/top:
+  get:
+    operationId: getTopHeadToHead
+    tags: [games]
+    summary: Get top head-to-head matchups
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Top head-to-head records
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/HeadToHead"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/stats/head-to-head/{opponentId}:
+  get:
+    operationId: getHeadToHead
+    tags: [games]
+    summary: Get head-to-head record with a specific opponent
+    security: [{ session: [] }]
+    parameters:
+      - name: opponentId
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Head-to-head record
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeadToHead"
+      "404":
+        description: Opponent not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/stats/global:
+  get:
+    operationId: getGlobalStats
+    tags: [games]
+    summary: Get platform-wide statistics
+    responses:
+      "200":
+        description: Global stats
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GlobalStats"
+
+/leaderboard:
+  get:
+    operationId: getLeaderboard
+    tags: [analytics]
+    summary: Get leaderboard rankings
+    parameters:
+      - name: metric
+        in: query
+        schema:
+          type: string
+          enum: [profit, hands, winRate, tournaments]
+      - name: period
+        in: query
+        schema:
+          type: string
+          enum: [daily, weekly, monthly, allTime]
+    responses:
+      "200":
+        description: Leaderboard entries
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/LeaderboardEntry"
+
+# ── Tournaments ──────────────────────────────────────────────────────────────
+
+/tournaments:
+  get:
+    operationId: getTournaments
+    tags: [tournaments]
+    summary: List tournaments
+    responses:
+      "200":
+        description: Tournament list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Tournament"
+  post:
+    operationId: createTournament
+    tags: [tournaments]
+    summary: Create a new tournament
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, buyIn, maxPlayers]
+            properties:
+              name:
+                type: string
+              buyIn:
+                type: number
+              maxPlayers:
+                type: integer
+              startTime:
+                type: string
+                format: date-time
+              blindStructure:
+                type: string
+              gameType:
+                type: string
+    responses:
+      "200":
+        description: Tournament created
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Tournament"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/tournaments/{id}:
+  get:
+    operationId: getTournamentById
+    tags: [tournaments]
+    summary: Get tournament details
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Tournament details
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Tournament"
+      "404":
+        description: Tournament not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/tournaments/{id}/register:
+  post:
+    operationId: registerForTournament
+    tags: [tournaments]
+    summary: Register for a tournament
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Registered successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "400":
+        description: Registration failed
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/tournaments/{id}/start:
+  post:
+    operationId: startTournament
+    tags: [tournaments]
+    summary: Start a tournament
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Tournament started
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "400":
+        description: Cannot start tournament
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/tournaments/{id}/status:
+  get:
+    operationId: getTournamentStatus
+    tags: [tournaments]
+    summary: Get live tournament status
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Tournament status
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TournamentStatus"
+      "404":
+        description: Tournament not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Alliances & Leagues ──────────────────────────────────────────────────────
+
+/alliances:
+  get:
+    operationId: getAlliances
+    tags: [leagues]
+    summary: List alliances
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Alliance list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Alliance"
+  post:
+    operationId: createAlliance
+    tags: [leagues]
+    summary: Create an alliance
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, clubId]
+            properties:
+              name:
+                type: string
+              clubId:
+                type: integer
+    responses:
+      "200":
+        description: Alliance created
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Alliance"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/alliances/{id}:
+  get:
+    operationId: getAllianceById
+    tags: [leagues]
+    summary: Get alliance details
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Alliance details
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Alliance"
+      "404":
+        description: Alliance not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  put:
+    operationId: updateAlliance
+    tags: [leagues]
+    summary: Update an alliance
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+    responses:
+      "200":
+        description: Alliance updated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Alliance"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  delete:
+    operationId: deleteAlliance
+    tags: [leagues]
+    summary: Delete an alliance
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Alliance deleted
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/alliances/{id}/join:
+  post:
+    operationId: joinAlliance
+    tags: [leagues]
+    summary: Add a club to an alliance
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [clubId]
+            properties:
+              clubId:
+                type: integer
+    responses:
+      "200":
+        description: Club joined alliance
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "400":
+        description: Already in alliance
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/alliances/{id}/remove-club:
+  post:
+    operationId: removeClubFromAlliance
+    tags: [leagues]
+    summary: Remove a club from an alliance
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [clubId]
+            properties:
+              clubId:
+                type: integer
+    responses:
+      "200":
+        description: Club removed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "400":
+        description: Club not in alliance
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/leagues:
+  get:
+    operationId: getLeagues
+    tags: [leagues]
+    summary: List league seasons
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: League list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/LeagueSeason"
+  post:
+    operationId: createLeague
+    tags: [leagues]
+    summary: Create a league season
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, startDate, endDate]
+            properties:
+              name:
+                type: string
+              startDate:
+                type: string
+                format: date-time
+              endDate:
+                type: string
+                format: date-time
+    responses:
+      "200":
+        description: League created
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeagueSeason"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/leagues/{id}:
+  get:
+    operationId: getLeagueById
+    tags: [leagues]
+    summary: Get league details
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: League details
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeagueSeason"
+      "404":
+        description: League not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  put:
+    operationId: updateLeague
+    tags: [leagues]
+    summary: Update a league season
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              startDate:
+                type: string
+                format: date-time
+              endDate:
+                type: string
+                format: date-time
+    responses:
+      "200":
+        description: League updated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeagueSeason"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  delete:
+    operationId: deleteLeague
+    tags: [leagues]
+    summary: Delete a league season
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: League deleted
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/leagues/{id}/standings:
+  post:
+    operationId: updateLeagueStandings
+    tags: [leagues]
+    summary: Update league standings
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [standings]
+            properties:
+              standings:
+                type: array
+                items:
+                  type: object
+    responses:
+      "200":
+        description: Standings updated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/leagues/{id}/complete:
+  post:
+    operationId: completeLeague
+    tags: [leagues]
+    summary: Mark a league season as complete
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: League completed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "400":
+        description: League already complete
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Coaching ─────────────────────────────────────────────────────────────────
+
+/coaching/recommendations:
+  get:
+    operationId: getCoachingRecommendations
+    tags: [games]
+    summary: Get personalized coaching recommendations
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Coaching recommendations
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Recommendation"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/analyze-hand:
+  post:
+    operationId: analyzeHand
+    tags: [games]
+    summary: Request AI analysis of a hand
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [handId]
+            properties:
+              handId:
+                type: integer
+    responses:
+      "200":
+        description: Hand analysis
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Analysis"
+      "404":
+        description: Hand not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/analyses:
+  get:
+    operationId: getAnalyses
+    tags: [games]
+    summary: List my hand analyses
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Analysis list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Analysis"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/commentary-audio/{segmentId}/{lineIndex}:
+  get:
+    operationId: getCommentaryAudio
+    tags: [games]
+    summary: Get TTS audio for a commentary line
+    parameters:
+      - name: segmentId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: lineIndex
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Audio data
+        content:
+          audio/mpeg:
+            schema:
+              type: string
+              format: binary
+      "404":
+        description: Audio not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/coaching/live-analysis:
+  post:
+    operationId: liveAnalysis
+    tags: [games]
+    summary: Request live coaching analysis for an active hand
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tableId, handData]
+            properties:
+              tableId:
+                type: integer
+              handData:
+                type: object
+    responses:
+      "200":
+        description: Live analysis result
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LiveAnalysis"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/coaching/session-report:
+  post:
+    operationId: getSessionReport
+    tags: [games]
+    summary: Generate coaching report for a session
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tableId]
+            properties:
+              tableId:
+                type: integer
+    responses:
+      "200":
+        description: Session report
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionReport"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Shop & Marketplace ───────────────────────────────────────────────────────
+
+/shop/items:
+  get:
+    operationId: getShopItems
+    tags: [shop]
+    summary: List shop items
+    parameters:
+      - name: category
+        in: query
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Shop items
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ShopItem"
+
+/shop/purchase:
+  post:
+    operationId: purchaseShopItem
+    tags: [shop]
+    summary: Purchase an item from the shop
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [itemId]
+            properties:
+              itemId:
+                type: integer
+    responses:
+      "200":
+        description: Purchase successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                item:
+                  $ref: "#/components/schemas/ShopItem"
+      "400":
+        description: Insufficient balance or item unavailable
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/shop/inventory:
+  get:
+    operationId: getInventory
+    tags: [shop]
+    summary: List items in my inventory
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Inventory items
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/InventoryItem"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/shop/equip:
+  post:
+    operationId: equipItem
+    tags: [shop]
+    summary: Equip an item from inventory
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [itemId, slot]
+            properties:
+              itemId:
+                type: integer
+              slot:
+                type: string
+    responses:
+      "200":
+        description: Item equipped
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "400":
+        description: Invalid equip request
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/shop/wishlist:
+  get:
+    operationId: getWishlist
+    tags: [shop]
+    summary: Get my wishlist
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Wishlist items
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ShopItem"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/shop/wishlist/{itemId}:
+  post:
+    operationId: addToWishlist
+    tags: [shop]
+    summary: Add item to wishlist
+    security: [{ session: [] }]
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Added to wishlist
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  delete:
+    operationId: removeFromWishlist
+    tags: [shop]
+    summary: Remove item from wishlist
+    security: [{ session: [] }]
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Removed from wishlist
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/marketplace:
+  get:
+    operationId: getMarketListings
+    tags: [shop]
+    summary: Browse marketplace listings
+    responses:
+      "200":
+        description: Marketplace listings
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/MarketListing"
+
+/marketplace/list:
+  post:
+    operationId: createMarketListing
+    tags: [shop]
+    summary: List an item on the marketplace
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [itemId, price]
+            properties:
+              itemId:
+                type: integer
+              price:
+                type: number
+    responses:
+      "200":
+        description: Listing created
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketListing"
+      "400":
+        description: Invalid listing
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/marketplace/{id}/buy:
+  post:
+    operationId: buyMarketListing
+    tags: [shop]
+    summary: Buy a marketplace listing
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Purchase successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "400":
+        description: Listing unavailable or insufficient balance
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/marketplace/{id}/cancel:
+  post:
+    operationId: cancelMarketListing
+    tags: [shop]
+    summary: Cancel my marketplace listing
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Listing cancelled
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "400":
+        description: Cannot cancel listing
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Missions ─────────────────────────────────────────────────────────────────
+
+/missions:
+  get:
+    operationId: getMissions
+    tags: [analytics]
+    summary: List all missions
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Mission list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Mission"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/missions/{id}/claim:
+  post:
+    operationId: claimMissionReward
+    tags: [analytics]
+    summary: Claim a completed mission reward
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Reward claimed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reward:
+                  type: number
+                newBalance:
+                  type: number
+      "400":
+        description: Mission not complete
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/missions/generate-daily:
+  post:
+    operationId: generateDailyMissions
+    tags: [analytics]
+    summary: Generate daily missions for the user
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Daily missions generated
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Mission"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/missions/active:
+  get:
+    operationId: getActiveMissions
+    tags: [analytics]
+    summary: List active (incomplete) missions
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Active missions
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Mission"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Stakes ───────────────────────────────────────────────────────────────────
+
+/stakes/my:
+  get:
+    operationId: getMyStakes
+    tags: [wallet]
+    summary: List my staking deals
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Staking deals
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Stake"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/stakes/offer:
+  post:
+    operationId: offerStake
+    tags: [wallet]
+    summary: Offer a staking deal to a player
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [playerId, amount, percentage]
+            properties:
+              playerId:
+                type: integer
+              amount:
+                type: number
+              percentage:
+                type: number
+                description: Percentage of winnings the backer receives
+    responses:
+      "200":
+        description: Stake offer created
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Stake"
+      "400":
+        description: Invalid offer
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/stakes/{id}/accept:
+  post:
+    operationId: acceptStake
+    tags: [wallet]
+    summary: Accept a staking deal
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Stake accepted
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Stake"
+      "400":
+        description: Cannot accept stake
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/stakes/{id}/settle:
+  post:
+    operationId: settleStake
+    tags: [wallet]
+    summary: Settle a staking deal
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [profitLoss]
+            properties:
+              profitLoss:
+                type: number
+    responses:
+      "200":
+        description: Stake settled
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "400":
+        description: Cannot settle stake
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/stakes/{id}/cancel:
+  post:
+    operationId: cancelStake
+    tags: [wallet]
+    summary: Cancel a staking deal
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Stake cancelled
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "400":
+        description: Cannot cancel stake
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Admin ────────────────────────────────────────────────────────────────────
+
+/admin/rake-report:
+  get:
+    operationId: getRakeReport
+    tags: [admin]
+    summary: Get rake collection report
+    security: [{ session: [] }]
+    parameters:
+      - name: days
+        in: query
+        schema:
+          type: integer
+          default: 30
+    responses:
+      "200":
+        description: Rake report
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/RakeReport"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/rake-by-player:
+  get:
+    operationId: getRakeByPlayer
+    tags: [admin]
+    summary: Get rake contributions per player
+    security: [{ session: [] }]
+    parameters:
+      - name: days
+        in: query
+        schema:
+          type: integer
+          default: 30
+    responses:
+      "200":
+        description: Per-player rake data
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/PlayerRake"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/revenue-summary:
+  get:
+    operationId: getRevenueSummary
+    tags: [admin]
+    summary: Get platform revenue summary
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Revenue summary
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevenueSummary"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/trial-balance:
+  get:
+    operationId: getTrialBalance
+    tags: [admin]
+    summary: Get accounting trial balance
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Trial balance
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrialBalance"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/process-rakeback:
+  post:
+    operationId: processRakeback
+    tags: [admin]
+    summary: Process rakeback for all eligible players
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Rakeback processed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                processed:
+                  type: integer
+                total:
+                  type: number
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/system-status:
+  get:
+    operationId: getSystemStatus
+    tags: [admin]
+    summary: Get system lock status
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: System status
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                locked:
+                  type: boolean
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/system-lock:
+  post:
+    operationId: setSystemLock
+    tags: [admin]
+    summary: Lock or unlock the system
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [lock]
+            properties:
+              lock:
+                type: boolean
+    responses:
+      "200":
+        description: System lock state updated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                locked:
+                  type: boolean
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/stats:
+  get:
+    operationId: getAdminStats
+    tags: [admin]
+    summary: Get admin dashboard statistics
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Admin stats
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminStats"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/payments:
+  get:
+    operationId: getAdminPayments
+    tags: [admin]
+    summary: List all payments (admin view)
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: All payments
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Payment"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/withdrawals:
+  get:
+    operationId: getAdminWithdrawals
+    tags: [admin]
+    summary: List withdrawal requests (admin view)
+    security: [{ session: [] }]
+    parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum: [pending, approved, rejected]
+    responses:
+      "200":
+        description: Withdrawal requests
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/WithdrawalRequest"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/withdrawals/{id}/approve:
+  post:
+    operationId: approveWithdrawal
+    tags: [admin]
+    summary: Approve a withdrawal request
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Withdrawal approved
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/withdrawals/{id}/reject:
+  post:
+    operationId: rejectWithdrawal
+    tags: [admin]
+    summary: Reject a withdrawal request
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              note:
+                type: string
+    responses:
+      "200":
+        description: Withdrawal rejected
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/collusion-alerts:
+  get:
+    operationId: getCollusionAlerts
+    tags: [admin]
+    summary: List collusion detection alerts
+    security: [{ session: [] }]
+    parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum: [pending, reviewed, dismissed]
+    responses:
+      "200":
+        description: Collusion alerts
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/CollusionAlert"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/collusion-alerts/{id}/review:
+  post:
+    operationId: reviewCollusionAlert
+    tags: [admin]
+    summary: Review a collusion alert
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [action]
+            properties:
+              action:
+                type: string
+                enum: [confirm, dismiss]
+              note:
+                type: string
+    responses:
+      "200":
+        description: Alert reviewed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/announcements:
+  get:
+    operationId: getAdminAnnouncements
+    tags: [admin]
+    summary: List admin announcements
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Announcements
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Announcement"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  post:
+    operationId: createAnnouncement
+    tags: [admin]
+    summary: Create an announcement
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [title, content]
+            properties:
+              title:
+                type: string
+              content:
+                type: string
+              type:
+                type: string
+    responses:
+      "200":
+        description: Announcement created
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Announcement"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/tournament-schedule:
+  get:
+    operationId: getTournamentSchedule
+    tags: [admin]
+    summary: Get tournament schedule configuration
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Schedule config
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleConfig"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  put:
+    operationId: updateTournamentSchedule
+    tags: [admin]
+    summary: Update tournament schedule configuration
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ScheduleConfig"
+    responses:
+      "200":
+        description: Schedule updated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleConfig"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/kyc/pending:
+  get:
+    operationId: getPendingKyc
+    tags: [admin]
+    summary: List pending KYC applications
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Pending KYC applications
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/KycApplication"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/kyc/{userId}/verify:
+  post:
+    operationId: verifyKyc
+    tags: [admin]
+    summary: Approve a KYC application
+    security: [{ session: [] }]
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: KYC approved
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/kyc/{userId}/reject:
+  post:
+    operationId: rejectKyc
+    tags: [admin]
+    summary: Reject a KYC application
+    security: [{ session: [] }]
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [reason]
+            properties:
+              reason:
+                type: string
+    responses:
+      "200":
+        description: KYC rejected
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/anti-cheat/live:
+  get:
+    operationId: getLiveRiskFlags
+    tags: [admin]
+    summary: Get live anti-cheat risk flags
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Live risk flags
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/RiskFlag"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/anti-cheat/freeze/{userId}:
+  post:
+    operationId: freezeUser
+    tags: [admin]
+    summary: Freeze a user account for anti-cheat review
+    security: [{ session: [] }]
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: User frozen
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Profile ──────────────────────────────────────────────────────────────────
+
+/profile/avatar:
+  put:
+    operationId: updateAvatar
+    tags: [users]
+    summary: Update avatar and display preferences
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              avatarId:
+                type: integer
+              displayName:
+                type: string
+              tauntVoice:
+                type: string
+    responses:
+      "200":
+        description: Profile updated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SafeUser"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/profile:
+  patch:
+    operationId: patchProfile
+    tags: [users]
+    summary: Partial update of profile fields
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              avatarId:
+                type: integer
+              displayName:
+                type: string
+              tauntVoice:
+                type: string
+    responses:
+      "200":
+        description: Profile updated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SafeUser"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/profile/wallet:
+  post:
+    operationId: setProfileWallet
+    tags: [users]
+    summary: Set or clear external wallet address
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              address:
+                type: string
+                nullable: true
+    responses:
+      "200":
+        description: Wallet address updated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Notifications ────────────────────────────────────────────────────────────
+
+/notifications:
+  get:
+    operationId: getNotifications
+    tags: [users]
+    summary: List notifications
+    security: [{ session: [] }]
+    parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+    responses:
+      "200":
+        description: Notification list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Notification"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/notifications/unread-count:
+  get:
+    operationId: getUnreadNotificationCount
+    tags: [users]
+    summary: Get unread notification count
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Unread count
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count:
+                  type: integer
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/notifications/{id}/read:
+  post:
+    operationId: markNotificationRead
+    tags: [users]
+    summary: Mark a notification as read
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Marked as read
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/notifications/read-all:
+  post:
+    operationId: markAllNotificationsRead
+    tags: [users]
+    summary: Mark all notifications as read
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: All marked as read
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Tiers ────────────────────────────────────────────────────────────────────
+
+/tiers:
+  get:
+    operationId: getTiers
+    tags: [users]
+    summary: List tier definitions
+    responses:
+      "200":
+        description: Tier definitions
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/TierDef"
+
+/tiers/upgrade:
+  post:
+    operationId: upgradeTier
+    tags: [users]
+    summary: Upgrade to a tier
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tier]
+            properties:
+              tier:
+                type: string
+    responses:
+      "200":
+        description: Tier upgraded
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                tier:
+                  type: string
+      "400":
+        description: Cannot upgrade
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Subscription ─────────────────────────────────────────────────────────────
+
+/subscribe/status:
+  get:
+    operationId: getSubscriptionStatus
+    tags: [users]
+    summary: Get premium subscription status
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Subscription status
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                premium:
+                  type: boolean
+                expiresAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/subscribe/premium:
+  post:
+    operationId: subscribePremium
+    tags: [users]
+    summary: Subscribe to premium
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Subscribed to premium
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                expiresAt:
+                  type: string
+                  format: date-time
+      "400":
+        description: Already subscribed
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── KYC ──────────────────────────────────────────────────────────────────────
+
+/kyc/status:
+  get:
+    operationId: getKycStatus
+    tags: [users]
+    summary: Get my KYC verification status
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: KYC status
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycStatus"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/kyc/submit:
+  post:
+    operationId: submitKyc
+    tags: [users]
+    summary: Submit KYC verification application
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [fullName, dateOfBirth, country, idType]
+            properties:
+              fullName:
+                type: string
+              dateOfBirth:
+                type: string
+                format: date
+              country:
+                type: string
+              idType:
+                type: string
+                enum: [passport, driverLicense, nationalId]
+    responses:
+      "200":
+        description: KYC submitted
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/kyc/record-on-chain:
+  post:
+    operationId: recordKycOnChain
+    tags: [users]
+    summary: Record KYC attestation on-chain
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: On-chain transaction hash
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                txHash:
+                  type: string
+      "400":
+        description: KYC not verified
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/member/{memberId}:
+  get:
+    operationId: getPublicMember
+    tags: [users]
+    summary: Get public member profile
+    parameters:
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Public member data
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublicMember"
+      "404":
+        description: Member not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Responsible Gambling ─────────────────────────────────────────────────────
+
+/responsible-gambling/settings:
+  get:
+    operationId: getRGSettings
+    tags: [users]
+    summary: Get responsible gambling settings
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: RG settings
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RGSettings"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  put:
+    operationId: updateRGSettings
+    tags: [users]
+    summary: Update responsible gambling limits
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              dailyDepositLimit:
+                type: number
+              weeklyDepositLimit:
+                type: number
+              sessionTimeLimit:
+                type: integer
+                description: Session limit in minutes
+              lossLimit:
+                type: number
+    responses:
+      "200":
+        description: Settings updated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RGSettings"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/responsible-gambling/self-exclude:
+  post:
+    operationId: selfExclude
+    tags: [users]
+    summary: Self-exclude from the platform
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [days]
+            properties:
+              days:
+                type: integer
+                minimum: 1
+    responses:
+      "200":
+        description: Self-exclusion activated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/responsible-gambling/cool-off:
+  post:
+    operationId: coolOff
+    tags: [users]
+    summary: Activate a 24-hour cool-off period
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Cool-off activated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Club Wars ────────────────────────────────────────────────────────────────
+
+/club-wars:
+  get:
+    operationId: getClubWars
+    tags: [clubs]
+    summary: List club wars
+    parameters:
+      - name: clubId
+        in: query
+        schema:
+          type: integer
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum: [pending, active, completed]
+    responses:
+      "200":
+        description: Club wars
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ClubWar"
+
+/club-wars/matchmake:
+  post:
+    operationId: matchmakeClubWar
+    tags: [clubs]
+    summary: Create a club war matchup
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [club1Id, club2Id]
+            properties:
+              club1Id:
+                type: integer
+              club2Id:
+                type: integer
+    responses:
+      "200":
+        description: Club war created
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClubWar"
+      "400":
+        description: Invalid matchup
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/club-wars/{id}/complete:
+  post:
+    operationId: completeClubWar
+    tags: [clubs]
+    summary: Complete a club war with final scores
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [club1Score, club2Score]
+            properties:
+              club1Score:
+                type: number
+              club2Score:
+                type: number
+    responses:
+      "200":
+        description: Club war completed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      "400":
+        description: War not active
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Support ──────────────────────────────────────────────────────────────────
+
+/support/contact:
+  post:
+    operationId: submitContactForm
+    tags: [users]
+    summary: Submit a contact form message
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, email, subject, message]
+            properties:
+              name:
+                type: string
+              email:
+                type: string
+                format: email
+              subject:
+                type: string
+              message:
+                type: string
+    responses:
+      "200":
+        description: Message sent
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/support/tickets:
+  post:
+    operationId: createSupportTicket
+    tags: [users]
+    summary: Create a support ticket
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [subject, category, priority, message]
+            properties:
+              subject:
+                type: string
+              category:
+                type: string
+              priority:
+                type: string
+                enum: [low, medium, high, urgent]
+              message:
+                type: string
+    responses:
+      "200":
+        description: Ticket created
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Ticket"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  get:
+    operationId: getMySupportTickets
+    tags: [users]
+    summary: List my support tickets
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Ticket list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Ticket"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/support/tickets/{id}:
+  get:
+    operationId: getSupportTicket
+    tags: [users]
+    summary: Get support ticket details with messages
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Ticket detail
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketDetail"
+      "404":
+        description: Ticket not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/support/tickets/{id}/messages:
+  post:
+    operationId: addTicketMessage
+    tags: [users]
+    summary: Add a message to a support ticket
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [message]
+            properties:
+              message:
+                type: string
+    responses:
+      "200":
+        description: Message added
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketMessage"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Admin Support ────────────────────────────────────────────────────────────
+
+/admin/support/tickets/{id}/status:
+  post:
+    operationId: updateTicketStatus
+    tags: [admin]
+    summary: Update support ticket status (admin)
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [open, in_progress, resolved, closed]
+    responses:
+      "200":
+        description: Status updated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/admin/support/tickets:
+  get:
+    operationId: getAdminSupportTickets
+    tags: [admin]
+    summary: List all support tickets (admin)
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: All tickets
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Ticket"
+      "403":
+        description: Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── Analytics ────────────────────────────────────────────────────────────────
+
+/analytics/club-activity:
+  get:
+    operationId: getClubActivity
+    tags: [analytics]
+    summary: Get club activity events
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Activity events
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ActivityEvent"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/analytics/table-volume:
+  get:
+    operationId: getTableVolume
+    tags: [analytics]
+    summary: Get table volume data
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Volume data
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/VolumeData"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/analytics/retention:
+  get:
+    operationId: getRetentionData
+    tags: [analytics]
+    summary: Get player retention analytics
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Retention data
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetentionData"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+# ── AI & Settings ────────────────────────────────────────────────────────────
+
+/ai-settings:
+  get:
+    operationId: getAiSettings
+    tags: [users]
+    summary: Get AI coaching settings
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: AI settings
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                hasKey:
+                  type: boolean
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  post:
+    operationId: updateAiSettings
+    tags: [users]
+    summary: Update AI API key
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [apiKey]
+            properties:
+              apiKey:
+                type: string
+    responses:
+      "200":
+        description: AI settings updated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/translate:
+  post:
+    operationId: translateText
+    tags: [users]
+    summary: Translate text using AI
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [text]
+            properties:
+              text:
+                type: string
+              targetLang:
+                type: string
+    responses:
+      "200":
+        description: Translation result
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                translated:
+                  type: string
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/health:
+  get:
+    operationId: healthCheck
+    tags: [users]
+    summary: Health check endpoint
+    responses:
+      "200":
+        description: Service healthy
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+
+# ── Other ────────────────────────────────────────────────────────────────────
+
+/online-users:
+  get:
+    operationId: getOnlineUsers
+    tags: [users]
+    summary: Get list of online usernames
+    responses:
+      "200":
+        description: Online user list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+
+/settings/social:
+  get:
+    operationId: getSocialSettings
+    tags: [users]
+    summary: Get social link settings
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: Social links
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialLinks"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  put:
+    operationId: updateSocialSettings
+    tags: [users]
+    summary: Update social link URLs
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SocialLinks"
+    responses:
+      "200":
+        description: Social links updated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialLinks"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/api-keys:
+  post:
+    operationId: createApiKey
+    tags: [users]
+    summary: Create an API key
+    security: [{ session: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+    responses:
+      "200":
+        description: API key created
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiKey"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+  get:
+    operationId: getApiKeys
+    tags: [users]
+    summary: List my API keys
+    security: [{ session: [] }]
+    responses:
+      "200":
+        description: API key list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApiKey"
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/api-keys/{id}:
+  delete:
+    operationId: deleteApiKey
+    tags: [users]
+    summary: Delete an API key
+    security: [{ session: [] }]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: API key deleted
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+      "401":
+        description: Not authenticated
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+
+/v1/stats/{userId}:
+  get:
+    operationId: getPlayerStatsViaApiKey
+    tags: [users]
+    summary: Get player stats via API key (external access)
+    security: [{ apiKey: [] }]
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: X-API-Key
+        in: header
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Player stats
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlayerStats"
+      "401":
+        description: Invalid or missing API key
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"
+      "404":
+        description: User not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ErrorMessage"

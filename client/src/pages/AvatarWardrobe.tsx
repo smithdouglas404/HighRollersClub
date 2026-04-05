@@ -6,7 +6,8 @@ import { AVATAR_OPTIONS, type AvatarOption } from "@/components/poker/AvatarSele
 import { useAuth } from "@/lib/auth-context";
 import {
   User, Crown, Check, Save, ShoppingBag,
-  Sparkles, Lock, ChevronRight
+  Sparkles, Lock, ChevronRight, Shield, Sword,
+  Star, Bookmark, Clock, Hand
 } from "lucide-react";
 
 /* ── Tier styling ── */
@@ -103,6 +104,20 @@ export default function AvatarWardrobe() {
   const [equippedId, setEquippedId] = useState<string>(user?.avatarId || AVATAR_OPTIONS[0].id);
   const [filterTier, setFilterTier] = useState<AvatarOption["tier"] | "all">("all");
   const [saved, setSaved] = useState(false);
+  const [recentlyEquipped, setRecentlyEquipped] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("recentlyEquipped") || "[]").slice(0, 3);
+    } catch { return []; }
+  });
+  const [presetSaved, setPresetSaved] = useState(false);
+
+  // Equipment slots (visual placeholders)
+  const equipmentSlots = [
+    { name: "Head", icon: Crown, equipped: equippedId ? true : false },
+    { name: "Body", icon: Shield, equipped: true },
+    { name: "Hands", icon: Hand, equipped: false },
+    { name: "Feet", icon: Sword, equipped: false },
+  ];
 
   // Set initial equipped from user's current avatar
   useEffect(() => {
@@ -115,6 +130,11 @@ export default function AvatarWardrobe() {
   const selected = AVATAR_OPTIONS.find(a => a.id === selectedId);
   const equipped = AVATAR_OPTIONS.find(a => a.id === equippedId) || AVATAR_OPTIONS[0];
 
+  // Calculated scores
+  const equippedCount = equipmentSlots.filter(s => s.equipped).length;
+  const armorRating = equippedCount * 25;
+  const styleScore = Math.min(100, equippedCount * 20 + (equipped.tier === "legendary" ? 40 : equipped.tier === "epic" ? 25 : equipped.tier === "rare" ? 15 : 5));
+
   const filteredAvatars = filterTier === "all"
     ? AVATAR_OPTIONS
     : AVATAR_OPTIONS.filter(a => a.tier === filterTier);
@@ -123,7 +143,24 @@ export default function AvatarWardrobe() {
     if (selectedId) {
       setEquippedId(selectedId);
       setSaved(false);
+      // Track recently equipped
+      setRecentlyEquipped(prev => {
+        const updated = [selectedId, ...prev.filter(id => id !== selectedId)].slice(0, 3);
+        localStorage.setItem("recentlyEquipped", JSON.stringify(updated));
+        return updated;
+      });
     }
+  };
+
+  const handleSavePreset = () => {
+    const preset = {
+      avatarId: equippedId,
+      equipmentSlots: equipmentSlots.map(s => ({ name: s.name, equipped: s.equipped })),
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem("avatarPreset", JSON.stringify(preset));
+    setPresetSaved(true);
+    setTimeout(() => setPresetSaved(false), 2000);
   };
 
   const handleSave = async () => {
@@ -283,11 +320,145 @@ export default function AvatarWardrobe() {
           </motion.div>
         </div>
 
+        {/* Equipment Grid + Stats + Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Equipment Slots */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18 }}
+            className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+          >
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-amber-400" />
+              Equipment Grid
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {equipmentSlots.map((slot) => {
+                const SlotIcon = slot.icon;
+                return (
+                  <div
+                    key={slot.name}
+                    className={`rounded-lg p-3 border text-center transition-all ${
+                      slot.equipped
+                        ? "border-amber-500/30 bg-amber-500/5"
+                        : "border-white/[0.06] bg-white/[0.02]"
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center ${
+                      slot.equipped ? "bg-amber-500/15 border border-amber-500/20" : "bg-white/5 border border-white/10"
+                    }`}>
+                      <SlotIcon className={`w-5 h-5 ${slot.equipped ? "text-amber-400" : "text-gray-600"}`} />
+                    </div>
+                    <div className="text-[0.6875rem] font-bold text-white">{slot.name}</div>
+                    <div className={`text-[0.5625rem] font-medium mt-0.5 ${slot.equipped ? "text-amber-400" : "text-gray-600"}`}>
+                      {slot.equipped ? "Equipped" : "Empty"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          {/* Armor Rating + Style Score */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] flex flex-col justify-between"
+          >
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-400" />
+              Stats
+            </h3>
+            <div className="space-y-5 flex-1 flex flex-col justify-center">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[0.6875rem] font-bold text-white flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-blue-400" /> Armor Rating</span>
+                  <span className="text-sm font-black text-blue-400">{armorRating}</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${armorRating}%` }}
+                    transition={{ delay: 0.3, duration: 0.8 }}
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400"
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[0.6875rem] font-bold text-white flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-purple-400" /> Style Score</span>
+                  <span className="text-sm font-black text-purple-400">{styleScore}</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${styleScore}%` }}
+                    transition={{ delay: 0.4, duration: 0.8 }}
+                    className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-400"
+                  />
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleSavePreset}
+              className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-black border border-amber-400/40 hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+            >
+              {presetSaved ? <Check className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+              {presetSaved ? "Preset Saved!" : "Save Preset"}
+            </button>
+          </motion.div>
+
+          {/* Recently Equipped */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.22 }}
+            className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+          >
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-400" />
+              Recently Equipped
+            </h3>
+            {recentlyEquipped.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Clock className="w-8 h-8 text-gray-600 mb-2" />
+                <p className="text-[0.6875rem] text-gray-600">No recent items yet. Equip avatars to see them here.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {recentlyEquipped.map((id) => {
+                  const avatar = AVATAR_OPTIONS.find(a => a.id === id);
+                  if (!avatar) return null;
+                  const style = TIER_STYLES[avatar.tier];
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => { setSelectedId(id); setEquippedId(id); }}
+                      className={`w-full flex items-center gap-3 p-2 rounded-lg border transition-all hover:bg-white/5 ${
+                        equippedId === id ? style.border + " bg-white/[0.03]" : "border-white/[0.06]"
+                      }`}
+                    >
+                      <img src={avatar.image} alt={avatar.name} className="w-10 h-10 rounded-lg object-cover" />
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="text-[0.6875rem] font-bold text-white truncate">{avatar.name}</div>
+                        <div className={`text-[0.5625rem] font-bold uppercase tracking-wider ${style.text}`}>{style.label}</div>
+                      </div>
+                      {equippedId === id && <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        </div>
+
         {/* Avatar grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.25 }}
           className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
         >
           {/* Filter bar */}

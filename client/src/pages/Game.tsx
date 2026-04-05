@@ -32,6 +32,8 @@ import { TableLedger } from "../components/poker/TableLedger";
 import { PlayerGameReport } from "../components/poker/PlayerGameReport";
 import { ElaborateHandHistory } from "../components/poker/ElaborateHandHistory";
 import BreakingNewsModal from "../components/poker/BreakingNewsModal";
+import { CoachingOverlay } from "../components/game/CoachingOverlay";
+import { CoachingToggle } from "../components/game/CoachingToggle";
 import { VideoControlBar, VideoThumbnail } from "../components/poker/VideoOverlay";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { HandBadge } from "../components/poker/HandBadge";
@@ -420,6 +422,7 @@ function GameTable({
   const [showPlayerReport, setShowPlayerReport] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [breakingNews, setBreakingNews] = useState<{ title: string; message: string } | null>(null);
+  const [coachingEnabled, setCoachingEnabled] = useState(false);
   const [showAddChips, setShowAddChips] = useState(false);
   const [addChipsAmount, setAddChipsAmount] = useState(maxBuyIn || 300);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
@@ -1143,6 +1146,9 @@ function GameTable({
             </button>
           )}
 
+          {/* AI Coaching toggle */}
+          <CoachingToggle enabled={coachingEnabled} onToggle={() => setCoachingEnabled(!coachingEnabled)} />
+
           {/* Next hand starts automatically after showdown — show countdown instead of decorative button */}
         </div>
       </div>
@@ -1771,6 +1777,21 @@ function GameTable({
           <ElaborateHandHistory tableId={tableId} onClose={() => setShowFullHistory(false)} />
         )}
       </AnimatePresence>
+
+      {/* ═══ AI COACHING OVERLAY ═══ */}
+      {coachingEnabled && hero && (
+        <CoachingOverlay
+          enabled={coachingEnabled}
+          holeCards={(hero.cards || []).map((c: any) => `${c.rank}${c.suit?.[0] || ""}`)}
+          communityCards={(gameState.communityCards || []).map((c: any) => `${c.rank}${c.suit?.[0] || ""}`)}
+          pot={gameState.pot || 0}
+          currentBet={hero.currentBet || 0}
+          position={hero.isDealer ? "BTN" : "MP"}
+          phase={gameState.phase || "waiting"}
+          isHeroTurn={gameState.currentTurnPlayerId === heroId}
+          onToggle={() => setCoachingEnabled(false)}
+        />
+      )}
 
       {/* ═══ BREAKING NEWS MODAL ═══ */}
       <AnimatePresence>

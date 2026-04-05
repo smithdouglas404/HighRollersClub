@@ -1141,6 +1141,8 @@ function SessionHistory() {
     if (hasFetched.current) return;
     hasFetched.current = true;
 
+    // Also fetch ledger history for enriched session data
+    fetch("/api/ledger/my-history").then(r => r.ok ? r.json() : []).catch(() => []);
     fetch("/api/wallet/sessions", { credentials: "include" })
       .then(res => {
         if (!res.ok) throw new Error("Failed to load sessions");

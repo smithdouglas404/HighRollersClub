@@ -290,6 +290,60 @@ function MyBlockchainRecords({ user }: { user: any }) {
   );
 }
 
+// ─── Account Activity Log ────────────────────────────────────────────────────
+function AccountActivityLog() {
+  const [actions, setActions] = useState<any[]>([]);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+    fetch("/api/account/actions?limit=10").then(r => r.ok ? r.json() : []).then(setActions).catch(() => {});
+  }, [expanded]);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
+      <button onClick={() => setExpanded(!expanded)}
+        className="w-full rounded-xl p-4 text-left transition-all hover:bg-white/[0.02]"
+        style={{ background: "rgba(15,15,20,0.7)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Account Activity</h3>
+              <p className="text-[10px] text-gray-500">System actions, warnings, and security events</p>
+            </div>
+          </div>
+          <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${expanded ? "rotate-90" : ""}`} />
+        </div>
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="px-4 pb-4 space-y-1.5" style={{ background: "rgba(15,15,20,0.5)", borderLeft: "1px solid rgba(255,255,255,0.05)", borderRight: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)", borderRadius: "0 0 12px 12px" }}>
+              {actions.length === 0 ? (
+                <p className="text-gray-600 text-[10px] text-center py-4">No account actions recorded</p>
+              ) : actions.map((a: any) => (
+                <div key={a.id} className="flex items-center justify-between px-2 py-1.5 rounded text-xs" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${a.severity === "critical" ? "bg-red-400" : a.severity === "warning" ? "bg-amber-400" : "bg-gray-400"}`} />
+                    <span className="text-gray-300">{a.message}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {a.automated && <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/10 text-purple-400">BOT</span>}
+                    <span className="text-[10px] text-gray-600">{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ""}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 export default function Profile() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -654,6 +708,9 @@ export default function Profile() {
 
           {/* ── My Blockchain Records ── */}
           <MyBlockchainRecords user={user} />
+
+          {/* ── Account Activity Log ── */}
+          <AccountActivityLog />
 
           {/* ── Quick Links ── */}
           <motion.div

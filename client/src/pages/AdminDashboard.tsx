@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save, ShieldAlert, Loader2, MessageSquare, Ticket, Users, Search, Edit3, Ban, UserCheck, Building2, Table2, FileText, X, Trash2, Key, Music, Upload, Megaphone } from "lucide-react";
+import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save, ShieldAlert, Loader2, MessageSquare, Ticket, Users, Search, Edit3, Ban, UserCheck, Building2, Table2, FileText, X, Trash2, Key, Music, Upload, Megaphone, LogOut } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;
@@ -133,7 +133,7 @@ interface AdminTicket {
   resolvedAt: string | null;
 }
 
-type Tab = "overview" | "users" | "clubs" | "tables" | "withdrawals" | "collusion" | "system" | "payments" | "settings" | "kyc" | "security" | "support" | "audit" | "env" | "music" | "sponsorship" | "announcements_ctrl";
+type Tab = "overview" | "users" | "clubs" | "tables" | "withdrawals" | "collusion" | "system" | "payments" | "settings" | "kyc" | "security" | "support" | "audit" | "env" | "music" | "sponsorship" | "announcements_ctrl" | "security_plus";
 
 interface SponsorshipPayout {
   id: string;
@@ -201,6 +201,16 @@ export default function AdminDashboard() {
   // Audit log
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditAction, setAuditAction] = useState("");
+
+  // Security+ tab data
+  const [botScanResults, setBotScanResults] = useState<any[]>([]);
+  const [multiAccounts, setMultiAccounts] = useState<any[]>([]);
+  const [hitlQueue, setHitlQueue] = useState<any[]>([]);
+  const [ipRulesList, setIpRulesList] = useState<any[]>([]);
+  const [platformSettingsList, setPlatformSettingsList] = useState<any>(null);
+  const [hitlStats, setHitlStats] = useState<any>(null);
+  const [secPlusLoading, setSecPlusLoading] = useState(false);
+  const [newIpRule, setNewIpRule] = useState({ ip: "", type: "ban" as string, reason: "" });
 
   // Chart data
   const [revenueTrend, setRevenueTrend] = useState<any[]>([]);
@@ -515,6 +525,22 @@ export default function AdminDashboard() {
     } catch {} finally { setUploadingMusic(false); }
   };
 
+  const fetchSecurityPlus = async () => {
+    setSecPlusLoading(true);
+    try {
+      const [bots, multi, hitl, ips, settings, stats] = await Promise.all([
+        fetch("/api/admin/bot-detection/scan/all").then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch("/api/admin/multi-accounts").then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch("/api/admin/hitl/queue?status=pending").then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch("/api/admin/ip-rules").then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch("/api/admin/platform-settings").then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch("/api/admin/hitl/stats").then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+      setBotScanResults(bots); setMultiAccounts(multi); setHitlQueue(hitl);
+      setIpRulesList(ips); setPlatformSettingsList(settings); setHitlStats(stats);
+    } catch {} finally { setSecPlusLoading(false); }
+  };
+
   const fetchEnvKeys = async () => {
     try {
       const res = await fetch("/api/admin/env-keys");
@@ -618,6 +644,7 @@ export default function AdminDashboard() {
     if (activeTab === "tables" && tableResults.length === 0) fetchTables();
     if (activeTab === "audit" && auditLogs.length === 0) fetchAuditLogs();
     if (activeTab === "env" && envKeys.length === 0) fetchEnvKeys();
+    if (activeTab === "security_plus" && botScanResults.length === 0) fetchSecurityPlus();
     if (activeTab === "music" && adminMusic.length === 0) fetchAdminMusic();
     if (activeTab === "sponsorship" && sponsorshipPayouts.length === 0) fetchSponsorshipPayouts();
     if (activeTab === "announcements_ctrl" && adminAnnouncements.length === 0) fetchAdminAnnouncements();
@@ -641,6 +668,7 @@ export default function AdminDashboard() {
     { key: "env", label: "Env Keys", icon: <Key className="w-4 h-4" /> },
     { key: "sponsorship", label: "Sponsorship", icon: <DollarSign className="w-4 h-4" /> },
     { key: "announcements_ctrl", label: "Announcements", icon: <MessageSquare className="w-4 h-4" /> },
+    { key: "security_plus", label: "Security+", icon: <ShieldAlert className="w-4 h-4" /> },
   ];
 
   if (authLoading) {
@@ -1535,6 +1563,7 @@ export default function AdminDashboard() {
                             <button onClick={() => { setEditingUser(u); setEditForm({ role: u.role, tier: u.tier, chipBalance: u.chipBalance, displayName: u.displayName || "" }); }} className="p-1 rounded hover:bg-white/10" title="Edit"><Edit3 className="w-3.5 h-3.5 text-cyan-400" /></button>
                             {u.role !== "admin" && !u.selfExcludedUntil && <button onClick={async () => { if (!confirm(`Ban ${u.username}?`)) return; await fetch(`/api/admin/users/${u.id}/ban`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "Banned by admin" }) }); fetchUsers(); }} className="p-1 rounded hover:bg-white/10" title="Ban"><Ban className="w-3.5 h-3.5 text-red-400" /></button>}
                             {u.selfExcludedUntil && <button onClick={async () => { await fetch(`/api/admin/users/${u.id}/unban`, { method: "POST" }); fetchUsers(); }} className="p-1 rounded hover:bg-white/10" title="Unban"><UserCheck className="w-3.5 h-3.5 text-green-400" /></button>}
+                            <button onClick={async () => { if (!confirm(`Force logout ${u.username}?`)) return; await fetch(`/api/admin/force-logout/${u.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "Admin force logout" }) }); }} className="p-1 rounded hover:bg-white/10" title="Force Logout"><LogOut className="w-3.5 h-3.5 text-orange-400" /></button>
                           </div>
                         </td>
                       </tr>
@@ -1857,6 +1886,128 @@ export default function AdminDashboard() {
                 </div>
               ));
             })()}
+          </div>
+        )}
+
+        {/* ── Security+ Tab (Bot Detection, Multi-Accounts, HITL, IP Rules, Platform Settings) ── */}
+        {activeTab === "security_plus" && (
+          <div className="space-y-6">
+            {secPlusLoading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div> : (
+              <>
+                {/* HITL Bot Stats */}
+                {hitlStats && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="glass rounded-xl p-3 text-center"><div className="text-lg font-bold text-cyan-400">{hitlStats.bot?.isRunning ? "ACTIVE" : "OFF"}</div><div className="text-[10px] text-gray-500">Admin Bot</div></div>
+                    <div className="glass rounded-xl p-3 text-center"><div className="text-lg font-bold text-amber-400">{hitlStats.queue?.pending || 0}</div><div className="text-[10px] text-gray-500">Pending Reviews</div></div>
+                    <div className="glass rounded-xl p-3 text-center"><div className="text-lg font-bold text-red-400">{hitlStats.queue?.autoActions || 0}</div><div className="text-[10px] text-gray-500">Auto Actions</div></div>
+                    <div className="glass rounded-xl p-3 text-center"><div className="text-lg font-bold text-green-400">{hitlStats.bot?.scanCount || 0}</div><div className="text-[10px] text-gray-500">Scans Run</div></div>
+                  </div>
+                )}
+
+                {/* Bot Detection Scan Results */}
+                <div className="glass rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-white">Bot Detection Scan</h3>
+                    <button onClick={() => fetch("/api/admin/bot-detection/scan/all").then(r => r.json()).then(setBotScanResults)} className="px-3 py-1 rounded bg-primary/20 text-primary text-xs font-bold border border-primary/30">Run Scan</button>
+                  </div>
+                  {botScanResults.length === 0 ? <p className="text-gray-500 text-xs text-center py-4">No bot patterns detected</p> : (
+                    <div className="space-y-1">
+                      {botScanResults.slice(0, 20).map((r: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.02] text-xs">
+                          <span className="text-white font-bold">{(r.userId || "").slice(0, 8)}</span>
+                          <span className={`font-bold ${r.riskScore >= 80 ? "text-red-400" : r.riskScore >= 50 ? "text-amber-400" : "text-green-400"}`}>Risk: {r.riskScore}/100</span>
+                          <span className="text-gray-500">{r.actionCount} actions, avg {r.avgTimeMs}ms</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${r.recommendation === "suspend" ? "bg-red-500/10 text-red-400" : r.recommendation === "flag" ? "bg-amber-500/10 text-amber-400" : "bg-green-500/10 text-green-400"}`}>{r.recommendation}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Multi-Account Detection */}
+                <div className="glass rounded-xl p-4">
+                  <h3 className="text-sm font-bold text-white mb-3">Multi-Account Detection</h3>
+                  {multiAccounts.length === 0 ? <p className="text-gray-500 text-xs text-center py-4">No multi-account flags</p> : (
+                    <div className="space-y-2">
+                      {multiAccounts.map((m: any, i: number) => (
+                        <div key={i} className="px-3 py-2 rounded bg-white/[0.02] text-xs">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-red-400 font-bold">{m.accountCount} accounts</span>
+                            <span className="text-gray-500">on device {m.fingerprint}</span>
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            {(m.accounts || []).map((a: any, j: number) => (
+                              <span key={j} className="px-1.5 py-0.5 rounded bg-white/5 text-gray-300 text-[10px]">@{a.username || (a.userId || "").slice(0, 8)}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* HITL Queue */}
+                <div className="glass rounded-xl p-4">
+                  <h3 className="text-sm font-bold text-white mb-3">HITL Review Queue ({hitlQueue.length} pending)</h3>
+                  {hitlQueue.length === 0 ? <p className="text-gray-500 text-xs text-center py-4">No items pending review</p> : (
+                    <div className="space-y-2">
+                      {hitlQueue.slice(0, 15).map((item: any) => (
+                        <div key={item.id} className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.02] text-xs">
+                          <div>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold mr-2 ${item.severity === "critical" ? "bg-red-500/10 text-red-400" : item.severity === "high" ? "bg-amber-500/10 text-amber-400" : "bg-gray-500/10 text-gray-400"}`}>{item.severity}</span>
+                            <span className="text-white font-bold">{item.title}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <button onClick={async () => { await fetch(`/api/admin/hitl/${item.id}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "actioned" }) }); fetchSecurityPlus(); }} className="px-2 py-1 rounded bg-green-500/10 text-green-400 text-[10px] font-bold">Action</button>
+                            <button onClick={async () => { await fetch(`/api/admin/hitl/${item.id}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "dismissed" }) }); fetchSecurityPlus(); }} className="px-2 py-1 rounded bg-gray-500/10 text-gray-400 text-[10px] font-bold">Dismiss</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* IP Rules */}
+                <div className="glass rounded-xl p-4">
+                  <h3 className="text-sm font-bold text-white mb-3">IP Rules ({ipRulesList.length})</h3>
+                  <div className="flex gap-2 mb-3">
+                    <input value={newIpRule.ip} onChange={e => setNewIpRule(r => ({ ...r, ip: e.target.value }))} placeholder="IP address or range" className="flex-1 px-3 py-1.5 rounded bg-black/30 border border-white/10 text-white text-xs" />
+                    <select value={newIpRule.type} onChange={e => setNewIpRule(r => ({ ...r, type: e.target.value }))} className="px-2 py-1.5 rounded bg-black/30 border border-white/10 text-white text-xs">
+                      <option value="ban">Ban</option><option value="allow">Allow</option>
+                    </select>
+                    <input value={newIpRule.reason} onChange={e => setNewIpRule(r => ({ ...r, reason: e.target.value }))} placeholder="Reason" className="flex-1 px-3 py-1.5 rounded bg-black/30 border border-white/10 text-white text-xs" />
+                    <button onClick={async () => { await fetch("/api/admin/ip-rules", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newIpRule) }); setNewIpRule({ ip: "", type: "ban", reason: "" }); fetchSecurityPlus(); }} className="px-3 py-1.5 rounded bg-red-500/10 text-red-400 text-xs font-bold border border-red-500/20">Add</button>
+                  </div>
+                  {ipRulesList.length > 0 && (
+                    <div className="space-y-1">
+                      {ipRulesList.map((rule: any) => (
+                        <div key={rule.id} className="flex items-center justify-between px-3 py-1.5 rounded bg-white/[0.02] text-xs">
+                          <span className="font-mono text-gray-300">{rule.ip}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${rule.type === "ban" ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"}`}>{rule.type}</span>
+                          <span className="text-gray-500">{rule.reason || "—"}</span>
+                          <button onClick={async () => { await fetch(`/api/admin/ip-rules/${rule.id}`, { method: "DELETE" }); fetchSecurityPlus(); }} className="text-red-400 hover:text-red-300"><Trash2 className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Platform Settings */}
+                {platformSettingsList && (
+                  <div className="glass rounded-xl p-4">
+                    <h3 className="text-sm font-bold text-white mb-3">Platform Settings</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {Object.entries(platformSettingsList).map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.02] text-xs">
+                          <span className="text-gray-400 font-mono">{key}</span>
+                          <span className="text-white font-bold">{typeof value === "boolean" ? (value ? "ON" : "OFF") : Array.isArray(value) ? (value as any[]).join(", ") : String(value ?? "—")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 

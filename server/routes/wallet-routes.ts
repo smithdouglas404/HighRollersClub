@@ -505,61 +505,30 @@ export async function registerWalletRoutes(
     }
   });
 
-  // ─── Premium Subscription ─────────────────────────────────────────────────
-  const PREMIUM_COST_CHIPS = 5000;
-  const PREMIUM_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
+  // ─── Subscription Status (replaced old chip-based premium with tier subscriptions) ──
   app.get("/api/subscribe/status", requireAuth, async (req, res, next) => {
     try {
       const user = await storage.getUser(req.user!.id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      const now = Date.now();
-      const isPremium = !!user.premiumUntil && new Date(user.premiumUntil).getTime() > now;
+      const tierDef = getTierDef(user.tier);
+      const isActive = user.tier !== "free" && (!user.tierExpiresAt || new Date(user.tierExpiresAt) > new Date());
       res.json({
-        isPremium,
-        expiresAt: isPremium ? user.premiumUntil : null,
+        tier: user.tier,
+        tierPlan: (user as any).tierPlan || null,
+        isActive,
+        expiresAt: user.tierExpiresAt,
+        monthlyPrice: `$${(tierDef.monthlyPrice / 100).toFixed(2)}`,
+        annualPrice: `$${(tierDef.annualPrice / 100).toFixed(2)}`,
+        message: isActive ? `${tierDef.name} tier active` : "Upgrade at /tiers",
       });
     } catch (err) { next(err); }
   });
 
-  app.post("/api/subscribe/premium", requireAuth, async (req, res, next) => {
-    try {
-      const user = await storage.getUser(req.user!.id);
-      if (!user) return res.status(404).json({ message: "User not found" });
-
-      // Deduct from main wallet
-      await storage.ensureWallets(user.id);
-      const wallets = await storage.getUserWallets(user.id);
-      const mainWallet = wallets.find(w => w.walletType === "main");
-      if (!mainWallet || mainWallet.balance < PREMIUM_COST_CHIPS) {
-        return res.status(400).json({
-          message: `Insufficient chips. You need ${PREMIUM_COST_CHIPS.toLocaleString()} chips in your main wallet.`,
-          required: PREMIUM_COST_CHIPS,
-          available: mainWallet?.balance ?? 0,
-        });
-      }
-
-      // Deduct chips
-      const result = await storage.atomicAddToWallet(user.id, "main", -PREMIUM_COST_CHIPS);
-      if (!result.success) {
-        return res.status(400).json({ message: "Failed to deduct chips. Try again." });
-      }
-
-      // Set or extend premium
-      const now = Date.now();
-      const currentExpiry = user.premiumUntil ? new Date(user.premiumUntil).getTime() : 0;
-      const baseTime = currentExpiry > now ? currentExpiry : now;
-      const newExpiry = new Date(baseTime + PREMIUM_DURATION_MS);
-
-      await storage.updateUser(user.id, { premiumUntil: newExpiry });
-
-      res.json({
-        message: "Premium activated!",
-        isPremium: true,
-        expiresAt: newExpiry,
-        chipsDeducted: PREMIUM_COST_CHIPS,
-        newBalance: result.newBalance,
-      });
-    } catch (err) { next(err); }
+  // Old premium endpoint redirects to tier system
+  app.post("/api/subscribe/premium", requireAuth, async (_req, res) => {
+    res.status(410).json({
+      message: "The premium subscription has been replaced by the tier system. Visit /tiers to upgrade.",
+      redirect: "/tiers",
+    });
   });
 }

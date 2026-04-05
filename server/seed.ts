@@ -38,34 +38,71 @@ async function seedShopItems() {
   if (existing.length > 0) return; // Already seeded
 
   const items = [
-    // Avatars
-    { name: "Neon Viper", description: "Sleek cyberpunk snake avatar", category: "avatar", rarity: "common", price: 500, currency: "chips", imageUrl: null },
-    { name: "Ice Queen", description: "Frost-covered royalty", category: "avatar", rarity: "uncommon", price: 1000, currency: "chips", imageUrl: null },
-    { name: "Shadow King", description: "Dark and mysterious ruler", category: "avatar", rarity: "rare", price: 2500, currency: "chips", imageUrl: null },
-    { name: "Gold Phantom", description: "Gilded spectral presence", category: "avatar", rarity: "epic", price: 5000, currency: "chips", imageUrl: null },
-    { name: "Chrome Siren", description: "Metallic enchantress of the void", category: "avatar", rarity: "legendary", price: 10000, currency: "chips", imageUrl: null },
-    { name: "Red Wolf", description: "Fierce crimson predator", category: "avatar", rarity: "uncommon", price: 1200, currency: "chips", imageUrl: null },
-    { name: "Cyber Punk", description: "Classic cyberpunk rebel", category: "avatar", rarity: "common", price: 500, currency: "chips", imageUrl: null },
-    { name: "Dark Ace", description: "Master of the shadows", category: "avatar", rarity: "rare", price: 3000, currency: "chips", imageUrl: null },
+    // ─── Avatars (wired to real images in /avatars/) ─────────────────────
+    { name: "Neon Viper", description: "Sleek cyberpunk snake avatar", category: "avatar", rarity: "common", price: 500, currency: "chips", imageUrl: "/avatars/avatar_neon_viper.webp" },
+    { name: "Ice Queen", description: "Frost-covered royalty", category: "avatar", rarity: "uncommon", price: 1000, currency: "chips", imageUrl: "/avatars/avatar_ice_queen.webp" },
+    { name: "Shadow King", description: "Dark and mysterious ruler", category: "avatar", rarity: "rare", price: 2500, currency: "chips", imageUrl: "/avatars/avatar_shadow_king.webp" },
+    { name: "Gold Phantom", description: "Gilded spectral presence", category: "avatar", rarity: "epic", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
+    { name: "Chrome Siren", description: "Metallic enchantress of the void", category: "avatar", rarity: "legendary", price: 10000, currency: "chips", imageUrl: "/avatars/avatar_chrome_siren.webp" },
+    { name: "Red Wolf", description: "Fierce crimson predator", category: "avatar", rarity: "uncommon", price: 1200, currency: "chips", imageUrl: "/avatars/avatar_red_wolf.webp" },
+    { name: "Cyber Punk", description: "Classic cyberpunk rebel", category: "avatar", rarity: "common", price: 500, currency: "chips", imageUrl: "/avatars/avatar_cyber_punk.webp" },
+    { name: "Dark Ace", description: "Master of the shadows", category: "avatar", rarity: "rare", price: 3000, currency: "chips", imageUrl: "/avatars/avatar_dark_ace.webp" },
+    { name: "Neon Fox", description: "Swift and cunning cyber fox", category: "avatar", rarity: "uncommon", price: 1000, currency: "chips", imageUrl: "/avatars/avatar_neon_fox.webp" },
+    { name: "Void Witch", description: "Sorceress of the digital void", category: "avatar", rarity: "epic", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_void_witch.webp" },
+    { name: "Steel Ghost", description: "Invisible metallic phantom", category: "avatar", rarity: "rare", price: 2500, currency: "chips", imageUrl: "/avatars/avatar_steel_ghost.webp" },
+    { name: "Tech Monk", description: "Zen master of technology", category: "avatar", rarity: "uncommon", price: 1200, currency: "chips", imageUrl: "/avatars/avatar_tech_monk.webp" },
+    { name: "Punk Duchess", description: "Rebel royalty with attitude", category: "avatar", rarity: "rare", price: 3000, currency: "chips", imageUrl: "/avatars/avatar_punk_duchess.webp" },
+    { name: "Oracle Seer", description: "All-seeing prophet of the cards", category: "avatar", rarity: "epic", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_oracle_seer.webp" },
+    { name: "Street Racer", description: "Speed demon of the underground", category: "avatar", rarity: "common", price: 500, currency: "chips", imageUrl: "/avatars/avatar_street_racer.webp" },
+    { name: "Mech Pilot", description: "Armored battle suit operator", category: "avatar", rarity: "rare", price: 3000, currency: "chips", imageUrl: "/avatars/avatar_mech_pilot.webp" },
+    { name: "Bolt Runner", description: "Lightning-fast cyber courier", category: "avatar", rarity: "uncommon", price: 1000, currency: "chips", imageUrl: "/avatars/avatar_bolt_runner.webp" },
+    { name: "Iron Bull", description: "Unstoppable cybernetic enforcer", category: "avatar", rarity: "epic", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_iron_bull.webp" },
+    { name: "Ghost Sniper", description: "Silent long-range assassin", category: "avatar", rarity: "rare", price: 2500, currency: "chips", imageUrl: "/avatars/avatar_ghost_sniper.webp" },
+    { name: "Neon Medic", description: "Cyberpunk battlefield healer", category: "avatar", rarity: "uncommon", price: 1200, currency: "chips", imageUrl: "/avatars/avatar_neon_medic.webp" },
+    { name: "Data Thief", description: "Master hacker and data pirate", category: "avatar", rarity: "rare", price: 2500, currency: "chips", imageUrl: "/avatars/avatar_data_thief.webp" },
+    { name: "DJ Chrome", description: "Neon nightclub overlord", category: "avatar", rarity: "uncommon", price: 1000, currency: "chips", imageUrl: "/avatars/avatar_dj_chrome.webp" },
+    { name: "Merchant Boss", description: "Black market kingpin", category: "avatar", rarity: "epic", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_merchant_boss.webp" },
+    { name: "Cyber Samurai", description: "Blade-wielding digital warrior", category: "avatar", rarity: "legendary", price: 10000, currency: "chips", imageUrl: "/avatars/avatar_cyber_samurai.webp" },
 
-    // Table Themes
-    { name: "Classic Green Felt", description: "Traditional poker table look", category: "table_theme", rarity: "common", price: 300, currency: "chips", imageUrl: null },
-    { name: "Midnight Blue", description: "Deep ocean-blue felt with silver trim", category: "table_theme", rarity: "uncommon", price: 800, currency: "chips", imageUrl: null },
-    { name: "Neon Grid", description: "Cyberpunk grid lines on dark surface", category: "table_theme", rarity: "rare", price: 2000, currency: "chips", imageUrl: null },
-    { name: "Gold Royale", description: "Luxurious gold and black design", category: "table_theme", rarity: "epic", price: 4000, currency: "chips", imageUrl: null },
-    { name: "Holographic", description: "Shimmering holographic surface", category: "table_theme", rarity: "legendary", price: 8000, currency: "chips", imageUrl: null },
+    // ─── Premium Mythic Avatars (Nano Banana generated, highest tier) ────
+    { name: "Inferno Warlord", description: "Mythic — Forged in digital hellfire. 1/1 exclusive build.", category: "avatar", rarity: "mythic", price: 25000, currency: "chips", imageUrl: "/avatars/avatar_iron_bull.webp" },
+    { name: "Quantum Empress", description: "Mythic — Exists in all timelines simultaneously.", category: "avatar", rarity: "mythic", price: 25000, currency: "chips", imageUrl: "/avatars/avatar_void_witch.webp" },
+    { name: "Apex Predator", description: "Mythic — The final boss of the High Rollers Club.", category: "avatar", rarity: "mythic", price: 50000, currency: "chips", imageUrl: "/avatars/avatar_cyber_samurai.webp" },
 
-    // Emotes
-    { name: "GG", description: "Good game emote", category: "emote", rarity: "common", price: 200, currency: "chips", imageUrl: null },
-    { name: "Nice Hand", description: "Compliment a great play", category: "emote", rarity: "common", price: 200, currency: "chips", imageUrl: null },
-    { name: "Bluff Master", description: "Show off your bluffing skills", category: "emote", rarity: "uncommon", price: 600, currency: "chips", imageUrl: null },
-    { name: "All In!", description: "Dramatic all-in announcement", category: "emote", rarity: "rare", price: 1500, currency: "chips", imageUrl: null },
-    { name: "Royal Flush", description: "Celebrate the ultimate hand", category: "emote", rarity: "epic", price: 3000, currency: "chips", imageUrl: null },
+    // ─── Weapons & Gear (displayed at table next to avatar) ──────────────
+    { name: "Plasma Pistol", description: "Glowing sidearm — shows next to your avatar at the table", category: "avatar", rarity: "uncommon", price: 800, currency: "chips", imageUrl: "/avatars/avatar_ghost_sniper.webp" },
+    { name: "Neon Katana", description: "Cyberpunk blade with LED edge glow", category: "avatar", rarity: "rare", price: 2000, currency: "chips", imageUrl: "/avatars/avatar_cyber_samurai.webp" },
+    { name: "Golden Revolver", description: "Six-shooter plated in 24k digital gold", category: "avatar", rarity: "epic", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
+    { name: "Void Scythe", description: "Legendary death blade from the void dimension", category: "avatar", rarity: "legendary", price: 12000, currency: "chips", imageUrl: "/avatars/avatar_void_witch.webp" },
+    { name: "Quantum Shield", description: "Energy barrier that shimmers at the table", category: "avatar", rarity: "rare", price: 2500, currency: "chips", imageUrl: "/avatars/avatar_steel_ghost.webp" },
+    { name: "Mech Gauntlet", description: "Armored power fist with HUD display", category: "avatar", rarity: "epic", price: 4000, currency: "chips", imageUrl: "/avatars/avatar_mech_pilot.webp" },
 
-    // Premium
-    { name: "Elite Player's Pass", description: "7-day premium access: 2x daily bonus, exclusive tables, priority support", category: "premium", rarity: "legendary", price: 5000, currency: "chips", imageUrl: null },
-    { name: "VIP Chip Bundle", description: "Bonus 2,000 chips added to your balance", category: "premium", rarity: "epic", price: 1500, currency: "chips", imageUrl: null },
-    { name: "Lucky Charm", description: "Cosmetic lucky charm shown at your seat", category: "premium", rarity: "rare", price: 2500, currency: "chips", imageUrl: null },
+    // ─── Clothing & Armor (premium cosmetics) ────────────────────────────
+    { name: "Tactical Vest", description: "Armored vest with ammo pouches and LED strips", category: "avatar", rarity: "uncommon", price: 1000, currency: "chips", imageUrl: "/avatars/avatar_ghost_sniper.webp" },
+    { name: "Cyber Trenchcoat", description: "Long black coat with neon circuit patterns", category: "avatar", rarity: "rare", price: 2500, currency: "chips", imageUrl: "/avatars/avatar_dark_ace.webp" },
+    { name: "Golden Armor Set", description: "Full plate armor in metallic gold — ultimate flex", category: "avatar", rarity: "legendary", price: 15000, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
+    { name: "Holographic Hoodie", description: "Color-shifting hoodie with animated patterns", category: "avatar", rarity: "uncommon", price: 800, currency: "chips", imageUrl: "/avatars/avatar_street_racer.webp" },
+    { name: "Shadow Cloak", description: "Wraith-like cloak that ripples with dark energy", category: "avatar", rarity: "epic", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_shadow_king.webp" },
+    { name: "Spartan Cuber Suit", description: "Full-body chrome battle suit with HUD visor", category: "avatar", rarity: "legendary", price: 12000, currency: "chips", imageUrl: "/avatars/avatar_steel_ghost.webp" },
+
+    // ─── Table Themes ────────────────────────────────────────────────────
+    { name: "Classic Green Felt", description: "Traditional poker table look", category: "table_theme", rarity: "common", price: 300, currency: "chips", imageUrl: "/avatars/avatar_merchant_boss.webp" },
+    { name: "Midnight Blue", description: "Deep ocean-blue felt with silver trim", category: "table_theme", rarity: "uncommon", price: 800, currency: "chips", imageUrl: "/avatars/avatar_ice_queen.webp" },
+    { name: "Neon Grid", description: "Cyberpunk grid lines on dark surface", category: "table_theme", rarity: "rare", price: 2000, currency: "chips", imageUrl: "/avatars/avatar_neon_fox.webp" },
+    { name: "Gold Royale", description: "Luxurious gold and black design", category: "table_theme", rarity: "epic", price: 4000, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
+    { name: "Holographic", description: "Shimmering holographic surface", category: "table_theme", rarity: "legendary", price: 8000, currency: "chips", imageUrl: "/avatars/avatar_chrome_siren.webp" },
+
+    // ─── Emotes ──────────────────────────────────────────────────────────
+    { name: "GG", description: "Good game emote", category: "emote", rarity: "common", price: 200, currency: "chips", imageUrl: "/avatars/avatar_tech_monk.webp" },
+    { name: "Nice Hand", description: "Compliment a great play", category: "emote", rarity: "common", price: 200, currency: "chips", imageUrl: "/avatars/avatar_neon_medic.webp" },
+    { name: "Bluff Master", description: "Show off your bluffing skills", category: "emote", rarity: "uncommon", price: 600, currency: "chips", imageUrl: "/avatars/avatar_data_thief.webp" },
+    { name: "All In!", description: "Dramatic all-in announcement", category: "emote", rarity: "rare", price: 1500, currency: "chips", imageUrl: "/avatars/avatar_iron_bull.webp" },
+    { name: "Royal Flush", description: "Celebrate the ultimate hand", category: "emote", rarity: "epic", price: 3000, currency: "chips", imageUrl: "/avatars/avatar_cyber_samurai.webp" },
+
+    // ─── Premium Items ───────────────────────────────────────────────────
+    { name: "Elite Player's Pass", description: "7-day premium access: 2x daily bonus, exclusive tables, priority support", category: "premium", rarity: "legendary", price: 5000, currency: "chips", imageUrl: "/avatars/avatar_gold_phantom.webp" },
+    { name: "VIP Chip Bundle", description: "Bonus 2,000 chips added to your balance", category: "premium", rarity: "epic", price: 1500, currency: "chips", imageUrl: "/avatars/avatar_merchant_boss.webp" },
+    { name: "Lucky Charm", description: "Cosmetic lucky charm shown at your seat", category: "premium", rarity: "rare", price: 2500, currency: "chips", imageUrl: "/avatars/avatar_oracle_seer.webp" },
   ];
 
   for (const item of items) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
-import { Shield, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Link as LinkIcon, Upload, Camera, Fingerprint, ShieldCheck, ExternalLink } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Link as LinkIcon, Upload, Camera, Fingerprint, ShieldCheck, ExternalLink, ArrowRight, Lock, ArrowDown, ArrowUp } from "lucide-react";
 
 interface KycStatus {
   kycStatus: string;
@@ -25,6 +25,77 @@ const ID_TYPES = [
   { value: "national_id", label: "National ID Card" },
   { value: "residence_permit", label: "Residence Permit" },
 ];
+
+type KycLevel = "none" | "email" | "basic" | "standard" | "full" | "enhanced";
+
+const KYC_LEVELS: { level: KycLevel; label: string; tier: string; color: string; requirements: string[]; depositDay: string; withdrawWeek: string }[] = [
+  {
+    level: "none",
+    label: "Unverified",
+    tier: "Free",
+    color: "text-gray-500",
+    requirements: ["No verification needed"],
+    depositDay: "N/A (play chips only)",
+    withdrawWeek: "N/A (play chips only)",
+  },
+  {
+    level: "email",
+    label: "Email Verified",
+    tier: "Bronze",
+    color: "text-orange-400",
+    requirements: ["Confirm email address"],
+    depositDay: "$200/day",
+    withdrawWeek: "$500/week",
+  },
+  {
+    level: "basic",
+    label: "Basic",
+    tier: "Silver",
+    color: "text-gray-200",
+    requirements: ["Phone verification", "Age check (18+)"],
+    depositDay: "$1,000/day",
+    withdrawWeek: "$2,500/week",
+  },
+  {
+    level: "full",
+    label: "Full KYC",
+    tier: "Gold",
+    color: "text-amber-400",
+    requirements: ["Government ID scan", "Liveness check", "Face match", "AML screening"],
+    depositDay: "$5,000/day",
+    withdrawWeek: "$10,000/week",
+  },
+  {
+    level: "enhanced",
+    label: "Enhanced",
+    tier: "Platinum",
+    color: "text-purple-300",
+    requirements: ["NFC passport scan", "Active liveness", "Source of funds"],
+    depositDay: "$25,000/day",
+    withdrawWeek: "$50,000/week",
+  },
+];
+
+function getKycLevelFromStatus(kycStatus: string, tier: string): KycLevel {
+  if (kycStatus === "verified") {
+    const tierMap: Record<string, KycLevel> = {
+      platinum: "enhanced",
+      gold: "full",
+      silver: "basic",
+      bronze: "email",
+    };
+    return tierMap[tier] || "email";
+  }
+  if (tier === "bronze" || tier === "silver" || tier === "gold" || tier === "platinum") {
+    // Has a tier but not verified yet — at least email level
+    return "email";
+  }
+  return "none";
+}
+
+function getKycLevelIndex(level: KycLevel): number {
+  return KYC_LEVELS.findIndex(k => k.level === level);
+}
 
 export default function KYC() {
   const { user, refreshUser } = useAuth();
@@ -75,7 +146,6 @@ export default function KYC() {
     setSubmitting(true);
     setError(null);
 
-    // Validate file uploads before sending
     const idDocError = validateFile(idDocument, "ID document");
     if (idDocError) { setError(idDocError); setSubmitting(false); return; }
     const selfieError = validateFile(selfie, "Selfie");
@@ -132,7 +202,6 @@ export default function KYC() {
     }
   };
 
-  // Start Didit verification flow — redirects user to Didit hosted page
   const startDidit = useCallback(async () => {
     setDiditStarting(true);
     setError(null);
@@ -150,7 +219,6 @@ export default function KYC() {
         return;
       }
 
-      // Redirect user to Didit hosted verification page
       if (data.sessionUrl) {
         window.location.href = data.sessionUrl;
       } else {
@@ -165,7 +233,6 @@ export default function KYC() {
     }
   }, [fullName, dateOfBirth, user]);
 
-  // Check Didit verification status (called when user returns from Didit)
   const checkDiditStatus = useCallback(async () => {
     setPollingStatus(true);
     setError(null);
@@ -194,22 +261,24 @@ export default function KYC() {
   // Check if Didit is configured on first load
   useEffect(() => {
     if (status && (status.kycStatus === "none" || status.kycStatus === "rejected")) {
-      // Pre-check if Didit is available
       fetch("/api/kyc/didit/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
         .then(r => r.json())
         .then(data => { setKycMode(data.mode === "didit" ? "didit" : "manual"); })
         .catch(() => setKycMode("manual"));
     } else if (status?.kycStatus === "pending") {
-      // User might have returned from Didit — check status
       setKycMode("didit");
     } else {
-      setKycMode("manual"); // Already submitted, show status
+      setKycMode("manual");
     }
   }, [status]);
 
   const userTier = user?.tier || "free";
-  const tierOrder = ["free", "bronze", "silver", "gold", "platinum"];
-  const isGoldPlus = tierOrder.indexOf(userTier) >= tierOrder.indexOf("gold");
+  const currentKycLevel = getKycLevelFromStatus(status?.kycStatus || "none", userTier);
+  const currentLevelIdx = getKycLevelIndex(currentKycLevel);
+  const nextLevel = currentLevelIdx < KYC_LEVELS.length - 1 ? KYC_LEVELS[currentLevelIdx + 1] : null;
+
+  // Any tier can now access KYC — it's progressive
+  const canSubmitKyc = true;
 
   if (loading) {
     return (
@@ -223,11 +292,11 @@ export default function KYC() {
 
   return (
     <DashboardLayout title="KYC Verification">
-      <div className="p-6 max-w-2xl mx-auto space-y-6">
+      <div className="p-6 max-w-3xl mx-auto space-y-6">
         <div className="text-center mb-6">
           <Shield className="w-12 h-12 mx-auto mb-3 text-primary" />
           <h1 className="text-2xl font-display font-black text-white">KYC Verification</h1>
-          <p className="text-gray-400 text-sm mt-1">Verify your identity for enhanced platform features</p>
+          <p className="text-gray-400 text-sm mt-1">Progressive identity verification unlocks higher limits</p>
         </div>
 
         {error && (
@@ -241,28 +310,114 @@ export default function KYC() {
           </div>
         )}
 
-        {/* Not Gold+ */}
-        {!isGoldPlus && (
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-8 text-center">
-            <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-400" />
-            <h2 className="text-lg font-bold text-white mb-2">Gold Tier Required</h2>
-            <p className="text-gray-400 text-sm mb-4">Upgrade to Gold tier or higher to access KYC verification.</p>
-            <Link href="/tiers">
-              <button className="px-6 py-2.5 rounded-lg bg-primary/20 text-primary font-bold text-sm border border-primary/30 hover:bg-primary/30 transition-all">
-                View Membership Tiers
-              </button>
-            </Link>
+        {/* Current KYC Level */}
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-white">Your Verification Level</h2>
+              <p className={`text-xs font-bold uppercase tracking-wider ${KYC_LEVELS[currentLevelIdx].color}`}>
+                {KYC_LEVELS[currentLevelIdx].label}
+              </p>
+            </div>
           </div>
-        )}
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="rounded-lg bg-black/20 p-3">
+              <div className="flex items-center gap-1.5 text-gray-400 mb-1">
+                <ArrowDown className="w-3 h-3" /> Deposit Limit
+              </div>
+              <p className="text-white font-bold">{KYC_LEVELS[currentLevelIdx].depositDay}</p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <div className="flex items-center gap-1.5 text-gray-400 mb-1">
+                <ArrowUp className="w-3 h-3" /> Withdraw Limit
+              </div>
+              <p className="text-white font-bold">{KYC_LEVELS[currentLevelIdx].withdrawWeek}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* KYC Level Progression */}
+        <div className="rounded-xl border border-white/10 bg-surface-high/50 p-5">
+          <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-4">Verification Levels</h3>
+          <div className="space-y-3">
+            {KYC_LEVELS.map((level, idx) => {
+              const isComplete = idx <= currentLevelIdx;
+              const isCurrent = idx === currentLevelIdx;
+              const isNext = idx === currentLevelIdx + 1;
+              return (
+                <div key={level.level} className={`rounded-lg p-3 border transition-all ${
+                  isCurrent ? "border-primary/30 bg-primary/5" :
+                  isComplete ? "border-green-500/20 bg-green-500/5" :
+                  isNext ? "border-white/10 bg-white/[0.02]" :
+                  "border-white/5 bg-white/[0.01] opacity-60"
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                      isComplete ? "bg-green-500/20 border border-green-500/30" :
+                      isNext ? "bg-primary/10 border border-primary/20" :
+                      "bg-gray-800 border border-gray-700"
+                    }`}>
+                      {isComplete ? (
+                        <CheckCircle className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Lock className={`w-3 h-3 ${isNext ? "text-primary" : "text-gray-600"}`} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-bold ${isComplete ? "text-green-400" : isNext ? "text-white" : "text-gray-500"}`}>
+                          {level.label}
+                        </span>
+                        <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                          isComplete ? "bg-green-500/10 text-green-400" :
+                          isCurrent ? "bg-primary/10 text-primary" :
+                          "bg-gray-800 text-gray-500"
+                        }`}>
+                          {level.tier}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[0.625rem] text-gray-500 mt-0.5">
+                        <span>Deposit: {level.depositDay}</span>
+                        <span>Withdraw: {level.withdrawWeek}</span>
+                      </div>
+                    </div>
+                    {isNext && (
+                      <ArrowRight className="w-4 h-4 text-primary shrink-0" />
+                    )}
+                  </div>
+                  {isNext && (
+                    <div className="mt-2 ml-10 space-y-1">
+                      <p className="text-[0.625rem] font-bold text-gray-400 uppercase tracking-wider">Required:</p>
+                      {level.requirements.map((req, i) => (
+                        <div key={i} className="flex items-center gap-1.5 text-xs text-gray-400">
+                          <div className="w-1 h-1 rounded-full bg-primary/50" />
+                          {req}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Verified */}
-        {isGoldPlus && status?.kycStatus === "verified" && (
+        {status?.kycStatus === "verified" && (
           <div className="space-y-4">
             <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6 text-center">
               <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
               <h2 className="text-xl font-bold text-green-400 mb-1">Verified</h2>
               {status.kycVerifiedAt && (
                 <p className="text-gray-400 text-xs">Verified on {new Date(status.kycVerifiedAt).toLocaleDateString()}</p>
+              )}
+              {nextLevel && (
+                <p className="text-gray-500 text-xs mt-2">
+                  Upgrade to {nextLevel.tier} to unlock {nextLevel.label} verification
+                </p>
               )}
             </div>
 
@@ -294,7 +449,7 @@ export default function KYC() {
         )}
 
         {/* Pending */}
-        {isGoldPlus && status?.kycStatus === "pending" && (
+        {status?.kycStatus === "pending" && (
           <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-6 text-center">
             <Clock className="w-12 h-12 mx-auto mb-3 text-yellow-400 animate-pulse" />
             <h2 className="text-xl font-bold text-yellow-400 mb-2">Application Pending</h2>
@@ -320,7 +475,7 @@ export default function KYC() {
         )}
 
         {/* Rejected */}
-        {isGoldPlus && status?.kycStatus === "rejected" && (
+        {status?.kycStatus === "rejected" && (
           <div className="space-y-4">
             <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-6 text-center">
               <XCircle className="w-12 h-12 mx-auto mb-3 text-red-400" />
@@ -352,7 +507,7 @@ export default function KYC() {
         )}
 
         {/* None — show Didit or manual form */}
-        {isGoldPlus && (status?.kycStatus === "none" || !status?.kycStatus) && (
+        {canSubmitKyc && (status?.kycStatus === "none" || !status?.kycStatus) && (
           <div className="space-y-4">
             {/* Professional Didit flow */}
             {kycMode !== "manual" && (
@@ -363,31 +518,27 @@ export default function KYC() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-white">AI-Powered Identity Verification</h3>
-                    <p className="text-xs text-gray-400">Powered by Didit — instant ID check with liveness detection</p>
+                    <p className="text-xs text-gray-400">Powered by Didit -- instant ID check with liveness detection</p>
                   </div>
                 </div>
 
                 {/* Tier-based verification features */}
                 <div className="rounded-lg bg-black/20 p-4 space-y-3">
-                  <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Verification Features by Tier</h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-lg bg-amber-500/5 border border-amber-500/10 p-2">
-                      <div className="text-amber-400 font-bold mb-1">Bronze</div>
-                      <div className="text-gray-500">Passive Liveness + Face Match</div>
+                  <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">What Gets Unlocked</h4>
+                  {nextLevel && (
+                    <div className="rounded-lg bg-primary/5 border border-primary/10 p-3">
+                      <p className="text-xs text-primary font-bold mb-1">Next: {nextLevel.label} ({nextLevel.tier})</p>
+                      <p className="text-[0.625rem] text-gray-400">Deposit: {nextLevel.depositDay} | Withdraw: {nextLevel.withdrawWeek}</p>
+                      <div className="mt-2 space-y-1">
+                        {nextLevel.requirements.map((req, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-[0.625rem] text-gray-500">
+                            <div className="w-1 h-1 rounded-full bg-primary/50" />
+                            {req}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="rounded-lg bg-gray-500/5 border border-gray-500/10 p-2">
-                      <div className="text-gray-300 font-bold mb-1">Silver</div>
-                      <div className="text-gray-500">+ Phone Verification + Age Check</div>
-                    </div>
-                    <div className="rounded-lg bg-yellow-500/5 border border-yellow-500/10 p-2">
-                      <div className="text-yellow-400 font-bold mb-1">Gold</div>
-                      <div className="text-gray-500">+ ID Verification + AML Screening</div>
-                    </div>
-                    <div className="rounded-lg bg-cyan-500/5 border border-cyan-500/10 p-2">
-                      <div className="text-cyan-400 font-bold mb-1">Platinum</div>
-                      <div className="text-gray-500">+ NFC Passport + Active Liveness</div>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 text-center text-xs">
@@ -449,6 +600,18 @@ export default function KYC() {
                 onSubmit={handleSubmit} submitting={submitting}
               />
             )}
+          </div>
+        )}
+
+        {/* Upgrade prompt */}
+        {nextLevel && status?.kycStatus === "verified" && (
+          <div className="text-center">
+            <Link href="/tiers">
+              <button className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm font-bold hover:bg-primary/20 transition-all">
+                Upgrade to {nextLevel.tier} for {nextLevel.label} Verification
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </Link>
           </div>
         )}
       </div>
@@ -533,7 +696,7 @@ function KycForm({
           <Upload className="w-3 h-3 inline mr-1" />
           Government ID Photo
         </label>
-        <p className="text-xs text-gray-500 mb-2">Upload a clear photo of the front of your ID document (JPG, PNG, PDF — max 10MB)</p>
+        <p className="text-xs text-gray-500 mb-2">Upload a clear photo of the front of your ID document (JPG, PNG, PDF -- max 10MB)</p>
         <label className="flex items-center justify-center w-full px-4 py-6 rounded-lg bg-black/30 border-2 border-dashed border-white/10 hover:border-primary/30 cursor-pointer transition-all">
           <input
             type="file"

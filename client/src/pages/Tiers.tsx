@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
-import { Crown, Shield, Star, Zap, Gem, Check, Loader2 } from "lucide-react";
+import { Link } from "wouter";
+import { Crown, Shield, Star, Zap, Gem, Check, Loader2, Lock, DollarSign, ArrowUp, ArrowDown } from "lucide-react";
 
 interface TierDefinition {
   id: string;
@@ -25,6 +26,75 @@ const TIER_COLORS: Record<string, { bg: string; border: string; text: string; gl
   silver: { bg: "from-gray-300/20 to-gray-500/20", border: "border-gray-300/30", text: "text-gray-200", glow: "shadow-[0_0_20px_rgba(156,163,175,0.15)]" },
   gold: { bg: "from-amber-500/20 to-yellow-600/20", border: "border-amber-400/40", text: "text-amber-400", glow: "shadow-[0_0_20px_rgba(245,158,11,0.2)]" },
   platinum: { bg: "from-purple-500/20 to-indigo-600/20", border: "border-purple-400/40", text: "text-purple-300", glow: "shadow-[0_0_20px_rgba(168,85,247,0.2)]" },
+};
+
+const KYC_LEVELS: Record<string, { label: string; color: string }> = {
+  free: { label: "None", color: "text-gray-500" },
+  bronze: { label: "Email", color: "text-orange-400" },
+  silver: { label: "Basic", color: "text-gray-200" },
+  gold: { label: "Full KYC", color: "text-amber-400" },
+  platinum: { label: "Enhanced", color: "text-purple-300" },
+};
+
+const TIER_PRICES: Record<string, { monthly: number; annual: number }> = {
+  free: { monthly: 0, annual: 0 },
+  bronze: { monthly: 499, annual: 4799 },
+  silver: { monthly: 1499, annual: 14399 },
+  gold: { monthly: 2999, annual: 28799 },
+  platinum: { monthly: 7999, annual: 76799 },
+};
+
+const TIER_LIMITS: Record<string, { depositDay: string; withdrawWeek: string; stakes: string }> = {
+  free: { depositDay: "N/A", withdrawWeek: "N/A", stakes: "Play chips only" },
+  bronze: { depositDay: "$200/day", withdrawWeek: "$500/week", stakes: "Micro (5/10)" },
+  silver: { depositDay: "$1,000/day", withdrawWeek: "$2,500/week", stakes: "Mid (25/50)" },
+  gold: { depositDay: "$5,000/day", withdrawWeek: "$10,000/week", stakes: "High (200/400)" },
+  platinum: { depositDay: "$25,000/day", withdrawWeek: "$50,000/week", stakes: "Unlimited" },
+};
+
+const TIER_BENEFITS: Record<string, string[]> = {
+  free: [
+    "Play chips only",
+    "5 starter avatars",
+    "Join clubs",
+    "Basic stats",
+    "500 chip daily bonus",
+  ],
+  bronze: [
+    "Real money micro stakes (5/10)",
+    "$200/day deposit, $500/week withdraw",
+    "1 club (25 members)",
+    "Coaching & hand replay",
+    "1,000 chip daily bonus",
+  ],
+  silver: [
+    "Mid stakes (25/50)",
+    "$1,000/day deposit, $2,500/week withdraw",
+    "Multi-table (4 tables)",
+    "Marketplace buy, staking, insurance",
+    "Run it twice, 10% rakeback",
+    "2,500 chip daily bonus",
+  ],
+  gold: [
+    "High stakes (200/400)",
+    "$5,000/day deposit, $10,000/week withdraw",
+    "Full KYC verified",
+    "5 clubs (500 members each)",
+    "Marketplace sell (5% fee)",
+    "Advanced analytics, 20% rakeback",
+    "Blockchain verification",
+    "5,000 chip daily bonus",
+  ],
+  platinum: [
+    "Unlimited stakes",
+    "$25,000/day deposit, $50,000/week withdraw",
+    "VIP tables & concierge support",
+    "Unlimited clubs",
+    "Marketplace (2.5% fee)",
+    "API access, 30% rakeback",
+    "Ad-free experience",
+    "10,000 chip daily bonus",
+  ],
 };
 
 export default function Tiers() {
@@ -88,10 +158,10 @@ export default function Tiers() {
 
   return (
     <DashboardLayout title="Membership Tiers">
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-display font-black text-white mb-2">Membership Tiers</h1>
-          <p className="text-gray-400 text-sm">Upgrade your membership to unlock exclusive benefits</p>
+          <p className="text-gray-400 text-sm">Upgrade your membership to unlock real money play, higher limits, and exclusive benefits</p>
           <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
             {(() => { const Icon = TIER_ICONS[currentTier] || Shield; return <Icon className="w-4 h-4 text-primary" />; })()}
             <span className="text-sm font-bold text-primary uppercase tracking-wider">Current: {currentTier}</span>
@@ -117,7 +187,7 @@ export default function Tiers() {
                   : "text-gray-400 hover:text-gray-300"
               }`}
             >
-              Annual <span className="text-green-400 text-[0.6rem] ml-1">Save ~17%</span>
+              Annual <span className="text-green-400 text-[0.6rem] ml-1">Save ~20%</span>
             </button>
           </div>
         </div>
@@ -135,15 +205,15 @@ export default function Tiers() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {tierOrder.map((tierId, idx) => {
-            const tier = tiers.find(t => t.id === tierId);
             const colors = TIER_COLORS[tierId] || TIER_COLORS.free;
             const Icon = TIER_ICONS[tierId] || Shield;
-            const benefits = tier?.benefits || [];
+            const benefits = TIER_BENEFITS[tierId] || [];
             const isCurrent = tierId === currentTier;
             const isLower = idx < currentRank;
-            const price = tier
-              ? billingCycle === "annual" ? tier.annualPrice : tier.monthlyPrice
-              : 0;
+            const prices = TIER_PRICES[tierId];
+            const price = billingCycle === "annual" ? prices.annual : prices.monthly;
+            const limits = TIER_LIMITS[tierId];
+            const kyc = KYC_LEVELS[tierId];
 
             return (
               <div
@@ -155,7 +225,7 @@ export default function Tiers() {
                     Current
                   </div>
                 )}
-                <div className="text-center mb-4">
+                <div className="text-center mb-3">
                   <Icon className={`w-8 h-8 mx-auto mb-2 ${colors.text}`} />
                   <h3 className={`text-lg font-display font-bold uppercase tracking-wider ${colors.text}`}>
                     {tierId}
@@ -170,9 +240,36 @@ export default function Tiers() {
                   )}
                 </div>
 
-                <div className="flex-1 space-y-2 mb-4">
+                {/* Deposit / Withdraw limits */}
+                <div className="mb-3 rounded-lg bg-black/20 p-2.5 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[0.625rem]">
+                    <ArrowDown className={`w-3 h-3 shrink-0 ${colors.text}`} />
+                    <span className="text-gray-400">Deposit:</span>
+                    <span className="text-white font-bold ml-auto">{limits.depositDay}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[0.625rem]">
+                    <ArrowUp className={`w-3 h-3 shrink-0 ${colors.text}`} />
+                    <span className="text-gray-400">Withdraw:</span>
+                    <span className="text-white font-bold ml-auto">{limits.withdrawWeek}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[0.625rem]">
+                    <DollarSign className={`w-3 h-3 shrink-0 ${colors.text}`} />
+                    <span className="text-gray-400">Stakes:</span>
+                    <span className="text-white font-bold ml-auto">{limits.stakes}</span>
+                  </div>
+                </div>
+
+                {/* KYC badge */}
+                <div className="mb-3 flex items-center justify-center gap-1.5">
+                  <Lock className={`w-3 h-3 ${kyc.color}`} />
+                  <span className={`text-[0.625rem] font-bold uppercase tracking-wider ${kyc.color}`}>
+                    KYC: {kyc.label}
+                  </span>
+                </div>
+
+                <div className="flex-1 space-y-1.5 mb-4">
                   {benefits.map((benefit, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs text-gray-300">
+                    <div key={i} className="flex items-start gap-2 text-[0.6875rem] text-gray-300">
                       <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${colors.text}`} />
                       <span>{benefit}</span>
                     </div>
@@ -203,6 +300,17 @@ export default function Tiers() {
               </div>
             );
           })}
+        </div>
+
+        {/* KYC prompt */}
+        <div className="text-center mt-6">
+          <Link href="/kyc">
+            <button className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm font-bold hover:bg-purple-500/20 transition-all">
+              <Shield className="w-4 h-4" />
+              Complete KYC Verification
+            </button>
+          </Link>
+          <p className="text-gray-500 text-xs mt-2">Higher tiers require identity verification to unlock deposit and withdrawal limits</p>
         </div>
       </div>
     </DashboardLayout>

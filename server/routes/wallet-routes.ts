@@ -2,6 +2,17 @@ import type { Express, Request, Response, NextFunction, RequestHandler } from "e
 import { storage } from "../storage";
 import { sql as defaultSql } from "drizzle-orm";
 
+// ─── Tier Bonus / Limit Lookup ─────────────────────────────────────────────
+const TIER_DAILY_BONUS: Record<string, number> = {
+  free: 500, bronze: 1000, silver: 2500, gold: 5000, platinum: 10000,
+};
+const TIER_DEPOSIT_LIMIT_DAILY: Record<string, number> = {
+  free: 0, bronze: 20000, silver: 100000, gold: 500000, platinum: 2500000,
+};
+const TIER_WITHDRAW_LIMIT_WEEKLY: Record<string, number> = {
+  free: 0, bronze: 50000, silver: 250000, gold: 1000000, platinum: 5000000,
+};
+
 export interface WalletHelpers {
   hasDatabase: () => boolean;
   getDb: () => any;
@@ -53,12 +64,8 @@ export async function registerWalletRoutes(
       const user = await storage.getUser(req.user!.id);
       if (!user) return res.status(404).json({ message: "User not found" });
 
-      // Determine bonus amount (2x with Elite Pass)
-      const inv = await storage.getUserInventory(user.id);
-      const items = await storage.getShopItems();
-      const elitePass = items.find(i => i.category === "premium" && i.rarity === "legendary");
-      const hasElitePass = elitePass ? inv.some(i => i.itemId === elitePass.id) : false;
-      const bonusAmount = hasElitePass ? 2000 : 1000;
+      // Determine bonus amount based on subscription tier
+      const bonusAmount = TIER_DAILY_BONUS[user.tier] ?? TIER_DAILY_BONUS.free;
 
       if (user.lastDailyClaim) {
         const nextClaimAt = new Date(user.lastDailyClaim.getTime() + 24 * 60 * 60 * 1000);
@@ -104,12 +111,8 @@ export async function registerWalletRoutes(
         // Set lastDailyClaim immediately to prevent race conditions
         await storage.updateUser(userId, { lastDailyClaim: now });
 
-      // Check if user has Elite Pass for 2x bonus
-      const userInventory = await storage.getUserInventory(user.id);
-      const allShopItems = await storage.getShopItems();
-      const elitePass = allShopItems.find(i => i.category === "premium" && i.rarity === "legendary");
-      const hasElitePass = elitePass ? userInventory.some(inv => inv.itemId === elitePass.id) : false;
-      const bonus = hasElitePass ? 2000 : 1000;
+      // Bonus amount based on subscription tier
+      const bonus = TIER_DAILY_BONUS[user.tier] ?? TIER_DAILY_BONUS.free;
 
       // Credit bonus wallet (ensure wallets exist first)
       await storage.ensureWallets(user.id);
@@ -365,6 +368,34 @@ export async function registerWalletRoutes(
       }
       if (amount < 100) return res.status(400).json({ message: "Minimum deposit is $1.00 (100 cents)" });
 
+      // ─── Tier-based daily deposit limit enforcement ───────────────────
+      const depositUser = await storage.getUser(req.user!.id);
+      if (!depositUser) return res.status(404).json({ message: "User not found" });
+      const dailyLimit = TIER_DEPOSIT_LIMIT_DAILY[depositUser.tier] ?? 0;
+      if (dailyLimit === 0) {
+        return res.status(403).json({ message: "Your subscription tier does not allow deposits. Upgrade to Bronze or higher." });
+      }
+      // Sum deposits in the last 24 hours
+      if (hasDatabase()) {
+        const db = getDb();
+        const { payments } = await import("@shared/schema");
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const [depResult] = await db
+          .select({ total: sql`COALESCE(SUM(${payments.amountFiat}), 0)` })
+          .from(payments)
+          .where(sql`${payments.userId} = ${req.user!.id} AND ${payments.direction} = 'deposit' AND ${payments.status} IN ('credited', 'confirmed', 'pending', 'confirming') AND ${payments.createdAt} >= ${oneDayAgo}`);
+        const todayTotal = Number(depResult?.total ?? 0);
+        if (todayTotal + amount > dailyLimit) {
+          const remaining = Math.max(0, dailyLimit - todayTotal);
+          return res.status(403).json({
+            message: `Daily deposit limit for ${depositUser.tier} tier is $${(dailyLimit / 100).toFixed(2)}. You have $${(remaining / 100).toFixed(2)} remaining today.`,
+            dailyLimit,
+            used: todayTotal,
+            remaining,
+          });
+        }
+      }
+
       const allocSum = allocation.reduce((s: number, a: any) => s + (a.amount || 0), 0);
       if (allocSum !== amount) {
         return res.status(400).json({ message: `Allocation sum (${allocSum}) must equal deposit amount (${amount})` });
@@ -435,6 +466,33 @@ export async function registerWalletRoutes(
         return res.status(400).json({ message: "amount, currency, and address required" });
       }
       if (amount <= 0) return res.status(400).json({ message: "Amount must be positive" });
+
+      // ─── Tier-based weekly withdrawal limit enforcement ───────────────
+      const withdrawUser = await storage.getUser(req.user!.id);
+      if (!withdrawUser) return res.status(404).json({ message: "User not found" });
+      const weeklyLimit = TIER_WITHDRAW_LIMIT_WEEKLY[withdrawUser.tier] ?? 0;
+      if (weeklyLimit === 0) {
+        return res.status(403).json({ message: "Your subscription tier does not allow withdrawals. Upgrade to Bronze or higher." });
+      }
+      if (hasDatabase()) {
+        const db = getDb();
+        const { withdrawalRequests } = await import("@shared/schema");
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const [wdResult] = await db
+          .select({ total: sql`COALESCE(SUM(COALESCE(${withdrawalRequests.amountFiat}, ${withdrawalRequests.amount})), 0)` })
+          .from(withdrawalRequests)
+          .where(sql`${withdrawalRequests.userId} = ${req.user!.id} AND ${withdrawalRequests.status} IN ('completed', 'pending', 'processing') AND ${withdrawalRequests.createdAt} >= ${oneWeekAgo}`);
+        const weekTotal = Number(wdResult?.total ?? 0);
+        if (weekTotal + amount > weeklyLimit) {
+          const remaining = Math.max(0, weeklyLimit - weekTotal);
+          return res.status(403).json({
+            message: `Weekly withdrawal limit for ${withdrawUser.tier} tier is $${(weeklyLimit / 100).toFixed(2)}. You have $${(remaining / 100).toFixed(2)} remaining this week.`,
+            weeklyLimit,
+            used: weekTotal,
+            remaining,
+          });
+        }
+      }
 
       const { getPaymentService } = await import("../payments/payment-service");
       const svc = getPaymentService();

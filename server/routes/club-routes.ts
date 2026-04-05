@@ -362,12 +362,40 @@ export async function registerClubRoutes(
     }
   });
 
-  app.post("/api/clubs", requireAuth, requireTier("platinum"), async (req, res, next) => {
+  // ─── Tier club creation limits ─────────────────────────────────────────
+  const TIER_CLUB_CREATE_LIMIT: Record<string, number> = {
+    free: 0, bronze: 1, silver: 3, gold: 5, platinum: -1, // -1 = unlimited
+  };
+  const TIER_CLUB_MEMBER_LIMIT: Record<string, number> = {
+    free: 0, bronze: 25, silver: 100, gold: 500, platinum: -1,
+  };
+
+  app.post("/api/clubs", requireAuth, requireTier("bronze"), async (req, res, next) => {
     try {
       const parsed = insertClubSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid club data", errors: parsed.error.flatten() });
       }
+
+      // ─── Tier-based club creation limit enforcement ───────────────────
+      const clubUser = await storage.getUser(req.user!.id);
+      if (!clubUser) return res.status(401).json({ message: "User not found" });
+      const tier = clubUser.tier || "free";
+      const createLimit = TIER_CLUB_CREATE_LIMIT[tier] ?? 0;
+      if (createLimit === 0) {
+        return res.status(403).json({ message: "Your subscription tier cannot create clubs. Upgrade to Bronze or higher." });
+      }
+      if (createLimit > 0) {
+        // Count clubs owned by user
+        const userClubs = await storage.getUserClubs(req.user!.id);
+        const ownedClubs = userClubs.filter((c: any) => c.ownerId === req.user!.id);
+        if (ownedClubs.length >= createLimit) {
+          return res.status(403).json({
+            message: `Your ${tier} tier allows creating up to ${createLimit} club(s). Upgrade your tier for more.`,
+          });
+        }
+      }
+
       const club = await storage.createClub({
         ...parsed.data,
         ownerId: req.user!.id,

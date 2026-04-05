@@ -372,6 +372,7 @@ export class MemStorage implements IStorage {
       lastDailyClaim: null,
       tier: data.tier || "free",
       tierExpiresAt: data.tierExpiresAt ?? null,
+      kycLevel: (data as any).kycLevel || "none",
       kycStatus: data.kycStatus || "none",
       kycData: data.kycData ?? null,
       kycVerifiedAt: data.kycVerifiedAt ?? null,

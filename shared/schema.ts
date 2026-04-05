@@ -30,6 +30,7 @@ export const users = pgTable("users", {
   tier: text("tier").notNull().default("free"), // free | bronze | silver | gold | platinum
   tierExpiresAt: timestamp("tier_expires_at"), // null for free tier
   // KYC verification
+  kycLevel: text("kyc_level").notNull().default("none"), // none | email | basic | standard | full | enhanced
   kycStatus: text("kyc_status").notNull().default("none"), // none | pending | verified | rejected
   kycData: jsonb("kyc_data"), // { fullName, dateOfBirth, country, idType, submittedAt, idDocumentPath?, selfiePath? }
   kycVerifiedAt: timestamp("kyc_verified_at"),

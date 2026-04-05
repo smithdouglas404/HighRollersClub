@@ -108,6 +108,11 @@ export async function registerTournamentRoutes(
     }
   });
 
+  // ─── Tier tournament buy-in limits (cents; 0 = special: free=freerolls-only, gold/plat=unlimited) ───
+  const TIER_TOURNAMENT_BUYIN_MAX: Record<string, number> = {
+    free: 0, bronze: 2500, silver: 20000, gold: 0, platinum: 0,
+  };
+
   app.post("/api/tournaments/:id/register", requireAuth, async (req, res, next) => {
     try {
       const tourney = await storage.getTournament(req.params.id);
@@ -119,9 +124,21 @@ export async function registerTournamentRoutes(
       const user = await storage.getUser(req.user!.id);
       if (!user) return res.status(400).json({ message: "User not found" });
 
-      // KYC required for all tournaments
-      if (user.kycStatus !== "verified") {
-        return res.status(403).json({ message: "KYC verification required for tournaments. Visit /kyc to verify your identity." });
+      // ─── Tier-based tournament buy-in limit enforcement ───────────────
+      const tier = user.tier || "free";
+      const maxBuyIn = TIER_TOURNAMENT_BUYIN_MAX[tier] ?? 0;
+      if (tier === "free" && tourney.buyIn > 0) {
+        return res.status(403).json({ message: "Free tier can only join freeroll tournaments (buy-in = 0). Upgrade to Bronze or higher." });
+      }
+      if (tier !== "free" && maxBuyIn > 0 && tourney.buyIn > maxBuyIn) {
+        return res.status(403).json({
+          message: `Your ${tier} tier allows tournament buy-ins up to $${(maxBuyIn / 100).toFixed(2)}. This tournament requires $${(tourney.buyIn / 100).toFixed(2)}. Upgrade your tier.`,
+        });
+      }
+
+      // KYC required for all paid tournaments
+      if (tourney.buyIn > 0 && user.kycStatus !== "verified") {
+        return res.status(403).json({ message: "KYC verification required for paid tournaments. Visit /kyc to verify your identity." });
       }
 
       if (user.chipBalance < tourney.buyIn) {

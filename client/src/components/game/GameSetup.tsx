@@ -871,8 +871,14 @@ export function GameSetup({ mode, onStartOffline, onCreateTable, onExit }: GameS
                                 <Gauge className="w-3 h-3" /> Blind Speed
                               </label>
                               <select value={blindPreset} onChange={(e) => {
-                                setBlindPreset(e.target.value);
-                                if (e.target.value === "custom" && customBlindSchedule.length === 0) {
+                                const preset = e.target.value;
+                                setBlindPreset(preset);
+                                if (preset === "hyper") { setSmallBlind(25); setBigBlind(50); }
+                                else if (preset === "turbo") { setSmallBlind(15); setBigBlind(30); }
+                                else if (preset === "standard") { setSmallBlind(10); setBigBlind(20); }
+                                else if (preset === "mtt") { setSmallBlind(5); setBigBlind(10); }
+                                else if (preset === "deep") { setSmallBlind(5); setBigBlind(10); }
+                                if (preset === "custom" && customBlindSchedule.length === 0) {
                                   setCustomBlindSchedule([
                                     { level: 1, sb: 10, bb: 20, ante: 0, durationSeconds: 300 },
                                     { level: 2, sb: 20, bb: 40, ante: 0, durationSeconds: 300 },

@@ -3951,6 +3951,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     { key: "BLOCKED_COUNTRIES", category: "Infrastructure", description: "Comma-separated blocked country codes", sensitive: false },
     { key: "NODE_ENV", category: "Infrastructure", description: "Environment (development|production)", sensitive: false },
     { key: "PORT", category: "Infrastructure", description: "Server listen port", sensitive: false },
+    { key: "REDIS_URL", category: "Infrastructure", description: "Redis connection URL for caching and pub/sub", sensitive: true },
   ];
 
   app.get("/api/admin/env-keys", requireAuth, requireAdmin, async (_req, res) => {

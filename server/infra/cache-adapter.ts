@@ -2,13 +2,15 @@
  * Cache Adapter — Abstracts in-memory Map behind a swappable interface.
  *
  * Default: In-memory Map (single process).
- * To scale: Drop in a Redis implementation of ICache.
+ * Redis: When REDIS_URL is set, uses ioredis for distributed caching.
  *
  * Usage:
  *   const cache = createCache<string>("geo");
  *   await cache.set("1.2.3.4", "US", 3600);
  *   const country = await cache.get("1.2.3.4");
  */
+
+import Redis from "ioredis";
 
 export interface ICache<V = any> {
   get(key: string): Promise<V | undefined>;
@@ -68,8 +70,64 @@ class MemoryCache<V> implements ICache<V> {
   }
 }
 
-// Factory — swap implementation here when adding Redis
-export function createCache<V = any>(_namespace?: string): ICache<V> {
-  // Future: if (process.env.REDIS_URL) return new RedisCache<V>(namespace);
+/** Redis-backed cache using ioredis */
+class RedisCache<V> implements ICache<V> {
+  private client: Redis;
+  private prefix: string;
+
+  constructor(namespace?: string) {
+    this.client = new Redis(process.env.REDIS_URL!);
+    this.prefix = namespace ? `cache:${namespace}:` : "cache:";
+  }
+
+  private k(key: string): string {
+    return this.prefix + key;
+  }
+
+  async get(key: string): Promise<V | undefined> {
+    const raw = await this.client.get(this.k(key));
+    if (raw === null) return undefined;
+    try {
+      return JSON.parse(raw) as V;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async set(key: string, value: V, ttlSeconds?: number): Promise<void> {
+    const serialized = JSON.stringify(value);
+    if (ttlSeconds) {
+      await this.client.set(this.k(key), serialized, "EX", ttlSeconds);
+    } else {
+      await this.client.set(this.k(key), serialized);
+    }
+  }
+
+  async delete(key: string): Promise<boolean> {
+    const count = await this.client.del(this.k(key));
+    return count > 0;
+  }
+
+  async has(key: string): Promise<boolean> {
+    const exists = await this.client.exists(this.k(key));
+    return exists === 1;
+  }
+
+  async clear(): Promise<void> {
+    const keys = await this.client.keys(this.prefix + "*");
+    if (keys.length > 0) {
+      await this.client.del(...keys);
+    }
+  }
+
+  async size(): Promise<number> {
+    const keys = await this.client.keys(this.prefix + "*");
+    return keys.length;
+  }
+}
+
+// Factory — returns Redis when REDIS_URL is set, otherwise in-memory
+export function createCache<V = any>(namespace?: string): ICache<V> {
+  if (process.env.REDIS_URL) return new RedisCache<V>(namespace);
   return new MemoryCache<V>();
 }

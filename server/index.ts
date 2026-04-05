@@ -131,7 +131,14 @@ app.use((req, res, next) => {
 
   // Ensure "system" user exists before any tables/tournaments are created
   const { storage } = await import("./storage");
-  await storage.ensureSystemUser().catch(err => console.warn("[init] System user creation:", err.message));
+  try {
+    await storage.ensureSystemUser();
+  } catch (err: any) {
+    console.error("[FATAL] Cannot create system user — scheduler and bot tables will fail:", err.message);
+    // Retry once after a short delay (migration may still be settling)
+    await new Promise(r => setTimeout(r, 2000));
+    await storage.ensureSystemUser();
+  }
 
   // Register REST routes + WebSocket (registerRoutes sets up both)
   // In monolith mode: everything as before

@@ -71,6 +71,15 @@ export async function autoMigrate(): Promise<void> {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS taunt_voice TEXT DEFAULT 'default'`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token TEXT`,
 
+    // Users table — loyalty program columns
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_points INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_level INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_multiplier NUMERIC(3,1) NOT NULL DEFAULT 1.0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_login_streak INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_reward_at TIMESTAMP`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR UNIQUE`,
+
     // Clubs table — geofence columns
     `ALTER TABLE clubs ADD COLUMN IF NOT EXISTS allowed_countries JSONB`,
     `ALTER TABLE clubs ADD COLUMN IF NOT EXISTS allowed_states JSONB`,
@@ -236,6 +245,120 @@ export async function autoMigrate(): Promise<void> {
       created_by VARCHAR NOT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     )`,
+
+    // Shop Items — earnable_at_level column
+    `ALTER TABLE shop_items ADD COLUMN IF NOT EXISTS earnable_at_level INTEGER`,
+
+    // Achievements table
+    `CREATE TABLE IF NOT EXISTS achievements (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      key TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT,
+      category TEXT NOT NULL,
+      requirement_type TEXT NOT NULL,
+      requirement_value INTEGER NOT NULL,
+      hrp_reward INTEGER NOT NULL,
+      chip_reward INTEGER NOT NULL DEFAULT 0,
+      badge_image_url TEXT,
+      rarity TEXT,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+
+    // User Achievements table
+    `CREATE TABLE IF NOT EXISTS user_achievements (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR NOT NULL REFERENCES users(id),
+      achievement_id VARCHAR NOT NULL REFERENCES achievements(id),
+      progress INTEGER NOT NULL DEFAULT 0,
+      unlocked_at TIMESTAMP,
+      claimed_at TIMESTAMP,
+      UNIQUE(user_id, achievement_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS user_achievements_user_idx ON user_achievements(user_id)`,
+    `CREATE INDEX IF NOT EXISTS user_achievements_achievement_idx ON user_achievements(achievement_id)`,
+
+    // Battle Passes table
+    `CREATE TABLE IF NOT EXISTS battle_passes (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      name TEXT NOT NULL,
+      season_number INTEGER NOT NULL,
+      starts_at TIMESTAMP NOT NULL,
+      ends_at TIMESTAMP NOT NULL,
+      premium_price_chips INTEGER NOT NULL DEFAULT 10000,
+      premium_price_usd INTEGER NOT NULL DEFAULT 999,
+      max_level INTEGER NOT NULL DEFAULT 50,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+
+    // Battle Pass Rewards table
+    `CREATE TABLE IF NOT EXISTS battle_pass_rewards (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      battle_pass_id VARCHAR NOT NULL REFERENCES battle_passes(id),
+      level INTEGER NOT NULL,
+      track TEXT NOT NULL,
+      reward_type TEXT NOT NULL,
+      reward_value INTEGER NOT NULL,
+      reward_item_id VARCHAR REFERENCES shop_items(id),
+      description TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+
+    // User Battle Passes table
+    `CREATE TABLE IF NOT EXISTS user_battle_passes (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR NOT NULL REFERENCES users(id),
+      battle_pass_id VARCHAR NOT NULL REFERENCES battle_passes(id),
+      current_level INTEGER NOT NULL DEFAULT 0,
+      hrp_earned_this_season INTEGER NOT NULL DEFAULT 0,
+      is_premium BOOLEAN NOT NULL DEFAULT false,
+      premium_purchased_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE(user_id, battle_pass_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS user_battle_passes_user_idx ON user_battle_passes(user_id)`,
+    `CREATE INDEX IF NOT EXISTS user_battle_passes_bp_idx ON user_battle_passes(battle_pass_id)`,
+
+    // Daily Login Rewards table
+    `CREATE TABLE IF NOT EXISTS daily_login_rewards (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      day_number INTEGER NOT NULL,
+      chip_reward INTEGER NOT NULL,
+      hrp_reward INTEGER NOT NULL,
+      item_reward_type TEXT,
+      item_reward_rarity TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+
+    // Referrals table
+    `CREATE TABLE IF NOT EXISTS referrals (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      referrer_id VARCHAR NOT NULL REFERENCES users(id),
+      referred_id VARCHAR NOT NULL REFERENCES users(id),
+      milestone TEXT NOT NULL,
+      referrer_hrp_reward INTEGER NOT NULL,
+      referrer_chip_reward INTEGER NOT NULL,
+      referred_hrp_reward INTEGER NOT NULL,
+      referred_chip_reward INTEGER NOT NULL,
+      completed_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS referrals_referrer_idx ON referrals(referrer_id)`,
+    `CREATE INDEX IF NOT EXISTS referrals_referred_idx ON referrals(referred_id)`,
+
+    // HRP Transactions table (audit log)
+    `CREATE TABLE IF NOT EXISTS hrp_transactions (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR NOT NULL REFERENCES users(id),
+      amount INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      description TEXT,
+      balance_after INTEGER NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS hrp_transactions_user_idx ON hrp_transactions(user_id)`,
   ];
 
   let migrated = 0;

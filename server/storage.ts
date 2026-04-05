@@ -1432,8 +1432,17 @@ export class DatabaseStorage implements IStorage {
         chipBalance: 0,
         memberId: "HR-SYSTEM00",
       });
-    } catch {
-      // May already exist from concurrent startup
+      console.log("[init] System user created successfully");
+    } catch (err: any) {
+      // Only suppress duplicate key / unique constraint violations
+      const msg = err?.message || "";
+      if (msg.includes("duplicate") || msg.includes("unique") || msg.includes("already exists")) {
+        // System user was created by a concurrent startup — this is fine
+        return;
+      }
+      // Any other error is a real problem — rethrow so callers know
+      console.error("[init] Failed to create system user:", msg);
+      throw err;
     }
   }
 

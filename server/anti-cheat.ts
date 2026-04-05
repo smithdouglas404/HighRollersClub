@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { createCache } from "./infra/cache-adapter";
 
 export interface CollusionAlertData {
   tableId: string;
@@ -44,6 +45,8 @@ interface HandData {
 export class AntiCheatEngine {
   private connections: Map<string, ConnectionRecord> = new Map();
   private riskScores: Map<string, PlayerRiskEntry> = new Map();
+  // Redis-backed persistent risk score cache (survives restarts)
+  private persistentRisk = createCache<PlayerRiskEntry>("anticheat:risk");
   // Track IP -> set of userIds
   private ipToUsers: Map<string, Set<string>> = new Map();
 
@@ -276,7 +279,13 @@ export class AntiCheatEngine {
    * Get player risk score (0-100)
    */
   getPlayerRiskScore(userId: string): number {
-    return this.riskScores.get(userId)?.score ?? 0;
+    const local = this.riskScores.get(userId);
+    if (local) return local.score;
+    // Try loading from Redis asynchronously — return 0 for now, cache will populate on next check
+    this.persistentRisk.get(userId).then(cached => {
+      if (cached) this.riskScores.set(userId, cached);
+    }).catch(() => {});
+    return 0;
   }
 
   /**
@@ -314,6 +323,8 @@ export class AntiCheatEngine {
         if (existing.reasons.length > 5) existing.reasons = existing.reasons.slice(-5);
         existing.updatedAt = Date.now();
         this.riskScores.set(playerId, existing);
+        // Persist to Redis (survives restarts, shared across instances)
+        this.persistentRisk.set(playerId, existing, 30 * 24 * 3600).catch(() => {});
       }
     }
   }

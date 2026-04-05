@@ -413,9 +413,15 @@ export async function registerKycRoutes(
       const provider = process.env.KYC_PROVIDER || "manual";
       const webhookSecret = process.env.KYC_WEBHOOK_SECRET;
 
-      // Verify webhook signature based on provider
+      // Verify webhook signature based on provider — mandatory in production
       if (provider === "onfido") {
         const sig = req.headers["x-sha2-signature"] as string;
+        if (!webhookSecret && process.env.NODE_ENV === "production") {
+          return res.status(401).json({ message: "KYC webhook secret not configured — rejecting in production" });
+        }
+        if (!sig && process.env.NODE_ENV === "production") {
+          return res.status(401).json({ message: "Missing webhook signature — rejecting in production" });
+        }
         if (webhookSecret && sig) {
           const expected = createHash("sha256").update(JSON.stringify(req.body) + webhookSecret).digest("hex");
           if (sig !== expected) return res.status(401).json({ message: "Invalid signature" });

@@ -275,7 +275,12 @@ export function sendGameStateToTable(tableId: string) {
               if (encrypted) {
                 // Level 1+3: Also obfuscate for sprite mapping
                 (p as any)._encryptedCards = encrypted;
-                (p as any)._obfuscatedCards = obfuscateCards(p.cards, client.userId, sessionKeyHex || "0".repeat(64));
+                if (!sessionKeyHex) {
+                  // No session key — refuse to send cards unencrypted
+                  p.cards = p.cards.map(() => ({ hidden: true }));
+                  continue;
+                }
+                (p as any)._obfuscatedCards = obfuscateCards(p.cards, client.userId, sessionKeyHex);
                 p.cards = p.cards.map(() => ({ encrypted: true }));
               }
             }

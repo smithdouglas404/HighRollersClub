@@ -266,11 +266,18 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // Marketplace routes registered after requireAdmin is defined (below)
 
   // ─── Server Info ───────────────────────────────────────────────────────
-  app.get("/api/health", (_req, res) => {
-    res.json({
-      ok: true,
+  app.get("/api/health", async (_req, res) => {
+    let dbOk = false;
+    if (hasDatabase()) {
+      try { await getDb().execute(sql`SELECT 1`); dbOk = true; } catch { dbOk = false; }
+    }
+    const ok = hasDatabase() ? dbOk : true;
+    res.status(ok ? 200 : 503).json({
+      ok,
       storage: hasDatabase() ? "database" : "memory",
-      warning: hasDatabase() ? null : "Using in-memory storage — all data will be lost on restart",
+      database: dbOk,
+      redis: !!process.env.REDIS_URL,
+      warning: dbOk ? null : hasDatabase() ? "Database connection failed" : "In-memory storage — data lost on restart",
     });
   });
 
@@ -420,6 +427,51 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   await registerGameRoutes(app, requireAuth, requireAdmin, { logAdminAction });
   await registerClubRoutes(app, requireAuth, requireAdmin, { hasDatabase, getDb, sql });
   await registerTournamentRoutes(app, requireAuth, requireAdmin);
+  // Legacy-compatible logAdminAction wrapper (accepts adminId string instead of req)
+  const logAdminActionLegacy = async (
+    adminId: string,
+    action: string,
+    targetType: string | null,
+    targetId: string | null,
+    details: Record<string, any> | null,
+    ipAddress?: string,
+  ) => {
+    try {
+      if (!hasDatabase()) return;
+      const db = getDb();
+      await db.insert(adminAuditLogs).values({
+        adminId,
+        action,
+        targetType,
+        targetId,
+        details,
+        ipAddress: ipAddress || null,
+      });
+    } catch (err: any) {
+      console.error("Audit log error:", err.message);
+    }
+  };
+
+  await registerAdminPlatformRoutes(app, requireAuth, requireAdmin, {
+    logAdminAction: logAdminActionLegacy,
+    globalSystemLocked,
+    globalLockReason,
+    setGlobalLock: (locked: boolean, reason: string) => { globalSystemLocked = locked; globalLockReason = reason; },
+  });
+  await registerKycRoutes(app, requireAuth, requireAdmin, {
+    requireTier,
+    logAdminAction: logAdminActionLegacy,
+    sendKycEmail,
+  });
+  await registerPlatformRoutes(app, requireAuth, requireAdmin, {
+    requireTier,
+    logAdminAction: logAdminActionLegacy,
+    sendKycEmail,
+    TIER_DEFINITIONS,
+    TIER_ORDER,
+    tierRank,
+    socialLinks,
+  });
 
   // ─── Admin: Rake & Revenue Reports ── (moved to routes/admin-platform-routes.ts)
 

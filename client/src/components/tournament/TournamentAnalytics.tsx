@@ -14,6 +14,12 @@ function formatChips(n: number): string {
 
 const PAYOUT_COLORS = ["#d4af37", "#c0c0c0", "#cd7f32", "#3b82f6", "#a855f7", "#22c55e", "#ef4444", "#f59e0b"];
 
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 export function TournamentAnalytics({ tournamentId }: TournamentAnalyticsProps) {
   const [tourney, setTourney] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +38,9 @@ export function TournamentAnalytics({ tournamentId }: TournamentAnalyticsProps) 
   const payoutStructure: Array<{ place: number; percentage: number }> = tourney.payoutStructure || [
     { place: 1, percentage: 50 }, { place: 2, percentage: 30 }, { place: 3, percentage: 20 },
   ];
-  const payoutData = payoutStructure.map(p => ({ name: `${p.place}${p.place === 1 ? "st" : p.place === 2 ? "nd" : p.place === 3 ? "rd" : "th"}`, value: p.percentage }));
+  const payoutTotal = payoutStructure.reduce((sum: number, p: { percentage: number }) => sum + p.percentage, 0);
+  const payoutValid = Math.abs(payoutTotal - 100) < 0.01;
+  const payoutData = payoutStructure.map(p => ({ name: ordinal(p.place), value: p.percentage }));
 
   return (
     <div className="space-y-6">
@@ -73,7 +81,7 @@ export function TournamentAnalytics({ tournamentId }: TournamentAnalyticsProps) 
                     <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black" style={{ background: PAYOUT_COLORS[i] + "20", color: PAYOUT_COLORS[i] }}>
                       {p.place}
                     </span>
-                    <span className="text-xs text-gray-300">{p.place === 1 ? "1st Place" : p.place === 2 ? "2nd Place" : p.place === 3 ? "3rd Place" : `${p.place}th Place`}</span>
+                    <span className="text-xs text-gray-300">{ordinal(p.place)} Place</span>
                   </div>
                   <div className="text-right">
                     <span className="text-xs font-bold text-white">{formatChips(amount)}</span>
@@ -83,6 +91,11 @@ export function TournamentAnalytics({ tournamentId }: TournamentAnalyticsProps) 
               );
             })}
           </div>
+          {!payoutValid && (
+            <div className="mt-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
+              Payout percentages sum to {payoutTotal.toFixed(1)}% — must equal exactly 100%.
+            </div>
+          )}
           {payoutStructure.length > 0 && (
             <div className="mt-2 pt-2 border-t border-white/5 flex justify-between px-3 text-xs">
               <span className="text-gray-500">1st Place Prize</span>

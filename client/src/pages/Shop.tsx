@@ -53,19 +53,19 @@ interface InventoryEntry {
   item: ShopItem | null;
 }
 
-const RARITY_COLORS: Record<string, string> = {
+const RARITY_COLORS_BASE: Record<string, string> = {
   mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
   legendary: "text-primary bg-amber-500/10 border-amber-500/20",
   epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
   rare: "text-primary bg-amber-500/10 border-amber-500/20",
   uncommon: "text-green-400 bg-green-500/10 border-green-500/20",
   common: "text-gray-400 bg-gray-500/10 border-gray-500/20",
-  // Also support capitalized keys for backward compatibility
-  Mythic: "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20",
-  Legendary: "text-primary bg-amber-500/10 border-amber-500/20",
-  Epic: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  Rare: "text-primary bg-amber-500/10 border-amber-500/20",
 };
+
+// Support both lowercase and capitalized keys via a single source of truth
+const RARITY_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(RARITY_COLORS_BASE).flatMap(([k, v]) => [[k, v], [k.charAt(0).toUpperCase() + k.slice(1), v]])
+);
 
 const RARITY_GRADIENTS: Record<string, string> = {
   mythic: "from-fuchsia-600/40 via-pink-500/30 to-fuchsia-800/40",

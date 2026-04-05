@@ -460,7 +460,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                           <div
                             key={entry.clubId}
                             className={`flex items-center gap-4 px-3 py-2.5 hover:bg-white/[0.06] transition-colors rounded-lg ${
-                              rank < 3 ? `border ${podiumBorder}` : `border-b ${podiumBorder}`
+                              `border ${podiumBorder}`
                             }`}
                           >
                             <span className="w-8 text-center">

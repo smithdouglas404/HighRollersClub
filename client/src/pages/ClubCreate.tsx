@@ -82,6 +82,7 @@ export default function ClubCreate() {
 
   // Step 1 — Club Identity
   const [clubName, setClubName] = useState("");
+  const [clubTag, setClubTag] = useState("");
   const [description, setDescription] = useState("");
   const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
   const [themeColor, setThemeColor] = useState("cyan");
@@ -127,6 +128,7 @@ export default function ClubCreate() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: clubName.trim(),
+          tag: clubTag.trim() || undefined,
           description: description.trim() || undefined,
           isPublic: visibility !== "private",
           maxMembers,
@@ -292,6 +294,26 @@ export default function ClubCreate() {
           className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40"
           style={inputStyle}
         />
+      </div>
+
+      {/* Club Tag */}
+      <div className="space-y-1.5">
+        <label htmlFor="club-tag" className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+          Club Tag
+        </label>
+        <input
+          id="club-tag"
+          type="text"
+          value={clubTag}
+          onChange={(e) => setClubTag(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
+          maxLength={6}
+          placeholder="e.g. HRPC"
+          className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40 font-mono tracking-widest"
+          style={inputStyle}
+        />
+        <p className="text-[0.5625rem] text-gray-500">
+          2-6 character identifier shown next to player names ({clubTag.length}/6)
+        </p>
       </div>
 
       {/* Description */}
@@ -748,6 +770,7 @@ export default function ClubCreate() {
         </div>
         <div className="divide-y divide-white/5">
           {[
+            { label: "Club Tag", value: clubTag || "None" },
             { label: "Max Members", value: `${maxMembers}` },
             { label: "Standard Buy-in", value: `${chipBuyIn.toLocaleString()} chips` },
             { label: "Credit Limit", value: `${creditLimit.toLocaleString()} chips` },

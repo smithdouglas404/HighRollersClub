@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
-import { Shield, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Link as LinkIcon, Upload, Camera, Fingerprint, ShieldCheck, ExternalLink } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Link as LinkIcon, Upload, Camera, Fingerprint, ShieldCheck, ExternalLink, ArrowRight, Lock, ArrowDown, ArrowUp } from "lucide-react";
 
 interface KycStatus {
   kycStatus: string;
@@ -26,6 +26,77 @@ const ID_TYPES = [
   { value: "residence_permit", label: "Residence Permit" },
 ];
 
+type KycLevel = "none" | "email" | "basic" | "standard" | "full" | "enhanced";
+
+const KYC_LEVELS: { level: KycLevel; label: string; tier: string; color: string; requirements: string[]; depositDay: string; withdrawWeek: string }[] = [
+  {
+    level: "none",
+    label: "Unverified",
+    tier: "Free",
+    color: "text-gray-500",
+    requirements: ["No verification needed"],
+    depositDay: "N/A (play chips only)",
+    withdrawWeek: "N/A (play chips only)",
+  },
+  {
+    level: "email",
+    label: "Email Verified",
+    tier: "Bronze",
+    color: "text-orange-400",
+    requirements: ["Confirm email address"],
+    depositDay: "$200/day",
+    withdrawWeek: "$500/week",
+  },
+  {
+    level: "basic",
+    label: "Basic",
+    tier: "Silver",
+    color: "text-gray-200",
+    requirements: ["Phone verification", "Age check (18+)"],
+    depositDay: "$1,000/day",
+    withdrawWeek: "$2,500/week",
+  },
+  {
+    level: "full",
+    label: "Full KYC",
+    tier: "Gold",
+    color: "text-amber-400",
+    requirements: ["Government ID scan", "Liveness check", "Face match", "AML screening"],
+    depositDay: "$5,000/day",
+    withdrawWeek: "$10,000/week",
+  },
+  {
+    level: "enhanced",
+    label: "Enhanced",
+    tier: "Platinum",
+    color: "text-purple-300",
+    requirements: ["NFC passport scan", "Active liveness", "Source of funds"],
+    depositDay: "$25,000/day",
+    withdrawWeek: "$50,000/week",
+  },
+];
+
+function getKycLevelFromStatus(kycStatus: string, tier: string): KycLevel {
+  if (kycStatus === "verified") {
+    const tierMap: Record<string, KycLevel> = {
+      platinum: "enhanced",
+      gold: "full",
+      silver: "basic",
+      bronze: "email",
+    };
+    return tierMap[tier] || "email";
+  }
+  if (tier === "bronze" || tier === "silver" || tier === "gold" || tier === "platinum") {
+    // Has a tier but not verified yet — at least email level
+    return "email";
+  }
+  return "none";
+}
+
+function getKycLevelIndex(level: KycLevel): number {
+  return KYC_LEVELS.findIndex(k => k.level === level);
+}
+
 export default function KYC() {
   const { user, refreshUser } = useAuth();
   const [status, setStatus] = useState<KycStatus | null>(null);
@@ -35,12 +106,10 @@ export default function KYC() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Onfido SDK state
-  const [kycMode, setKycMode] = useState<"loading" | "onfido" | "manual">("loading");
-  const [onfidoToken, setOnfidoToken] = useState<string | null>(null);
-  const [onfidoStarting, setOnfidoStarting] = useState(false);
-  const onfidoContainerRef = useRef<HTMLDivElement>(null);
-  const onfidoInstanceRef = useRef<any>(null);
+  // Didit verification state
+  const [kycMode, setKycMode] = useState<"loading" | "didit" | "manual">("loading");
+  const [diditStarting, setDiditStarting] = useState(false);
+  const [pollingStatus, setPollingStatus] = useState(false);
 
   // Form fields (manual fallback)
   const [fullName, setFullName] = useState("");
@@ -58,10 +127,30 @@ export default function KYC() {
       .finally(() => setLoading(false));
   }, []);
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+
+  function validateFile(file: File | null, label: string): string | null {
+    if (!file) return null;
+    if (file.size > MAX_FILE_SIZE) {
+      return `${label} is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`;
+    }
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      return `${label} has an unsupported format (${file.type || "unknown"}). Allowed: JPEG, PNG, PDF.`;
+    }
+    return null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    const idDocError = validateFile(idDocument, "ID document");
+    if (idDocError) { setError(idDocError); setSubmitting(false); return; }
+    const selfieError = validateFile(selfie, "Selfie");
+    if (selfieError) { setError(selfieError); setSubmitting(false); return; }
+
     try {
       const formData = new FormData();
       formData.append("fullName", fullName);
@@ -113,12 +202,11 @@ export default function KYC() {
     }
   };
 
-  // Start Onfido verification flow
-  const startOnfido = useCallback(async () => {
-    setOnfidoStarting(true);
+  const startDidit = useCallback(async () => {
+    setDiditStarting(true);
     setError(null);
     try {
-      const res = await fetch("/api/kyc/onfido/start", {
+      const res = await fetch("/api/kyc/didit/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName: fullName || user?.displayName, dateOfBirth }),
@@ -131,97 +219,66 @@ export default function KYC() {
         return;
       }
 
-      setOnfidoToken(data.sdkToken);
-      setKycMode("onfido");
-
-      // Load Onfido SDK dynamically
-      if (!document.getElementById("onfido-sdk-script")) {
-        const script = document.createElement("script");
-        script.id = "onfido-sdk-script";
-        script.src = "https://sdk.onfido.com/v14";
-        script.async = true;
-        document.head.appendChild(script);
-
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = "https://sdk.onfido.com/v14/style.css";
-        document.head.appendChild(link);
-
-        await new Promise<void>((resolve) => {
-          script.onload = () => resolve();
-          setTimeout(resolve, 5000); // timeout fallback
-        });
-      }
-
-      // Wait for container to render
-      await new Promise(r => setTimeout(r, 100));
-
-      // Initialize Onfido SDK
-      if ((window as any).Onfido && onfidoContainerRef.current) {
-        onfidoInstanceRef.current = (window as any).Onfido.init({
-          token: data.sdkToken,
-          containerId: "onfido-mount",
-          steps: [
-            { type: "document", options: { documentTypes: { passport: true, driving_licence: true, national_identity_card: true } } },
-            { type: "face", options: { requestedVariant: "video" } }, // liveness detection
-          ],
-          onComplete: async () => {
-            // SDK complete — trigger server-side check
-            try {
-              const checkRes = await fetch("/api/kyc/onfido/check", { method: "POST" });
-              const checkData = await checkRes.json();
-              if (checkRes.ok) {
-                setSuccess("Verification submitted! AI is checking your identity. You'll be notified when complete.");
-                setStatus(prev => prev ? { ...prev, kycStatus: "pending" } : prev);
-                await refreshUser();
-              } else {
-                setError(checkData.message || "Check creation failed");
-              }
-            } catch {
-              setError("Network error creating check");
-            }
-            // Teardown SDK
-            if (onfidoInstanceRef.current?.tearDown) onfidoInstanceRef.current.tearDown();
-          },
-          onError: (err: any) => {
-            console.error("Onfido SDK error:", err);
-            setError("Verification error. Please try again.");
-          },
-        });
+      if (data.sessionUrl) {
+        window.location.href = data.sessionUrl;
       } else {
-        // SDK failed to load — fall back to manual
+        setError("No verification URL returned");
         setKycMode("manual");
-        setError("Verification SDK failed to load. Using manual form.");
       }
     } catch (err: any) {
       setError(err.message || "Failed to start verification");
       setKycMode("manual");
     } finally {
-      setOnfidoStarting(false);
+      setDiditStarting(false);
     }
-  }, [fullName, dateOfBirth, user, refreshUser]);
+  }, [fullName, dateOfBirth, user]);
 
-  // Check if Onfido is configured on first load
+  const checkDiditStatus = useCallback(async () => {
+    setPollingStatus(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/kyc/didit/status", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.status === "verified") {
+          setSuccess("Identity verified successfully!");
+          setStatus(prev => prev ? { ...prev, kycStatus: "verified" } : prev);
+          await refreshUser();
+        } else if (data.status === "rejected") {
+          setError("Verification was not approved. You may try again.");
+          setStatus(prev => prev ? { ...prev, kycStatus: "rejected" } : prev);
+        } else {
+          setSuccess("Verification is still being processed. You'll be notified when complete.");
+        }
+      }
+    } catch {
+      setError("Failed to check verification status");
+    } finally {
+      setPollingStatus(false);
+    }
+  }, [refreshUser]);
+
+  // Check if Didit is configured on first load
   useEffect(() => {
     if (status && (status.kycStatus === "none" || status.kycStatus === "rejected")) {
-      // Pre-check if Onfido is available
-      fetch("/api/kyc/onfido/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
+      fetch("/api/kyc/didit/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
         .then(r => r.json())
-        .then(data => { setKycMode(data.mode === "onfido" ? "onfido" : "manual"); })
+        .then(data => { setKycMode(data.mode === "didit" ? "didit" : "manual"); })
         .catch(() => setKycMode("manual"));
+    } else if (status?.kycStatus === "pending") {
+      setKycMode("didit");
     } else {
-      setKycMode("manual"); // Already submitted, show status
+      setKycMode("manual");
     }
   }, [status]);
 
-  // Cleanup Onfido SDK on unmount
-  useEffect(() => {
-    return () => { if (onfidoInstanceRef.current?.tearDown) onfidoInstanceRef.current.tearDown(); };
-  }, []);
-
   const userTier = user?.tier || "free";
-  const tierOrder = ["free", "bronze", "silver", "gold", "platinum"];
-  const isGoldPlus = tierOrder.indexOf(userTier) >= tierOrder.indexOf("gold");
+  const currentKycLevel = getKycLevelFromStatus(status?.kycStatus || "none", userTier);
+  const currentLevelIdx = getKycLevelIndex(currentKycLevel);
+  const nextLevel = currentLevelIdx < KYC_LEVELS.length - 1 ? KYC_LEVELS[currentLevelIdx + 1] : null;
+
+  // Any tier can now access KYC — it's progressive
+  const canSubmitKyc = true;
 
   if (loading) {
     return (
@@ -235,11 +292,11 @@ export default function KYC() {
 
   return (
     <DashboardLayout title="KYC Verification">
-      <div className="p-6 max-w-2xl mx-auto space-y-6">
+      <div className="p-6 max-w-3xl mx-auto space-y-6">
         <div className="text-center mb-6">
           <Shield className="w-12 h-12 mx-auto mb-3 text-primary" />
           <h1 className="text-2xl font-display font-black text-white">KYC Verification</h1>
-          <p className="text-gray-400 text-sm mt-1">Verify your identity for enhanced platform features</p>
+          <p className="text-gray-400 text-sm mt-1">Progressive identity verification unlocks higher limits</p>
         </div>
 
         {error && (
@@ -253,28 +310,114 @@ export default function KYC() {
           </div>
         )}
 
-        {/* Not Gold+ */}
-        {!isGoldPlus && (
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-8 text-center">
-            <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-400" />
-            <h2 className="text-lg font-bold text-white mb-2">Gold Tier Required</h2>
-            <p className="text-gray-400 text-sm mb-4">Upgrade to Gold tier or higher to access KYC verification.</p>
-            <Link href="/tiers">
-              <button className="px-6 py-2.5 rounded-lg bg-primary/20 text-primary font-bold text-sm border border-primary/30 hover:bg-primary/30 transition-all">
-                View Membership Tiers
-              </button>
-            </Link>
+        {/* Current KYC Level */}
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-white">Your Verification Level</h2>
+              <p className={`text-xs font-bold uppercase tracking-wider ${KYC_LEVELS[currentLevelIdx].color}`}>
+                {KYC_LEVELS[currentLevelIdx].label}
+              </p>
+            </div>
           </div>
-        )}
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="rounded-lg bg-black/20 p-3">
+              <div className="flex items-center gap-1.5 text-gray-400 mb-1">
+                <ArrowDown className="w-3 h-3" /> Deposit Limit
+              </div>
+              <p className="text-white font-bold">{KYC_LEVELS[currentLevelIdx].depositDay}</p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <div className="flex items-center gap-1.5 text-gray-400 mb-1">
+                <ArrowUp className="w-3 h-3" /> Withdraw Limit
+              </div>
+              <p className="text-white font-bold">{KYC_LEVELS[currentLevelIdx].withdrawWeek}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* KYC Level Progression */}
+        <div className="rounded-xl border border-white/10 bg-surface-high/50 p-5">
+          <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-4">Verification Levels</h3>
+          <div className="space-y-3">
+            {KYC_LEVELS.map((level, idx) => {
+              const isComplete = idx <= currentLevelIdx;
+              const isCurrent = idx === currentLevelIdx;
+              const isNext = idx === currentLevelIdx + 1;
+              return (
+                <div key={level.level} className={`rounded-lg p-3 border transition-all ${
+                  isCurrent ? "border-primary/30 bg-primary/5" :
+                  isComplete ? "border-green-500/20 bg-green-500/5" :
+                  isNext ? "border-white/10 bg-white/[0.02]" :
+                  "border-white/5 bg-white/[0.01] opacity-60"
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                      isComplete ? "bg-green-500/20 border border-green-500/30" :
+                      isNext ? "bg-primary/10 border border-primary/20" :
+                      "bg-gray-800 border border-gray-700"
+                    }`}>
+                      {isComplete ? (
+                        <CheckCircle className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Lock className={`w-3 h-3 ${isNext ? "text-primary" : "text-gray-600"}`} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-bold ${isComplete ? "text-green-400" : isNext ? "text-white" : "text-gray-500"}`}>
+                          {level.label}
+                        </span>
+                        <span className={`text-[0.5rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                          isComplete ? "bg-green-500/10 text-green-400" :
+                          isCurrent ? "bg-primary/10 text-primary" :
+                          "bg-gray-800 text-gray-500"
+                        }`}>
+                          {level.tier}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[0.625rem] text-gray-500 mt-0.5">
+                        <span>Deposit: {level.depositDay}</span>
+                        <span>Withdraw: {level.withdrawWeek}</span>
+                      </div>
+                    </div>
+                    {isNext && (
+                      <ArrowRight className="w-4 h-4 text-primary shrink-0" />
+                    )}
+                  </div>
+                  {isNext && (
+                    <div className="mt-2 ml-10 space-y-1">
+                      <p className="text-[0.625rem] font-bold text-gray-400 uppercase tracking-wider">Required:</p>
+                      {level.requirements.map((req, i) => (
+                        <div key={i} className="flex items-center gap-1.5 text-xs text-gray-400">
+                          <div className="w-1 h-1 rounded-full bg-primary/50" />
+                          {req}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Verified */}
-        {isGoldPlus && status?.kycStatus === "verified" && (
+        {status?.kycStatus === "verified" && (
           <div className="space-y-4">
             <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6 text-center">
               <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
               <h2 className="text-xl font-bold text-green-400 mb-1">Verified</h2>
               {status.kycVerifiedAt && (
                 <p className="text-gray-400 text-xs">Verified on {new Date(status.kycVerifiedAt).toLocaleDateString()}</p>
+              )}
+              {nextLevel && (
+                <p className="text-gray-500 text-xs mt-2">
+                  Upgrade to {nextLevel.tier} to unlock {nextLevel.label} verification
+                </p>
               )}
             </div>
 
@@ -306,7 +449,7 @@ export default function KYC() {
         )}
 
         {/* Pending */}
-        {isGoldPlus && status?.kycStatus === "pending" && (
+        {status?.kycStatus === "pending" && (
           <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-6 text-center">
             <Clock className="w-12 h-12 mx-auto mb-3 text-yellow-400 animate-pulse" />
             <h2 className="text-xl font-bold text-yellow-400 mb-2">Application Pending</h2>
@@ -320,11 +463,19 @@ export default function KYC() {
                 <p className="text-gray-400">Submitted: <span className="text-white">{new Date(status.kycData.submittedAt).toLocaleString()}</span></p>
               </div>
             )}
+            <button
+              onClick={checkDiditStatus}
+              disabled={pollingStatus}
+              className="mt-4 px-6 py-2.5 rounded-lg bg-yellow-500/20 text-yellow-300 font-bold text-sm border border-yellow-500/30 hover:bg-yellow-500/30 transition-all disabled:opacity-50 inline-flex items-center gap-2"
+            >
+              {pollingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+              Check Verification Status
+            </button>
           </div>
         )}
 
         {/* Rejected */}
-        {isGoldPlus && status?.kycStatus === "rejected" && (
+        {status?.kycStatus === "rejected" && (
           <div className="space-y-4">
             <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-6 text-center">
               <XCircle className="w-12 h-12 mx-auto mb-3 text-red-400" />
@@ -336,9 +487,9 @@ export default function KYC() {
             </div>
 
             {kycMode !== "manual" ? (
-              <button onClick={startOnfido} disabled={onfidoStarting}
+              <button onClick={startDidit} disabled={diditStarting}
                 className="w-full py-3 rounded-lg bg-purple-500/20 text-purple-400 font-bold text-sm border border-purple-500/30 hover:bg-purple-500/30 flex items-center justify-center gap-2">
-                {onfidoStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
+                {diditStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
                 Retry Identity Verification
               </button>
             ) : (
@@ -352,14 +503,13 @@ export default function KYC() {
                 onSubmit={handleSubmit} submitting={submitting}
               />
             )}
-            <div id="onfido-mount" ref={onfidoContainerRef} className="rounded-lg overflow-hidden" />
           </div>
         )}
 
-        {/* None — show Onfido or manual form */}
-        {isGoldPlus && (status?.kycStatus === "none" || !status?.kycStatus) && (
+        {/* None — show Didit or manual form */}
+        {canSubmitKyc && (status?.kycStatus === "none" || !status?.kycStatus) && (
           <div className="space-y-4">
-            {/* Professional Onfido flow */}
+            {/* Professional Didit flow */}
             {kycMode !== "manual" && (
               <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-6 space-y-4">
                 <div className="flex items-center gap-3">
@@ -368,8 +518,27 @@ export default function KYC() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-white">AI-Powered Identity Verification</h3>
-                    <p className="text-xs text-gray-400">Powered by Onfido — instant ID check with liveness detection</p>
+                    <p className="text-xs text-gray-400">Powered by Didit -- instant ID check with liveness detection</p>
                   </div>
+                </div>
+
+                {/* Tier-based verification features */}
+                <div className="rounded-lg bg-black/20 p-4 space-y-3">
+                  <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">What Gets Unlocked</h4>
+                  {nextLevel && (
+                    <div className="rounded-lg bg-primary/5 border border-primary/10 p-3">
+                      <p className="text-xs text-primary font-bold mb-1">Next: {nextLevel.label} ({nextLevel.tier})</p>
+                      <p className="text-[0.625rem] text-gray-400">Deposit: {nextLevel.depositDay} | Withdraw: {nextLevel.withdrawWeek}</p>
+                      <div className="mt-2 space-y-1">
+                        {nextLevel.requirements.map((req, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-[0.625rem] text-gray-500">
+                            <div className="w-1 h-1 rounded-full bg-primary/50" />
+                            {req}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 text-center text-xs">
@@ -390,7 +559,7 @@ export default function KYC() {
                   </div>
                 </div>
 
-                {/* Name + DOB for applicant creation */}
+                {/* Name + DOB for session creation */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Full Legal Name</label>
@@ -404,18 +573,15 @@ export default function KYC() {
                   </div>
                 </div>
 
-                <button onClick={startOnfido} disabled={onfidoStarting || !fullName}
+                <button onClick={startDidit} disabled={diditStarting || !fullName}
                   className="w-full py-3 rounded-lg bg-purple-500/20 text-purple-400 font-bold text-sm border border-purple-500/30 hover:bg-purple-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                  {onfidoStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
-                  {onfidoStarting ? "Starting Verification..." : "Start Identity Verification"}
+                  {diditStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
+                  {diditStarting ? "Starting Verification..." : "Start Identity Verification"}
                 </button>
 
-                {/* Onfido SDK mounts here */}
-                <div id="onfido-mount" ref={onfidoContainerRef} className="rounded-lg overflow-hidden" />
-
                 <p className="text-[10px] text-gray-600 text-center">
-                  Your documents are processed securely by Onfido and never stored on our servers.
-                  <a href="https://onfido.com/privacy" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 ml-1 inline-flex items-center gap-0.5">
+                  Your documents are processed securely by Didit and never stored on our servers.
+                  <a href="https://didit.me/privacy" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 ml-1 inline-flex items-center gap-0.5">
                     Privacy Policy <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 </p>
@@ -434,6 +600,18 @@ export default function KYC() {
                 onSubmit={handleSubmit} submitting={submitting}
               />
             )}
+          </div>
+        )}
+
+        {/* Upgrade prompt */}
+        {nextLevel && status?.kycStatus === "verified" && (
+          <div className="text-center">
+            <Link href="/tiers">
+              <button className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm font-bold hover:bg-primary/20 transition-all">
+                Upgrade to {nextLevel.tier} for {nextLevel.label} Verification
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </Link>
           </div>
         )}
       </div>
@@ -518,11 +696,11 @@ function KycForm({
           <Upload className="w-3 h-3 inline mr-1" />
           Government ID Photo
         </label>
-        <p className="text-xs text-gray-500 mb-2">Upload a clear photo of the front of your ID document (JPG, PNG, PDF — max 10MB)</p>
+        <p className="text-xs text-gray-500 mb-2">Upload a clear photo of the front of your ID document (JPG, PNG, PDF -- max 10MB)</p>
         <label className="flex items-center justify-center w-full px-4 py-6 rounded-lg bg-black/30 border-2 border-dashed border-white/10 hover:border-primary/30 cursor-pointer transition-all">
           <input
             type="file"
-            accept=".jpg,.jpeg,.png,.webp,.pdf"
+            accept=".jpg,.jpeg,.png,.pdf"
             onChange={e => setIdDocument(e.target.files?.[0] || null)}
             className="hidden"
           />
@@ -543,7 +721,7 @@ function KycForm({
         <label className="flex items-center justify-center w-full px-4 py-6 rounded-lg bg-black/30 border-2 border-dashed border-white/10 hover:border-primary/30 cursor-pointer transition-all">
           <input
             type="file"
-            accept=".jpg,.jpeg,.png,.webp"
+            accept=".jpg,.jpeg,.png"
             onChange={e => setSelfie(e.target.files?.[0] || null)}
             className="hidden"
           />
@@ -557,7 +735,7 @@ function KycForm({
 
       <button
         type="submit"
-        disabled={submitting || !fullName || !dateOfBirth || !country || !idType}
+        disabled={submitting || !fullName || !dateOfBirth || !country || !idType || !idDocument || !selfie}
         className="w-full py-3 rounded-lg bg-primary/20 text-primary font-bold text-sm border border-primary/30 hover:bg-primary/30 transition-all disabled:opacity-50"
       >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Submit Application"}

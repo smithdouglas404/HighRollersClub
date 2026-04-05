@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Bell, X } from "lucide-react";
 
@@ -19,17 +19,29 @@ const PRIORITY_STYLES: Record<Priority, { border: string; icon: typeof Bell; ico
 
 export function BreakingNewsModal({ title, message, priority = "normal", onClose }: BreakingNewsModalProps) {
   const [visible, setVisible] = useState(true);
+  const [paused, setPaused] = useState(false);
   const style = PRIORITY_STYLES[priority];
   const Icon = style.icon;
+  const elapsedRef = useRef(0);
+  const lastTickRef = useRef(Date.now());
 
-  // Auto-dismiss after 8 seconds
+  // Auto-dismiss after 8 seconds, pausing on hover/focus
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(false);
-      onClose();
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
+    const interval = setInterval(() => {
+      if (paused) {
+        lastTickRef.current = Date.now();
+        return;
+      }
+      const now = Date.now();
+      elapsedRef.current += now - lastTickRef.current;
+      lastTickRef.current = now;
+      if (elapsedRef.current >= 8000) {
+        setVisible(false);
+        onClose();
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [onClose, paused]);
 
   const dismiss = () => {
     setVisible(false);
@@ -52,6 +64,10 @@ export function BreakingNewsModal({ title, message, priority = "normal", onClose
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ duration: 0.25 }}
             onClick={(e) => e.stopPropagation()}
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => { setPaused(false); lastTickRef.current = Date.now(); }}
+            onFocus={() => setPaused(true)}
+            onBlur={() => { setPaused(false); lastTickRef.current = Date.now(); }}
             className={`relative max-w-md w-full mx-4 rounded-xl bg-surface-low border-2 ${style.border} p-6 shadow-2xl ${
               style.pulse ? "animate-pulse" : ""
             }`}

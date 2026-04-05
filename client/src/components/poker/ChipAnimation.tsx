@@ -84,7 +84,7 @@ function ChipFlightAnim({ flight, onComplete }: { flight: ChipFlight; onComplete
       onAnimationComplete={onComplete}
     >
       {/* Stack of 3 chips */}
-      <div className="relative w-6 h-4">
+      <div className="relative w-6 h-6">
         {[0, 1, 2].map((i) => (
           <div
             key={i}

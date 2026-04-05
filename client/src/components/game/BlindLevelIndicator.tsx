@@ -37,12 +37,14 @@ export function BlindLevelIndicator({
 
   // Countdown timer
   useEffect(() => {
-    if (timeLeft <= 0) return;
     const interval = setInterval(() => {
-      setTimeLeft((prev) => Math.max(0, prev - 1));
+      setTimeLeft((prev) => {
+        if (prev <= 0) return 0;
+        return prev - 1;
+      });
     }, 1000);
     return () => clearInterval(interval);
-  }, [timeLeft]);
+  }, []);
 
   const isWarning = timeLeft > 0 && timeLeft <= 30;
   const nextLevel = blindSchedule?.find((l) => l.level === currentLevel + 1);

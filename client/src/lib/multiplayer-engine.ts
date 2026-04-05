@@ -199,9 +199,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         // Auto-rejoin table after reconnect
         if (joinedRef.current && lastBuyInRef.current > 0) {
           console.log("[ws] reconnected — auto-rejoining table", tableIdRef.current);
-          const pw = sessionStorage.getItem(`table-password-${tableIdRef.current}`) || undefined;
           const rejoinMsg: any = { type: "join_table", tableId: tableIdRef.current, buyIn: lastBuyInRef.current };
-          if (pw) rejoinMsg.password = pw;
           wsClient.send(rejoinMsg);
         }
       })
@@ -549,10 +547,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         const isJoinError = joinErrors.some(e => msg.message?.includes(e));
         if (isJoinError) {
           joinedRef.current = false;
-          // Clear stored password on incorrect password to prevent reuse
-          if (msg.message?.includes("Incorrect table password")) {
-            sessionStorage.removeItem(`table-password-${tableIdRef.current}`);
-          }
+          // No action needed on incorrect password — passwords are not persisted
         }
         setTimeout(() => setError(null), 5000);
       })

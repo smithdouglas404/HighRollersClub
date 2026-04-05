@@ -70,11 +70,15 @@ const ENV_KEY_DEFINITIONS = [
   { key: "SMTP_PASS", category: "Email", description: "SMTP password", sensitive: true },
   { key: "SMTP_FROM", category: "Email", description: "From address for emails", sensitive: false },
   // KYC
-  { key: "KYC_PROVIDER", category: "KYC", description: "KYC provider (manual|onfido|sumsub)", sensitive: false },
+  { key: "KYC_PROVIDER", category: "KYC", description: "KYC provider (manual|didit|sumsub)", sensitive: false },
   { key: "KYC_WEBHOOK_SECRET", category: "KYC", description: "KYC webhook signing secret", sensitive: true },
-  { key: "ONFIDO_API_TOKEN", category: "KYC", description: "Onfido API token for identity verification", sensitive: true },
-  { key: "ONFIDO_REGION", category: "KYC", description: "Onfido region (us|eu)", sensitive: false },
-  { key: "ONFIDO_REFERRER", category: "KYC", description: "Onfido SDK referrer pattern (e.g., *://*/*)", sensitive: false },
+  { key: "DIDIT_API_KEY", category: "KYC", description: "Didit API key for identity verification", sensitive: true },
+  { key: "DIDIT_WORKFLOW_ID", category: "KYC", description: "Didit default workflow ID", sensitive: false },
+  { key: "DIDIT_CALLBACK_URL", category: "KYC", description: "Didit webhook callback URL", sensitive: false },
+  { key: "DIDIT_WORKFLOW_BRONZE", category: "KYC", description: "Didit workflow ID for Bronze tier (liveness + face match)", sensitive: false },
+  { key: "DIDIT_WORKFLOW_SILVER", category: "KYC", description: "Didit workflow ID for Silver tier (+ phone + age)", sensitive: false },
+  { key: "DIDIT_WORKFLOW_GOLD", category: "KYC", description: "Didit workflow ID for Gold tier (full KYC + AML)", sensitive: false },
+  { key: "DIDIT_WORKFLOW_PLATINUM", category: "KYC", description: "Didit workflow ID for Platinum tier (NFC + active liveness)", sensitive: false },
   // AI & Services
   { key: "ANTHROPIC_API_KEY", category: "AI", description: "Anthropic API key for AI bots", sensitive: true },
   { key: "AI_BOT_MODEL", category: "AI", description: "AI bot model ID", sensitive: false },
@@ -576,12 +580,33 @@ export async function registerAdminRoutes(
     res.json(keys);
   });
 
+  // Keys that must never be mutated at runtime — they require a server restart
+  const BLOCKED_ENV_KEYS = new Set([
+    "SESSION_SECRET",
+    "DATABASE_URL",
+    "STRIPE_API_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "POLYGON_WALLET_KEY",
+    "NOWPAYMENTS_API_KEY",
+    "ALCHEMY_API_KEY",
+  ]);
+
   app.put("/api/admin/env-keys", requireAuth, requireAdmin, async (req, res) => {
     const { key, value } = req.body;
     if (!key || typeof key !== "string") return res.status(400).json({ message: "Key is required" });
 
     const def = ENV_KEY_DEFINITIONS.find(d => d.key === key);
     if (!def) return res.status(400).json({ message: "Unknown key" });
+
+    // Block mutation of security-critical keys at runtime
+    if (BLOCKED_ENV_KEYS.has(key)) {
+      await logAdminAction(req.user!.id, "env_key_change_blocked", "system", key,
+        { reason: "blocked_key", description: def.description },
+        req.ip || req.socket.remoteAddress);
+      return res.status(403).json({ message: `Key "${key}" cannot be changed at runtime. Restart the server with the new value.` });
+    }
+
+    const previouslySet = !!process.env[key];
 
     // Update process.env at runtime
     if (value === "" || value === null) {
@@ -591,7 +616,7 @@ export async function registerAdminRoutes(
     }
 
     await logAdminAction(req.user!.id, "env_key_change", "system", key,
-      { description: def.description, sensitive: def.sensitive },
+      { description: def.description, sensitive: def.sensitive, previouslySet, newIsSet: !!process.env[key] },
       req.ip || req.socket.remoteAddress);
 
     res.json({ success: true, key, isSet: !!process.env[key] });

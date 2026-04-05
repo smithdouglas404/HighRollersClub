@@ -14,6 +14,7 @@ import {
   type Notification, type ClubChallenge, type ClubWar,
   type MarketplaceListing, type Stake,
   type ApiKey,
+  type ClubMessage,
   walletTypeEnum,
   users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, tournamentRegistrations, playerStats,
   clubInvitations, clubAnnouncements, clubEvents,
@@ -26,6 +27,7 @@ import {
   notifications, clubChallenges, clubWars,
   marketplaceListings, stakes,
   apiKeys,
+  clubMessages,
 } from "@shared/schema";
 import { eq, and, desc, sql, inArray, gte, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -198,6 +200,7 @@ export interface IStorage {
   getPaymentByGatewayId(provider: string, gatewayPaymentId: string): Promise<Payment | undefined>;
   getUserPayments(userId: string, limit?: number, offset?: number): Promise<Payment[]>;
   getAllPayments(limit?: number, offset?: number): Promise<Payment[]>;
+  getPendingPayments(): Promise<Payment[]>;
   updatePayment(id: string, data: Partial<Payment>): Promise<Payment | undefined>;
 
   // Withdrawal Requests
@@ -273,6 +276,10 @@ export interface IStorage {
 
   // OAuth
   getUserByProvider(provider: string, providerId: string): Promise<User | undefined>;
+
+  // Club Messages (Club Chat)
+  getClubMessages(clubId: string, limit?: number): Promise<ClubMessage[]>;
+  createClubMessage(data: { clubId: string; userId: string; message: string }): Promise<ClubMessage>;
 }
 
 // ─── In-Memory Storage (fallback when no DATABASE_URL) ───────────────────────
@@ -300,6 +307,7 @@ export class MemStorage implements IStorage {
   private clubAlliancesList: ClubAlliance[] = [];
   private leagueSeasonsList: LeagueSeason[] = [];
   private chatMessagesList: ChatMessage[] = [];
+  private clubMessagesList: ClubMessage[] = [];
   private collusionAlertsList: CollusionAlert[] = [];
   private playerNotesList: PlayerNote[] = [];
 
@@ -364,6 +372,7 @@ export class MemStorage implements IStorage {
       lastDailyClaim: null,
       tier: data.tier || "free",
       tierExpiresAt: data.tierExpiresAt ?? null,
+      kycLevel: (data as any).kycLevel || "none",
       kycStatus: data.kycStatus || "none",
       kycData: data.kycData ?? null,
       kycVerifiedAt: data.kycVerifiedAt ?? null,
@@ -1115,6 +1124,10 @@ export class MemStorage implements IStorage {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(offset, offset + limit);
   }
+  async getPendingPayments() {
+    const pendingStatuses = ["pending", "confirming", "waiting"];
+    return this.paymentsList.filter(p => p.direction === "deposit" && pendingStatuses.includes(p.status));
+  }
   async updatePayment(id: string, data: Partial<Payment>) {
     const p = this.paymentsList.find(p => p.id === id);
     if (!p) return undefined;
@@ -1161,6 +1174,19 @@ export class MemStorage implements IStorage {
   }
   async getRecentChatMessages(tableId: string, limit = 50) {
     return this.chatMessagesList.filter(m => m.tableId === tableId).slice(-limit);
+  }
+
+  // ── Club Messages (Club Chat) ─────────────────────────────────────────
+  async getClubMessages(clubId: string, limit = 50) {
+    return this.clubMessagesList
+      .filter(m => m.clubId === clubId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .slice(-limit);
+  }
+  async createClubMessage(data: { clubId: string; userId: string; message: string }) {
+    const msg: ClubMessage = { id: randomUUID(), clubId: data.clubId, userId: data.userId, message: data.message, createdAt: new Date() };
+    this.clubMessagesList.push(msg);
+    return msg;
   }
 
   // ── Collusion Alerts ───────────────────────────────────────────────────
@@ -2290,6 +2316,15 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
   }
+  async getPendingPayments() {
+    return this.db.select().from(payments)
+      .where(
+        and(
+          eq(payments.direction, "deposit"),
+          inArray(payments.status, ["pending", "confirming", "waiting"]),
+        ),
+      );
+  }
   async updatePayment(id: string, data: Partial<Payment>) {
     const [p] = await this.db.update(payments).set({ ...data, updatedAt: new Date() })
       .where(eq(payments.id, id)).returning();
@@ -2354,6 +2389,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(chatMessages.tableId, tableId))
       .orderBy(desc(chatMessages.createdAt))
       .limit(limit);
+  }
+
+  // ── Club Messages (Club Chat) ─────────────────────────────────────────
+  async getClubMessages(clubId: string, limit = 50) {
+    return this.db.select().from(clubMessages)
+      .where(eq(clubMessages.clubId, clubId))
+      .orderBy(desc(clubMessages.createdAt))
+      .limit(limit)
+      .then(rows => rows.reverse()); // return in chronological order
+  }
+  async createClubMessage(data: { clubId: string; userId: string; message: string }) {
+    const [msg] = await this.db.insert(clubMessages).values(data).returning();
+    return msg;
   }
 
   // ── Collusion Alerts ───────────────────────────────────────────────────
@@ -2593,4 +2641,8 @@ export class DatabaseStorage implements IStorage {
 }
 
 // Export singleton - use DatabaseStorage if DATABASE_URL exists, otherwise MemStorage
+// In production, refuse to run without a database — in-memory storage loses all data on restart
+if (!hasDatabase() && process.env.NODE_ENV === "production") {
+  throw new Error("FATAL: DATABASE_URL must be set in production. In-memory storage is not safe for real users.");
+}
 export const storage: IStorage = hasDatabase() ? new DatabaseStorage() : new MemStorage();

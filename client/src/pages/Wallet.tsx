@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
@@ -15,7 +15,7 @@ import {
   Wallet as WalletIcon, Gamepad2, ArrowRightLeft, Trophy,
   Send, ArrowDown, QrCode, Copy, Check, ExternalLink,
   ChevronDown, ChevronRight, Lock, Unlock, AlertTriangle, ArrowRight,
-  History, Timer, Shield, Link2, Unlink,
+  History, Timer, Shield, Link2, Unlink, Crown,
 } from "lucide-react";
 
 // ── Wallet Config ─────────────────────────────────────────────────────
@@ -27,26 +27,26 @@ const WALLET_CONFIG = [
   { key: "bonus" as WalletType, label: "Bonus", shortLabel: "Bonus", desc: "Rewards & rakeback", icon: Sparkles, color: "text-pink-400", border: "border-pink-500/20", bg: "bg-pink-500/10", gradient: "from-pink-500/20 to-rose-600/10", rgb: "236,72,153" },
 ];
 
-const CRYPTO_CURRENCIES = [
-  { id: "USD", name: "Credit/Debit Card", icon: "💳", color: "text-emerald-400" },
-  { id: "BTC", name: "Bitcoin", icon: "₿", color: "text-orange-400" },
-  { id: "ETH", name: "Ethereum", icon: "Ξ", color: "text-blue-400" },
-  { id: "USDT", name: "Tether", icon: "$", color: "text-green-400" },
-  { id: "SOL", name: "Solana", icon: "◎", color: "text-purple-400" },
-  { id: "LTC", name: "Litecoin", icon: "Ł", color: "text-gray-400" },
-  { id: "DOGE", name: "Dogecoin", icon: "Ð", color: "text-primary" },
-];
+// Display metadata for currencies — actual availability comes from the server
+const CURRENCY_META: Record<string, { name: string; icon: string; color: string }> = {
+  USD: { name: "Credit/Debit Card", icon: "💳", color: "text-emerald-400" },
+  BTC: { name: "Bitcoin", icon: "₿", color: "text-orange-400" },
+  ETH: { name: "Ethereum", icon: "Ξ", color: "text-blue-400" },
+  USDT: { name: "Tether", icon: "$", color: "text-green-400" },
+  SOL: { name: "Solana", icon: "◎", color: "text-purple-400" },
+  LTC: { name: "Litecoin", icon: "Ł", color: "text-gray-400" },
+  DOGE: { name: "Dogecoin", icon: "Ð", color: "text-primary" },
+};
 
-const GATEWAYS = [
+// These are populated from /api/payments/currencies and /api/payments/gateways at runtime
+// Fallback only used if API is unreachable during development
+const FALLBACK_CURRENCIES = Object.entries(CURRENCY_META).map(([id, meta]) => ({ id, ...meta }));
+
+const FALLBACK_GATEWAYS = [
   { id: "stripe", name: "Stripe", desc: "Credit/debit card, instant", badge: "Cards" },
   { id: "nowpayments", name: "NOWPayments", desc: "200+ coins, simple setup", badge: "Most Coins" },
   { id: "direct", name: "Direct Wallet", desc: "No middleman, lowest fees", badge: "Low Fees" },
 ];
-
-const FEE_ESTIMATES: Record<string, string> = {
-  USD: "No fee", USDT: "~1 USDT", BTC: "~0.0001 BTC", ETH: "~0.002 ETH", SOL: "~0.001 SOL",
-  LTC: "~0.001 LTC", DOGE: "~2 DOGE",
-};
 
 type FilterType = "all" | "bonus" | "buy_in" | "cashout" | "purchase" | "prize" | "transfer" | "deposit" | "withdraw";
 
@@ -68,6 +68,23 @@ const ALLOCATION_PRESETS = [
   { label: "Cash Focus", alloc: { main: 20, cash_game: 60, sng: 10, tournament: 10 } },
   { label: "Tourney Focus", alloc: { main: 20, cash_game: 10, sng: 10, tournament: 60 } },
 ];
+
+// ── Tier Deposit/Withdrawal Limits ────────────────────────────────────
+const TIER_LIMITS: Record<string, { depositDay: number; withdrawWeek: number; label: string; realMoney: boolean }> = {
+  free: { depositDay: 0, withdrawWeek: 0, label: "Free", realMoney: false },
+  bronze: { depositDay: 200, withdrawWeek: 500, label: "Bronze", realMoney: true },
+  silver: { depositDay: 1000, withdrawWeek: 2500, label: "Silver", realMoney: true },
+  gold: { depositDay: 5000, withdrawWeek: 10000, label: "Gold", realMoney: true },
+  platinum: { depositDay: 25000, withdrawWeek: 50000, label: "Platinum", realMoney: true },
+};
+
+const TIER_ORDER = ["free", "bronze", "silver", "gold", "platinum"];
+
+function getNextTier(current: string): string | null {
+  const idx = TIER_ORDER.indexOf(current);
+  if (idx < 0 || idx >= TIER_ORDER.length - 1) return null;
+  return TIER_ORDER[idx + 1];
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────
 function getTypeIcon(type: string) {
@@ -376,11 +393,31 @@ const CURRENCY_ICON_MAP: Record<string, { icon: string; color: string }> = {
 };
 
 function DepositPanel() {
+  const { user } = useAuth();
   const { balances } = useWallet();
   const { toast } = useToast();
+  const userTier = user?.tier || "free";
+  const limits = TIER_LIMITS[userTier] || TIER_LIMITS.free;
+
+  if (!limits.realMoney) {
+    return (
+      <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 p-6 text-center">
+        <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-400/70" />
+        <h3 className="text-lg font-bold text-white mb-2">Deposits Unavailable</h3>
+        <p className="text-sm text-gray-400 mb-4">Free tier accounts can only use play chips. Upgrade to Bronze or higher to deposit real money.</p>
+        <Link href="/tiers">
+          <button className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold uppercase tracking-wider text-black transition-all"
+            style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}>
+            <Crown className="w-4 h-4" />
+            Upgrade to Unlock Deposits
+          </button>
+        </Link>
+      </div>
+    );
+  }
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [currency, setCurrency] = useState("USDT");
-  const [gateway, setGateway] = useState("nowpayments");
+  const [gateway, setGateway] = useState("");
   const [amount, setAmount] = useState("");
   const [allocation, setAllocation] = useState<Record<string, number>>({ main: 100, cash_game: 0, sng: 0, tournament: 0 });
   const [lockedWallets, setLockedWallets] = useState<Set<string>>(new Set());
@@ -390,8 +427,8 @@ function DepositPanel() {
   const [expirySeconds, setExpirySeconds] = useState(0);
 
   // Dynamic currencies & gateways from backend
-  const [fetchedCurrencies, setFetchedCurrencies] = useState<typeof CRYPTO_CURRENCIES | null>(null);
-  const [fetchedGateways, setFetchedGateways] = useState<typeof GATEWAYS | null>(null);
+  const [fetchedCurrencies, setFetchedCurrencies] = useState<typeof FALLBACK_CURRENCIES | null>(null);
+  const [fetchedGateways, setFetchedGateways] = useState<typeof FALLBACK_GATEWAYS | null>(null);
 
   useEffect(() => {
     // Fetch supported currencies from backend
@@ -440,8 +477,15 @@ function DepositPanel() {
   }, []);
 
   // Use fetched data if available, otherwise fall back to hardcoded constants
-  const activeCurrencies = fetchedCurrencies || CRYPTO_CURRENCIES;
-  const activeGateways = fetchedGateways || GATEWAYS;
+  const activeCurrencies = fetchedCurrencies || FALLBACK_CURRENCIES;
+  const activeGateways = fetchedGateways || FALLBACK_GATEWAYS;
+
+  // Default gateway to first available if not set
+  useEffect(() => {
+    if (!gateway && activeGateways.length > 0) {
+      setGateway(activeGateways[0].id);
+    }
+  }, [gateway, activeGateways]);
 
   const totalPercent = Object.values(allocation).reduce((s, v) => s + v, 0);
   const amountNum = parseInt(amount) || 0;
@@ -507,7 +551,12 @@ function DepositPanel() {
   const handleDeposit = async () => {
     const amountCents = amountNum * 100;
     if (!amountCents || amountCents < 100) return;
-    const allocationEntries = Object.entries(allocation)
+    // Guard: if all allocations are 0%, distribute equally
+    const totalAlloc = Object.values(allocation).reduce((s, v) => s + v, 0);
+    const effectiveAllocation = totalAlloc === 0
+      ? Object.fromEntries(Object.keys(allocation).map((k, i, arr) => [k, Math.floor(100 / arr.length) + (i < 100 % arr.length ? 1 : 0)]))
+      : allocation;
+    const allocationEntries = Object.entries(effectiveAllocation)
       .filter(([_, pct]) => pct > 0)
       .map(([walletType, pct]) => ({ walletType: walletType as WalletType, amount: Math.round(amountCents * pct / 100) }));
     const allocSum = allocationEntries.reduce((s, a) => s + a.amount, 0);
@@ -845,8 +894,28 @@ function DepositPanel() {
 
 // ── Withdraw Panel ────────────────────────────────────────────────────
 function WithdrawPanel() {
+  const { user } = useAuth();
   const { balances, refreshBalances } = useWallet();
   const { toast } = useToast();
+  const userTier = user?.tier || "free";
+  const wLimits = TIER_LIMITS[userTier] || TIER_LIMITS.free;
+
+  if (!wLimits.realMoney) {
+    return (
+      <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 p-6 text-center">
+        <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-400/70" />
+        <h3 className="text-lg font-bold text-white mb-2">Withdrawals Unavailable</h3>
+        <p className="text-sm text-gray-400 mb-4">Free tier accounts can only use play chips. Upgrade to Bronze or higher to withdraw real money.</p>
+        <Link href="/tiers">
+          <button className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold uppercase tracking-wider text-black transition-all"
+            style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}>
+            <Crown className="w-4 h-4" />
+            Upgrade to Unlock Withdrawals
+          </button>
+        </Link>
+      </div>
+    );
+  }
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USDT");
   const [address, setAddress] = useState("");
@@ -932,7 +1001,7 @@ function WithdrawPanel() {
             </button>
           ))}
         </div>
-        <p className="text-[0.5625rem] text-gray-600 mt-1">Estimated fee: {FEE_ESTIMATES[currency] || "varies"}</p>
+        <p className="text-[0.5625rem] text-gray-600 mt-1">Estimated fee: {"varies by network"}</p>
       </div>
 
       <div>
@@ -958,7 +1027,7 @@ function WithdrawPanel() {
                 { label: "Amount", value: `${parseInt(amount || "0").toLocaleString()} chips` },
                 { label: "Currency", value: currency },
                 { label: "Address", value: truncateAddress(address), mono: true },
-                { label: "Est. Network Fee", value: FEE_ESTIMATES[currency] || "varies" },
+                { label: "Est. Network Fee", value: "varies by network" },
                 { label: "Processing", value: "1-24 hours" },
               ].map(row => (
                 <div key={row.label} className="flex items-center justify-between">
@@ -1540,7 +1609,7 @@ function ConnectedWalletsSection() {
 
 // ── Main Page ─────────────────────────────────────────────────────────
 export default function Wallet() {
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const [location] = useLocation();
 
@@ -1693,6 +1762,102 @@ export default function Wallet() {
             </div>
           </div>
         </motion.div>
+
+        {/* ── Tier Limits & Usage ──────────────────────────────────── */}
+        {(() => {
+          const userTier = user?.tier || "free";
+          const limits = TIER_LIMITS[userTier] || TIER_LIMITS.free;
+          const nextTier = getNextTier(userTier);
+          const nextLimits = nextTier ? TIER_LIMITS[nextTier] : null;
+
+          // Mock usage data — in production, fetch from /api/wallet/usage
+          const todayDeposited = 0;
+          const weekWithdrawn = 0;
+          const depositPct = limits.depositDay > 0 ? Math.min(100, (todayDeposited / limits.depositDay) * 100) : 0;
+          const withdrawPct = limits.withdrawWeek > 0 ? Math.min(100, (weekWithdrawn / limits.withdrawWeek) * 100) : 0;
+          const nearDepositLimit = depositPct >= 80;
+          const nearWithdrawLimit = withdrawPct >= 80;
+
+          return (
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.05 }}
+              className="rounded-2xl p-5 sm:p-6"
+              style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xs font-display font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "#d4af37" }}>
+                  <Crown className="w-4 h-4" style={{ color: "rgba(212,175,55,0.7)" }} /> {limits.label} Tier Limits
+                </h2>
+                <Link href="/tiers">
+                  <span className="text-[0.625rem] text-primary hover:text-white cursor-pointer transition-colors uppercase tracking-wider font-bold">
+                    Manage Tier
+                  </span>
+                </Link>
+              </div>
+
+              {!limits.realMoney ? (
+                <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 p-5 text-center">
+                  <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-amber-400/70" />
+                  <p className="text-sm font-bold text-white mb-1">Play Chips Only</p>
+                  <p className="text-xs text-gray-400 mb-3">Free tier does not support real money deposits or withdrawals.</p>
+                  <Link href="/tiers">
+                    <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black transition-all"
+                      style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}>
+                      <Crown className="w-3.5 h-3.5" />
+                      Upgrade to Bronze for Real Money
+                    </button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Deposit usage */}
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                        <ArrowDown className="w-3.5 h-3.5 text-green-400" /> Daily Deposit
+                      </div>
+                      <span className="text-[0.5rem] text-gray-600 uppercase tracking-wider">Today</span>
+                    </div>
+                    <p className="text-lg font-bold text-white mb-1">
+                      ${todayDeposited.toLocaleString()} <span className="text-xs text-gray-500 font-normal">of ${limits.depositDay.toLocaleString()}</span>
+                    </p>
+                    <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${nearDepositLimit ? "bg-amber-500" : "bg-green-500/60"}`}
+                        style={{ width: `${depositPct}%` }} />
+                    </div>
+                    {nearDepositLimit && nextLimits && (
+                      <p className="text-[0.5625rem] text-amber-400 mt-1.5 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Upgrade to {nextLimits.label} for ${nextLimits.depositDay.toLocaleString()}/day
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Withdraw usage */}
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                        <Send className="w-3.5 h-3.5 text-blue-400" /> Weekly Withdrawal
+                      </div>
+                      <span className="text-[0.5rem] text-gray-600 uppercase tracking-wider">This Week</span>
+                    </div>
+                    <p className="text-lg font-bold text-white mb-1">
+                      ${weekWithdrawn.toLocaleString()} <span className="text-xs text-gray-500 font-normal">of ${limits.withdrawWeek.toLocaleString()}</span>
+                    </p>
+                    <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${nearWithdrawLimit ? "bg-amber-500" : "bg-blue-500/60"}`}
+                        style={{ width: `${withdrawPct}%` }} />
+                    </div>
+                    {nearWithdrawLimit && nextLimits && (
+                      <p className="text-[0.5625rem] text-amber-400 mt-1.5 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Upgrade to {nextLimits.label} for ${nextLimits.withdrawWeek.toLocaleString()}/week
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          );
+        })()}
 
         {/* ── Wallet Cards ────────────────────────────────────────────── */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.1 }}>

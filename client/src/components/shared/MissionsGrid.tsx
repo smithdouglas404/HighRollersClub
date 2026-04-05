@@ -34,6 +34,7 @@ interface MissionsGridProps {
 
 export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCount, onClaim }: MissionsGridProps) {
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   if (missions.length === 0) {
     return (
       <div className="text-center py-4">
@@ -58,7 +59,7 @@ export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCo
         </div>
       )}
       <div className="grid grid-cols-3 gap-3">
-        {missions.slice(0, maxVisible).map((mission) => {
+        {(showAll ? missions : missions.slice(0, maxVisible)).map((mission) => {
           const Icon = MISSION_ICON_MAP[mission.type] || Target;
           const badgeUrl = MISSION_BADGE_MAP[mission.type];
           const progressPct = Math.min(Math.round((mission.progress / mission.target) * 100), 100);
@@ -112,6 +113,16 @@ export function MissionsGrid({ missions, maxVisible = 6, showHeader, completedCo
           );
         })}
       </div>
+      {!showAll && missions.length > maxVisible && (
+        <div className="flex justify-center mt-3">
+          <button
+            onClick={() => setShowAll(true)}
+            className="text-xs font-bold text-primary hover:text-primary/80 transition-colors uppercase tracking-wider"
+          >
+            View All Missions ({missions.length})
+          </button>
+        </div>
+      )}
     </>
   );
 }

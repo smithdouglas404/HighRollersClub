@@ -13,7 +13,10 @@ import {
   Shield, Medal, Gamepad2, Activity,
   Layers, Wifi, Image, Megaphone, LayoutDashboard,
   Target, Clock, CheckCircle2, Sparkles,
-  Mail, Send, RefreshCw
+  Mail, Send, RefreshCw,
+  DollarSign, BarChart3, Eye, UserCog,
+  Pencil, Ban, UserMinus, Globe,
+  PlayCircle, ChevronRight, Zap
 } from "lucide-react";
 import { ClubTournaments } from "@/components/club/ClubTournaments";
 import { ClubChatSidebar } from "@/components/shared/ClubChatSidebar";
@@ -67,6 +70,21 @@ export default function ClubDashboard() {
   } = useClub();
 
   const [activeTab, setActiveTab] = useState<"overview" | "members" | "tournaments" | "leaderboard" | "financials">("overview");
+  type SidebarSection = "dashboard" | "tables" | "live-tables" | "tournament-center" | "member-registry" | "revenue-reports" | "global-settings";
+  const [sidebarSection, setSidebarSection] = useState<SidebarSection>("dashboard");
+
+  // Rake report state
+  const [rakeReport, setRakeReport] = useState<{ period: string; totalRake: number; tableBreakdown: { tableName: string; rake: number; hands: number }[] } | null>(null);
+  const [rakeReportLoading, setRakeReportLoading] = useState(false);
+  const [rakeReportPeriod, setRakeReportPeriod] = useState<"day" | "week" | "month">("week");
+
+  // Enhanced stats state
+  const [enhancedStats, setEnhancedStats] = useState<{
+    activeTables: number;
+    volume24h: number;
+    avgPotSize: number;
+    totalRakeCollected: number;
+  }>({ activeTables: 0, volume24h: 0, avgPotSize: 0, totalRakeCollected: 0 });
   const [creatingTable, setCreatingTable] = useState(false);
   const [clubTables, setClubTables] = useState<any[]>([]);
   const [clubTablesLoading, setClubTablesLoading] = useState(false);
@@ -195,6 +213,29 @@ export default function ClubDashboard() {
       .catch(() => setChartData([]))
       .finally(() => setChartLoading(false));
   }, [club, activeTab]);
+
+  // Fetch rake report when revenue tab is active
+  useEffect(() => {
+    if (!club || sidebarSection !== "revenue-reports") return;
+    setRakeReportLoading(true);
+    fetch(`/api/clubs/${club.id}/rake-report?period=${rakeReportPeriod}`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then((data) => { if (data) setRakeReport(data); })
+      .catch(() => setRakeReport(null))
+      .finally(() => setRakeReportLoading(false));
+  }, [club, sidebarSection, rakeReportPeriod]);
+
+  // Derive enhanced stats from existing data
+  useEffect(() => {
+    if (!club) return;
+    const activeTables = clubTables.filter((t: any) => t.status === "playing").length;
+    const volume24h = clubTables.reduce((sum: number, t: any) => sum + (t.totalPot ?? 0), 0);
+    const avgPotSize = clubTables.length > 0
+      ? Math.round(clubTables.reduce((sum: number, t: any) => sum + (t.currentPot ?? 0), 0) / Math.max(clubTables.length, 1))
+      : 0;
+    const totalRakeCollected = rakeReport?.totalRake ?? 0;
+    setEnhancedStats({ activeTables, volume24h, avgPotSize, totalRakeCollected });
+  }, [club, clubTables, rakeReport]);
 
   const handleGenerateChallenges = async () => {
     if (generatingChallenges || !club) return;
@@ -344,11 +385,22 @@ export default function ClubDashboard() {
     { key: "financials" as const, label: "Financials", icon: TrendingUp, count: null },
   ];
 
+  const sidebarNavItems: { key: SidebarSection; label: string; icon: any; badge?: number }[] = [
+    { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { key: "tables", label: "Tables", icon: Layers, badge: clubTables.length },
+    { key: "live-tables", label: "Live Tables", icon: PlayCircle, badge: clubTables.filter((t: any) => t.status === "playing").length },
+    { key: "tournament-center", label: "Tournament Center", icon: Trophy, badge: clubTournaments.length },
+    { key: "member-registry", label: "Member Registry", icon: UserCog, badge: members.length },
+    { key: "revenue-reports", label: "Revenue Reports", icon: BarChart3 },
+    { key: "global-settings", label: "Global Settings", icon: Settings },
+  ];
+
   const statsCards = [
-    { label: "Members", value: club?.memberCount ?? members.length, icon: Users, color: "text-[#c9a84c]" },
-    { label: "Online Now", value: onlineCount, icon: Wifi, color: "text-[#c9a84c]" },
-    { label: "Hands Played", value: totalHands, icon: Gamepad2, color: "text-[#c9a84c]" },
-    { label: "Total Chips", value: totalChips, icon: Coins, color: "text-[#c9a84c]" },
+    { label: "Total Members", value: club?.memberCount ?? members.length, icon: Users, color: "text-[#c9a84c]" },
+    { label: "Active Tables", value: enhancedStats.activeTables, icon: Layers, color: "text-[#c9a84c]" },
+    { label: "24h Volume", value: enhancedStats.volume24h, icon: DollarSign, color: "text-[#c9a84c]", prefix: "" },
+    { label: "Avg Pot Size", value: enhancedStats.avgPotSize, icon: Zap, color: "text-[#c9a84c]" },
+    { label: "Total Rake", value: enhancedStats.totalRakeCollected, icon: TrendingUp, color: "text-[#c9a84c]" },
   ];
 
   return (
@@ -604,13 +656,88 @@ export default function ClubDashboard() {
                 </div>
               </motion.div>
 
+              {/* ── Main Layout: Sidebar + Content ── */}
+              <div className="flex gap-6">
+                {/* ── Left Sidebar Navigation ── */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="hidden lg:block w-56 shrink-0"
+                >
+                  <div
+                    className="rounded-md overflow-hidden sticky top-4"
+                    style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(16px)", border: "1px solid rgba(212,175,55,0.12)" }}
+                  >
+                    <div className="p-3 border-b border-white/[0.04]">
+                      <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#c9a84c]/60">Navigation</span>
+                    </div>
+                    <nav className="p-1.5 space-y-0.5">
+                      {sidebarNavItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = sidebarSection === item.key;
+                        return (
+                          <button
+                            key={item.key}
+                            data-testid={`sidebar-${item.key}`}
+                            onClick={() => {
+                              setSidebarSection(item.key);
+                              // Map sidebar sections to legacy tabs for backward compat
+                              if (item.key === "dashboard") setActiveTab("overview");
+                              else if (item.key === "tables" || item.key === "live-tables") setActiveTab("overview");
+                              else if (item.key === "tournament-center") setActiveTab("tournaments");
+                              else if (item.key === "member-registry") setActiveTab("members");
+                              else if (item.key === "revenue-reports") setActiveTab("financials");
+                              else if (item.key === "global-settings") navigate("/club/settings");
+                            }}
+                            className={cn(
+                              "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all group",
+                              isActive
+                                ? "bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/20"
+                                : "text-gray-400 hover:text-white hover:bg-white/[0.03] border border-transparent"
+                            )}
+                          >
+                            <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-[#d4af37]" : "text-gray-500 group-hover:text-gray-300")} />
+                            <span className="flex-1 text-left truncate">{item.label}</span>
+                            {item.badge !== undefined && item.badge > 0 && (
+                              <span className={cn(
+                                "text-[9px] font-bold px-1.5 py-0.5 rounded-full",
+                                isActive ? "bg-[#d4af37]/20 text-[#d4af37]" : "bg-white/5 text-gray-500"
+                              )}>
+                                {item.badge}
+                              </span>
+                            )}
+                            <ChevronRight className={cn("w-3 h-3 shrink-0 transition-transform", isActive ? "text-[#d4af37]/50" : "text-gray-600 opacity-0 group-hover:opacity-100")} />
+                          </button>
+                        );
+                      })}
+                    </nav>
+
+                    {/* Quick Online Status */}
+                    <div className="p-3 border-t border-white/[0.04]">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+                        </span>
+                        <span className="text-[10px] text-green-400 font-bold">{onlineCount} online</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* ── Main Content Area ── */}
+                <div className="flex-1 min-w-0">
+
               {/* ── Stats Overview Row ── */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
                 {statsCards.map((stat, i) => {
                   const Icon = stat.icon;
                   return (
-                    <div
+                    <motion.div
                       key={stat.label}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
                       data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}
                       className="stats-card rounded-md p-4 hover:border-[#c9a84c]/40 hover:shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-all duration-200 relative overflow-hidden"
                       style={{
@@ -628,7 +755,7 @@ export default function ClubDashboard() {
                       <p className="font-display font-bold text-white text-lg">
                         <AnimatedNumber value={stat.value} />
                       </p>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -660,8 +787,8 @@ export default function ClubDashboard() {
                 </motion.div>
               )}
 
-              {/* ── Tab Navigation with Animated Underline ── */}
-              <div className="flex gap-1 mb-6 bg-surface-low/30 rounded-md p-1 border border-white/[0.04]">
+              {/* ── Mobile Tab Navigation (hidden on lg where sidebar shows) ── */}
+              <div className="flex gap-1 mb-6 bg-surface-low/30 rounded-md p-1 border border-white/[0.04] lg:hidden">
                 {tabs.map(tab => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.key;
@@ -693,11 +820,69 @@ export default function ClubDashboard() {
                 })}
               </div>
 
-              {/* ── Overview Tab Content ── */}
-              {activeTab === "overview" && (
+              {/* ── Overview Tab Content (Dashboard / Tables / Live Tables) ── */}
+              {(activeTab === "overview" || sidebarSection === "dashboard" || sidebarSection === "tables" || sidebarSection === "live-tables") && activeTab === "overview" && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left side: Club Tables (2/3 width) */}
-                  <div className="lg:col-span-2">
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* ── Featured Tables (Live with Players) ── */}
+                    {clubTables.filter((t: any) => t.status === "playing" && (t.playerCount ?? 0) > 0).length > 0 && (
+                      <div className="rounded-md overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.15)" }}>
+                        <div className="px-5 py-3 border-b border-[#d4af37]/10 flex items-center justify-between">
+                          <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+                            <PlayCircle className="w-4 h-4 text-[#d4af37]" /> Featured Tables
+                            <span className="relative flex h-2 w-2 ml-1">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+                            </span>
+                          </h3>
+                          <span className="text-[10px] text-[#d4af37]/60 font-bold uppercase tracking-wider">Live Now</span>
+                        </div>
+                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {clubTables
+                            .filter((t: any) => t.status === "playing" && (t.playerCount ?? 0) > 0)
+                            .sort((a: any, b: any) => (b.playerCount ?? 0) - (a.playerCount ?? 0))
+                            .map((table: any, i: number) => (
+                              <motion.div
+                                key={table.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: i * 0.08 }}
+                                className="rounded-md p-4 relative overflow-hidden group cursor-pointer hover:border-[#d4af37]/30 transition-all"
+                                style={{ background: "linear-gradient(135deg, rgba(212,175,55,0.05) 0%, rgba(15,15,20,0.9) 50%)", border: "1px solid rgba(212,175,55,0.12)" }}
+                                onClick={() => navigate(`/game/${table.id}`)}
+                              >
+                                <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #d4af37, transparent)" }} />
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="text-sm font-bold text-white truncate">{table.name}</h4>
+                                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/15 border border-green-500/20 text-[9px] font-bold uppercase tracking-wider text-green-400">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
+                                    </span>
+                                    LIVE
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                      <Users className="w-3.5 h-3.5 text-[#c9a84c]" />
+                                      <span className="font-bold text-white">{table.playerCount ?? 0}</span>
+                                      <span>/ {table.maxPlayers ?? 6}</span>
+                                    </div>
+                                    <span className="text-[10px] text-gray-500">{table.smallBlind}/{table.bigBlind}</span>
+                                  </div>
+                                  <span className="text-[10px] font-bold text-[#c9a84c] group-hover:underline uppercase tracking-wider">
+                                    Watch <Eye className="w-3 h-3 inline" />
+                                  </span>
+                                </div>
+                              </motion.div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Club Tables ── */}
                     <div className="rounded-md overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                       <div className="px-5 py-3 border-b border-white/[0.05] flex items-center justify-between">
                         <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
@@ -1097,7 +1282,7 @@ export default function ClubDashboard() {
                     </div>
 
                     {/* Club Chat */}
-                    <ClubChatSidebar clubName={club?.name} className="mt-4" />
+                    <ClubChatSidebar clubId={club?.id} clubName={club?.name} className="mt-4" />
                   </div>
                 </div>
               )}
@@ -1157,12 +1342,23 @@ export default function ClubDashboard() {
               )}
 
               {activeTab === "members" && <div>
+                {/* Enhanced Member Registry Table */}
                 <div className="rounded-md overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <div className="hidden sm:grid grid-cols-[1fr_100px_100px_80px] gap-4 px-4 py-2 border-b border-white/[0.04] text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-                      <span>Player</span>
-                      <span>Chips</span>
-                      <span>Hands</span>
-                      <span>Status</span>
+                    <div className="px-5 py-3 border-b border-white/[0.05] flex items-center justify-between">
+                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+                        <UserCog className="w-4 h-4 text-[#c9a84c]" /> Member Registry
+                      </h3>
+                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{members.length} total</span>
+                    </div>
+
+                    {/* Enhanced table header */}
+                    <div className="hidden sm:grid grid-cols-[48px_1fr_100px_110px_80px_100px] gap-4 px-4 py-2 border-b border-white/[0.04] text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                      <span></span>
+                      <span>Member</span>
+                      <span>Join Date</span>
+                      <span>Contribution</span>
+                      <span>Role</span>
+                      <span className="text-right">Actions</span>
                     </div>
 
                     {members.length === 0 ? (
@@ -1177,12 +1373,16 @@ export default function ClubDashboard() {
                       members.map((member, i) => {
                         const ms = memberStatsMap[member.userId];
                         const isOnline = onlineUserIds.has(member.userId);
-                        const status = isOnline ? "Active" : member.role === "owner" ? "VIP" : "Offline";
-                        const statusColor = isOnline
-                          ? "bg-secondary/10 text-secondary"
-                          : status === "VIP"
-                            ? "bg-primary/10 text-primary"
-                            : "bg-white/5 text-muted-foreground";
+                        const roleBadgeColors: Record<string, string> = {
+                          owner: "bg-[#d4af37]/15 text-[#d4af37] border-[#d4af37]/25",
+                          admin: "bg-purple-500/15 text-purple-400 border-purple-500/25",
+                          member: "bg-white/5 text-gray-400 border-white/10",
+                        };
+                        const roleColor = roleBadgeColors[member.role] || roleBadgeColors.member;
+                        const totalContribution = member.chipBalance + ((ms as any)?.totalWagered ?? ms?.handsPlayed ?? 0) * 10;
+                        const joinDate = member.joinedAt
+                          ? new Date(member.joinedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" })
+                          : "N/A";
 
                         return (
                           <motion.div
@@ -1191,28 +1391,75 @@ export default function ClubDashboard() {
                             animate={{ opacity: 1 }}
                             transition={{ delay: i * 0.03 }}
                             data-testid={`row-member-${member.userId}`}
-                            className="flex flex-col sm:grid sm:grid-cols-[1fr_100px_100px_80px] gap-2 sm:gap-4 px-4 py-3 items-start sm:items-center border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors"
+                            className="flex flex-col sm:grid sm:grid-cols-[48px_1fr_100px_110px_80px_100px] gap-2 sm:gap-4 px-4 py-3 items-start sm:items-center border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors"
                           >
-                            <div className="flex items-center gap-3 min-w-0">
+                            {/* Avatar with online indicator */}
+                            <div className="relative shrink-0">
                               <MemberAvatar
                                 avatarId={member.avatarId}
                                 displayName={member.displayName}
                                 size="sm"
                               />
-                              <div className="min-w-0">
-                                <p className="font-bold text-white text-sm truncate">{member.displayName}</p>
-                                <p className="text-[10px] text-muted-foreground truncate">@{member.username}</p>
-                              </div>
+                              {isOnline && (
+                                <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-400 border-2 border-[#0f0f14]" />
+                                </span>
+                              )}
                             </div>
-                            <span className="text-sm font-display font-bold text-secondary">
-                              {member.chipBalance.toLocaleString()}
+
+                            {/* Member Name */}
+                            <div className="min-w-0">
+                              <p className="font-bold text-white text-sm truncate">{member.displayName}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">@{member.username}</p>
+                            </div>
+
+                            {/* Join Date */}
+                            <span className="text-xs text-gray-400">{joinDate}</span>
+
+                            {/* Total Contribution */}
+                            <span className="text-sm font-display font-bold text-[#c9a84c]">
+                              {totalContribution.toLocaleString()}
                             </span>
-                            <span className="text-sm text-muted-foreground">
-                              {ms?.handsPlayed ?? 0}
+
+                            {/* Role Badge */}
+                            <span className={cn(
+                              "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border inline-flex items-center gap-1 w-fit",
+                              roleColor
+                            )}>
+                              {member.role === "owner" && <Crown className="w-2.5 h-2.5" />}
+                              {member.role === "admin" && <Shield className="w-2.5 h-2.5" />}
+                              {member.role}
                             </span>
-                            <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full", statusColor)}>
-                              {status}
-                            </span>
+
+                            {/* Actions */}
+                            {isAdminOrOwner && member.role !== "owner" ? (
+                              <div className="flex gap-1 justify-end">
+                                <button
+                                  data-testid={`btn-edit-${member.userId}`}
+                                  className="p-1.5 rounded-md bg-white/5 hover:bg-[#c9a84c]/15 text-gray-400 hover:text-[#c9a84c] transition-colors"
+                                  title="Edit member"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  data-testid={`btn-kick-${member.userId}`}
+                                  className="p-1.5 rounded-md bg-white/5 hover:bg-orange-500/15 text-gray-400 hover:text-orange-400 transition-colors"
+                                  title="Kick member"
+                                >
+                                  <UserMinus className="w-3 h-3" />
+                                </button>
+                                <button
+                                  data-testid={`btn-ban-${member.userId}`}
+                                  className="p-1.5 rounded-md bg-white/5 hover:bg-red-500/15 text-gray-400 hover:text-red-400 transition-colors"
+                                  title="Ban member"
+                                >
+                                  <Ban className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div />
+                            )}
                           </motion.div>
                         );
                       })
@@ -1410,6 +1657,130 @@ export default function ClubDashboard() {
                   </div>
                 )}
               </div>}
+
+              {/* ── Revenue Reports Section (sidebar: revenue-reports) ── */}
+              {sidebarSection === "revenue-reports" && activeTab === "financials" && club && (
+                <div className="space-y-6">
+                  {/* Period Selector */}
+                  <div className="flex items-center gap-2">
+                    {(["day", "week", "month"] as const).map((period) => (
+                      <button
+                        key={period}
+                        data-testid={`rake-period-${period}`}
+                        onClick={() => setRakeReportPeriod(period)}
+                        className={cn(
+                          "px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all border",
+                          rakeReportPeriod === period
+                            ? "bg-[#d4af37]/10 text-[#d4af37] border-[#d4af37]/30"
+                            : "bg-white/[0.02] text-gray-400 border-white/[0.06] hover:text-white hover:border-white/10"
+                        )}
+                      >
+                        {period === "day" ? "24 Hours" : period === "week" ? "7 Days" : "30 Days"}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Rake Summary Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="rounded-md p-4 relative overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}>
+                      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #d4af37, transparent)" }} />
+                      <div className="flex items-center gap-2 mb-1">
+                        <DollarSign className="w-4 h-4 text-[#c9a84c]" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Rake</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">
+                        {rakeReportLoading ? "..." : (rakeReport?.totalRake ?? 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="rounded-md p-4 relative overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Users className="w-4 h-4 text-[#c9a84c]" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Count</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{club.memberCount ?? members.length}</p>
+                    </div>
+                    <div className="rounded-md p-4 relative overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Coins className="w-4 h-4 text-[#c9a84c]" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Chips</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{totalChips.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Rake by Table Breakdown */}
+                  <div className="rounded-md overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="px-5 py-3 border-b border-white/[0.05] flex items-center justify-between">
+                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-[#c9a84c]" /> Rake by Table
+                      </h3>
+                    </div>
+                    {rakeReportLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      </div>
+                    ) : !rakeReport?.tableBreakdown || rakeReport.tableBreakdown.length === 0 ? (
+                      <div className="py-12 text-center">
+                        <BarChart3 className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 font-medium">No rake data for this period</p>
+                        <p className="text-[0.625rem] text-gray-600 mt-0.5">Play some hands to start collecting rake</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="hidden sm:grid grid-cols-[1fr_100px_100px] gap-4 px-4 py-2 border-b border-white/[0.04] text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                          <span>Table</span>
+                          <span>Rake</span>
+                          <span>Hands</span>
+                        </div>
+                        {rakeReport.tableBreakdown.map((row, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: i * 0.03 }}
+                            className="grid grid-cols-[1fr_100px_100px] gap-4 px-4 py-3 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors items-center"
+                          >
+                            <span className="text-sm font-bold text-white truncate">{row.tableName}</span>
+                            <span className="text-sm font-display font-bold text-[#c9a84c]">{row.rake.toLocaleString()}</span>
+                            <span className="text-sm text-muted-foreground">{row.hands.toLocaleString()}</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Chart */}
+                  <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-[#c9a84c]" />
+                      Daily Active Players (30 Days)
+                    </h3>
+                    {chartLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      </div>
+                    ) : chartData.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-12">No activity data available yet.</p>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                          <XAxis dataKey="date" stroke="#666" tick={{ fontSize: 10 }} />
+                          <YAxis stroke="#666" tick={{ fontSize: 10 }} />
+                          <Tooltip
+                            contentStyle={{ background: "rgba(15,15,20,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "12px" }}
+                            labelStyle={{ color: "#999" }}
+                          />
+                          <Line type="monotone" dataKey="activePlayers" stroke="#c9a84c" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              </div>{/* end main content area */}
+              </div>{/* end flex sidebar+content layout */}
             </>
           )}
         </div>

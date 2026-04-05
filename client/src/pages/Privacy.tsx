@@ -1,7 +1,7 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ShieldCheck } from "lucide-react";
 
-const LAST_UPDATED = "April 1, 2026";
+const LAST_UPDATED = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
 interface SectionProps {
   number: number;

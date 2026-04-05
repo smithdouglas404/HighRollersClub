@@ -359,7 +359,7 @@ export function ShowdownOverlay({ visible, results, players, pot, onDismiss, aut
                         textShadow: "0 0 30px rgba(255,215,0,0.5), 0 0 60px rgba(255,215,0,0.2)",
                       }}
                     >
-                      ${Math.floor(pot / winners.length).toLocaleString()}
+                      ${Math.round(pot / winners.length).toLocaleString()}
                     </motion.span>
                   </motion.div>
                 </motion.div>

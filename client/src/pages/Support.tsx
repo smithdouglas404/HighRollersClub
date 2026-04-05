@@ -145,10 +145,18 @@ function ContactForm() {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const canSubmit = name.trim() && email.trim() && subject.trim() && message.trim() && !sending;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const isEmailValid = emailRegex.test(email.trim());
+  const canSubmit = name.trim() && email.trim() && isEmailValid && subject.trim() && message.trim() && !sending;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!emailRegex.test(email.trim())) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+    setEmailError(null);
     if (!canSubmit) return;
 
     setSending(true);
@@ -201,11 +209,14 @@ function ContactForm() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
             placeholder="you@example.com"
             className={inputClasses}
             maxLength={200}
           />
+          {emailError && (
+            <p className="text-xs text-red-400 mt-1">{emailError}</p>
+          )}
         </div>
       </div>
       <div>
@@ -512,7 +523,7 @@ export default function Support() {
                 </div>
 
                 {/* Messages */}
-                <div className="px-5 py-4 space-y-4 max-h-96 overflow-y-auto">
+                <div className="px-5 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
                   {ticketLoading ? (
                     <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
                   ) : (

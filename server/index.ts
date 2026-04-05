@@ -10,6 +10,9 @@ import { seedBotTables } from "./seed-bot-tables";
 import { scheduleDailyTournaments } from "./scheduler";
 import { csrfProtection } from "./middleware/csrf";
 import { hasDatabase, getPool } from "./db";
+import { SERVICE_MODE, logServiceMode } from "./service-mode";
+
+logServiceMode();
 
 // Auto-push database schema if DATABASE_URL is set
 if (hasDatabase()) {
@@ -49,7 +52,22 @@ const app = express();
 
 const isDev = process.env.NODE_ENV !== "production";
 app.use(helmet({
-  contentSecurityPolicy: false, // Disabled — app uses many external services (Firebase, Onfido, Daily, fonts, etc.)
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.firebaseapp.com", "*.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+      fontSrc: ["'self'", "fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "*.googleapis.com", "*.didit.me"],
+      connectSrc: ["'self'", "*.firebaseapp.com", "*.googleapis.com", "*.didit.me", "*.daily.co", "wss:", "ws:"],
+      frameSrc: ["'self'", "*.didit.me", "*.daily.co", "*.firebaseapp.com"],
+      mediaSrc: ["'self'", "blob:", "*.daily.co"],
+      workerSrc: ["'self'", "blob:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
 }));
 
 declare module 'http' {
@@ -103,6 +121,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Run evaluator self-test at startup to ensure both hand evaluators agree
+  const { selfTestEvaluators } = await import("./game/engine");
+  selfTestEvaluators();
+
   // Auto-migrate database schema (add missing columns/tables)
   const { autoMigrate } = await import("./db");
   await autoMigrate().catch(err => console.warn("[init] Auto-migrate:", err.message));
@@ -118,16 +140,26 @@ app.use((req, res, next) => {
     await storage.ensureSystemUser();
   }
 
+  // Register REST routes + WebSocket (registerRoutes sets up both)
+  // In monolith mode: everything as before
+  // In api mode: routes are registered, WebSocket is set up (handled inside registerRoutes)
+  // In game/payments/jobs mode: still need a minimal HTTP server for health checks
   const server = await registerRoutes(app, sessionMiddleware);
 
-  // Seed default missions and shop items
-  await seedData().catch(err => console.error("[seed] Failed:", err));
+  // Seed default missions and shop items (only needed for api/game services)
+  if (SERVICE_MODE.api || SERVICE_MODE.game) {
+    await seedData().catch(err => console.error("[seed] Failed:", err));
+  }
 
-  // Seed bot tables so the lobby is never empty
-  await seedBotTables().catch(err => console.error("[seed-bot-tables] Failed:", err));
+  // Seed bot tables so the lobby is never empty (only for api/game services)
+  if (SERVICE_MODE.api || SERVICE_MODE.game) {
+    await seedBotTables().catch(err => console.error("[seed-bot-tables] Failed:", err));
+  }
 
-  // Start the recurring daily tournament scheduler
-  scheduleDailyTournaments();
+  // Start the recurring daily tournament scheduler (only for jobs service)
+  if (SERVICE_MODE.jobs) {
+    scheduleDailyTournaments();
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -140,10 +172,13 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+  // Only serve the client frontend when running the API service
+  if (SERVICE_MODE.api) {
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT

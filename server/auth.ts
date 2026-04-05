@@ -12,6 +12,7 @@ import { promisify } from "util";
 import nodemailer from "nodemailer";
 import { verifyFirebaseToken } from "./firebase-admin";
 import { AVATAR_IDS as GUEST_AVATAR_IDS } from "@shared/avatar-ids";
+import { createCache } from "./infra/cache-adapter";
 
 const scryptAsync = promisify(scrypt);
 
@@ -32,7 +33,7 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 function verifyTOTP(secret: string, code: string): boolean {
   const time = Math.floor(Date.now() / 30000); // 30-second window
   for (let i = -1; i <= 1; i++) { // Check current, previous, and next window
-    const hmac = createHmac("sha1", Buffer.from(secret, "hex"));
+    const hmac = createHmac("sha256", Buffer.from(secret, "hex"));
     const timeVal = time + i;
     hmac.update(Buffer.from([
       (timeVal >> 24) & 0xff,
@@ -76,19 +77,25 @@ export function setupAuth(app: Express) {
       createTableIfMissing: true,
     });
   } else {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("FATAL: Database required for session storage in production. Set DATABASE_URL.");
+    }
     const MemoryStore = createMemoryStore(session);
     store = new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
+      checkPeriod: 86400000,
     });
   }
 
   const sessionMiddleware = session({
     secret: (() => {
       const s = process.env.SESSION_SECRET;
-      if (!s || s === "poker-platform-dev-secret-change-me-in-prod") {
-        console.warn("[SECURITY] SESSION_SECRET not set or using default. Set a strong secret in production!");
+      if (!s && process.env.NODE_ENV === "production") {
+        throw new Error("FATAL: SESSION_SECRET must be set in production. Refusing to start with insecure sessions.");
       }
-      return s || require("crypto").randomBytes(32).toString("hex"); // Generate random if missing (won't persist across restarts)
+      if (!s) {
+        console.warn("[SECURITY] SESSION_SECRET not set — generating ephemeral secret (sessions lost on restart)");
+      }
+      return s || require("crypto").randomBytes(32).toString("hex");
     })(),
     resave: false,
     saveUninitialized: false,
@@ -158,25 +165,17 @@ function generateGuestName(): string {
 }
 
 
-// Rate limiting for registration/guest creation
-const registrationAttempts = new Map<string, { count: number; resetAt: number }>();
+// Rate limiting for registration/guest creation — uses Redis when REDIS_URL is set
+const registrationCache = createCache<number>("rate:reg");
 const MAX_REG_ATTEMPTS = 5;
-const REG_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const REG_WINDOW_SECONDS = 60 * 60; // 1 hour
 
-function checkRegistrationRate(req: Request): boolean {
+async function checkRegistrationRate(req: Request): Promise<boolean> {
   const ip = req.ip || req.socket.remoteAddress || "unknown";
-  const now = Date.now();
-  const attempts = registrationAttempts.get(ip);
-  if (attempts) {
-    if (now < attempts.resetAt) {
-      if (attempts.count >= MAX_REG_ATTEMPTS) return false;
-      attempts.count++;
-    } else {
-      registrationAttempts.set(ip, { count: 1, resetAt: now + REG_WINDOW_MS });
-    }
-  } else {
-    registrationAttempts.set(ip, { count: 1, resetAt: now + REG_WINDOW_MS });
-  }
+  const current = await registrationCache.get(ip);
+  const count = (current ?? 0) + 1;
+  if (count > MAX_REG_ATTEMPTS) return false;
+  await registrationCache.set(ip, count, REG_WINDOW_SECONDS);
   return true;
 }
 
@@ -184,7 +183,7 @@ function checkRegistrationRate(req: Request): boolean {
 export function registerAuthRoutes(app: Express) {
   // Create guest account
   app.post("/api/auth/guest", async (req, res, next) => {
-    if (!checkRegistrationRate(req)) {
+    if (!(await checkRegistrationRate(req))) {
       return res.status(429).json({ message: "Too many accounts created. Try again later." });
     }
     try {
@@ -218,7 +217,7 @@ export function registerAuthRoutes(app: Express) {
 
   // Register with username + password
   app.post("/api/auth/register", async (req, res, next) => {
-    if (!checkRegistrationRate(req)) {
+    if (!(await checkRegistrationRate(req))) {
       return res.status(429).json({ message: "Too many registration attempts. Try again later." });
     }
     try {
@@ -280,7 +279,7 @@ export function registerAuthRoutes(app: Express) {
       const email = req.body.email;
       if (email) {
         const token = randomUUID();
-        await storage.updateUser(user.id, { email, emailVerificationToken: token } as any);
+        await storage.updateUser(user.id, { email, emailVerificationToken: token, emailVerificationSentAt: new Date() } as any);
         if (process.env.SMTP_HOST) {
           try {
             const transport = nodemailer.createTransport({
@@ -327,7 +326,18 @@ export function registerAuthRoutes(app: Express) {
         const { sql } = await import("drizzle-orm");
         const [user] = await db.select().from(users).where(sql`${users.emailVerificationToken} = ${token}`).limit(1);
         if (!user) return res.status(400).send("Invalid or expired verification link");
-        await db.update(users).set({ emailVerified: true, emailVerificationToken: null } as any).where(sql`${users.id} = ${user.id}`);
+        // Check 24-hour expiry
+        const sentAt = (user as any).emailVerificationSentAt;
+        if (sentAt) {
+          const elapsed = Date.now() - new Date(sentAt).getTime();
+          const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+          if (elapsed > TWENTY_FOUR_HOURS) {
+            // Clear the expired token
+            await db.update(users).set({ emailVerificationToken: null } as any).where(sql`${users.id} = ${user.id}`);
+            return res.status(400).send("Verification link has expired. Please request a new one.");
+          }
+        }
+        await db.update(users).set({ emailVerified: true, emailVerificationToken: null, emailVerificationSentAt: null } as any).where(sql`${users.id} = ${user.id}`);
         return res.redirect("/?emailVerified=true");
       }
       res.status(400).send("Database required for email verification");
@@ -336,35 +346,26 @@ export function registerAuthRoutes(app: Express) {
     }
   });
 
-  // Rate limiting for login attempts
-  const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+  // Rate limiting for login attempts — uses Redis when REDIS_URL is set
+  const loginCache = createCache<number>("rate:login");
   const MAX_LOGIN_ATTEMPTS = 5;
-  const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+  const LOGIN_WINDOW_SECONDS = 15 * 60; // 15 minutes
 
   // Login
-  app.post("/api/auth/login", (req, res, next) => {
+  app.post("/api/auth/login", async (req, res, next) => {
     const ip = req.ip || req.socket.remoteAddress || "unknown";
-    const now = Date.now();
-    const attempts = loginAttempts.get(ip);
-    if (attempts) {
-      if (now < attempts.resetAt) {
-        if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
-          return res.status(429).json({ message: "Too many login attempts. Try again in 15 minutes." });
-        }
-      } else {
-        loginAttempts.delete(ip);
-      }
+    const currentCount = (await loginCache.get(ip)) ?? 0;
+    if (currentCount >= MAX_LOGIN_ATTEMPTS) {
+      return res.status(429).json({ message: "Too many login attempts. Try again in 15 minutes." });
     }
 
-    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
+    passport.authenticate("local", async (err: any, user: Express.User | false, info: any) => {
       if (err) return next(err);
       if (!user) {
-        const current = loginAttempts.get(ip) || { count: 0, resetAt: now + LOGIN_WINDOW_MS };
-        current.count++;
-        loginAttempts.set(ip, current);
+        await loginCache.set(ip, currentCount + 1, LOGIN_WINDOW_SECONDS);
         return res.status(401).json({ message: info?.message || "Login failed" });
       }
-      loginAttempts.delete(ip);
+      await loginCache.delete(ip);
 
       // Check if 2FA is enabled — require TOTP code before completing login
       if ((user as any).twoFactorEnabled) {
@@ -372,6 +373,10 @@ export function registerAuthRoutes(app: Express) {
         if (!totpCode) {
           // Don't log in yet — tell client to prompt for 2FA code
           return res.status(206).json({ requires2FA: true, userId: (user as any).id, message: "2FA code required" });
+        }
+        // Rate limit 2FA verification attempts per user
+        if (!(await check2FARate((user as any).id))) {
+          return res.status(429).json({ message: "Too many 2FA attempts. Try again in 15 minutes." });
         }
         // Verify TOTP code
         try {
@@ -554,18 +559,35 @@ export function registerAuthRoutes(app: Express) {
     }
   });
 
+  // ── 2FA rate limiting: max 5 attempts per user per 15 minutes — uses Redis when REDIS_URL is set ──
+  const twoFactorCache = createCache<number>("rate:2fa");
+  const MAX_2FA_ATTEMPTS = 5;
+  const TWO_FA_WINDOW_SECONDS = 15 * 60; // 15 minutes
+
+  async function check2FARate(userId: string): Promise<boolean> {
+    const current = (await twoFactorCache.get(userId)) ?? 0;
+    if (current >= MAX_2FA_ATTEMPTS) return false;
+    await twoFactorCache.set(userId, current + 1, TWO_FA_WINDOW_SECONDS);
+    return true;
+  }
+
   // Verify and enable 2FA
   app.post("/api/auth/2fa/verify", requireAuth, async (req, res) => {
     try {
       const { code } = req.body;
       if (!code) return res.status(400).json({ message: "Verification code required" });
 
+      // Rate limit 2FA verification attempts
+      if (!(await check2FARate(req.user!.id))) {
+        return res.status(429).json({ message: "Too many 2FA attempts. Try again in 15 minutes." });
+      }
+
       const user = await storage.getUser(req.user!.id);
       if (!user?.twoFactorSecret) {
         return res.status(400).json({ message: "2FA not initialized. Call /api/auth/2fa/setup first" });
       }
 
-      // Simple TOTP verification using HMAC
+      // Simple TOTP verification using HMAC-SHA256
       const isValid = verifyTOTP(user.twoFactorSecret, code);
       if (!isValid) {
         return res.status(400).json({ message: "Invalid verification code" });

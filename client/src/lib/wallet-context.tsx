@@ -87,6 +87,9 @@ function computeTotal(b: Omit<WalletBalances, "total">): number {
 export function WalletProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
+  // ── Error state (declared early — referenced in callbacks below) ────
+  const [error, setError] = useState<string | null>(null);
+
   // ── Multi-Wallet Balances ───────────────────────────────────────────
   const [balances, setBalances] = useState<WalletBalances>(DEFAULT_BALANCES);
   const balance = balances.total;
@@ -269,8 +272,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [fetchTransactionsPage]);
 
   // ── Claim daily bonus ─────────────────────────────────────────────
-  const [error, setError] = useState<string | null>(null);
-
   const claimDailyBonus = useCallback(async (): Promise<{ success: boolean; bonus?: number }> => {
     if (claiming || !canClaim) return { success: false };
     setClaiming(true);

@@ -25,6 +25,9 @@ export class StripeGateway implements IPaymentGateway {
   constructor(config: PaymentGatewayConfig) {
     this.apiKey = config.apiKey;
     this.webhookSecret = config.webhookSecret || "";
+    if (!this.webhookSecret && process.env.NODE_ENV === "production") {
+      console.warn("[stripe] WARNING: No STRIPE_WEBHOOK_SECRET configured — all Stripe webhooks will be REJECTED in production");
+    }
   }
 
   /**
@@ -107,7 +110,9 @@ export class StripeGateway implements IPaymentGateway {
     } else {
       // Default: redirect back to wallet page with success indicator
       const baseUrl = process.env.WEBHOOK_BASE_URL
-        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : "http://localhost:5000");
+        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
+        || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
+        || (process.env.NODE_ENV === "production" ? (() => { throw new Error("FATAL: WEBHOOK_BASE_URL required for Stripe redirects in production"); })() : "http://localhost:5000");
       params["success_url"] = `${baseUrl}/wallet?deposit=success`;
       params["cancel_url"] = `${baseUrl}/wallet?deposit=cancelled`;
     }
@@ -116,7 +121,9 @@ export class StripeGateway implements IPaymentGateway {
       params["cancel_url"] = req.cancelUrl;
     } else if (!params["cancel_url"]) {
       const baseUrl = process.env.WEBHOOK_BASE_URL
-        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : "http://localhost:5000");
+        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
+        || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
+        || (process.env.NODE_ENV === "production" ? (() => { throw new Error("FATAL: WEBHOOK_BASE_URL required for Stripe redirects in production"); })() : "http://localhost:5000");
       params["cancel_url"] = `${baseUrl}/wallet?deposit=cancelled`;
     }
 
@@ -181,6 +188,10 @@ export class StripeGateway implements IPaymentGateway {
       if (!signature) throw new Error("Missing stripe-signature header");
 
       this.verifyWebhookSignature(body, signature);
+    } else if (process.env.NODE_ENV === "production") {
+      // In production, never process unsigned webhooks
+      console.error("[stripe] REJECTING webhook: no webhook secret configured in production");
+      throw new Error("Stripe webhook secret not configured — refusing unsigned webhook in production");
     }
 
     // Parse the event — body may be raw string or parsed object

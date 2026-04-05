@@ -5,7 +5,7 @@ interface PageBackgroundProps {
 
 export function PageBackground({ image, opacity = 0.15 }: PageBackgroundProps) {
   return (
-    <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden>
+    <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
       <div className="absolute inset-0 bg-[#0a0a0c]" />
       <div
         className="absolute inset-0"

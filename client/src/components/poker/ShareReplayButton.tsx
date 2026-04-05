@@ -21,8 +21,9 @@ export function ShareReplayButton({ handId }: ShareReplayButtonProps) {
   const shareUrl = `${window.location.origin}/replay/${handId}`;
 
   function handleCopy() {
-    const textToCopy = commentary
-      ? `${shareUrl}?commentary=${encodeURIComponent(commentary)}`
+    const truncatedCommentary = commentary.slice(0, 2000);
+    const textToCopy = truncatedCommentary
+      ? `${shareUrl}?commentary=${encodeURIComponent(truncatedCommentary)}`
       : shareUrl;
 
     navigator.clipboard.writeText(textToCopy).then(() => {

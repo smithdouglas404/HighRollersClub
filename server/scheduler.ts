@@ -39,6 +39,9 @@ function todayDateString(): string {
  * Idempotent: skips if tournaments for today were already created.
  */
 async function ensureTodaysTournaments(): Promise<void> {
+  // Ensure system user exists before creating tournaments (FK constraint on created_by_id)
+  await storage.ensureSystemUser();
+
   const today = todayDateString();
 
   if (lastScheduledDate === today) {

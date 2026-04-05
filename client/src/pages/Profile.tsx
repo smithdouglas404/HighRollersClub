@@ -12,6 +12,8 @@ import {
   Star, Shield, Crown, Clock, ChevronRight, Award, Flame, Target,
   StickyNote, Trash2, ShoppingBag, Swords,
   Link as LinkIcon, ExternalLink, Copy, Lock, ShieldCheck, Key, Fingerprint, Hash,
+  ChevronUp, ChevronDown, Gift, Diamond, Gem, Image, ArrowRightLeft,
+  CalendarDays, Medal, ThumbsUp, BarChart3,
 } from "lucide-react";
 import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
@@ -102,6 +104,32 @@ const BADGES = [
   { name: "Legend", img: "/badges/badge_club_legend.webp", glow: "#a855f7", criteria: "Play 1,000 hands", check: (s: PlayerStats) => s.handsPlayed >= 1000, progress: (s: PlayerStats) => ({ current: Math.min(s.handsPlayed, 1000), max: 1000 }) },
 ];
 
+// ─── Military Ranks ─────────────────────────────────────────────────────────
+const MILITARY_RANKS = [
+  { name: "Recruit", icon: Shield, minHands: 0, minWinRate: 0, minTourneyWins: 0, color: "text-gray-400" },
+  { name: "Private", icon: Shield, minHands: 50, minWinRate: 0, minTourneyWins: 0, color: "text-gray-300" },
+  { name: "Corporal", icon: Medal, minHands: 200, minWinRate: 30, minTourneyWins: 0, color: "text-green-400" },
+  { name: "Sergeant", icon: Medal, minHands: 500, minWinRate: 35, minTourneyWins: 0, color: "text-blue-400" },
+  { name: "Lieutenant", icon: Star, minHands: 1000, minWinRate: 40, minTourneyWins: 1, color: "text-cyan-400" },
+  { name: "Captain", icon: Star, minHands: 2500, minWinRate: 45, minTourneyWins: 3, color: "text-purple-400" },
+  { name: "Major", icon: Crown, minHands: 5000, minWinRate: 48, minTourneyWins: 5, color: "text-amber-400" },
+  { name: "Colonel", icon: Crown, minHands: 10000, minWinRate: 50, minTourneyWins: 10, color: "text-orange-400" },
+  { name: "General", icon: Crown, minHands: 25000, minWinRate: 55, minTourneyWins: 25, color: "text-red-400" },
+  { name: "Field Marshal", icon: Crown, minHands: 50000, minWinRate: 60, minTourneyWins: 50, color: "text-yellow-300" },
+];
+
+function getMilitaryRank(handsPlayed: number, winRate: number, tourneyWins: number) {
+  let currentIdx = 0;
+  for (let i = MILITARY_RANKS.length - 1; i >= 0; i--) {
+    const r = MILITARY_RANKS[i];
+    if (handsPlayed >= r.minHands && winRate >= r.minWinRate && tourneyWins >= r.minTourneyWins) {
+      currentIdx = i;
+      break;
+    }
+  }
+  return { current: currentIdx, rank: MILITARY_RANKS[currentIdx], next: MILITARY_RANKS[Math.min(currentIdx + 1, MILITARY_RANKS.length - 1)] };
+}
+
 // ─── My Blockchain Records ──────────────────────────────────────────────────
 function MyBlockchainRecords({ user }: { user: any }) {
   const [hands, setHands] = useState<any[]>([]);
@@ -124,6 +152,7 @@ function MyBlockchainRecords({ user }: { user: any }) {
   useEffect(() => { if (expanded && hands.length === 0) fetchData(); }, [expanded]);
 
   const kycHash = user?.kycBlockchainTxHash;
+  const [kycCopied, setKycCopied] = useState(false);
   const memberId = user?.memberId;
   const kycVerified = user?.kycStatus === "verified";
 
@@ -188,8 +217,9 @@ function MyBlockchainRecords({ user }: { user: any }) {
                       </div>
                       <div className="flex items-center gap-1 mt-1">
                         <span className="font-mono text-[11px] text-purple-400 truncate">{kycHash}</span>
-                        <button onClick={() => navigator.clipboard.writeText(kycHash)} className="p-0.5 hover:bg-white/5 rounded shrink-0">
-                          <Copy className="w-3 h-3 text-gray-600" />
+                        <button onClick={() => { navigator.clipboard.writeText(kycHash); setKycCopied(true); setTimeout(() => setKycCopied(false), 2000); }} className="p-0.5 hover:bg-white/5 rounded shrink-0 relative">
+                          {kycCopied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-gray-600" />}
+                          {kycCopied && <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-green-400 whitespace-nowrap bg-black/80 px-1.5 py-0.5 rounded">Copied!</span>}
                         </button>
                         {getExplorerUrl(kycHash) && (
                           <a href={getExplorerUrl(kycHash)!} target="_blank" rel="noopener noreferrer" className="shrink-0 text-purple-400 hover:text-purple-300">
@@ -682,6 +712,38 @@ export default function Profile() {
             </div>
           </motion.div>
 
+          {/* ── 1. Military Rank Progression Bar ── */}
+          {stats && (
+            <MilitaryRankProgressionBar stats={stats} winRate={winRate} />
+          )}
+
+          {/* ── 2. Active Missions Widget ── */}
+          <ActiveMissionsWidget />
+
+          {/* ── 3. Club Membership Card ── */}
+          <ClubMembershipCard />
+
+          {/* ── 4. NFT Collection Showcase ── */}
+          <NFTCollectionShowcase />
+
+          {/* ── 5. Marketplace Activity ── */}
+          <MarketplaceActivity />
+
+          {/* ── 6. Wallet Summary ── */}
+          <WalletSummaryWidget />
+
+          {/* ── 7. Leaderboard Position ── */}
+          <LeaderboardPositionWidget />
+
+          {/* ── 8. Tournament History ── */}
+          <TournamentHistoryWidget />
+
+          {/* ── Recent Transactions ── */}
+          <RecentTransactionsWidget />
+
+          {/* ── Social & Behavior ── */}
+          <SocialBehaviorWidget />
+
           {/* ── Head-to-Head Records ── */}
           <HeadToHeadSection />
 
@@ -757,6 +819,790 @@ export default function Profile() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+// ─── 1. Military Rank Progression Bar ────────────────────────────────────────
+function MilitaryRankProgressionBar({ stats, winRate }: { stats: PlayerStats; winRate: number }) {
+  const { current, rank, next } = getMilitaryRank(stats.handsPlayed, winRate, stats.sngWins);
+  const isMaxRank = current === MILITARY_RANKS.length - 1;
+  const handsProgress = isMaxRank ? 100 : next.minHands > 0 ? Math.min((stats.handsPlayed / next.minHands) * 100, 100) : 100;
+  const CurrentIcon = rank.icon;
+  const NextIcon = next.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.26 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+        <Medal className="w-4 h-4 text-primary/70" />
+        Military Rank
+      </h3>
+      <div className="flex items-center gap-4 mb-3">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-amber-600/20 flex items-center justify-center border border-primary/20">
+            <CurrentIcon className={`w-5 h-5 ${rank.color}`} />
+          </div>
+          <div>
+            <div className={`text-sm font-black ${rank.color}`}>{rank.name}</div>
+            <div className="text-[0.5625rem] text-gray-600">Current Rank</div>
+          </div>
+        </div>
+        <div className="flex-1">
+          <div className="w-full h-3 rounded-full bg-white/5 overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${handsProgress}%` }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              className="h-full rounded-full"
+              style={{ background: "linear-gradient(90deg, #d4af37, #f5e6a3, #d4af37)" }}
+            />
+          </div>
+        </div>
+        {!isMaxRank && (
+          <div className="flex items-center gap-2 shrink-0">
+            <div>
+              <div className={`text-sm font-black ${next.color} text-right`}>{next.name}</div>
+              <div className="text-[0.5625rem] text-gray-600 text-right">Next Rank</div>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
+              <NextIcon className={`w-5 h-5 ${next.color} opacity-50`} />
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-3 text-[0.625rem]">
+        <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+          {stats.handsPlayed.toLocaleString()} / {isMaxRank ? "MAX" : next.minHands.toLocaleString()} hands
+        </span>
+        <span className={`px-2.5 py-1 rounded-full border ${winRate >= (isMaxRank ? rank.minWinRate : next.minWinRate) ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}`}>
+          Need {isMaxRank ? rank.minWinRate : next.minWinRate}%+ win rate
+        </span>
+        <span className={`px-2.5 py-1 rounded-full border ${stats.sngWins >= (isMaxRank ? rank.minTourneyWins : next.minTourneyWins) ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>
+          Need {isMaxRank ? rank.minTourneyWins : next.minTourneyWins} tournament win{(isMaxRank ? rank.minTourneyWins : next.minTourneyWins) !== 1 ? "s" : ""}
+        </span>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── 2. Active Missions Widget ───────────────────────────────────────────────
+interface Mission {
+  id: number;
+  title: string;
+  description: string;
+  type: "daily" | "weekly";
+  progress: number;
+  target: number;
+  reward: number;
+  completed: boolean;
+  claimed: boolean;
+}
+
+function ActiveMissionsWidget() {
+  const [missions, setMissions] = useState<Mission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"daily" | "weekly">("daily");
+  const [claimingId, setClaimingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/missions/active", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setMissions(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleClaim = async (missionId: number) => {
+    setClaimingId(missionId);
+    try {
+      const res = await fetch(`/api/missions/${missionId}/claim`, { method: "POST", credentials: "include" });
+      if (res.ok) {
+        setMissions(prev => prev.map(m => m.id === missionId ? { ...m, claimed: true } : m));
+      }
+    } catch {}
+    setClaimingId(null);
+  };
+
+  const filtered = missions.filter(m => m.type === filter);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.28 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+          <Target className="w-4 h-4 text-primary/70" />
+          Active Missions
+        </h3>
+        <div className="flex rounded-lg overflow-hidden border border-white/10">
+          {(["daily", "weekly"] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setFilter(t)}
+              className={`px-3 py-1 text-[0.625rem] font-bold uppercase transition-colors ${filter === t ? "bg-primary/20 text-primary" : "text-gray-500 hover:text-gray-300"}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-8">
+          <Target className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+          <p className="text-xs text-gray-500">No {filter} missions available.</p>
+          <p className="text-[0.625rem] text-gray-600 mt-1">Check back later for new missions.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {filtered.slice(0, 4).map(mission => {
+            const pct = Math.min((mission.progress / mission.target) * 100, 100);
+            return (
+              <div key={mission.id} className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Target className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">{mission.title}</div>
+                      <div className="text-[0.5625rem] text-gray-500">{mission.description}</div>
+                    </div>
+                  </div>
+                  <span className="flex items-center gap-1 text-[0.625rem] font-bold text-primary">
+                    <Coins className="w-3 h-3" />
+                    {mission.reward.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-primary to-amber-400 transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-[0.5625rem] text-gray-500 shrink-0">{mission.progress}/{mission.target}</span>
+                </div>
+                {mission.completed && !mission.claimed && (
+                  <button
+                    onClick={() => handleClaim(mission.id)}
+                    disabled={claimingId === mission.id}
+                    className="mt-2 w-full py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors disabled:opacity-50"
+                  >
+                    {claimingId === mission.id ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : "CLAIM REWARD"}
+                  </button>
+                )}
+                {mission.claimed && (
+                  <div className="mt-2 text-center text-[0.625rem] font-bold text-green-400/60">Claimed</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── 3. Club Membership Card ─────────────────────────────────────────────────
+function ClubMembershipCard() {
+  const [club, setClub] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/clubs", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        const clubs = Array.isArray(data) ? data : data?.clubs || [];
+        setClub(clubs.length > 0 ? clubs[0] : null);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.30 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+        <Users className="w-4 h-4 text-primary/70" />
+        Club Membership
+      </h3>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : club ? (
+        <div className="flex items-center gap-4 p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center border border-primary/20" style={{ boxShadow: "0 0 16px rgba(212,175,55,0.15)" }}>
+            <Crown className="w-7 h-7 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-black text-white">{club.name || "My Club"}</div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`px-2 py-0.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider ${
+                club.role === "owner" ? "bg-primary/15 text-primary border border-primary/20" :
+                club.role === "admin" ? "bg-purple-500/15 text-purple-400 border border-purple-500/20" :
+                "bg-white/5 text-gray-400 border border-white/10"
+              }`}>
+                {club.role || "Member"}
+              </span>
+              <span className="text-[0.625rem] text-gray-500 flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                {club.memberCount || 0} members
+              </span>
+            </div>
+          </div>
+          <Link href="/club">
+            <button className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
+              View Club
+            </button>
+          </Link>
+        </div>
+      ) : (
+        <div className="text-center py-6">
+          <Users className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+          <p className="text-xs text-gray-500 mb-3">You're not in a club yet.</p>
+          <Link href="/clubs">
+            <button className="px-6 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-gradient-to-r from-primary/20 to-amber-500/20 text-primary border border-primary/20 hover:from-primary/30 hover:to-amber-500/30 transition-all">
+              Join a Club
+            </button>
+          </Link>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── 4. NFT Collection Showcase ──────────────────────────────────────────────
+function NFTCollectionShowcase() {
+  const [nfts, setNfts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/inventory", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setNfts(Array.isArray(data) ? data : data?.items || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const rarityGlow: Record<string, string> = {
+    mythic: "border-primary/50 shadow-[0_0_16px_rgba(212,175,55,0.3)]",
+    legendary: "border-primary/40 shadow-[0_0_12px_rgba(212,175,55,0.2)]",
+    epic: "border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.2)]",
+    rare: "border-purple-400/30 shadow-[0_0_10px_rgba(168,85,247,0.15)]",
+    uncommon: "border-blue-400/30",
+    common: "border-gray-500/20",
+  };
+
+  const rarityBadge: Record<string, string> = {
+    mythic: "bg-primary/20 text-primary",
+    legendary: "bg-amber-500/20 text-amber-400",
+    epic: "bg-purple-500/20 text-purple-400",
+    rare: "bg-blue-500/20 text-blue-400",
+    uncommon: "bg-green-500/20 text-green-400",
+    common: "bg-gray-500/20 text-gray-400",
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.32 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+          <Gem className="w-4 h-4 text-primary/70" />
+          My Collection
+        </h3>
+        <Link href="/avatar-wardrobe">
+          <button className="text-[0.625rem] font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+            View All <ChevronRight className="w-3 h-3" />
+          </button>
+        </Link>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : nfts.length === 0 ? (
+        <div className="text-center py-6">
+          <Image className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+          <p className="text-xs text-gray-500">No collectibles yet.</p>
+          <p className="text-[0.625rem] text-gray-600 mt-1">Visit the shop to get your first avatar NFT.</p>
+        </div>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10">
+          {nfts.slice(0, 8).map((nft, i) => {
+            const rarity = (nft.rarity || "common").toLowerCase();
+            return (
+              <div
+                key={nft.id || i}
+                className={`shrink-0 w-28 rounded-xl overflow-hidden border-2 ${rarityGlow[rarity] || rarityGlow.common} bg-white/[0.02] transition-transform hover:scale-105`}
+              >
+                <div className="w-28 h-28 bg-gradient-to-br from-white/5 to-transparent flex items-center justify-center">
+                  {nft.imageUrl ? (
+                    <img src={nft.imageUrl} alt={nft.name} className="w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <Gem className="w-8 h-8 text-gray-600" />
+                  )}
+                </div>
+                <div className="p-2">
+                  <div className="text-[0.5625rem] font-bold text-white truncate">{nft.name || "Unknown"}</div>
+                  <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase ${rarityBadge[rarity] || rarityBadge.common}`}>
+                    {rarity}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── 5. Marketplace Activity ─────────────────────────────────────────────────
+function MarketplaceActivity() {
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/marketplace/history?limit=5", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setTransactions(Array.isArray(data) ? data : data?.transactions || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.34 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+          <ArrowRightLeft className="w-4 h-4 text-primary/70" />
+          Recent Activity
+        </h3>
+        <Link href="/marketplace">
+          <button className="text-[0.625rem] font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+            View Marketplace <ChevronRight className="w-3 h-3" />
+          </button>
+        </Link>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : transactions.length === 0 ? (
+        <div className="text-center py-6">
+          <ArrowRightLeft className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+          <p className="text-xs text-gray-500">No marketplace activity yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {transactions.slice(0, 5).map((tx, i) => (
+            <div key={tx.id || i} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tx.type === "buy" ? "bg-green-500/10" : "bg-red-500/10"}`}>
+                {tx.type === "buy" ? (
+                  <ShoppingBag className="w-4 h-4 text-green-400" />
+                ) : (
+                  <Coins className="w-4 h-4 text-red-400" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-gray-300 truncate">
+                  {tx.type === "buy" ? "Bought" : "Sold"} <span className="font-bold text-white">{tx.itemName || "Item"}</span>
+                  {" for "}
+                  <span className="font-bold text-primary">{tx.price?.toLocaleString() || "0"} {tx.currency || "Gold"}</span>
+                </div>
+              </div>
+              <span className="text-[0.5625rem] text-gray-600 shrink-0">
+                {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── 6. Wallet Summary Widget ────────────────────────────────────────────────
+function WalletSummaryWidget() {
+  const [balances, setBalances] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/wallet/balances", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setBalances(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const walletTypes = [
+    { key: "main", label: "Main", color: "bg-primary", textColor: "text-primary", bgColor: "bg-primary/15" },
+    { key: "cashGame", label: "Cash Game", color: "bg-green-500", textColor: "text-green-400", bgColor: "bg-green-500/15" },
+    { key: "sng", label: "SNG", color: "bg-blue-500", textColor: "text-blue-400", bgColor: "bg-blue-500/15" },
+    { key: "tournament", label: "Tournament", color: "bg-purple-500", textColor: "text-purple-400", bgColor: "bg-purple-500/15" },
+    { key: "bonus", label: "Bonus", color: "bg-amber-500", textColor: "text-amber-400", bgColor: "bg-amber-500/15" },
+  ];
+
+  const totalBalance = balances ? walletTypes.reduce((sum, w) => sum + (balances[w.key] || 0), 0) : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.36 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+        <Wallet className="w-4 h-4 text-primary/70" />
+        Wallet
+      </h3>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : (
+        <>
+          <div className="text-center mb-4">
+            <div className="text-3xl font-black" style={{ color: "#d4af37" }}>
+              {totalBalance.toLocaleString()}
+            </div>
+            <div className="text-[0.625rem] text-gray-500 uppercase tracking-wider mt-0.5">Total Balance</div>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {walletTypes.map(w => {
+              const val = balances?.[w.key] || 0;
+              return (
+                <div key={w.key} className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${w.bgColor} border border-white/5`}>
+                  <div className={`w-2 h-2 rounded-full ${w.color}`} />
+                  <span className="text-[0.625rem] text-gray-400">{w.label}</span>
+                  <span className={`text-[0.625rem] font-bold ${w.textColor}`}>{val.toLocaleString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── 7. Leaderboard Position Widget ──────────────────────────────────────────
+function LeaderboardPositionWidget() {
+  const [position, setPosition] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/leaderboard", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.myPosition !== undefined) {
+          setPosition({ rank: data.myPosition, change: data.positionChange || 0 });
+        } else if (data?.rank !== undefined) {
+          setPosition({ rank: data.rank, change: data.change || 0 });
+        } else if (Array.isArray(data)) {
+          // If we get back the full leaderboard, find our position
+          setPosition({ rank: data.length > 0 ? 1 : 0, change: 0 });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.38 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+          <BarChart3 className="w-4 h-4 text-primary/70" />
+          Global Ranking
+        </h3>
+        <Link href="/leaderboard">
+          <button className="text-[0.625rem] font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+            View Leaderboard <ChevronRight className="w-3 h-3" />
+          </button>
+        </Link>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : position ? (
+        <div className="flex items-center justify-center gap-4">
+          <div className="text-center">
+            <div className="flex items-center gap-2 justify-center">
+              <span className="text-5xl font-black" style={{ color: "#d4af37" }}>#{position.rank}</span>
+              {position.change !== 0 && (
+                <div className={`flex items-center gap-0.5 ${position.change > 0 ? "text-green-400" : "text-red-400"}`}>
+                  {position.change > 0 ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  <span className="text-sm font-bold">{Math.abs(position.change)}</span>
+                </div>
+              )}
+            </div>
+            <div className="text-[0.625rem] text-gray-500 mt-1">Based on total winnings</div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-6">
+          <BarChart3 className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+          <p className="text-xs text-gray-500">Play more hands to earn a ranking.</p>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── 8. Tournament History Widget ────────────────────────────────────────────
+function TournamentHistoryWidget() {
+  const [tournamentData, setTournamentData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/stats/tournaments", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setTournamentData(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const summary = tournamentData?.summary || { played: 0, wins: 0, finalTables: 0, biggestPrize: 0 };
+  const recent = tournamentData?.recent || [];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.40 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+        <Trophy className="w-4 h-4 text-primary/70" />
+        Tournament Record
+      </h3>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            {[
+              { label: "Played", value: summary.played, color: "text-cyan-400" },
+              { label: "Wins", value: summary.wins, color: "text-green-400" },
+              { label: "Final Tables", value: summary.finalTables, color: "text-amber-400" },
+              { label: "Biggest Prize", value: summary.biggestPrize?.toLocaleString() || "0", color: "text-primary" },
+            ].map(s => (
+              <div key={s.label} className="rounded-lg p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                <div className={`text-lg font-black ${s.color}`}>{s.value}</div>
+                <div className="text-[0.5625rem] text-gray-500 uppercase">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {recent.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-4 gap-2 px-3 py-1.5 text-[0.5625rem] text-gray-600 uppercase font-bold">
+                <span>Tournament</span>
+                <span className="text-center">Place</span>
+                <span className="text-center">Prize</span>
+                <span className="text-right">Date</span>
+              </div>
+              {recent.slice(0, 5).map((t: any, i: number) => (
+                <div key={t.id || i} className="grid grid-cols-4 gap-2 px-3 py-2 rounded-lg bg-white/[0.02] items-center">
+                  <span className="text-xs text-white font-semibold truncate">{t.name || "Tournament"}</span>
+                  <span className={`text-xs font-bold text-center ${t.placement === 1 ? "text-primary" : t.placement <= 3 ? "text-amber-400" : "text-gray-400"}`}>
+                    #{t.placement}
+                  </span>
+                  <span className="text-xs font-bold text-primary text-center">{(t.prize || 0).toLocaleString()}</span>
+                  <span className="text-[0.5625rem] text-gray-600 text-right">
+                    {t.date ? new Date(t.date).toLocaleDateString() : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {recent.length === 0 && (
+            <div className="text-center py-4">
+              <p className="text-[0.625rem] text-gray-600">No tournament results yet. Enter a tournament to see your history.</p>
+            </div>
+          )}
+        </>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Recent Transactions Widget ──────────────────────────────────────────────
+function RecentTransactionsWidget() {
+  const [txns, setTxns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/wallet/transactions?limit=5", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setTxns(Array.isArray(data) ? data : data?.transactions || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const txnIcon: Record<string, { icon: typeof Coins; color: string; bg: string }> = {
+    "buy-in": { icon: Coins, color: "text-red-400", bg: "bg-red-500/10" },
+    "cash-out": { icon: Coins, color: "text-green-400", bg: "bg-green-500/10" },
+    deposit: { icon: Wallet, color: "text-blue-400", bg: "bg-blue-500/10" },
+    withdrawal: { icon: Wallet, color: "text-orange-400", bg: "bg-orange-500/10" },
+    bonus: { icon: Gift, color: "text-amber-400", bg: "bg-amber-500/10" },
+    reward: { icon: Gift, color: "text-primary", bg: "bg-primary/10" },
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.42 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+        <Coins className="w-4 h-4 text-primary/70" />
+        Recent Transactions
+      </h3>
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : txns.length === 0 ? (
+        <div className="text-center py-6">
+          <Coins className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+          <p className="text-xs text-gray-500">No recent transactions.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {txns.slice(0, 5).map((tx, i) => {
+            const txType = (tx.type || "deposit").toLowerCase();
+            const style = txnIcon[txType] || txnIcon.deposit;
+            const TxIcon = style.icon;
+            return (
+              <div key={tx.id || i} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${style.bg}`}>
+                  <TxIcon className={`w-4 h-4 ${style.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-gray-300 capitalize">{tx.type || "Transaction"}</div>
+                  {tx.description && <div className="text-[0.5625rem] text-gray-600 truncate">{tx.description}</div>}
+                </div>
+                <div className="text-right shrink-0">
+                  <div className={`text-xs font-bold ${(tx.amount || 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    {(tx.amount || 0) >= 0 ? "+" : ""}{(tx.amount || 0).toLocaleString()}
+                  </div>
+                  <div className="text-[0.5rem] text-gray-600">
+                    {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : ""}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Social & Behavior Widget ────────────────────────────────────────────────
+function SocialBehaviorWidget() {
+  const [reputation, setReputation] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/stats/reputation", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setReputation(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const repLevel = reputation?.level || "Excellent";
+  const repColor: Record<string, { text: string; bg: string; border: string; glow: string }> = {
+    Excellent: { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20", glow: "0 0 12px rgba(34,197,94,0.15)" },
+    Good: { text: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", glow: "0 0 12px rgba(59,130,246,0.15)" },
+    Fair: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", glow: "0 0 12px rgba(245,158,11,0.15)" },
+    Poor: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", glow: "0 0 12px rgba(239,68,68,0.15)" },
+  };
+  const style = repColor[repLevel] || repColor.Excellent;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.44 }}
+      className="rounded-xl p-5 mb-6"
+      style={{ background: "rgba(15,15,20,0.5)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2" style={{ textShadow: "0 0 8px rgba(212,175,55,0.4)" }}>
+        <ThumbsUp className="w-4 h-4 text-primary/70" />
+        Social & Behavior
+      </h3>
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="flex items-center gap-4">
+          <div
+            className={`flex items-center gap-3 px-5 py-3 rounded-xl ${style.bg} border ${style.border}`}
+            style={{ boxShadow: style.glow }}
+          >
+            <ThumbsUp className={`w-6 h-6 ${style.text}`} />
+            <div>
+              <div className={`text-lg font-black ${style.text}`}>{repLevel}</div>
+              <div className="text-[0.5625rem] text-gray-500">Table Reputation</div>
+            </div>
+          </div>
+          <div className="flex-1 space-y-2">
+            {[
+              { label: "Games Completed", value: reputation?.gamesCompleted || 0 },
+              { label: "Times Reported", value: reputation?.timesReported || 0 },
+              { label: "Friendly Actions", value: reputation?.friendlyActions || 0 },
+            ].map(item => (
+              <div key={item.label} className="flex items-center justify-between text-[0.625rem]">
+                <span className="text-gray-500">{item.label}</span>
+                <span className="font-bold text-gray-300">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
   );
 }
 
@@ -901,6 +1747,7 @@ function TauntVoicePicker({ currentVoice }: { currentVoice: string }) {
       <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
         <Mic className="w-4 h-4 text-purple-500/70" />
         Taunt Voice
+        {saving && <span className="flex items-center gap-1 text-[0.5625rem] text-purple-400 ml-2"><Loader2 className="w-3 h-3 animate-spin" /> Saving...</span>}
       </h3>
       <p className="text-[0.625rem] text-gray-500 mb-4">
         Choose the voice your taunts play in. Default is a confident, energetic voice. Or pick one that matches your avatar.

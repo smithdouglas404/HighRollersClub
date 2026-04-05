@@ -10,6 +10,12 @@ interface PayoutPieChartProps {
   className?: string;
 }
 
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 const COLORS = [
   "#d4af37", // 1st - gold
   "#c0c0c0", // 2nd - silver
@@ -76,7 +82,7 @@ export function PayoutPieChart({ slices, size = 160, className }: PayoutPieChart
         {slices.map((s, i) => (
           <div key={i} className="flex items-center gap-2 text-xs">
             <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-            <span className="text-white/60">{s.label || `${s.position}${s.position === 1 ? "st" : s.position === 2 ? "nd" : s.position === 3 ? "rd" : "th"}`}</span>
+            <span className="text-white/60">{s.label || ordinal(s.position)}</span>
             <span className="ml-auto font-mono font-bold text-white/80">{s.percentage}%</span>
           </div>
         ))}

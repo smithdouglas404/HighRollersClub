@@ -55,26 +55,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         setUser(data);
-        // Submit device fingerprint for anti-fraud tracking
-        try {
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-          ctx?.fillText("fp", 10, 10);
-          const fp = [
-            canvas.toDataURL().slice(-32),
-            navigator.userAgent.slice(0, 50),
-            `${screen.width}x${screen.height}`,
-            Intl.DateTimeFormat().resolvedOptions().timeZone,
-            navigator.language,
-          ].join("|");
-          const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(fp));
-          const fingerprint = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
-          fetch("/api/device-fingerprint", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fingerprint, screenRes: `${screen.width}x${screen.height}`, userAgent: navigator.userAgent }),
-          }).catch(() => {});
-        } catch {}
+        // Submit device fingerprint for anti-fraud tracking (only with consent)
+        const fpConsent = localStorage.getItem("fp_consent");
+        if (fpConsent === "accepted") {
+          try {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            ctx?.fillText("fp", 10, 10);
+            const fp = [
+              canvas.toDataURL().slice(-32),
+              navigator.userAgent.slice(0, 50),
+              `${screen.width}x${screen.height}`,
+              Intl.DateTimeFormat().resolvedOptions().timeZone,
+              navigator.language,
+            ].join("|");
+            const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(fp));
+            const fingerprint = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+            fetch("/api/device-fingerprint", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ fingerprint, screenRes: `${screen.width}x${screen.height}`, userAgent: navigator.userAgent }),
+            }).catch(() => {});
+          } catch {}
+        }
       } else {
         setUser(null);
       }

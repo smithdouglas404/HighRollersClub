@@ -52,6 +52,10 @@ import PremiumTable from "@/pages/PremiumTable";
 import DyeShop from "@/pages/DyeShop";
 import MultiTable from "@/pages/MultiTable";
 import SharedReplay from "@/pages/SharedReplay";
+import ClubRevenueReports from "@/pages/ClubRevenueReports";
+import ClubMemberAnalytics from "@/pages/ClubMemberAnalytics";
+import ClubTournamentAnalytics from "@/pages/ClubTournamentAnalytics";
+import AvatarCustomizer from "@/pages/AvatarCustomizer";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -192,6 +196,22 @@ function ProtectedSharedReplay() {
   return <AuthGate><SharedReplay /></AuthGate>;
 }
 
+function ProtectedClubRevenueReports({ params }: { params: { id: string } }) {
+  return <AuthGate><ClubRevenueReports /></AuthGate>;
+}
+
+function ProtectedClubMemberAnalytics({ params }: { params: { id: string } }) {
+  return <AuthGate><ClubMemberAnalytics /></AuthGate>;
+}
+
+function ProtectedClubTournamentAnalytics({ params }: { params: { id: string } }) {
+  return <AuthGate><ClubTournamentAnalytics /></AuthGate>;
+}
+
+function ProtectedAvatarCustomizer() {
+  return <AuthGate><AvatarCustomizer /></AuthGate>;
+}
+
 function GameWithTable({ params }: { params: { tableId: string } }) {
   return <AuthGate><ErrorBoundary fallbackTitle="Game Error"><Game tableId={params.tableId} /></ErrorBoundary></AuthGate>;
 }
@@ -282,7 +302,10 @@ function Router() {
       <Route path="/dye-shop" component={ProtectedDyeShop} />
       <Route path="/multi-table" component={ProtectedMultiTable} />
       <Route path="/shared-replay/:id">{(params) => <AuthGate><SharedReplay /></AuthGate>}</Route>
-      <Route path="/avatar-customizer">{() => <Redirect to="/wardrobe" />}</Route>
+      <Route path="/clubs/:id/revenue">{(params) => <ProtectedClubRevenueReports params={params} />}</Route>
+      <Route path="/clubs/:id/analytics">{(params) => <ProtectedClubMemberAnalytics params={params} />}</Route>
+      <Route path="/clubs/:id/tournament-analytics">{(params) => <ProtectedClubTournamentAnalytics params={params} />}</Route>
+      <Route path="/avatar-customizer" component={ProtectedAvatarCustomizer} />
       <Route path="/avatar-render">{() => <Redirect to="/wardrobe" />}</Route>
       <Route component={NotFound} />
     </Switch>

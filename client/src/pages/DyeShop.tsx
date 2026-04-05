@@ -1,44 +1,50 @@
-import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useAuth } from "@/lib/auth-context";
-import { Palette, Paintbrush, Check, Sparkles } from "lucide-react";
+import {
+  Palette, Paintbrush, Check, Sparkles, Shield, Star,
+  Clock, Wand2, Shirt, Sword, Crown
+} from "lucide-react";
 
-const PRIMARY_COLORS = [
-  "#c9a84c", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6",
-  "#e67e22", "#1abc9c", "#f1c40f", "#e91e63", "#00bcd4",
-  "#8bc34a", "#ff5722", "#607d8b", "#795548", "#ffffff",
-];
+/* ── Color Palettes ── */
+const PRIMARY_SWATCHES = ["#c9a84c", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#e67e22", "#1abc9c", "#f1c40f"];
+const SECONDARY_SWATCHES = ["#1a1a2e", "#2d1b69", "#0a3d62", "#1e3a2f", "#3d0c02", "#2c2c3e", "#0d0d1a", "#1b1b2f"];
+const ACCENT_SWATCHES = ["#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff", "#ff6f91", "#845ec2", "#00c9a7", "#ffc75f"];
 
-const SECONDARY_COLORS = [
-  "#1a1a2e", "#2d1b69", "#0a3d62", "#1e3a2f", "#3d0c02",
-  "#2c2c3e", "#0d0d1a", "#1b1b2f", "#0f3460", "#16213e",
-  "#1a1a40", "#2b2d42", "#3c1642", "#0b0b0f", "#252525",
-];
-
-const ACCENT_COLORS = [
-  "#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff", "#ff6f91",
-  "#845ec2", "#00c9a7", "#ffc75f", "#f9f871", "#c34a36",
-  "#ff8066", "#a29bfe", "#fd79a8", "#00cec9", "#e17055",
-];
-
+/* ── Dye Packs ── */
 interface DyePack {
   name: string;
-  icon: string;
   primary: string;
   secondary: string;
   accent: string;
-  description: string;
 }
 
 const DYE_PACKS: DyePack[] = [
-  { name: "Gold Rush", icon: "💰", primary: "#c9a84c", secondary: "#1a1a2e", accent: "#ffd700", description: "Classic gold luxury" },
-  { name: "Neon Cyber", icon: "🔮", primary: "#00ffff", secondary: "#0d0d1a", accent: "#ff00ff", description: "Cyberpunk neon glow" },
-  { name: "Ocean Deep", icon: "🌊", primary: "#0077b6", secondary: "#023e8a", accent: "#00b4d8", description: "Deep sea explorer" },
-  { name: "Blood Red", icon: "🩸", primary: "#dc2626", secondary: "#1a0000", accent: "#ff4444", description: "Crimson intimidation" },
-  { name: "Phantom Purple", icon: "👻", primary: "#7c3aed", secondary: "#1e1040", accent: "#a78bfa", description: "Ethereal phantom aura" },
+  { name: "Gold Leaf", primary: "#d4af37", secondary: "#1a1a2e", accent: "#ffd700" },
+  { name: "Midnight Chrome", primary: "#c0c0c0", secondary: "#0d0d1a", accent: "#4d96ff" },
+  { name: "Sentinel Blue", primary: "#2563eb", secondary: "#0f172a", accent: "#60a5fa" },
+  { name: "Crimson Fury", primary: "#dc2626", secondary: "#1a0000", accent: "#ff4444" },
+  { name: "Phantom Purple", primary: "#7c3aed", secondary: "#1e1040", accent: "#a78bfa" },
+  { name: "Emerald Shadow", primary: "#059669", secondary: "#0a1f15", accent: "#34d399" },
+  { name: "Arctic Frost", primary: "#06b6d4", secondary: "#0c1a2e", accent: "#e0f2fe" },
+  { name: "Solar Flare", primary: "#ea580c", secondary: "#1c0a00", accent: "#fbbf24" },
 ];
 
+/* ── Recently Equipped Placeholder Items ── */
+const RECENT_ITEMS = [
+  { name: "Obsidian Helm", icon: Crown, tier: "legendary" as const },
+  { name: "Void Chestplate", icon: Shield, tier: "epic" as const },
+  { name: "Ember Gauntlets", icon: Sword, tier: "rare" as const },
+  { name: "Shadow Cloak", icon: Shirt, tier: "rare" as const },
+];
+
+const TIER_COLORS = {
+  legendary: "text-amber-400",
+  epic: "text-purple-400",
+  rare: "text-blue-400",
+};
+
+/* ── localStorage persistence ── */
 const STORAGE_KEY = "poker-avatar-dye";
 
 function loadSavedDye(): { primary: string; secondary: string; accent: string } {
@@ -49,13 +55,99 @@ function loadSavedDye(): { primary: string; secondary: string; accent: string } 
   return { primary: "#c9a84c", secondary: "#1a1a2e", accent: "#ff6b6b" };
 }
 
+/* ── Color Picker Row Component ── */
+function ColorPickerRow({
+  label,
+  swatches,
+  value,
+  onChange,
+}: {
+  label: string;
+  swatches: string[];
+  value: string;
+  onChange: (color: string) => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[0.6875rem] font-bold text-white uppercase tracking-wider">{label}</span>
+        <span className="text-[0.5625rem] font-mono text-gray-500 uppercase">{value}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {swatches.map((color) => (
+          <button
+            key={color}
+            onClick={() => onChange(color)}
+            className={`w-8 h-8 rounded-lg border-2 transition-all hover:scale-110 relative shrink-0 ${
+              value === color
+                ? "border-white shadow-[0_0_10px_rgba(255,255,255,0.25)]"
+                : "border-transparent hover:border-white/20"
+            }`}
+            style={{ backgroundColor: color }}
+          >
+            {value === color && (
+              <Check className="w-3 h-3 text-white absolute inset-0 m-auto drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+            )}
+          </button>
+        ))}
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-8 h-8 rounded-lg border border-white/10 cursor-pointer bg-transparent shrink-0 [&::-webkit-color-swatch-wrapper]:p-0.5 [&::-webkit-color-swatch]:rounded"
+          title="Custom color"
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── Style Score Ring SVG ── */
+function StyleScoreRing({ score }: { score: number }) {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+
+  return (
+    <div className="relative w-28 h-28 mx-auto">
+      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+        {/* Background ring */}
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
+        {/* Progress ring */}
+        <motion.circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          stroke="url(#scoreGradient)"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.2, delay: 0.3 }}
+        />
+        <defs>
+          <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#d4af37" />
+            <stop offset="100%" stopColor="#f59e0b" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-xl font-black text-amber-400">{score}</span>
+        <span className="text-[0.5rem] text-gray-500 uppercase tracking-wider font-bold">Style</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main Component ── */
 export default function DyeShop() {
-  const { user } = useAuth();
   const saved = loadSavedDye();
   const [primary, setPrimary] = useState(saved.primary);
   const [secondary, setSecondary] = useState(saved.secondary);
   const [accent, setAccent] = useState(saved.accent);
-  const [activeSection, setActiveSection] = useState<"primary" | "secondary" | "accent">("primary");
   const [applied, setApplied] = useState(false);
 
   const handleApply = () => {
@@ -70,161 +162,252 @@ export default function DyeShop() {
     setAccent(pack.accent);
   };
 
-  const currentColors = activeSection === "primary" ? PRIMARY_COLORS : activeSection === "secondary" ? SECONDARY_COLORS : ACCENT_COLORS;
-  const currentValue = activeSection === "primary" ? primary : activeSection === "secondary" ? secondary : accent;
-  const setCurrentValue = activeSection === "primary" ? setPrimary : activeSection === "secondary" ? setSecondary : setAccent;
+  // Calculated scores
+  const styleScore = 72;
+  const armorRating = 85;
 
   return (
     <DashboardLayout title="Dye Shop">
-      <div className="px-4 md:px-8 pb-8 relative z-10">
+      <div className="px-4 md:px-8 pb-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#c9a84c]/20 to-purple-500/20 border border-[#c9a84c]/20 flex items-center justify-center">
-            <Palette className="w-5 h-5 text-[#c9a84c]" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-4"
+        >
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/15 to-purple-500/15 border border-amber-500/20 flex items-center justify-center">
+            <Palette className="w-6 h-6 text-amber-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white font-display">Avatar Dye Shop</h1>
-            <p className="text-xs text-gray-400">Customize your avatar colors</p>
+            <h2 className="text-lg font-display font-bold text-white tracking-tight">Avatar Dye Shop</h2>
+            <p className="text-[0.625rem] text-muted-foreground">Customize your avatar colors with dyes and preset packs.</p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-          {/* Left: Color Selection */}
-          <div className="space-y-6">
-            {/* Section Tabs */}
-            <div className="flex gap-2">
-              {(["primary", "secondary", "accent"] as const).map((section) => (
-                <button
-                  key={section}
-                  onClick={() => setActiveSection(section)}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                    activeSection === section
-                      ? "bg-[#c9a84c]/20 text-[#c9a84c] border border-[#c9a84c]/30"
-                      : "bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10"
-                  }`}
-                >
-                  <Paintbrush className="w-3 h-3 inline mr-1.5" />
-                  {section}
-                </button>
+        {/* Main 3-Column Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_260px] gap-6">
+          {/* ── Left Panel: Avatar Preview ── */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10 flex flex-col items-center"
+          >
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4">Live Preview</h3>
+
+            {/* Avatar Preview with live colors */}
+            <motion.div
+              key={`${primary}-${secondary}-${accent}`}
+              initial={{ scale: 0.97, opacity: 0.8 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-48 h-60 rounded-2xl overflow-hidden border-2 border-amber-500/30 mb-4 relative"
+              style={{
+                backgroundColor: secondary,
+                boxShadow: `0 0 30px ${primary}33, 0 8px 32px rgba(0,0,0,0.5)`,
+              }}
+            >
+              <svg viewBox="0 0 120 160" className="w-full h-full">
+                {/* Head */}
+                <circle cx="60" cy="38" r="18" fill={primary} opacity="0.9" />
+                {/* Visor / eye line */}
+                <rect x="46" y="35" width="28" height="4" rx="2" fill={accent} opacity="0.7" />
+                {/* Neck */}
+                <rect x="54" y="54" width="12" height="8" rx="3" fill={primary} opacity="0.85" />
+                {/* Body / Torso */}
+                <path d="M33 66 Q33 58 60 58 Q87 58 87 66 L90 112 Q90 124 60 124 Q30 124 30 112 Z" fill={primary} opacity="0.85" />
+                {/* Armor accent lines */}
+                <path d="M42 72 L78 72" stroke={accent} strokeWidth="2" opacity="0.6" />
+                <path d="M44 80 L76 80" stroke={accent} strokeWidth="1.5" opacity="0.45" />
+                <path d="M46 88 L74 88" stroke={accent} strokeWidth="1" opacity="0.35" />
+                {/* Shoulder pads */}
+                <ellipse cx="33" cy="66" rx="8" ry="5" fill={primary} opacity="0.75" />
+                <ellipse cx="87" cy="66" rx="8" ry="5" fill={primary} opacity="0.75" />
+                {/* Accent circle on chest */}
+                <circle cx="60" cy="76" r="5" fill="none" stroke={accent} strokeWidth="1.5" opacity="0.5" />
+                <circle cx="60" cy="76" r="2" fill={accent} opacity="0.6" />
+                {/* Arms */}
+                <path d="M33 68 L20 98 L26 100 L36 76" fill={primary} opacity="0.8" />
+                <path d="M87 68 L100 98 L94 100 L84 76" fill={primary} opacity="0.8" />
+                {/* Legs */}
+                <path d="M42 120 L38 155 L48 155 L50 120" fill={primary} opacity="0.75" />
+                <path d="M70 120 L72 155 L82 155 L78 120" fill={primary} opacity="0.75" />
+                {/* Glow ring around head */}
+                <circle cx="60" cy="38" r="22" fill="none" stroke={accent} strokeWidth="0.6" opacity="0.3" />
+              </svg>
+            </motion.div>
+
+            {/* Color Summary */}
+            <div className="w-full space-y-2">
+              {[
+                { label: "Primary", color: primary },
+                { label: "Secondary", color: secondary },
+                { label: "Accent", color: accent },
+              ].map(({ label, color }) => (
+                <div key={label} className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded border border-white/10 shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-[0.6875rem] text-gray-400 flex-1">{label}</span>
+                  <span className="text-[0.5625rem] text-gray-500 font-mono uppercase">{color}</span>
+                </div>
               ))}
             </div>
+          </motion.div>
 
-            {/* Color Grid */}
-            <div className="rounded-xl border border-white/[0.06] p-5" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}>
-              <h3 className="text-sm font-bold text-white mb-3 capitalize">{activeSection} Color</h3>
-              <div className="grid grid-cols-5 sm:grid-cols-8 gap-3">
-                {currentColors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setCurrentValue(color)}
-                    className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-110 relative ${
-                      currentValue === color ? "border-white shadow-[0_0_12px_rgba(255,255,255,0.3)]" : "border-transparent"
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  >
-                    {currentValue === color && (
-                      <Check className="w-4 h-4 text-white absolute inset-0 m-auto drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" />
-                    )}
-                  </button>
-                ))}
+          {/* ── Center Panel: Dye Customization ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="space-y-5"
+          >
+            {/* Color Pickers */}
+            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-5 flex items-center gap-2">
+                <Paintbrush className="w-4 h-4 text-amber-400" />
+                Dye Customization
+              </h3>
+              <div className="space-y-5">
+                <ColorPickerRow label="Primary" swatches={PRIMARY_SWATCHES} value={primary} onChange={setPrimary} />
+                <ColorPickerRow label="Secondary" swatches={SECONDARY_SWATCHES} value={secondary} onChange={setSecondary} />
+                <ColorPickerRow label="Accent" swatches={ACCENT_SWATCHES} value={accent} onChange={setAccent} />
               </div>
             </div>
 
-            {/* Dye Packs */}
-            <div className="rounded-xl border border-white/[0.06] p-5" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}>
+            {/* Dye Packs Grid */}
+            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
               <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-4 h-4 text-[#c9a84c]" />
-                <h3 className="text-sm font-bold text-white">Dye Packs</h3>
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Dye Packs</h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {DYE_PACKS.map((pack) => {
                   const isActive = primary === pack.primary && secondary === pack.secondary && accent === pack.accent;
                   return (
                     <button
                       key={pack.name}
                       onClick={() => handlePackSelect(pack)}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                      className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all text-center ${
                         isActive
-                          ? "border-[#c9a84c]/40 bg-[#c9a84c]/10"
-                          : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]"
+                          ? "border-amber-500/40 bg-amber-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]"
+                          : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10"
                       }`}
                     >
-                      <span className="text-2xl">{pack.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-white">{pack.name}</p>
-                        <p className="text-[10px] text-gray-400">{pack.description}</p>
-                      </div>
+                      {/* Color dots */}
                       <div className="flex gap-1">
                         <span className="w-4 h-4 rounded-full border border-white/10" style={{ backgroundColor: pack.primary }} />
                         <span className="w-4 h-4 rounded-full border border-white/10" style={{ backgroundColor: pack.secondary }} />
                         <span className="w-4 h-4 rounded-full border border-white/10" style={{ backgroundColor: pack.accent }} />
                       </div>
+                      <span className="text-[0.625rem] font-bold text-white leading-tight">{pack.name}</span>
+                      {isActive && (
+                        <Check className="w-3 h-3 text-amber-400" />
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
-          </div>
 
-          {/* Right: Preview Panel */}
-          <div className="space-y-4">
-            <div className="rounded-xl border border-white/[0.06] p-5 sticky top-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}>
-              <h3 className="text-sm font-bold text-white mb-4 text-center">Preview</h3>
-
-              {/* Avatar Preview */}
-              <div className="relative w-40 h-40 mx-auto mb-4 rounded-2xl overflow-hidden" style={{ backgroundColor: secondary }}>
-                {/* SVG avatar silhouette with color overlay */}
-                <svg viewBox="0 0 100 100" className="w-full h-full">
-                  {/* Head */}
-                  <circle cx="50" cy="30" r="16" fill={primary} opacity="0.9" />
-                  {/* Body */}
-                  <path d="M30 55 Q30 42 50 42 Q70 42 70 55 L72 85 Q72 95 50 95 Q28 95 28 85 Z" fill={primary} opacity="0.85" />
-                  {/* Accent details */}
-                  <circle cx="50" cy="30" r="12" fill="none" stroke={accent} strokeWidth="1.5" opacity="0.6" />
-                  <path d="M38 60 L62 60" stroke={accent} strokeWidth="2" opacity="0.5" />
-                  <path d="M40 68 L60 68" stroke={accent} strokeWidth="1.5" opacity="0.4" />
-                </svg>
-              </div>
-
-              {/* Color Summary */}
-              <div className="space-y-2 mb-4">
-                {[
-                  { label: "Primary", color: primary },
-                  { label: "Secondary", color: secondary },
-                  { label: "Accent", color: accent },
-                ].map(({ label, color }) => (
-                  <div key={label} className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded border border-white/10" style={{ backgroundColor: color }} />
-                    <span className="text-xs text-gray-400 flex-1">{label}</span>
-                    <span className="text-[10px] text-gray-500 font-mono uppercase">{color}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Apply Button */}
-              <button
+            {/* Bottom Action Buttons */}
+            <div className="flex gap-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={handleApply}
-                className={`w-full py-2.5 rounded-lg font-bold text-sm transition-all ${
+                className={`flex-1 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
                   applied
                     ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                    : "bg-gradient-to-r from-[#c9a84c] to-[#b8943f] text-black hover:brightness-110"
+                    : "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black border border-amber-400/40 shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.45)]"
                 }`}
               >
                 {applied ? (
-                  <><Check className="w-4 h-4 inline mr-1" /> Dye Applied!</>
+                  <>
+                    <Check className="w-4 h-4" />
+                    Dye Applied!
+                  </>
                 ) : (
-                  <><Paintbrush className="w-4 h-4 inline mr-1" /> Apply Dye</>
+                  <>
+                    <Paintbrush className="w-4 h-4" />
+                    Apply Dye
+                  </>
                 )}
-              </button>
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/25 hover:bg-purple-500/20 transition-all flex items-center gap-2"
+              >
+                <Wand2 className="w-4 h-4" />
+                Nano Banana Render
+              </motion.button>
+            </div>
+          </motion.div>
+
+          {/* ── Right Panel: Stats + Recent Items ── */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-5"
+          >
+            {/* Quick Stats */}
+            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-400" />
+                Quick Stats
+              </h3>
+
+              {/* Style Score Ring */}
+              <StyleScoreRing score={styleScore} />
+
+              {/* Armor Rating */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[0.6875rem] font-bold text-white flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-blue-400" />
+                    Armor Rating
+                  </span>
+                  <span className="text-sm font-black text-blue-400">{armorRating}</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${armorRating}%` }}
+                    transition={{ delay: 0.5, duration: 0.8 }}
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="text-center">
-              <Link href="/wardrobe" className="text-xs text-[#c9a84c] hover:underline">
-                Back to Wardrobe
-              </Link>
+            {/* Recently Equipped */}
+            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-400" />
+                Recently Equipped
+              </h3>
+              <div className="space-y-2">
+                {RECENT_ITEMS.map((item) => {
+                  const ItemIcon = item.icon;
+                  return (
+                    <div
+                      key={item.name}
+                      className="flex items-center gap-3 p-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                        <ItemIcon className={`w-4 h-4 ${TIER_COLORS[item.tier]}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[0.6875rem] font-bold text-white truncate">{item.name}</div>
+                        <div className={`text-[0.5625rem] font-bold uppercase tracking-wider ${TIER_COLORS[item.tier]}`}>
+                          {item.tier}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </DashboardLayout>

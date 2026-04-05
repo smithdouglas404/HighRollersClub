@@ -11,7 +11,7 @@ import {
   Plus, Users, Coins, ChevronRight,
   Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search,
   Brain, Key, CheckCircle, XCircle, Flame, Diamond,
-  Spade, Heart, Club, Trash2, Megaphone, CircleDot
+  Spade, Heart, Club, Trash2, Megaphone, CircleDot, Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NeonButton } from "@/components/ui/neon";
@@ -708,6 +708,8 @@ export default function Lobby() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [passwordModal, setPasswordModal] = useState<{ tableId: string; tableName: string } | null>(null);
   const [passwordInput, setPasswordInput] = useState("");
+  const [submittingPassword, setSubmittingPassword] = useState(false);
+  const [aiKeyError, setAiKeyError] = useState("");
   const [showAISettings, setShowAISettings] = useState(false);
   const [aiKeyInput, setAiKeyInput] = useState("");
   const [aiEnabled, setAiEnabled] = useState(false);
@@ -812,12 +814,14 @@ export default function Lobby() {
   };
 
   const handlePasswordSubmit = () => {
-    if (!passwordModal) return;
-    // Store password temporarily for the join attempt — cleared on failed join
-    sessionStorage.setItem(`table-password-${passwordModal.tableId}`, passwordInput);
+    if (!passwordModal || submittingPassword) return;
+    setSubmittingPassword(true);
+    const pw = passwordInput;
     setPasswordInput("");
-    setPasswordModal(null);
-    navigate(`/game/${passwordModal.tableId}`);
+    // Pass password via navigation state — never stored in sessionStorage
+    navigate(`/game/${passwordModal.tableId}?tp=${encodeURIComponent(pw)}`);
+    // Reset after navigation in case user comes back
+    setTimeout(() => { setSubmittingPassword(false); setPasswordModal(null); }, 500);
   };
 
   const handleCreateTable = async (config: any) => {
@@ -897,31 +901,31 @@ export default function Lobby() {
         {/* Daily Challenges */}
         <DailyChallenges />
 
-        {/* Game Mode Selection Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        {/* Premium Game Mode Selection Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
           {[
             {
-              icon: Lock,
-              title: "Private Game",
-              description: "Create a private table with invite code",
-              onClick: () => { setDefaultPrivate(true); setShowCreateTable(true); },
-              accent: "primary",
+              icon: Diamond,
+              title: "Private Table",
+              description: "Set your stakes and play with invited guests",
+              cta: "CREATE PRIVATE TABLE",
+              href: "/table/new",
               bgImage: "/images/generated/card-private-table.png",
             },
             {
               icon: Users,
               title: "Public Game",
-              description: "Join open tables",
-              onClick: () => tablesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
-              accent: "secondary",
+              description: "Open community play with exciting stakes",
+              cta: "CREATE PUBLIC GAME",
+              href: "/clubs/browse",
               bgImage: "/images/generated/card-public-game.png",
             },
             {
               icon: Trophy,
               title: "Tournament",
-              description: "Compete in scheduled events",
-              onClick: () => navigate("/tournaments"),
-              accent: "tertiary",
+              description: "Climb the leaderboard to become a legend",
+              cta: "JOIN TOURNAMENT",
+              href: "/tournaments",
               bgImage: "/images/generated/card-tournament.png",
             },
           ].map((mode, i) => {
@@ -929,43 +933,84 @@ export default function Lobby() {
             return (
               <motion.div
                 key={mode.title}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 25 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + i * 0.08, duration: 0.45 }}
-                whileHover={{ scale: 1.03 }}
+                transition={{ delay: 0.1 + i * 0.1, duration: 0.5 }}
+                whileHover={{ scale: 1.02, y: -4 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={mode.onClick}
-                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); mode.onClick(); } }}
+                onClick={() => navigate(mode.href)}
+                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(mode.href); } }}
                 role="button"
                 tabIndex={0}
                 data-testid={`card-mode-${mode.title.toLowerCase().replace(/\s+/g, "-")}`}
-                className={cn(
-                  "group cursor-pointer relative overflow-hidden rounded-md p-5 transition-all duration-300",
-                  "backdrop-blur-xl border border-white/[0.06]",
-                  "hover:border-[rgba(212,175,55,0.3)] hover:shadow-[0_0_25px_rgba(212,175,55,0.15)]"
-                )}
+                className="group cursor-pointer relative overflow-hidden rounded-xl transition-all duration-300"
                 style={{
-                  backgroundImage: `url(${mode.bgImage})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
+                  background: "linear-gradient(145deg, rgba(15,15,20,0.85) 0%, rgba(22,22,30,0.75) 100%)",
+                  backdropFilter: "blur(16px)",
+                  border: "1px solid rgba(212,175,55,0.15)",
+                  boxShadow: "0 4px 30px rgba(0,0,0,0.3), inset 0 1px 0 rgba(212,175,55,0.08)",
                 }}
               >
-                {/* Dark gradient overlay for text readability */}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/75 to-black/60 pointer-events-none" />
+                {/* Subtle background image */}
+                <div
+                  className="absolute inset-0 opacity-[0.12] pointer-events-none"
+                  style={{
+                    backgroundImage: `url(${mode.bgImage})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                />
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{
+                    background: "radial-gradient(ellipse at center bottom, rgba(212,175,55,0.12) 0%, transparent 70%)",
+                  }}
+                />
+                {/* Top gold accent line */}
+                <div className="absolute top-0 left-0 right-0 h-[2px]"
+                  style={{
+                    background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.5), transparent)",
+                  }}
+                />
 
-                <div className="relative flex items-start gap-4">
-                  <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.25)" }}>
-                    <Icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" style={{ color: "#d4af37" }} />
+                <div className="relative p-6 flex flex-col items-center text-center">
+                  {/* Icon container with glow */}
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:shadow-[0_0_25px_rgba(212,175,55,0.3)]"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(154,123,44,0.2) 0%, rgba(212,175,55,0.1) 100%)",
+                      border: "1px solid rgba(212,175,55,0.3)",
+                    }}
+                  >
+                    <Icon className="w-6 h-6 transition-transform duration-300 group-hover:scale-110" style={{ color: "#d4af37", filter: "drop-shadow(0 0 6px rgba(212,175,55,0.4))" }} />
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-display font-bold uppercase tracking-wider transition-colors duration-200" style={{ color: "#f5e6a3" }}>
-                      {mode.title}
-                    </h3>
-                    <p className="text-[0.6875rem] text-muted-foreground mt-0.5 leading-relaxed">
-                      {mode.description}
-                    </p>
+
+                  <h3
+                    className="text-base font-display font-bold uppercase tracking-wider mb-2"
+                    style={{
+                      background: "linear-gradient(135deg, #f5e6a3 0%, #d4af37 60%, #c9a84c 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
+                    {mode.title}
+                  </h3>
+                  <p className="text-[0.75rem] text-gray-400 leading-relaxed mb-5 max-w-[200px]">
+                    {mode.description}
+                  </p>
+
+                  {/* CTA Button */}
+                  <div
+                    className="w-full py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-[0.15em] text-center transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(154,123,44,0.3) 0%, rgba(212,175,55,0.15) 100%)",
+                      border: "1px solid rgba(212,175,55,0.35)",
+                      color: "#d4af37",
+                    }}
+                  >
+                    {mode.cta}
                   </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0 mt-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200" />
                 </div>
               </motion.div>
             );
@@ -1081,10 +1126,23 @@ export default function Lobby() {
                     <input
                       type="password"
                       value={aiKeyInput}
-                      onChange={(e) => setAiKeyInput(e.target.value)}
+                      onChange={(e) => {
+                        setAiKeyInput(e.target.value);
+                        const v = e.target.value.trim();
+                        if (v && !v.startsWith("sk-ant-")) {
+                          setAiKeyError("Key must start with \"sk-ant-\"");
+                        } else if (v && v.length < 20) {
+                          setAiKeyError("Key is too short");
+                        } else {
+                          setAiKeyError("");
+                        }
+                      }}
                       placeholder={aiHasKey ? "Key is set (enter new to replace)" : "sk-ant-..."}
-                      className="w-full pl-9 pr-4 py-2 rounded-md text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-purple-500/30 bg-surface-highest/50 border border-white/[0.06]"
+                      className={`w-full pl-9 pr-4 py-2 rounded-md text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-purple-500/30 bg-surface-highest/50 border ${aiKeyError ? "border-red-500/50" : "border-white/[0.06]"}`}
                     />
+                    {aiKeyError && (
+                      <p className="absolute -bottom-4 left-0 text-[0.5625rem] text-red-400">{aiKeyError}</p>
+                    )}
                   </div>
                   <button
                     onClick={async () => {
@@ -1111,7 +1169,7 @@ export default function Lobby() {
                         setAiSaving(false);
                       }
                     }}
-                    disabled={aiSaving || !aiKeyInput.trim()}
+                    disabled={aiSaving || !aiKeyInput.trim() || !!aiKeyError}
                     className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-white bg-purple-600/60 border border-purple-500/30 hover:bg-purple-600/80 transition-all disabled:opacity-40"
                   >
                     {aiSaving ? "Saving..." : "Save Key"}
@@ -1471,11 +1529,11 @@ export default function Lobby() {
                 className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-4"
               />
               <div className="flex gap-2">
-                <NeonButton variant="ghost" onClick={() => setPasswordModal(null)} className="flex-1">
+                <NeonButton variant="ghost" onClick={() => setPasswordModal(null)} className="flex-1" disabled={submittingPassword}>
                   Cancel
                 </NeonButton>
-                <NeonButton onClick={handlePasswordSubmit} className="flex-1">
-                  Join Table
+                <NeonButton onClick={handlePasswordSubmit} className="flex-1" disabled={submittingPassword}>
+                  {submittingPassword ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Joining...</> : "Join Table"}
                 </NeonButton>
               </div>
             </motion.div>
@@ -1525,9 +1583,11 @@ export default function Lobby() {
                 className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-1 uppercase tracking-widest font-mono"
               />
               <div className="h-5 mb-3">
-                {joinCodeError && (
+                {joinCodeError ? (
                   <p className="text-[0.625rem] text-destructive">{joinCodeError}</p>
-                )}
+                ) : joinCode.length > 0 && joinCode.length < 6 ? (
+                  <p className="text-[0.625rem] text-muted-foreground">Minimum 6 characters ({6 - joinCode.length} more needed)</p>
+                ) : null}
               </div>
               <div className="flex gap-2">
                 <NeonButton variant="ghost" onClick={() => setJoinCodeOpen(false)} className="flex-1" disabled={joinCodeLoading}>

@@ -611,6 +611,22 @@ function StepStakes({
           </div>
         </div>
 
+        {/* Buy-in ratio warning */}
+        {config.minBuyIn < 20 && (
+          <div
+            className="rounded-lg px-4 py-3 flex items-center gap-2"
+            style={{
+              background: "rgba(245,158,11,0.06)",
+              border: "1px solid rgba(245,158,11,0.2)",
+            }}
+          >
+            <span className="text-amber-400 text-sm">&#9888;</span>
+            <span className="text-[0.6875rem] text-amber-400">
+              Min buy-in is less than 20 BB. This may lead to very short-stacked play.
+            </span>
+          </div>
+        )}
+
         {/* Calculated Range */}
         <div
           className="rounded-lg px-4 py-3 flex items-center justify-between"

@@ -127,9 +127,9 @@ export function CommunityCards({ cards, pot }: CommunityCardsProps) {
                   >
                     {/* Phase indicator dots */}
                     <div className="flex gap-0.5">
-                      {i < 3 && <div className="w-1 h-1 rounded-full bg-amber-500/20" />}
-                      {i === 3 && <div className="w-1 h-1 rounded-full bg-yellow-500/20" />}
-                      {i === 4 && <div className="w-1 h-1 rounded-full bg-red-500/20" />}
+                      {i < 3 && <div className="w-1 h-1 rounded-full bg-[#d4af37]/30" />}
+                      {i === 3 && <div className="w-1 h-1 rounded-full bg-[#d4af37]/20" />}
+                      {i === 4 && <div className="w-1 h-1 rounded-full bg-[#d4af37]/20" />}
                     </div>
                   </div>
                 )}

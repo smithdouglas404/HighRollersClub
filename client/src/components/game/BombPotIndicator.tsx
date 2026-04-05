@@ -27,6 +27,8 @@ export function BombPotIndicator({ visible }: BombPotIndicatorProps) {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.5, y: -40 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          role="status"
+          aria-label="Bomb pot active"
           className="fixed inset-0 z-[90] flex items-center justify-center pointer-events-none"
         >
           {/* Radial explosion glow */}

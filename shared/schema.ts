@@ -30,6 +30,7 @@ export const users = pgTable("users", {
   tier: text("tier").notNull().default("free"), // free | bronze | silver | gold | platinum
   tierExpiresAt: timestamp("tier_expires_at"), // null for free tier
   // KYC verification
+  kycLevel: text("kyc_level").notNull().default("none"), // none | email | basic | standard | full | enhanced
   kycStatus: text("kyc_status").notNull().default("none"), // none | pending | verified | rejected
   kycData: jsonb("kyc_data"), // { fullName, dateOfBirth, country, idType, submittedAt, idDocumentPath?, selfiePath? }
   kycVerifiedAt: timestamp("kyc_verified_at"),
@@ -93,6 +94,7 @@ export const insertClubSchema = createInsertSchema(clubs).pick({
   name: true,
   description: true,
   isPublic: true,
+  avatarUrl: true,
 });
 
 export type Club = typeof clubs.$inferSelect;
@@ -1141,3 +1143,14 @@ export const announcements = pgTable("announcements", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type Announcement = typeof announcements.$inferSelect;
+
+// ─── Club Messages (Club Chat) ──────────────────────────────────────────────
+export const clubMessages = pgTable("club_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clubId: varchar("club_id").notNull().references(() => clubs.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [index("idx_club_messages_club").on(t.clubId), index("idx_club_messages_created").on(t.createdAt)]);
+
+export type ClubMessage = typeof clubMessages.$inferSelect;

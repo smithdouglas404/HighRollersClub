@@ -181,6 +181,27 @@ export default function TournamentCreate() {
       goToTab("general");
       return;
     }
+    if (buyIn <= 0) {
+      toast({ title: "Validation error", description: "Buy-in must be greater than 0.", variant: "destructive" });
+      goToTab("general");
+      return;
+    }
+    const firstBB = Math.round((startingStack / 100)) * 2;
+    if (startingStack < 20 * firstBB) {
+      toast({ title: "Validation error", description: `Starting stack (${startingStack}) must be at least 20x the first big blind (${firstBB}).`, variant: "destructive" });
+      goToTab("structure");
+      return;
+    }
+    if (maxPlayers < 2) {
+      toast({ title: "Validation error", description: "Max players must be at least 2.", variant: "destructive" });
+      goToTab("rules");
+      return;
+    }
+    if (adminFee < 0 || adminFee > 100) {
+      toast({ title: "Validation error", description: "Admin fee must be between 0% and 100%.", variant: "destructive" });
+      goToTab("financials");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -610,7 +631,7 @@ export default function TournamentCreate() {
               <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-500">Ante</span>
             </div>
             {Array.from({ length: Math.min(numberOfLevels, 8) }).map((_, i) => {
-              const sb = Math.round((startingStack / 100) * Math.pow(2, i));
+              const sb = Math.round((startingStack / 100) * Math.pow(1.25, i));
               const bb = sb * 2;
               const ante = i >= 3 ? Math.round(sb * 0.25) : 0;
               return (
@@ -624,7 +645,7 @@ export default function TournamentCreate() {
             })}
           </div>
           {(() => {
-            const totalBreakTime = breaks.reduce((sum, b) => sum + Math.floor(numberOfLevels / b.everyXLevels) * b.durationMinutes, 0);
+            const totalBreakTime = breaks.reduce((sum, b) => sum + Math.ceil(numberOfLevels / b.everyXLevels) * b.durationMinutes, 0);
             const estMinutes = numberOfLevels * blindInterval + totalBreakTime;
             const hours = Math.floor(estMinutes / 60);
             const mins = estMinutes % 60;

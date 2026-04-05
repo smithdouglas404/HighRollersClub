@@ -1,9 +1,82 @@
-import { type CardType, type Suit, type Rank, determineWinners, evaluateHand, type PlayerResult } from "./hand-evaluator";
+import { type CardType, type Suit, type Rank, determineWinners, evaluateHand, compareHands, type PlayerResult } from "./hand-evaluator";
 import { calculateEquity } from "./equity-calculator";
 import { encodeCard, evaluate7Fast, getHandCategory } from "./fast-evaluator";
 import { createProvablyFairShuffle, createProvablyFairShuffleMultiParty, type ShuffleProof, type PlayerSeedData } from "./crypto-shuffle";
 import type { VRFClient } from "../blockchain/vrf-client";
 import type { BlindLevel } from "./blind-presets";
+
+// ─── Evaluator Self-Test: ensure both evaluators agree on known hands ────────
+// If they disagree, log an error and set a flag to fall back to the slow evaluator.
+let useFastEvaluator = true;
+
+export function selfTestEvaluators(): boolean {
+  const suits: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
+  const ranks: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+  const c = (rank: Rank, suit: Suit): CardType => ({ rank, suit });
+
+  // 20+ test scenarios: [holeCards, communityCards, expectedCategory]
+  const testHands: { label: string; hole1: CardType[]; hole2: CardType[]; community: CardType[]; winner: 1 | 2 | 0 }[] = [
+    { label: "Royal flush vs straight flush", hole1: [c("A","spades"),c("K","spades")], hole2: [c("9","spades"),c("8","spades")], community: [c("Q","spades"),c("J","spades"),c("10","spades"),c("3","hearts"),c("2","diamonds")], winner: 1 },
+    { label: "Four of a kind vs full house", hole1: [c("A","hearts"),c("A","diamonds")], hole2: [c("K","hearts"),c("K","diamonds")], community: [c("A","clubs"),c("A","spades"),c("K","clubs"),c("7","hearts"),c("2","diamonds")], winner: 1 },
+    { label: "Flush vs straight", hole1: [c("A","hearts"),c("9","hearts")], hole2: [c("6","clubs"),c("5","diamonds")], community: [c("K","hearts"),c("7","hearts"),c("4","hearts"),c("3","spades"),c("2","clubs")], winner: 1 },
+    { label: "Two pair vs one pair", hole1: [c("K","hearts"),c("Q","diamonds")], hole2: [c("A","clubs"),c("9","spades")], community: [c("K","diamonds"),c("Q","clubs"),c("7","hearts"),c("3","spades"),c("2","clubs")], winner: 1 },
+    { label: "Set vs two pair", hole1: [c("8","hearts"),c("8","diamonds")], hole2: [c("A","clubs"),c("K","spades")], community: [c("8","clubs"),c("A","hearts"),c("K","hearts"),c("5","diamonds"),c("2","clubs")], winner: 1 },
+    { label: "High card ace vs high card king", hole1: [c("A","hearts"),c("2","diamonds")], hole2: [c("K","clubs"),c("3","spades")], community: [c("9","hearts"),c("7","diamonds"),c("5","clubs"),c("4","spades"),c("10","hearts")], winner: 1 },
+    { label: "Full house vs flush", hole1: [c("J","hearts"),c("J","diamonds")], hole2: [c("A","clubs"),c("3","clubs")], community: [c("J","clubs"),c("9","clubs"),c("9","hearts"),c("6","clubs"),c("2","diamonds")], winner: 1 },
+    { label: "Straight vs three of a kind", hole1: [c("6","hearts"),c("5","diamonds")], hole2: [c("7","clubs"),c("7","spades")], community: [c("4","clubs"),c("3","hearts"),c("2","spades"),c("7","hearts"),c("K","diamonds")], winner: 2 },
+    { label: "Pair vs pair (kicker decides)", hole1: [c("A","hearts"),c("K","diamonds")], hole2: [c("A","clubs"),c("Q","spades")], community: [c("A","spades"),c("9","hearts"),c("7","diamonds"),c("5","clubs"),c("2","hearts")], winner: 1 },
+    { label: "Wheel straight vs pair", hole1: [c("A","hearts"),c("2","diamonds")], hole2: [c("K","clubs"),c("K","spades")], community: [c("3","hearts"),c("4","diamonds"),c("5","clubs"),c("9","spades"),c("J","hearts")], winner: 1 },
+    { label: "Identical hands (split pot)", hole1: [c("A","hearts"),c("K","diamonds")], hole2: [c("A","clubs"),c("K","spades")], community: [c("Q","hearts"),c("J","diamonds"),c("10","clubs"),c("2","spades"),c("3","hearts")], winner: 0 },
+    { label: "Quads vs quads (kicker)", hole1: [c("A","hearts"),c("9","diamonds")], hole2: [c("A","clubs"),c("8","spades")], community: [c("2","hearts"),c("2","diamonds"),c("2","clubs"),c("2","spades"),c("3","hearts")], winner: 1 },
+    { label: "Straight flush vs four of a kind", hole1: [c("7","diamonds"),c("6","diamonds")], hole2: [c("A","hearts"),c("A","clubs")], community: [c("5","diamonds"),c("4","diamonds"),c("3","diamonds"),c("A","diamonds"),c("A","spades")], winner: 1 },
+    { label: "Full house (higher trips)", hole1: [c("K","hearts"),c("K","diamonds")], hole2: [c("Q","clubs"),c("Q","spades")], community: [c("K","clubs"),c("Q","hearts"),c("5","hearts"),c("5","diamonds"),c("2","clubs")], winner: 1 },
+    { label: "Flush (higher cards)", hole1: [c("A","hearts"),c("J","hearts")], hole2: [c("K","hearts"),c("10","hearts")], community: [c("8","hearts"),c("6","hearts"),c("3","diamonds"),c("2","spades"),c("9","clubs")], winner: 1 },
+    { label: "Trips vs trips (kicker)", hole1: [c("7","hearts"),c("A","diamonds")], hole2: [c("7","clubs"),c("K","spades")], community: [c("7","diamonds"),c("9","hearts"),c("5","clubs"),c("3","spades"),c("2","hearts")], winner: 1 },
+    { label: "Two pair vs two pair (kicker)", hole1: [c("A","hearts"),c("K","diamonds")], hole2: [c("A","clubs"),c("K","spades")], community: [c("A","spades"),c("K","hearts"),c("Q","clubs"),c("J","diamonds"),c("2","hearts")], winner: 0 },
+    { label: "Bottom straight vs top pair", hole1: [c("5","hearts"),c("4","diamonds")], hole2: [c("A","clubs"),c("K","spades")], community: [c("A","hearts"),c("3","diamonds"),c("2","clubs"),c("6","spades"),c("9","hearts")], winner: 1 },
+    { label: "Flush draw completes vs set", hole1: [c("J","clubs"),c("10","clubs")], hole2: [c("9","hearts"),c("9","diamonds")], community: [c("8","clubs"),c("5","clubs"),c("3","clubs"),c("9","spades"),c("K","diamonds")], winner: 1 },
+    { label: "Pair of aces vs pair of kings", hole1: [c("A","hearts"),c("A","diamonds")], hole2: [c("K","hearts"),c("K","diamonds")], community: [c("Q","clubs"),c("J","spades"),c("9","hearts"),c("5","diamonds"),c("2","clubs")], winner: 1 },
+    { label: "Broadway straight vs lower straight", hole1: [c("A","hearts"),c("K","diamonds")], hole2: [c("9","clubs"),c("8","spades")], community: [c("Q","hearts"),c("J","diamonds"),c("10","clubs"),c("7","spades"),c("2","hearts")], winner: 1 },
+  ];
+
+  let allPassed = true;
+  for (const t of testHands) {
+    const community = t.community;
+
+    // Fast evaluator scoring
+    const encode1 = [...t.hole1.map(encodeCard), ...community.map(encodeCard)];
+    const encode2 = [...t.hole2.map(encodeCard), ...community.map(encodeCard)];
+    const fast1 = evaluate7Fast(encode1);
+    const fast2 = evaluate7Fast(encode2);
+    let fastWinner: 1 | 2 | 0 = fast1 > fast2 ? 1 : fast1 < fast2 ? 2 : 0;
+
+    // Slow evaluator scoring
+    const slow1 = evaluateHand(t.hole1, community);
+    const slow2 = evaluateHand(t.hole2, community);
+    const cmp = compareHands(slow1, slow2);
+    let slowWinner: 1 | 2 | 0 = cmp > 0 ? 1 : cmp < 0 ? 2 : 0;
+
+    if (fastWinner !== slowWinner) {
+      console.error(`[evaluator-selftest] MISMATCH on "${t.label}": fast says player ${fastWinner}, slow says player ${slowWinner}`);
+      console.error(`  fast scores: p1=${fast1} p2=${fast2}  |  slow ranks: p1=${slow1.rank}(${slow1.rankValue}) p2=${slow2.rank}(${slow2.rankValue})`);
+      allPassed = false;
+    }
+  }
+
+  if (!allPassed) {
+    console.error("[evaluator-selftest] FAILED — falling back to slow evaluator for all winner determination");
+    useFastEvaluator = false;
+  } else {
+    console.log(`[evaluator-selftest] PASSED — ${testHands.length} test hands verified, both evaluators agree`);
+  }
+
+  return allPassed;
+}
+
+/** Returns whether the fast evaluator should be used (passes self-test) */
+export function shouldUseFastEvaluator(): boolean {
+  return useFastEvaluator;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export type GamePhase = "waiting" | "collecting-seeds" | "pre-flop" | "flop" | "turn" | "river" | "showdown";
@@ -1154,14 +1227,26 @@ export class GameEngine {
       if (boardCommunity.length < 5) break;
 
       // Evaluate each player's hand against this board
-      const boardCommunityEncoded = boardCommunity.map(encodeCard);
       let bestScore = 0;
       const scores: { id: string; score: number }[] = [];
-      for (const p of active) {
-        const encoded = [...p.cards!.map(encodeCard), ...boardCommunityEncoded];
-        const score = evaluate7Fast(encoded);
-        scores.push({ id: p.id, score });
-        if (score > bestScore) bestScore = score;
+      if (useFastEvaluator) {
+        const boardCommunityEncoded = boardCommunity.map(encodeCard);
+        for (const p of active) {
+          const encoded = [...p.cards!.map(encodeCard), ...boardCommunityEncoded];
+          const score = evaluate7Fast(encoded);
+          scores.push({ id: p.id, score });
+          if (score > bestScore) bestScore = score;
+        }
+      } else {
+        for (const p of active) {
+          const hand = evaluateHand(p.cards!.map(c => ({ ...c, hidden: false })), boardCommunity);
+          let score = hand.rankValue * 1000000;
+          for (let i = 0; i < hand.kickers.length && i < 5; i++) {
+            score += hand.kickers[i] * Math.pow(15, 4 - i);
+          }
+          scores.push({ id: p.id, score });
+          if (score > bestScore) bestScore = score;
+        }
       }
       const winners = scores.filter(s => s.score === bestScore).map(s => s.id);
 
@@ -1352,15 +1437,32 @@ export class GameEngine {
 
     const active = this.state.players.filter(p => p.status !== "folded" && p.status !== "sitting-out" && p.cards);
 
-    // Fast path: use bitmask/prime evaluator for scoring, old evaluator for UI descriptions
+    // Score each player's hand. Use fast evaluator if self-test passed, otherwise fall back to slow evaluator.
     const communityEncoded = this.state.communityCards.map(encodeCard);
     let bestScore = 0;
     const playerScores: { id: string; score: number }[] = [];
-    for (const p of active) {
-      const encoded = [...p.cards!.map(encodeCard), ...communityEncoded];
-      const score = evaluate7Fast(encoded);
-      playerScores.push({ id: p.id, score });
-      if (score > bestScore) bestScore = score;
+
+    if (useFastEvaluator) {
+      // Fast path: bitmask/prime evaluator for scoring
+      for (const p of active) {
+        const encoded = [...p.cards!.map(encodeCard), ...communityEncoded];
+        const score = evaluate7Fast(encoded);
+        playerScores.push({ id: p.id, score });
+        if (score > bestScore) bestScore = score;
+      }
+    } else {
+      // Fallback: slow evaluator produces consistent ranking via rankValue + kickers
+      for (const p of active) {
+        const hand = evaluateHand(p.cards!.map(c => ({ ...c, hidden: false })), this.state.communityCards);
+        // Convert slow evaluator result to a comparable numeric score
+        // Use rankValue * 1000000 + kicker-based tiebreak
+        let score = hand.rankValue * 1000000;
+        for (let i = 0; i < hand.kickers.length && i < 5; i++) {
+          score += hand.kickers[i] * Math.pow(15, 4 - i);
+        }
+        playerScores.push({ id: p.id, score });
+        if (score > bestScore) bestScore = score;
+      }
     }
 
     // Build results with UI-friendly hand descriptions from old evaluator

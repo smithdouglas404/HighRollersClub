@@ -14,6 +14,7 @@ import { LotterySNGLifecycle } from "./lottery-sng-lifecycle";
 import { STANDARD_SNG_SCHEDULE, HYPER_TURBO_SCHEDULE, getDefaultPayouts, type BlindLevel, type PayoutEntry } from "./blind-presets";
 import { fastFoldManager } from "./fast-fold-manager";
 import { antiCheatEngine } from "../anti-cheat";
+import { saveCheckpoint, clearCheckpoint } from "./state-checkpoint";
 import { hasDatabase, getDb } from "../db";
 
 import { AVATAR_IDS } from "@shared/avatar-ids";
@@ -214,6 +215,9 @@ class TableManager {
     // When a hand completes, persist proof and broadcast reveal
     engine.onHandComplete = (proof: ShuffleProof, summary: HandSummary) => {
       const winnerIds = summary.winners.map(w => w.playerId);
+
+      // Clear checkpoint — hand completed normally, no recovery needed
+      clearCheckpoint(tableId).catch(() => {});
 
       // Fire blockchain reveal at showdown (commit already fired during deal)
       const revealPromise = this.contractClient
@@ -660,6 +664,21 @@ class TableManager {
   ): Promise<{ ok: boolean; error?: string }> {
     const instance = await this.ensureTable(tableId);
     const { engine, config, lifecycle } = instance;
+
+    // ── Validate buy-in amount ──
+    if (!Number.isFinite(buyIn) || buyIn <= 0) {
+      return { ok: false, error: "Invalid buy-in amount" };
+    }
+    if (!Number.isInteger(buyIn)) {
+      return { ok: false, error: "Buy-in must be a whole number" };
+    }
+    // For non-tournament cash games, enforce table min/max immediately
+    const isTournamentFormat = config.gameFormat === "sng" || config.gameFormat === "lottery_sng" || config.gameFormat === "tournament";
+    if (!isTournamentFormat) {
+      if (buyIn < config.minBuyIn || buyIn > config.maxBuyIn) {
+        return { ok: false, error: `Buy-in must be between ${config.minBuyIn} and ${config.maxBuyIn}` };
+      }
+    }
 
     // Lottery SNG path: 3-player spin & go
     if (config.gameFormat === "lottery_sng" && lifecycle && lifecycle instanceof LotterySNGLifecycle) {
@@ -1395,6 +1414,11 @@ class TableManager {
     if (!player) return { ok: false, error: "Not seated at this table" };
 
     const result = instance.engine.handleAction(userId, action, amount, actionNumber);
+
+    // Checkpoint game state after every successful action (crash recovery)
+    if (result.ok && instance.engine.state.phase !== "waiting" && (instance.engine.state.phase as string) !== "finished") {
+      saveCheckpoint(tableId, instance.engine.state, instance.config).catch(() => {});
+    }
 
     // Fast-fold: on fold, instantly move player to a new table
     if (result.ok && action === "fold" && fastFoldManager.isTableInPool(tableId)) {

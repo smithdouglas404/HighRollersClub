@@ -2749,11 +2749,18 @@ function MultiplayerGame({ tableId }: { tableId: string }) {
 
   const handleJoin = () => {
     const amount = isSNG ? (tableInfo?.buyInAmount || buyIn) : buyIn;
-    const password = sessionStorage.getItem(`table-password-${tableId}`) || undefined;
-    // Check for invite code in URL query params (from /invite/:code redirect)
+    // Read password from URL query param (set by lobby password modal) — never persisted in storage
     const urlParams = new URLSearchParams(window.location.search);
+    const password = urlParams.get("tp") || undefined;
+    // Check for invite code in URL query params (from /invite/:code redirect)
     const inviteCode = urlParams.get("invite") || undefined;
     joinTable(amount, selectedSeat, password, inviteCode);
+    // Remove password from URL to prevent it from lingering in browser history
+    if (password) {
+      urlParams.delete("tp");
+      const cleanUrl = urlParams.toString() ? `${window.location.pathname}?${urlParams}` : window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+    }
     setJoined(true);
     soundEngine.init();
   };

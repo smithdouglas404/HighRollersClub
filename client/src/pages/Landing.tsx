@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Users, Trophy, Zap, Play, ChevronRight, Eye, Gamepad2, Crown, Swords } from "lucide-react";
+import { Shield, Users, Trophy, Zap, Play, ChevronRight, Eye, Gamepad2, Crown, Swords, Loader2 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
 import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.webp";
@@ -74,11 +74,13 @@ interface SocialLinks {
 }
 
 export default function Landing() {
+  const [, navigate] = useLocation();
   const [onlineCount, setOnlineCount] = useState(0);
   const [splashIdx, setSplashIdx] = useState(0);
   const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
   const [statsError, setStatsError] = useState(false);
   const [socialLinks, setSocialLinks] = useState<SocialLinks | null>(null);
+  const [playLoading, setPlayLoading] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchOnline() {
@@ -193,15 +195,15 @@ export default function Landing() {
                 Lobby
               </span>
             </Link>
-            <Link href="/lobby">
-              <button
-                className="rounded-lg px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 bg-primary/10 border border-primary/30 text-primary"
-                data-testid="button-launch"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                Play Now
-              </button>
-            </Link>
+            <button
+              onClick={() => { setPlayLoading("nav"); navigate("/lobby"); }}
+              className="rounded-lg px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 bg-primary/10 border border-primary/30 text-primary"
+              data-testid="button-launch"
+              disabled={playLoading === "nav"}
+            >
+              {playLoading === "nav" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+              {playLoading === "nav" ? "Loading..." : "Play Now"}
+            </button>
           </div>
         </motion.nav>
 
@@ -247,33 +249,33 @@ export default function Landing() {
                   transition={{ duration: 0.6, delay: 0.5 }}
                   className="flex flex-wrap items-center gap-4 pt-2"
                 >
-                  <Link href="/lobby">
-                    <motion.button
-                      animate={{ boxShadow: ["0 0 20px rgba(212,175,55,0.2)", "0 0 40px rgba(212,175,55,0.4)", "0 0 20px rgba(212,175,55,0.2)"] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="group relative overflow-hidden rounded-xl px-8 py-4 font-bold text-base uppercase tracking-wider gradient-primary text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
-                      data-testid="button-play-now"
-                    >
-                      <div className="absolute inset-0 bg-white/0 group-hover:bg-white/15 transition-all duration-300" />
-                      <div className="relative flex items-center gap-2">
-                        <Gamepad2 className="w-5 h-5" />
-                        Play Now
-                        <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </motion.button>
-                  </Link>
+                  <motion.button
+                    onClick={() => { setPlayLoading("lobby"); navigate("/lobby"); }}
+                    animate={{ boxShadow: ["0 0 20px rgba(212,175,55,0.2)", "0 0 40px rgba(212,175,55,0.4)", "0 0 20px rgba(212,175,55,0.2)"] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="group relative overflow-hidden rounded-xl px-8 py-4 font-bold text-base uppercase tracking-wider gradient-primary text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
+                    data-testid="button-play-now"
+                    disabled={playLoading === "lobby"}
+                  >
+                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/15 transition-all duration-300" />
+                    <div className="relative flex items-center gap-2">
+                      {playLoading === "lobby" ? <Loader2 className="w-5 h-5 animate-spin" /> : <Gamepad2 className="w-5 h-5" />}
+                      {playLoading === "lobby" ? "Loading..." : "Play Now"}
+                      {playLoading !== "lobby" && <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+                    </div>
+                  </motion.button>
 
-                  <Link href="/game">
-                    <button
-                      className="glass rounded-xl px-6 py-3.5 text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all border border-white/5"
-                      data-testid="button-play-offline"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Crown className="w-4 h-4 text-amber-500/70" />
-                        Practice Mode
-                      </div>
-                    </button>
-                  </Link>
+                  <button
+                    onClick={() => { setPlayLoading("practice"); navigate("/game"); }}
+                    className="glass rounded-xl px-6 py-3.5 text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all border border-white/5"
+                    data-testid="button-play-offline"
+                    disabled={playLoading === "practice"}
+                  >
+                    <div className="flex items-center gap-2">
+                      {playLoading === "practice" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4 text-amber-500/70" />}
+                      {playLoading === "practice" ? "Loading..." : "Practice Mode"}
+                    </div>
+                  </button>
                 </motion.div>
 
                 <motion.div

@@ -257,6 +257,14 @@ function SelfExclusionSection({ settings, onExclude }: { settings: RGSettings; o
       {isExcluded ? (
         <div className="text-sm text-red-300">
           <p>You are currently self-excluded until <strong>{new Date(settings.selfExcludedUntil!).toLocaleDateString()}</strong>.</p>
+          <p className="mt-1 text-amber-400 font-semibold">
+            {(() => {
+              const remaining = new Date(settings.selfExcludedUntil!).getTime() - now.getTime();
+              const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+              const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+              return `${days} day${days !== 1 ? "s" : ""}, ${hours} hour${hours !== 1 ? "s" : ""} remaining`;
+            })()}
+          </p>
           <p className="mt-1 text-muted-foreground">This cannot be reversed early for exclusion periods longer than 24 hours.</p>
         </div>
       ) : (

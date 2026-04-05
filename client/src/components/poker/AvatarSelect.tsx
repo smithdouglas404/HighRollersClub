@@ -303,7 +303,7 @@ export function AvatarSelect({ onSelect }: AvatarSelectProps) {
                 <input
                   type="text"
                   value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value.slice(0, 16))}
+                  onChange={(e) => setPlayerName(e.target.value.replace(/[^a-zA-Z0-9 _-]/g, "").slice(0, 16))}
                   onKeyDown={(e) => e.key === "Enter" && handleJoin()}
                   placeholder="Enter your player name..."
                   maxLength={16}

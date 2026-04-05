@@ -47,7 +47,7 @@ export function TablePreviewThumbnail({
             color: "#22c55e",
           }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" style={{ willChange: "opacity" }} />
           LIVE
         </div>
       )}

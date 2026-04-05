@@ -19,18 +19,36 @@ export function ElaborateHandHistory({ tableId, onClose }: HandHistoryProps) {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [summary, setSummary] = useState<{ totalPot: number; totalRake: number; handsCount: number }>({ totalPot: 0, totalRake: 0, handsCount: 0 });
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 30;
 
-  useEffect(() => {
-    fetch(`/api/tables/${tableId}/hands?limit=30`).then(r => r.ok ? r.json() : [])
+  const fetchHands = (currentOffset: number, append: boolean) => {
+    const setLoadingFn = append ? setLoadingMore : setLoading;
+    setLoadingFn(true);
+    fetch(`/api/tables/${tableId}/hands?limit=${PAGE_SIZE}&offset=${currentOffset}`).then(r => r.ok ? r.json() : [])
       .then((data: any[]) => {
-        setHands(data);
-        const totalPot = data.reduce((s: number, h: any) => s + (h.potTotal || 0), 0);
-        const totalRake = data.reduce((s: number, h: any) => s + (h.totalRake || 0), 0);
-        setSummary({ totalPot, totalRake, handsCount: data.length });
+        const newHands = append ? [...hands, ...data] : data;
+        setHands(newHands);
+        const totalPot = newHands.reduce((s: number, h: any) => s + (h.potTotal || 0), 0);
+        const totalRake = newHands.reduce((s: number, h: any) => s + (h.totalRake || 0), 0);
+        setSummary({ totalPot, totalRake, handsCount: newHands.length });
+        setHasMore(data.length >= PAGE_SIZE);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setLoadingFn(false));
+  };
+
+  useEffect(() => {
+    fetchHands(0, false);
   }, [tableId]);
+
+  const handleLoadMore = () => {
+    const newOffset = offset + PAGE_SIZE;
+    setOffset(newOffset);
+    fetchHands(newOffset, true);
+  };
 
   const loadHandPlayers = async (handId: string) => {
     if (players.has(handId)) return;
@@ -175,6 +193,18 @@ export function ElaborateHandHistory({ tableId, onClose }: HandHistoryProps) {
                   </AnimatePresence>
                 </div>
               ))}
+            </div>
+          )}
+          {hasMore && (
+            <div className="flex justify-center py-4 border-t border-white/5">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-bold hover:bg-primary/20 transition-colors disabled:opacity-50"
+              >
+                {loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                {loadingMore ? "Loading..." : "Load More"}
+              </button>
             </div>
           )}
         </div>

@@ -815,13 +815,13 @@ export default function Marketplace() {
                             Platform Fee ({feePercent}%{user?.tier === "platinum" ? " — Platinum rate" : ""})
                           </span>
                           <span className="text-red-400">
-                            -{Math.floor(parseInt(listPrice) * (feePercent / 100)).toLocaleString()}
+                            -{Math.max(1, Math.floor(parseInt(listPrice) * (feePercent / 100))).toLocaleString()}
                           </span>
                         </div>
                         <div className="border-t border-white/[0.06] pt-1.5 flex justify-between text-[0.625rem] font-bold">
                           <span className="text-white">You Receive</span>
                           <span style={{ color: "#d4af37" }}>
-                            {(parseInt(listPrice) - Math.floor(parseInt(listPrice) * (feePercent / 100))).toLocaleString()} Gold
+                            {(parseInt(listPrice) - Math.max(1, Math.floor(parseInt(listPrice) * (feePercent / 100)))).toLocaleString()} Gold
                           </span>
                         </div>
                       </div>

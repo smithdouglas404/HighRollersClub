@@ -12,6 +12,7 @@ export function ClubTournaments() {
   const { club, clubTournaments, isAdminOrOwner, createClubTournament } = useClub();
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -60,14 +61,15 @@ export function ClubTournaments() {
   };
 
   const handleRegister = async (tournamentId: string) => {
+    setInlineError(null);
     try {
       const res = await fetch(`/api/tournaments/${tournamentId}/register`, { method: "POST" });
       if (!res.ok) {
         const d = await res.json().catch(() => ({ message: "Registration failed" }));
-        alert(d.message);
+        setInlineError(d.message);
       }
     } catch {
-      alert("Registration failed");
+      setInlineError("Registration failed");
     }
   };
 
@@ -76,16 +78,17 @@ export function ClubTournaments() {
   const handleStart = async (tournamentId: string) => {
     if (starting) return;
     setStarting(tournamentId);
+    setInlineError(null);
     try {
       const res = await fetch(`/api/tournaments/${tournamentId}/start`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.message || "Failed to start tournament");
+        setInlineError(data.message || "Failed to start tournament");
       } else {
         navigate(`/game/${data.tables?.[0]?.tableId ?? ""}`);
       }
     } catch {
-      alert("Failed to start tournament");
+      setInlineError("Failed to start tournament");
     } finally {
       setStarting(null);
     }
@@ -95,6 +98,14 @@ export function ClubTournaments() {
 
   return (
     <div className="space-y-6">
+      {inlineError && (
+        <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium flex items-center justify-between">
+          <span>{inlineError}</span>
+          <button onClick={() => setInlineError(null)} className="ml-2 text-red-400 hover:text-red-300">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">

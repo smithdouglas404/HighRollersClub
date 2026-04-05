@@ -61,7 +61,7 @@ export function ReplayTimeline({
         onClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const x = (e.clientX - rect.left) / rect.width;
-          const idx = Math.round(x * totalActions) - 1;
+          const idx = Math.max(0, Math.round(x * totalActions) - 1);
           onGoToAction(idx);
         }}
       >

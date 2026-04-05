@@ -1142,3 +1142,14 @@ export const announcements = pgTable("announcements", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type Announcement = typeof announcements.$inferSelect;
+
+// ─── Club Messages (Club Chat) ──────────────────────────────────────────────
+export const clubMessages = pgTable("club_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clubId: varchar("club_id").notNull().references(() => clubs.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [index("idx_club_messages_club").on(t.clubId), index("idx_club_messages_created").on(t.createdAt)]);
+
+export type ClubMessage = typeof clubMessages.$inferSelect;

@@ -1124,4 +1124,92 @@ export async function registerClubRoutes(
       res.json(updated);
     } catch (err) { next(err); }
   });
+
+  // ─── Club Chat ────────────────────────────────────────────────────────────
+
+  // GET /api/clubs/:id/chat — fetch recent club chat messages with user info
+  app.get("/api/clubs/:id/chat", requireAuth, async (req, res, next) => {
+    try {
+      const clubId = req.params.id;
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
+
+      // Verify membership
+      const members = await storage.getClubMembers(clubId);
+      const isMember = members.some(m => m.userId === req.user!.id);
+      if (!isMember) return res.status(403).json({ message: "Not a member of this club" });
+
+      const messages = await storage.getClubMessages(clubId, limit);
+
+      // Enrich with user info
+      const userIds = [...new Set(messages.map(m => m.userId))];
+      const userMap = new Map<string, { username: string; displayName: string | null; avatarId: string | null }>();
+      await Promise.all(userIds.map(async (uid) => {
+        const u = await storage.getUser(uid);
+        if (u) userMap.set(uid, { username: u.username, displayName: u.displayName, avatarId: u.avatarId });
+      }));
+
+      const enriched = messages.map(m => ({
+        id: m.id,
+        clubId: m.clubId,
+        userId: m.userId,
+        message: m.message,
+        createdAt: m.createdAt,
+        username: userMap.get(m.userId)?.username ?? "Unknown",
+        displayName: userMap.get(m.userId)?.displayName ?? null,
+        avatarId: userMap.get(m.userId)?.avatarId ?? null,
+      }));
+
+      res.json(enriched);
+    } catch (err) { next(err); }
+  });
+
+  // POST /api/clubs/:id/chat — send a club chat message
+  app.post("/api/clubs/:id/chat", requireAuth, async (req, res, next) => {
+    try {
+      const clubId = req.params.id;
+      const rawMessage = req.body.message;
+
+      if (!rawMessage || typeof rawMessage !== "string") {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      const trimmed = rawMessage.trim();
+      if (trimmed.length < 1 || trimmed.length > 500) {
+        return res.status(400).json({ message: "Message must be 1-500 characters" });
+      }
+
+      // Verify membership
+      const members = await storage.getClubMembers(clubId);
+      const isMember = members.some(m => m.userId === req.user!.id);
+      if (!isMember) return res.status(403).json({ message: "Not a member of this club" });
+
+      // Sanitize
+      const sanitized = trimmed.replace(/[<>&"']/g, (c: string) =>
+        ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c] || c)
+      );
+
+      const msg = await storage.createClubMessage({ clubId, userId: req.user!.id, message: sanitized });
+
+      // Get user info for broadcasting
+      const user = await storage.getUser(req.user!.id);
+      const enriched = {
+        id: msg.id,
+        clubId: msg.clubId,
+        userId: msg.userId,
+        message: msg.message,
+        createdAt: msg.createdAt,
+        username: user?.username ?? "Unknown",
+        displayName: user?.displayName ?? null,
+        avatarId: user?.avatarId ?? null,
+      };
+
+      // Publish to Redis pub/sub for real-time delivery
+      const { getPubSub } = await import("../infra/ws-pubsub");
+      getPubSub().publish(`club:chat:${clubId}`, {
+        type: "club_chat",
+        ...enriched,
+      }).catch(() => {});
+
+      res.json(enriched);
+    } catch (err) { next(err); }
+  });
 }

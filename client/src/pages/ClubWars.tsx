@@ -44,11 +44,17 @@ export default function ClubWars() {
   const [wars, setWars] = useState<ClubWar[]>([]);
   const [loading, setLoading] = useState(true);
   const [matchmaking, setMatchmaking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchWars = () => {
+    setError(null);
     fetch("/api/club-wars", { credentials: "include" })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error("Failed to load club wars");
+        return r.json();
+      })
       .then(data => { if (Array.isArray(data)) setWars(data); })
+      .catch(err => setError(err.message || "Failed to load club wars"))
       .finally(() => setLoading(false));
   };
 
@@ -60,9 +66,17 @@ export default function ClubWars() {
 
   const requestMatchmaking = async () => {
     setMatchmaking(true);
+    setError(null);
     try {
-      await fetch("/api/club-wars/matchmake", { method: "POST", credentials: "include" });
+      const res = await fetch("/api/club-wars/matchmake", { method: "POST", credentials: "include" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ message: "Matchmaking failed" }));
+        setError(d.message || "Matchmaking failed");
+        return;
+      }
       fetchWars();
+    } catch {
+      setError("Matchmaking request failed");
     } finally { setMatchmaking(false); }
   };
 
@@ -90,6 +104,12 @@ export default function ClubWars() {
             </button>
           )}
         </div>
+
+        {error && (
+          <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
+            {error}
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-20">

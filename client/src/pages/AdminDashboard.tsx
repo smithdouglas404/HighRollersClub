@@ -20,6 +20,8 @@ interface WithdrawalRequest {
   withdrawalAddress: string;
   status: string;
   createdAt: string;
+  paymentId?: string;
+  txHash?: string;
 }
 
 interface CollusionAlertData {
@@ -959,6 +961,9 @@ export default function AdminDashboard() {
                   <div className="text-sm font-bold text-white">{w.amount.toLocaleString()} chips</div>
                   <div className="text-xs text-gray-500">{w.currency} to {w.withdrawalAddress.slice(0, 12)}...</div>
                   <div className="text-xs text-gray-600">{new Date(w.createdAt).toLocaleString()}</div>
+                  <div className="text-[10px] text-gray-600 font-mono mt-1">ID: {w.id}</div>
+                  {w.paymentId && <div className="text-[10px] text-gray-600 font-mono">Payment: {w.paymentId}</div>}
+                  {w.txHash && <div className="text-[10px] text-purple-400 font-mono">Tx: {w.txHash.slice(0, 16)}...</div>}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -1027,8 +1032,17 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 {expandedAlert === a.id && a.details && (
-                  <div className="mt-3 p-3 rounded-lg bg-black/30 text-xs text-gray-400 font-mono overflow-auto max-h-40">
-                    {JSON.stringify(a.details, null, 2)}
+                  <div className="mt-3 p-3 rounded-lg bg-black/30 text-xs text-gray-400 overflow-auto max-h-40 space-y-1">
+                    {Object.entries(a.details).map(([key, value]) => (
+                      <div key={key} className="flex gap-2">
+                        <span className="text-gray-500 font-semibold min-w-[100px]">{key}:</span>
+                        <span className="text-gray-300 break-all">
+                          {typeof value === "object" && value !== null
+                            ? Object.entries(value as Record<string, unknown>).map(([k, v]) => `${k}: ${v}`).join(", ")
+                            : String(value)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

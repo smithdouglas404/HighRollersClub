@@ -14,6 +14,7 @@ import {
   type Notification, type ClubChallenge, type ClubWar,
   type MarketplaceListing, type Stake,
   type ApiKey,
+  type ClubMessage,
   walletTypeEnum,
   users, clubs, clubMembers, tables, tablePlayers, transactions, gameHands, tournaments, tournamentRegistrations, playerStats,
   clubInvitations, clubAnnouncements, clubEvents,
@@ -26,6 +27,7 @@ import {
   notifications, clubChallenges, clubWars,
   marketplaceListings, stakes,
   apiKeys,
+  clubMessages,
 } from "@shared/schema";
 import { eq, and, desc, sql, inArray, gte, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -274,6 +276,10 @@ export interface IStorage {
 
   // OAuth
   getUserByProvider(provider: string, providerId: string): Promise<User | undefined>;
+
+  // Club Messages (Club Chat)
+  getClubMessages(clubId: string, limit?: number): Promise<ClubMessage[]>;
+  createClubMessage(data: { clubId: string; userId: string; message: string }): Promise<ClubMessage>;
 }
 
 // ─── In-Memory Storage (fallback when no DATABASE_URL) ───────────────────────
@@ -301,6 +307,7 @@ export class MemStorage implements IStorage {
   private clubAlliancesList: ClubAlliance[] = [];
   private leagueSeasonsList: LeagueSeason[] = [];
   private chatMessagesList: ChatMessage[] = [];
+  private clubMessagesList: ClubMessage[] = [];
   private collusionAlertsList: CollusionAlert[] = [];
   private playerNotesList: PlayerNote[] = [];
 
@@ -1166,6 +1173,19 @@ export class MemStorage implements IStorage {
   }
   async getRecentChatMessages(tableId: string, limit = 50) {
     return this.chatMessagesList.filter(m => m.tableId === tableId).slice(-limit);
+  }
+
+  // ── Club Messages (Club Chat) ─────────────────────────────────────────
+  async getClubMessages(clubId: string, limit = 50) {
+    return this.clubMessagesList
+      .filter(m => m.clubId === clubId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .slice(-limit);
+  }
+  async createClubMessage(data: { clubId: string; userId: string; message: string }) {
+    const msg: ClubMessage = { id: randomUUID(), clubId: data.clubId, userId: data.userId, message: data.message, createdAt: new Date() };
+    this.clubMessagesList.push(msg);
+    return msg;
   }
 
   // ── Collusion Alerts ───────────────────────────────────────────────────
@@ -2359,6 +2379,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(chatMessages.tableId, tableId))
       .orderBy(desc(chatMessages.createdAt))
       .limit(limit);
+  }
+
+  // ── Club Messages (Club Chat) ─────────────────────────────────────────
+  async getClubMessages(clubId: string, limit = 50) {
+    return this.db.select().from(clubMessages)
+      .where(eq(clubMessages.clubId, clubId))
+      .orderBy(desc(clubMessages.createdAt))
+      .limit(limit)
+      .then(rows => rows.reverse()); // return in chronological order
+  }
+  async createClubMessage(data: { clubId: string; userId: string; message: string }) {
+    const [msg] = await this.db.insert(clubMessages).values(data).returning();
+    return msg;
   }
 
   // ── Collusion Alerts ───────────────────────────────────────────────────

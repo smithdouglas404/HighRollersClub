@@ -11,7 +11,7 @@ import {
   Plus, Users, Coins, ChevronRight,
   Bot, Lock, Zap, Clock, Trophy, Bomb, Swords, LayoutGrid, Search,
   Brain, Key, CheckCircle, XCircle, Flame, Diamond,
-  Spade, Heart, Club, Trash2, Megaphone, CircleDot
+  Spade, Heart, Club, Trash2, Megaphone, CircleDot, Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NeonButton } from "@/components/ui/neon";
@@ -708,6 +708,8 @@ export default function Lobby() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [passwordModal, setPasswordModal] = useState<{ tableId: string; tableName: string } | null>(null);
   const [passwordInput, setPasswordInput] = useState("");
+  const [submittingPassword, setSubmittingPassword] = useState(false);
+  const [aiKeyError, setAiKeyError] = useState("");
   const [showAISettings, setShowAISettings] = useState(false);
   const [aiKeyInput, setAiKeyInput] = useState("");
   const [aiEnabled, setAiEnabled] = useState(false);
@@ -812,12 +814,14 @@ export default function Lobby() {
   };
 
   const handlePasswordSubmit = () => {
-    if (!passwordModal) return;
+    if (!passwordModal || submittingPassword) return;
+    setSubmittingPassword(true);
     const pw = passwordInput;
     setPasswordInput("");
-    setPasswordModal(null);
     // Pass password via navigation state — never stored in sessionStorage
     navigate(`/game/${passwordModal.tableId}?tp=${encodeURIComponent(pw)}`);
+    // Reset after navigation in case user comes back
+    setTimeout(() => { setSubmittingPassword(false); setPasswordModal(null); }, 500);
   };
 
   const handleCreateTable = async (config: any) => {
@@ -1122,10 +1126,23 @@ export default function Lobby() {
                     <input
                       type="password"
                       value={aiKeyInput}
-                      onChange={(e) => setAiKeyInput(e.target.value)}
+                      onChange={(e) => {
+                        setAiKeyInput(e.target.value);
+                        const v = e.target.value.trim();
+                        if (v && !v.startsWith("sk-ant-")) {
+                          setAiKeyError("Key must start with \"sk-ant-\"");
+                        } else if (v && v.length < 20) {
+                          setAiKeyError("Key is too short");
+                        } else {
+                          setAiKeyError("");
+                        }
+                      }}
                       placeholder={aiHasKey ? "Key is set (enter new to replace)" : "sk-ant-..."}
-                      className="w-full pl-9 pr-4 py-2 rounded-md text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-purple-500/30 bg-surface-highest/50 border border-white/[0.06]"
+                      className={`w-full pl-9 pr-4 py-2 rounded-md text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-purple-500/30 bg-surface-highest/50 border ${aiKeyError ? "border-red-500/50" : "border-white/[0.06]"}`}
                     />
+                    {aiKeyError && (
+                      <p className="absolute -bottom-4 left-0 text-[0.5625rem] text-red-400">{aiKeyError}</p>
+                    )}
                   </div>
                   <button
                     onClick={async () => {
@@ -1152,7 +1169,7 @@ export default function Lobby() {
                         setAiSaving(false);
                       }
                     }}
-                    disabled={aiSaving || !aiKeyInput.trim()}
+                    disabled={aiSaving || !aiKeyInput.trim() || !!aiKeyError}
                     className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-white bg-purple-600/60 border border-purple-500/30 hover:bg-purple-600/80 transition-all disabled:opacity-40"
                   >
                     {aiSaving ? "Saving..." : "Save Key"}
@@ -1512,11 +1529,11 @@ export default function Lobby() {
                 className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-4"
               />
               <div className="flex gap-2">
-                <NeonButton variant="ghost" onClick={() => setPasswordModal(null)} className="flex-1">
+                <NeonButton variant="ghost" onClick={() => setPasswordModal(null)} className="flex-1" disabled={submittingPassword}>
                   Cancel
                 </NeonButton>
-                <NeonButton onClick={handlePasswordSubmit} className="flex-1">
-                  Join Table
+                <NeonButton onClick={handlePasswordSubmit} className="flex-1" disabled={submittingPassword}>
+                  {submittingPassword ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Joining...</> : "Join Table"}
                 </NeonButton>
               </div>
             </motion.div>
@@ -1566,9 +1583,11 @@ export default function Lobby() {
                 className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-1 uppercase tracking-widest font-mono"
               />
               <div className="h-5 mb-3">
-                {joinCodeError && (
+                {joinCodeError ? (
                   <p className="text-[0.625rem] text-destructive">{joinCodeError}</p>
-                )}
+                ) : joinCode.length > 0 && joinCode.length < 6 ? (
+                  <p className="text-[0.625rem] text-muted-foreground">Minimum 6 characters ({6 - joinCode.length} more needed)</p>
+                ) : null}
               </div>
               <div className="flex gap-2">
                 <NeonButton variant="ghost" onClick={() => setJoinCodeOpen(false)} className="flex-1" disabled={joinCodeLoading}>

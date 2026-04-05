@@ -287,7 +287,7 @@ export function CSSPokerTable({
                   fontFamily: "var(--font-display)",
                   textShadow: `0 0 8px rgba(242,198,96,0.4)`,
                 }}>
-                  Pot: ${animatedPot.toLocaleString()}
+                  Pot: {animatedPot.toLocaleString()}
                 </span>
               </div>
 

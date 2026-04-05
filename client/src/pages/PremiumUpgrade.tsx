@@ -21,7 +21,7 @@ const PERKS = [
 
 const PREMIUM_COST = 5000;
 const YEARLY_DISCOUNT = 0.2;
-const PREMIUM_YEARLY_COST = Math.round(PREMIUM_COST * 12 * (1 - YEARLY_DISCOUNT));
+const PREMIUM_YEARLY_COST = parseFloat((PREMIUM_COST * 12 * (1 - YEARLY_DISCOUNT)).toFixed(2));
 
 const VIP_PERKS = [
   "Access to Premium Avatars",

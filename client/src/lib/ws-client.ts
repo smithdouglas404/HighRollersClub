@@ -75,7 +75,7 @@ class WsClient {
               if (msg.spriteMapping) {
                 cs.decryptSpriteMapping(msg.spriteMapping, msg.cardKey);
               }
-            }).catch(() => {});
+            }).catch((err) => { console.warn("[ws] Failed to load card-security module:", err); });
             return;
           }
 
@@ -93,8 +93,8 @@ class WsClient {
           }
 
           this.emit(msg.type, msg);
-        } catch {
-          // ignore invalid messages
+        } catch (err) {
+          console.warn("[ws] Failed to parse message:", err);
         }
       };
 
@@ -109,7 +109,8 @@ class WsClient {
       this.ws.onerror = () => {
         // onclose will fire after this
       };
-    } catch {
+    } catch (err) {
+      console.warn("[ws] Connection creation failed:", err);
       this.scheduleReconnect();
     }
   }

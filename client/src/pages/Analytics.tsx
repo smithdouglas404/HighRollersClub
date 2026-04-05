@@ -384,16 +384,21 @@ export default function Analytics() {
   const [sessionReportLoading, setSessionReportLoading] = useState(false);
   const [sessionReportError, setSessionReportError] = useState<string | null>(null);
   const [reportSections, setReportSections] = useState<Record<string, boolean>>({ positions: true, leaks: true, hands: true, recs: true });
+  const [reportAbort, setReportAbort] = useState<AbortController | null>(null);
 
   const handleGenerateSessionReport = async () => {
     setSessionReportLoading(true);
     setSessionReportError(null);
     setSessionReport(null);
+    const controller = new AbortController();
+    setReportAbort(controller);
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await fetch("/api/coaching/session-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
+        signal: controller.signal,
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -401,10 +406,20 @@ export default function Analytics() {
       }
       setSessionReport(await res.json());
     } catch (err: any) {
-      setSessionReportError(err.message || "Failed to generate report");
+      if (err.name === "AbortError") {
+        setSessionReportError("Report generation was cancelled or timed out (30s limit)");
+      } else {
+        setSessionReportError(err.message || "Failed to generate report");
+      }
     } finally {
+      clearTimeout(timeout);
       setSessionReportLoading(false);
+      setReportAbort(null);
     }
+  };
+
+  const handleCancelReport = () => {
+    if (reportAbort) reportAbort.abort();
   };
 
   const toggleReportSection = (key: string) => {
@@ -684,6 +699,12 @@ export default function Analytics() {
                   <div className="flex flex-col items-center gap-2 py-6">
                     <Loader2 className="w-6 h-6 animate-spin text-[#c9a84c]" />
                     <span className="text-xs text-gray-400">Analyzing your session...</span>
+                    <button
+                      onClick={handleCancelReport}
+                      className="mt-1 px-3 py-1 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 )}
 

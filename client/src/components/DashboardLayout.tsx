@@ -119,20 +119,27 @@ function ClubSwitcher() {
 
 function GlobalSearch() {
   const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(false);
   const [, navigate] = useLocation();
 
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
+      setSearching(true);
       navigate(`/lobby?search=${encodeURIComponent(query.trim())}`);
       setQuery("");
+      setTimeout(() => setSearching(false), 600);
     }
   }, [query, navigate]);
 
   return (
     <form onSubmit={handleSearch} className="px-3 pb-2">
       <div className="relative group">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground group-focus-within:text-primary transition-colors" />
+        {searching ? (
+          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground group-focus-within:text-primary transition-colors" />
+        )}
         <input
           type="text"
           value={query}
@@ -247,7 +254,11 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             <div className="flex-1 min-w-0">
               <div className="text-[0.5rem] text-muted-foreground uppercase tracking-wider font-medium">Total Balance</div>
               <div className="text-xs font-bold tabular-nums transition-colors" style={{ color: "#d4af37" }}>
-                {(balance ?? 0).toLocaleString()} <span className="text-[0.5rem]" style={{ color: "rgba(212,175,55,0.6)" }}>chips</span>
+                {balance === null || balance === undefined ? (
+                  <div className="h-4 w-20 rounded bg-primary/10 animate-pulse" />
+                ) : (
+                  <>{balance.toLocaleString()} <span className="text-[0.5rem]" style={{ color: "rgba(212,175,55,0.6)" }}>chips</span></>
+                )}
               </div>
             </div>
           </div>
@@ -280,7 +291,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             </div>
           </div>
           <button
-            onClick={logout}
+            onClick={() => { if (!confirm("Are you sure you want to log out?")) return; logout(); }}
             className="p-1 hover:bg-white/5 rounded transition-colors"
             title="Logout"
           >
@@ -410,7 +421,28 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
         <PageTransition key={location}>
           {children}
         </PageTransition>
+        <FingerprintConsent />
       </main>
+    </div>
+  );
+}
+
+function FingerprintConsent() {
+  const [show, setShow] = useState(false);
+  useEffect(() => { if (!localStorage.getItem("fp_consent")) setShow(true); }, []);
+  if (!show) return null;
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-gray-900/95 backdrop-blur-xl border-t border-white/10">
+      <div className="max-w-3xl mx-auto flex items-center gap-4 flex-wrap">
+        <p className="text-xs text-gray-300 flex-1">
+          We use device fingerprinting to protect your account from unauthorized access and detect fraud.
+          This collects a hash of your browser and screen info — no personal data is stored.
+        </p>
+        <div className="flex gap-2">
+          <button onClick={() => { localStorage.setItem("fp_consent", "declined"); setShow(false); }} className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors">Decline</button>
+          <button onClick={() => { localStorage.setItem("fp_consent", "accepted"); setShow(false); }} className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30 rounded-lg hover:bg-primary/30 transition-colors">Accept</button>
+        </div>
+      </div>
     </div>
   );
 }

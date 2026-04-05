@@ -645,7 +645,7 @@ export default function TournamentCreate() {
             })}
           </div>
           {(() => {
-            const totalBreakTime = breaks.reduce((sum, b) => sum + Math.floor(numberOfLevels / b.everyXLevels) * b.durationMinutes, 0);
+            const totalBreakTime = breaks.reduce((sum, b) => sum + Math.ceil(numberOfLevels / b.everyXLevels) * b.durationMinutes, 0);
             const estMinutes = numberOfLevels * blindInterval + totalBreakTime;
             const hours = Math.floor(estMinutes / 60);
             const mins = estMinutes % 60;

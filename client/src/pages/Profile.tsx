@@ -152,6 +152,7 @@ function MyBlockchainRecords({ user }: { user: any }) {
   useEffect(() => { if (expanded && hands.length === 0) fetchData(); }, [expanded]);
 
   const kycHash = user?.kycBlockchainTxHash;
+  const [kycCopied, setKycCopied] = useState(false);
   const memberId = user?.memberId;
   const kycVerified = user?.kycStatus === "verified";
 
@@ -216,8 +217,9 @@ function MyBlockchainRecords({ user }: { user: any }) {
                       </div>
                       <div className="flex items-center gap-1 mt-1">
                         <span className="font-mono text-[11px] text-purple-400 truncate">{kycHash}</span>
-                        <button onClick={() => navigator.clipboard.writeText(kycHash)} className="p-0.5 hover:bg-white/5 rounded shrink-0">
-                          <Copy className="w-3 h-3 text-gray-600" />
+                        <button onClick={() => { navigator.clipboard.writeText(kycHash); setKycCopied(true); setTimeout(() => setKycCopied(false), 2000); }} className="p-0.5 hover:bg-white/5 rounded shrink-0 relative">
+                          {kycCopied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-gray-600" />}
+                          {kycCopied && <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-green-400 whitespace-nowrap bg-black/80 px-1.5 py-0.5 rounded">Copied!</span>}
                         </button>
                         {getExplorerUrl(kycHash) && (
                           <a href={getExplorerUrl(kycHash)!} target="_blank" rel="noopener noreferrer" className="shrink-0 text-purple-400 hover:text-purple-300">
@@ -1745,6 +1747,7 @@ function TauntVoicePicker({ currentVoice }: { currentVoice: string }) {
       <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
         <Mic className="w-4 h-4 text-purple-500/70" />
         Taunt Voice
+        {saving && <span className="flex items-center gap-1 text-[0.5625rem] text-purple-400 ml-2"><Loader2 className="w-3 h-3 animate-spin" /> Saving...</span>}
       </h3>
       <p className="text-[0.625rem] text-gray-500 mb-4">
         Choose the voice your taunts play in. Default is a confident, energetic voice. Or pick one that matches your avatar.

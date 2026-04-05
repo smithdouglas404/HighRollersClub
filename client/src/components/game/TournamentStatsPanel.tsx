@@ -32,9 +32,8 @@ export function TournamentStatsPanel({
   const stackRatio = avgStack > 0 ? (chips / avgStack) : 0;
 
   const getStackColor = () => {
-    if (stackRatio >= 1.2) return { text: "text-green-400", glow: "rgba(34,197,94,0.3)" };
-    if (stackRatio >= 0.8) return { text: "text-amber-400", glow: "rgba(212,175,55,0.3)" };
-    if (stackRatio >= 0.5) return { text: "text-yellow-400", glow: "rgba(234,179,8,0.3)" };
+    if (stackRatio > 1.0) return { text: "text-green-400", glow: "rgba(34,197,94,0.3)" };
+    if (stackRatio >= 0.5) return { text: "text-amber-400", glow: "rgba(212,175,55,0.3)" };
     return { text: "text-red-400", glow: "rgba(239,68,68,0.3)" };
   };
 

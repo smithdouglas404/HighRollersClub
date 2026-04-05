@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -295,6 +295,18 @@ export default function TransactionExplorer() {
 
   const [tab, setTab] = useState<TabType>("transactions");
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setSearch(value);
+    }, 300);
+  };
+  useEffect(() => {
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, []);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 25;
@@ -431,8 +443,8 @@ export default function TransactionExplorer() {
             <input
               type="text"
               placeholder={tab === "hands" ? "Search by ID, hash, or tx..." : "Search by ID, description, or tx hash..."}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={e => handleSearchChange(e.target.value)}
               className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/40"
             />
           </div>

@@ -33,7 +33,7 @@ export function HandBadge({ holeCards, communityCards, phase }: HandBadgeProps) 
       >
         {/* Phase indicator */}
         {phaseLabel && (
-          <span className="text-[0.5rem] font-bold uppercase tracking-[0.2em] text-gray-400">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
             {phaseLabel}
           </span>
         )}

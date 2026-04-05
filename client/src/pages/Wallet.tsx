@@ -517,7 +517,7 @@ function DepositPanel() {
     // Guard: if all allocations are 0%, distribute equally
     const totalAlloc = Object.values(allocation).reduce((s, v) => s + v, 0);
     const effectiveAllocation = totalAlloc === 0
-      ? Object.fromEntries(Object.keys(allocation).map((k, _, arr) => [k, Math.round(100 / arr.length)]))
+      ? Object.fromEntries(Object.keys(allocation).map((k, i, arr) => [k, Math.floor(100 / arr.length) + (i < 100 % arr.length ? 1 : 0)]))
       : allocation;
     const allocationEntries = Object.entries(effectiveAllocation)
       .filter(([_, pct]) => pct > 0)

@@ -17,8 +17,11 @@ import { getPubSub } from "./infra/ws-pubsub";
 // Rate limiting for table password attempts
 const passwordAttempts = new Map<string, number>();
 
-// Track Redis pub/sub unsubscribe functions per user per table
+// Track Redis pub/sub unsubscribe functions per user per table/club
 const pubsubUnsubs = new Map<string, () => void>();
+
+// Track club chat pub/sub unsubscribe functions per user per club
+const clubChatUnsubs = new Map<string, () => void>();
 
 // Subscribe a client to a table's Redis pub/sub channel
 function subscribeClientToTable(userId: string, tableId: string) {
@@ -42,6 +45,41 @@ function unsubscribeClientFromTable(userId: string, tableId: string) {
   if (unsub) {
     unsub();
     pubsubUnsubs.delete(key);
+  }
+}
+
+// Subscribe a client to a club's chat Redis pub/sub channel
+function subscribeClientToClubChat(userId: string, clubId: string) {
+  const key = `club:${userId}:${clubId}`;
+  if (clubChatUnsubs.has(key)) return;
+
+  const unsub = getPubSub().subscribe(`club:chat:${clubId}`, (data: any) => {
+    const client = clients.get(userId);
+    if (client && client.ws.readyState === WebSocket.OPEN && data.userId !== userId) {
+      client.ws.send(JSON.stringify(data));
+    }
+  });
+  clubChatUnsubs.set(key, unsub);
+}
+
+// Unsubscribe a client from a club's chat channel
+function unsubscribeClientFromClubChat(userId: string, clubId: string) {
+  const key = `club:${userId}:${clubId}`;
+  const unsub = clubChatUnsubs.get(key);
+  if (unsub) {
+    unsub();
+    clubChatUnsubs.delete(key);
+  }
+}
+
+// Unsubscribe a client from ALL club chat channels
+function unsubscribeClientFromAllClubChats(userId: string) {
+  const prefix = `club:${userId}:`;
+  for (const [key, unsub] of clubChatUnsubs.entries()) {
+    if (key.startsWith(prefix)) {
+      unsub();
+      clubChatUnsubs.delete(key);
+    }
   }
 }
 
@@ -79,6 +117,8 @@ export type ClientMessage =
   | { type: "wait_for_bb"; tableId?: string }
   | { type: "commentary_toggle"; tableId?: string; enabled: boolean }
   | { type: "commentary_omniscient"; tableId?: string; enabled: boolean }
+  // Club chat
+  | { type: "club_chat"; clubId: string; message: string }
   // Fast-fold pool messages
   | { type: "join_fast_fold_pool"; poolId: string; buyIn: number }
   | { type: "leave_fast_fold_pool" }

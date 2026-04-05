@@ -13,7 +13,7 @@ import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
   BarChart3, LogOut, Search, Wallet, Medal, Star,
   Shield, ChevronDown, Check, Menu, X, Coins, Crown, Shirt,
-  Store, Handshake, FileSearch, Link as LinkChain, Star
+  Store, Handshake, FileSearch, Link as LinkChain, MoreHorizontal
 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
@@ -25,29 +25,29 @@ interface NavItem {
   match?: string[];
 }
 
-const BASE_NAV_ITEMS: NavItem[] = [
+const PRIMARY_NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/lobby" },
-  { icon: Users, label: "Members", href: "/members", match: ["/members"] },
-  { icon: Trophy, label: "Games & Tables", href: "/lobby", match: ["/lobby", "/game", "/table"] },
+  { icon: Trophy, label: "Play", href: "/lobby", match: ["/lobby", "/game", "/table"] },
   { icon: Medal, label: "Tournaments", href: "/tournaments", match: ["/tournaments"] },
+  { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
   { icon: ShoppingBag, label: "Shop", href: "/shop", match: ["/shop"] },
   { icon: Star, label: "Loyalty", href: "/loyalty", match: ["/loyalty"] },
-  { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
+];
+
+const MORE_NAV_ITEMS: NavItem[] = [
+  { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse", "/clubs/create"] },
+  { icon: Swords, label: "Club Wars", href: "/club-wars", match: ["/club-wars"] },
+  { icon: Swords, label: "Leagues & Alliances", href: "/leagues" },
+  { icon: Users, label: "Members", href: "/members", match: ["/members"] },
   { icon: FileSearch, label: "Explorer", href: "/explorer", match: ["/explorer"] },
   { icon: LinkChain, label: "Blockchain", href: "/blockchain", match: ["/blockchain"] },
-  { icon: Crown, label: "Premium Table", href: "/premium-table", match: ["/premium-table"] },
   { icon: BarChart3, label: "Multi-Table", href: "/multi-table", match: ["/multi-table"] },
-  { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse", "/clubs/create"] },
-  { icon: Swords, label: "League & Alliances", href: "/leagues" },
-  { icon: Swords, label: "Club Wars", href: "/club-wars", match: ["/club-wars"] },
-  { icon: Store, label: "Marketplace", href: "/marketplace", match: ["/marketplace"] },
-  { icon: Handshake, label: "Staking", href: "/stakes", match: ["/stakes"] },
-  { icon: Trophy, label: "Club Rankings", href: "/club-rankings", match: ["/club-rankings"] },
-  { icon: BarChart3, label: "Analytics", href: "/analytics" },
   { icon: Shirt, label: "Wardrobe", href: "/wardrobe", match: ["/wardrobe"] },
   { icon: Shirt, label: "Avatar Studio", href: "/avatar-customizer", match: ["/avatar-customizer"] },
-  { icon: Crown, label: "Premium", href: "/premium", match: ["/premium"] },
   { icon: Shield, label: "Tiers", href: "/tiers", match: ["/tiers"] },
+  { icon: BarChart3, label: "Analytics", href: "/analytics" },
+  { icon: Handshake, label: "Staking", href: "/stakes", match: ["/stakes"] },
+  { icon: Store, label: "Marketplace", href: "/marketplace", match: ["/marketplace"] },
 ];
 
 const ADMIN_NAV_ITEM: NavItem = { icon: Shield, label: "Admin", href: "/admin", match: ["/admin"] };
@@ -159,10 +159,10 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
   const { balance, balances } = useWallet();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showMore, setShowMore] = useState(false);
 
-  const navItems = user?.role === "admin"
-    ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM]
-    : BASE_NAV_ITEMS;
+  const navItems = PRIMARY_NAV_ITEMS;
+  const moreItems = MORE_NAV_ITEMS;
 
   // Close sidebar on navigation
   useEffect(() => {
@@ -242,6 +242,83 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             </Link>
           );
         })}
+
+        {/* More toggle */}
+        <button
+          onClick={() => setShowMore(!showMore)}
+          className="w-full relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer group touch-target text-muted-foreground hover:text-foreground hover:bg-white/5"
+        >
+          <MoreHorizontal className="relative z-10 w-4 h-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
+          <span className="relative z-10 tracking-wide">More</span>
+          <ChevronDown className={`relative z-10 ml-auto w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${showMore ? "rotate-180" : ""}`} />
+        </button>
+
+        {/* Collapsible "More" items */}
+        <AnimatePresence>
+          {showMore && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-0.5"
+            >
+              {moreItems.map((item) => {
+                const isActive =
+                  location === item.href ||
+                  item.match?.some((m) => location.startsWith(m));
+                const Icon = item.icon;
+                return (
+                  <Link key={item.label} href={item.href}>
+                    <motion.div
+                      whileHover={{ x: 2 }}
+                      className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-[0.6875rem] font-medium transition-all cursor-pointer group touch-target ${
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                      }`}
+                    >
+                      {isActive && (
+                        <motion.div
+                          layoutId="sidebar-active-more"
+                          className="absolute inset-0 rounded-lg bg-primary/10 border border-primary/20"
+                          style={{ boxShadow: "0 0 15px rgba(129,236,255,0.15), inset 0 0 10px rgba(129,236,255,0.08)" }}
+                          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                        />
+                      )}
+                      <Icon
+                        className={`relative z-10 w-3.5 h-3.5 shrink-0 ${
+                          isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                        }`}
+                      />
+                      <span className="relative z-10 tracking-wide">{item.label}</span>
+                      {isActive && (
+                        <div className="relative z-10 ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
+                      )}
+                    </motion.div>
+                  </Link>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Admin link — only for admin role, always at bottom of nav */}
+        {user?.role === "admin" && (
+          <Link href={ADMIN_NAV_ITEM.href}>
+            <motion.div
+              whileHover={{ x: 2 }}
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer group touch-target mt-2 border-t border-white/[0.04] pt-3 ${
+                location === ADMIN_NAV_ITEM.href || ADMIN_NAV_ITEM.match?.some((m) => location.startsWith(m))
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+              }`}
+            >
+              <Shield className="relative z-10 w-4 h-4 shrink-0" />
+              <span className="relative z-10 tracking-wide">Admin</span>
+            </motion.div>
+          </Link>
+        )}
       </nav>
 
       {/* Bottom: Chip Balance + User info */}

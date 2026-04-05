@@ -657,13 +657,7 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.01 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "rgba(15,15,20,0.7)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(212,175,55,0.12)",
-              }}
+              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#c9a84c]/80" />
@@ -840,13 +834,7 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.02 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "rgba(15,15,20,0.7)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(212,175,55,0.12)",
-              }}
+              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                 <Zap className="w-4 h-4 text-[#c9a84c]/80" />
@@ -996,13 +984,7 @@ export default function Analytics() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="rounded-xl p-4 relative overflow-hidden"
-                    style={{
-                      background: "rgba(15,15,20,0.7)",
-                      backdropFilter: "blur(12px)",
-                      WebkitBackdropFilter: "blur(12px)",
-                      border: "1px solid rgba(212,175,55,0.12)",
-                    }}
+                    className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-4 relative overflow-hidden"
                   >
                     <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${card.gradient} blur-3xl rounded-full opacity-30`} />
                     <div className="relative">
@@ -1026,13 +1008,7 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "rgba(15,15,20,0.7)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(212,175,55,0.12)",
-              }}
+              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
@@ -1088,13 +1064,7 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.17 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "rgba(15,15,20,0.7)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(212,175,55,0.12)",
-              }}
+              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                 <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
@@ -1214,13 +1184,7 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "rgba(15,15,20,0.7)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(212,175,55,0.12)",
-              }}
+              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-[#c9a84c]/80" />
@@ -1257,13 +1221,7 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "rgba(15,15,20,0.7)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(212,175,55,0.12)",
-              }}
+              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                 <Brain className="w-4 h-4 text-[#c9a84c]/80" />
@@ -1340,13 +1298,7 @@ export default function Analytics() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.45 }}
-                    className="rounded-xl overflow-hidden"
-                    style={{
-                      background: "rgba(15,15,20,0.7)",
-                      backdropFilter: "blur(12px)",
-                      WebkitBackdropFilter: "blur(12px)",
-                      border: "1px solid rgba(212,175,55,0.12)",
-                    }}
+                    className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
                   >
                     <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                       <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
@@ -1379,13 +1331,7 @@ export default function Analytics() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="rounded-xl overflow-hidden"
-                    style={{
-                      background: "rgba(15,15,20,0.7)",
-                      backdropFilter: "blur(12px)",
-                      WebkitBackdropFilter: "blur(12px)",
-                      border: "1px solid rgba(212,175,55,0.12)",
-                    }}
+                    className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
                   >
                     <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                       <Activity className="w-4 h-4 text-[#c9a84c]/80" />
@@ -1419,13 +1365,7 @@ export default function Analytics() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.55 }}
-                  className="rounded-xl overflow-hidden"
-                  style={{
-                    background: "rgba(15,15,20,0.7)",
-                    backdropFilter: "blur(12px)",
-                    WebkitBackdropFilter: "blur(12px)",
-                    border: "1px solid rgba(212,175,55,0.12)",
-                  }}
+                  className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
                 >
                   <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1477,13 +1417,7 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.65 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "rgba(15,15,20,0.7)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(212,175,55,0.12)",
-              }}
+              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1533,13 +1467,7 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="rounded-2xl overflow-hidden"
-              style={{
-                background: "rgba(15,15,20,0.7)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(212,175,55,0.12)",
-              }}
+              className="rounded-2xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                 <Activity className="w-4 h-4 text-[#c9a84c]/80" />

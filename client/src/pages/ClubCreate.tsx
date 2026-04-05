@@ -53,13 +53,6 @@ const slideVariants = {
 
 /* ── Card wrapper style helper ─────────────────────────────────────────────── */
 
-const cardStyle = {
-  background: "rgba(15,15,20,0.7)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
-  border: "1px solid rgba(212,175,55,0.12)",
-};
-
 const inputStyle = {
   background: "rgba(255,255,255,0.04)",
   border: "1px solid rgba(212,175,55,0.15)",
@@ -350,7 +343,7 @@ export default function ClubCreate() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setSelectedLogo(isSelected ? null : logo.id)}
-                className="relative rounded-xl overflow-hidden p-3 flex flex-col items-center gap-2 transition-all cursor-pointer"
+                className="relative rounded-xl overflow-hidden p-3 flex flex-col items-center gap-2 transition-all cursor-pointer hover:scale-105 transition-transform"
                 style={{
                   background: isSelected
                     ? "rgba(212,175,55,0.12)"
@@ -756,8 +749,7 @@ export default function ClubCreate() {
 
       {/* Summary table */}
       <div
-        className="rounded-xl overflow-hidden"
-        style={cardStyle}
+        className="rounded-xl overflow-hidden bg-[rgba(15,15,20,0.7)] backdrop-blur-xl border border-white/[0.06]"
       >
         <div
           className="px-5 py-3 flex items-center gap-2"
@@ -830,8 +822,7 @@ export default function ClubCreate() {
 
           {/* Step Content */}
           <div
-            className="rounded-xl overflow-hidden"
-            style={cardStyle}
+            className="rounded-xl overflow-hidden bg-[rgba(15,15,20,0.7)] backdrop-blur-xl border border-white/[0.06]"
           >
             {/* Step header */}
             <div

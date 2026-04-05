@@ -278,7 +278,12 @@ export default function BrowseClubs() {
           </div>
 
           <div className="mt-2.5 text-xs text-gray-500">
-            {loading ? "Loading clubs..." : `${sortedAndFilteredClubs.length} club${sortedAndFilteredClubs.length !== 1 ? "s" : ""} available`}
+            {loading ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                Loading clubs...
+              </span>
+            ) : `${sortedAndFilteredClubs.length} club${sortedAndFilteredClubs.length !== 1 ? "s" : ""} available`}
           </div>
         </motion.div>
 

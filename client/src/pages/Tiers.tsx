@@ -284,7 +284,7 @@ export default function Tiers() {
                       ? "bg-primary/20 text-primary cursor-default"
                       : isLower || tierId === "free"
                         ? "bg-gray-700/50 text-gray-500 cursor-not-allowed"
-                        : "bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 hover:border-primary/50"
+                        : "bg-gradient-to-r from-[#9a7b2c] via-[#d4af37] to-[#f3e2ad] text-black hover:brightness-110 border border-[#d4af37]/30"
                   }`}
                 >
                   {upgrading === tierId ? (

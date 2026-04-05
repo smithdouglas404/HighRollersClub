@@ -691,7 +691,7 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="px-4 md:px-8 pb-8 space-y-6">
         <h1 className="text-2xl font-bold text-white font-display">Admin Dashboard</h1>
 
         {/* Tabs */}
@@ -768,7 +768,7 @@ export default function AdminDashboard() {
 
             {/* Revenue Trend Chart */}
             {revenueTrend.length > 0 && (
-              <div className="glass rounded-xl p-4">
+              <div className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-4">
                 <h3 className="text-sm font-bold text-white mb-3">Daily Revenue Trend (30 Days)</h3>
                 <ResponsiveContainer width="100%" height={250}>
                   <AreaChart data={revenueTrend}>
@@ -797,7 +797,7 @@ export default function AdminDashboard() {
             {/* Revenue Sources Pie Chart */}
             {revenueSources.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="glass rounded-xl p-4">
+                <div className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-4">
                   <h3 className="text-sm font-bold text-white mb-3">Revenue by Source</h3>
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
@@ -811,7 +811,7 @@ export default function AdminDashboard() {
                   </ResponsiveContainer>
                 </div>
                 {trialBalance && (
-                  <div className="glass rounded-xl p-4">
+                  <div className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-4">
                     <h3 className="text-sm font-bold text-white mb-3">Financial Health</h3>
                     <div className="space-y-3">
                       <div className="flex justify-between text-xs"><span className="text-gray-400">Money In</span><span className="text-green-400 font-bold">${((trialBalance.moneyIn || 0) / 100).toFixed(2)}</span></div>

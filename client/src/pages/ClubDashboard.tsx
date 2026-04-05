@@ -1513,8 +1513,8 @@ export default function ClubDashboard() {
                 {/* Welcome Card Preview */}
                 {isAdminOrOwner && (
                   <div className="mt-6 space-y-6">
-                    <div className="rounded-xl border-2 border-[#c9a84c]/30 p-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0d0b08 0%, #1a1510 50%, #0d0b08 100%)" }}>
-                      <div className="absolute inset-0 border border-[#c9a84c]/10 rounded-xl pointer-events-none" />
+                    <div className="rounded-xl border-2 border-white/10 p-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0d0b08 0%, #1a1510 50%, #0d0b08 100%)" }}>
+                      <div className="absolute inset-0 border border-white/10 rounded-xl pointer-events-none" />
                       <div className="text-center">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c9a84c]/20 to-[#c9a84c]/5 border border-[#c9a84c]/20 flex items-center justify-center mx-auto mb-4">
                           {clubLogo ? (

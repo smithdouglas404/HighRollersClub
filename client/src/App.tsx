@@ -166,10 +166,6 @@ function ProtectedTiers() {
   return <AuthGate><Tiers /></AuthGate>;
 }
 
-function ProtectedLoyalty() {
-  return <AuthGate><Loyalty /></AuthGate>;
-}
-
 function ProtectedKYC() {
   return <AuthGate><KYC /></AuthGate>;
 }
@@ -317,7 +313,6 @@ function Router() {
       <Route path="/clubs/:id/analytics">{(params) => <ProtectedClubMemberAnalytics params={params} />}</Route>
       <Route path="/clubs/:id/tournament-analytics">{(params) => <ProtectedClubTournamentAnalytics params={params} />}</Route>
       <Route path="/avatar-customizer" component={ProtectedAvatarCustomizer} />
-      <Route path="/loyalty" component={ProtectedLoyalty} />
       <Route path="/avatar-render">{() => <Redirect to="/wardrobe" />}</Route>
       <Route component={NotFound} />
     </Switch>

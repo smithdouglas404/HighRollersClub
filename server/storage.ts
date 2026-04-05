@@ -399,6 +399,11 @@ export class MemStorage implements IStorage {
       loyaltyLevel: data.loyaltyLevel ?? 1,
       loyaltyStreakDays: data.loyaltyStreakDays ?? 0,
       loyaltyLastPlayDate: data.loyaltyLastPlayDate ?? null,
+      loyaltyMultiplier: (data as any).loyaltyMultiplier ?? 100,
+      dailyLoginStreak: (data as any).dailyLoginStreak ?? 0,
+      lastLoginRewardAt: (data as any).lastLoginRewardAt ?? null,
+      referredBy: (data as any).referredBy ?? null,
+      referralCode: (data as any).referralCode ?? null,
       createdAt: new Date(),
     };
     this.users.set(id, user);

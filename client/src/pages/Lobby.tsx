@@ -99,7 +99,7 @@ function TableCard({ table, onClick, featured, currentUserId, onDelete }: { tabl
       data-testid={`card-table-${table.id}`}
       className={cn(
         "group cursor-pointer rounded-md p-5 transition-all duration-300 relative overflow-hidden card-hover",
-        "hover:shadow-[0_0_25px_rgba(212,175,55,0.12)]",
+        "hover:shadow-[0_0_25px_rgba(212,175,55,0.12)] hover:scale-[1.02] transition-transform",
         isPlaying && "border-l-2 border-l-secondary",
         isFull && "opacity-60"
       )}
@@ -1315,7 +1315,7 @@ export default function Lobby() {
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5",
                   isActive
-                    ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_12px_rgba(129,236,255,0.15)]"
+                    ? "bg-primary/15 text-primary border border-primary/30 border-b-2 border-primary shadow-[0_0_10px_rgba(212,175,55,0.2)]"
                     : "bg-surface-high/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
                 )}
               >

@@ -355,7 +355,7 @@ class TableManager {
 
       // ─── Award Loyalty Points (HRP) for hand participation ──────────────
       try {
-        const { processHandRewards, checkAchievements } = await import("../loyalty-engine");
+        const { processHandRewards, checkAchievements } = require("../loyalty-engine");
         const isTournament = tableRow.gameFormat === "tournament" || tableRow.gameFormat === "sng";
         const winnerIdSet = new Set(summary.winners.map(w => w.playerId));
         for (const p of summary.players) {

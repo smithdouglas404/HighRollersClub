@@ -384,7 +384,7 @@ export default function Leaderboard() {
                       {entry.displayName || entry.username}
                     </span>
                     {isCurrentUser && (
-                      <span className="shrink-0 px-1.5 py-0.5 rounded text-[0.5rem] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-[0_0_8px_rgba(212,175,55,0.2)]">
+                      <span className="shrink-0 px-1.5 py-0.5 rounded text-[0.5rem] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-[0_0_8px_rgba(212,175,55,0.2)] animate-pulse">
                         YOU
                       </span>
                     )}

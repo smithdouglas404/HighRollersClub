@@ -915,13 +915,13 @@ export default function Security() {
             Back to Profile
           </button>
 
-          <div className="flex items-center gap-4">
+          <div className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-5 flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-purple-500/15 border border-primary/20 flex items-center justify-center">
               <Shield className="w-6 h-6 text-primary" />
             </div>
             <div>
               <h2 className="text-lg font-display font-bold text-white tracking-tight">
-                Security Settings
+                Account Security
               </h2>
               <p className="text-[0.625rem] text-muted-foreground">
                 Manage your account security, authentication methods, and connected services.

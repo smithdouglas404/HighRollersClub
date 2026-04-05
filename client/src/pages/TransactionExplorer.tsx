@@ -400,7 +400,7 @@ export default function TransactionExplorer() {
 
   return (
     <DashboardLayout title="Transaction Explorer">
-      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-4">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>

@@ -121,7 +121,7 @@ export default function Loyalty() {
 
   return (
     <DashboardLayout title="Loyalty Program">
-      <PageBackground />
+      <PageBackground image="/images/generated/profile-bg.png" />
       <div className="relative z-10 pb-8 max-w-5xl mx-auto">
         {/* ── Hero Section ── */}
         <motion.div

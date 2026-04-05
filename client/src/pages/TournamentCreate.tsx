@@ -255,11 +255,11 @@ export default function TournamentCreate() {
 
   /* ── Reusable gold input class ── */
   const goldInputClass =
-    "w-full bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 focus:shadow-[0_0_12px_rgba(212,175,55,0.15)] transition-all [color-scheme:dark]";
+    "w-full bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/40 focus:shadow-[0_0_12px_rgba(212,175,55,0.15)] transition-all [color-scheme:dark]";
   const goldSelectClass =
-    "w-full bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50 focus:shadow-[0_0_12px_rgba(212,175,55,0.15)] transition-all";
+    "w-full bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/40 focus:shadow-[0_0_12px_rgba(212,175,55,0.15)] transition-all";
   const goldLabelClass =
-    "text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-1.5";
+    "text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5";
 
   /* ── Toggle component ── */
   function GoldToggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {

@@ -697,7 +697,7 @@ function KycForm({
           Government ID Photo
         </label>
         <p className="text-xs text-gray-500 mb-2">Upload a clear photo of the front of your ID document (JPG, PNG, PDF -- max 10MB)</p>
-        <label className="flex items-center justify-center w-full px-4 py-6 rounded-lg bg-black/30 border-2 border-dashed border-white/10 hover:border-primary/30 cursor-pointer transition-all">
+        <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-white/20 hover:border-primary/40 rounded-xl bg-black/30 cursor-pointer transition-all">
           <input
             type="file"
             accept=".jpg,.jpeg,.png,.pdf"
@@ -707,7 +707,7 @@ function KycForm({
           {idDocument ? (
             <span className="text-sm text-green-400">{idDocument.name}</span>
           ) : (
-            <span className="text-sm text-gray-500">Click to upload ID document</span>
+            <span className="text-sm text-gray-500">Click or drag to upload ID document</span>
           )}
         </label>
       </div>
@@ -718,7 +718,7 @@ function KycForm({
           Selfie Photo
         </label>
         <p className="text-xs text-gray-500 mb-2">Upload a clear selfie holding your ID next to your face</p>
-        <label className="flex items-center justify-center w-full px-4 py-6 rounded-lg bg-black/30 border-2 border-dashed border-white/10 hover:border-primary/30 cursor-pointer transition-all">
+        <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-white/20 hover:border-primary/40 rounded-xl bg-black/30 cursor-pointer transition-all">
           <input
             type="file"
             accept=".jpg,.jpeg,.png"
@@ -728,7 +728,7 @@ function KycForm({
           {selfie ? (
             <span className="text-sm text-green-400">{selfie.name}</span>
           ) : (
-            <span className="text-sm text-gray-500">Click to upload selfie</span>
+            <span className="text-sm text-gray-500">Click or drag to upload selfie</span>
           )}
         </label>
       </div>

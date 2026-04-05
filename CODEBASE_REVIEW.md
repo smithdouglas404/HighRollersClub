@@ -298,3 +298,96 @@ Replit PID management code baked into production startup flow.
 21. Hardware wallet signing for blockchain operations
 22. Distributed session store as default
 23. Improve collusion detection with ML-based heuristics
+
+---
+
+## Client-Side Issues
+
+### CRITICAL
+
+#### C1. XSS in Provably Fair Verification Panel
+**File:** `client/src/components/poker/ProvablyFairPanel.tsx:74-109`
+
+The download-verification feature generates an HTML file with unsanitized server data interpolated into JavaScript strings:
+```typescript
+const seed="${shuffleProof.serverSeed}";
+```
+If `serverSeed` or `commitmentHash` is compromised or manipulated, malicious JS executes in the downloaded file.
+
+**Fix:** Escape all interpolated values or use safe DOM APIs instead of string concatenation.
+
+---
+
+### HIGH
+
+#### C2. Table Passwords Stored in sessionStorage
+**File:** `client/src/lib/multiplayer-engine.ts:202`
+
+Table passwords stored as `table-password-${tableId}` in sessionStorage. Vulnerable to XSS exfiltration. Sent in plaintext on WebSocket rejoin.
+
+**Fix:** Use server-side session tokens instead of storing passwords client-side.
+
+#### C3. Device Fingerprinting Without User Consent
+**File:** `client/src/lib/auth-context.tsx:59-77`
+
+Canvas fingerprint + user agent + screen resolution + timezone + language combined and sent to server on every auth check. No opt-out mechanism. Silent `.catch(() => {})` on failure.
+
+#### C4. Full Error Stacks Exposed to Users
+**File:** `client/src/components/ErrorBoundary.tsx:52-57`
+
+"Show details" reveals `error.message` and `error.stack` including internal component names, file paths, and framework versions.
+
+**Fix:** Log stacks server-side; show sanitized messages to users.
+
+#### C5. KYC File Upload Lacks Client Validation
+**File:** `client/src/pages/KYC.tsx:61-91`
+
+No file size or MIME type validation before upload. FormData submission also missing CSRF token.
+
+---
+
+### MEDIUM
+
+#### C6. Sensitive Data in Console Logs
+**Files:** `client/src/lib/multiplayer-engine.ts`, `client/src/lib/game-engine.ts`, `client/src/lib/video-manager.ts`
+
+Console.log calls expose table IDs, chip amounts, bet details, and connection state in production DevTools.
+
+**Fix:** Strip console.log in production builds or gate behind debug flag.
+
+#### C7. API Key Transmitted in Plaintext
+**File:** `client/src/pages/Lobby.tsx:1097`
+
+User AI API keys (`apiKey: aiKeyInput.trim()`) sent via POST to server. No indication of encryption at rest server-side.
+
+#### C8. No Client-Side Rate Limiting
+All API calls fire without debounce/throttle. Relies entirely on server-side rate limiting which (as noted above) is in-memory only.
+
+#### C9. Unhandled Promise Rejections
+Multiple `.catch(() => {})` statements silently swallow errors throughout auth context, club context, and other pages. Makes debugging impossible.
+
+#### C10. No Subresource Integrity for External Resources
+**File:** `client/index.html:14`
+
+Google Fonts loaded without SRI hashes. Low risk given trusted CDN, but best practice to include.
+
+---
+
+### Code Quality (Client)
+
+- **Type safety:** `any` types in `multiplayer-engine.ts`, `ws-client.ts` card decryption
+- **Card security strengths:** Web Crypto API with AES-256-GCM, canvas rendering to prevent scraping, session keys in memory only
+- **Card security gaps:** No key rotation within a session; relies on WSS for key transport
+- **Build config:** Vite with strict file serving, proper path aliases — well configured
+
+---
+
+## Updated Issue Totals
+
+| Severity | Server/Infra | Client | Total |
+|----------|-------------|--------|-------|
+| Critical | 6 | 1 | **7** |
+| High | 10 | 4 | **14** |
+| Medium | 14 | 5 | **19** |
+| Low | 8 | 5 | **13** |
+| **Total** | **38** | **15** | **53** |

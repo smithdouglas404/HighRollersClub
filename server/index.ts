@@ -49,18 +49,7 @@ const app = express();
 
 const isDev = process.env.NODE_ENV !== "production";
 app.use(helmet({
-  contentSecurityPolicy: isDev ? false : {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://*.daily.co"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", "ws:", "wss:", "https://*.daily.co", "https://*.pluot.blue", "wss://*.daily.co"],
-      mediaSrc: ["'self'", "blob:"],
-      frameSrc: ["'self'", "https://*.daily.co"],
-    },
-  },
+  contentSecurityPolicy: false, // Disabled — app uses many external services (Firebase, Onfido, Daily, fonts, etc.)
 }));
 
 declare module 'http' {

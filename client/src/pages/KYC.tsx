@@ -58,10 +58,31 @@ export default function KYC() {
       .finally(() => setLoading(false));
   }, []);
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+
+  function validateFile(file: File | null, label: string): string | null {
+    if (!file) return null;
+    if (file.size > MAX_FILE_SIZE) {
+      return `${label} is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`;
+    }
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      return `${label} has an unsupported format (${file.type || "unknown"}). Allowed: JPEG, PNG, PDF.`;
+    }
+    return null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    // Validate file uploads before sending
+    const idDocError = validateFile(idDocument, "ID document");
+    if (idDocError) { setError(idDocError); setSubmitting(false); return; }
+    const selfieError = validateFile(selfie, "Selfie");
+    if (selfieError) { setError(selfieError); setSubmitting(false); return; }
+
     try {
       const formData = new FormData();
       formData.append("fullName", fullName);
@@ -522,7 +543,7 @@ function KycForm({
         <label className="flex items-center justify-center w-full px-4 py-6 rounded-lg bg-black/30 border-2 border-dashed border-white/10 hover:border-primary/30 cursor-pointer transition-all">
           <input
             type="file"
-            accept=".jpg,.jpeg,.png,.webp,.pdf"
+            accept=".jpg,.jpeg,.png,.pdf"
             onChange={e => setIdDocument(e.target.files?.[0] || null)}
             className="hidden"
           />
@@ -543,7 +564,7 @@ function KycForm({
         <label className="flex items-center justify-center w-full px-4 py-6 rounded-lg bg-black/30 border-2 border-dashed border-white/10 hover:border-primary/30 cursor-pointer transition-all">
           <input
             type="file"
-            accept=".jpg,.jpeg,.png,.webp"
+            accept=".jpg,.jpeg,.png"
             onChange={e => setSelfie(e.target.files?.[0] || null)}
             className="hidden"
           />

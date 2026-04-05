@@ -661,6 +661,21 @@ class TableManager {
     const instance = await this.ensureTable(tableId);
     const { engine, config, lifecycle } = instance;
 
+    // ── Validate buy-in amount ──
+    if (!Number.isFinite(buyIn) || buyIn <= 0) {
+      return { ok: false, error: "Invalid buy-in amount" };
+    }
+    if (!Number.isInteger(buyIn)) {
+      return { ok: false, error: "Buy-in must be a whole number" };
+    }
+    // For non-tournament cash games, enforce table min/max immediately
+    const isTournamentFormat = config.gameFormat === "sng" || config.gameFormat === "lottery_sng" || config.gameFormat === "tournament";
+    if (!isTournamentFormat) {
+      if (buyIn < config.minBuyIn || buyIn > config.maxBuyIn) {
+        return { ok: false, error: `Buy-in must be between ${config.minBuyIn} and ${config.maxBuyIn}` };
+      }
+    }
+
     // Lottery SNG path: 3-player spin & go
     if (config.gameFormat === "lottery_sng" && lifecycle && lifecycle instanceof LotterySNGLifecycle) {
       const fixedBuyIn = config.buyInAmount;

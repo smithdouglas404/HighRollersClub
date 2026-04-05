@@ -55,8 +55,10 @@ export async function getIpGeoInfo(ip: string): Promise<IpGeoInfo | null> {
   if (cached && Date.now() - cached.fetchedAt < GEO_CACHE_TTL) return cached;
 
   try {
-    // ip-api.com with proxy detection fields (free tier supports these)
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,regionName,city,isp,proxy,hosting`, { signal: AbortSignal.timeout(3000) });
+    // Use HTTPS via pro.ip-api.com when API key is set, otherwise fall back to ip-api.io (free HTTPS)
+    const apiBase = process.env.IP_API_URL || (process.env.IP_API_KEY ? "https://pro.ip-api.com" : "https://ip-api.io");
+    const keyParam = process.env.IP_API_KEY ? `&key=${process.env.IP_API_KEY}` : "";
+    const res = await fetch(`${apiBase}/json/${ip}?fields=status,country,countryCode,region,regionName,city,isp,proxy,hosting${keyParam}`, { signal: AbortSignal.timeout(3000) });
     const data = await res.json();
 
     if (data.status !== "success") return null;

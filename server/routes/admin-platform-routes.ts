@@ -4,12 +4,14 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { storage } from "../storage";
-import { users, gameHands, tables, adminAuditLogs, transactions, payments, musicTracks, sponsorshipPayouts, announcements } from "@shared/schema";
-import { sql as defaultSql } from "drizzle-orm";
+import { users, gameHands, tables, adminAuditLogs, transactions, payments, musicTracks, announcements } from "@shared/schema";
+import { sql } from "drizzle-orm";
 import { tableManager } from "../game/table-manager";
 import { getClients, sendToUser } from "../websocket";
 import { getTournamentSchedule, setTournamentSchedule, type ScheduledTournament } from "../scheduler";
-import { blockchainConfig as defaultBlockchainConfig } from "../blockchain/config";
+import { blockchainConfig } from "../blockchain/config";
+import { hasDatabase, getDb } from "../db";
+import type { RouteContext } from "./types";
 
 // ─── Music Upload Setup ──────────────────────────────────────────────────
 const MUSIC_UPLOAD_DIR = path.join(process.cwd(), "uploads", "music");
@@ -92,44 +94,21 @@ const ENV_KEY_DEFINITIONS = [
   { key: "BLOCKED_COUNTRIES", category: "Infrastructure", description: "Comma-separated blocked country codes", sensitive: false },
   { key: "NODE_ENV", category: "Infrastructure", description: "Environment (development|production)", sensitive: false },
   { key: "PORT", category: "Infrastructure", description: "Server listen port", sensitive: false },
+  { key: "REDIS_URL", category: "Infrastructure", description: "Redis connection URL for caching and pub/sub", sensitive: true },
 ];
 
-// In-memory global lock state (shared with routes.ts via helpers)
-let globalSystemLocked = false;
-let globalLockReason = "";
-
-export interface AdminHelpers {
-  logAdminAction: (
-    adminId: string,
-    action: string,
-    targetType: string | null,
-    targetId: string | null,
-    details: Record<string, any> | null,
-    ipAddress?: string,
-  ) => Promise<void>;
-  sendKycEmail: (to: string, subject: string, html: string) => Promise<void>;
-  blockchainConfig: typeof defaultBlockchainConfig;
-  getDb: () => ReturnType<typeof import("../db")["getDb"]>;
-  hasDatabase: () => boolean;
-  sql: typeof defaultSql;
-}
-
-export function setSystemLockState(locked: boolean, reason: string) {
-  globalSystemLocked = locked;
-  globalLockReason = reason;
-}
-
-export function getSystemLockState() {
-  return { locked: globalSystemLocked, reason: globalLockReason };
-}
-
-export async function registerAdminRoutes(
+export async function registerAdminPlatformRoutes(
   app: Express,
   requireAuth: RequestHandler,
   requireAdmin: RequestHandler,
-  helpers: AdminHelpers,
+  ctx: {
+    logAdminAction: (adminId: string, action: string, targetType: string | null, targetId: string | null, details: Record<string, any> | null, ipAddress?: string) => Promise<void>;
+    globalSystemLocked: boolean;
+    globalLockReason: string;
+    setGlobalLock: (locked: boolean, reason: string) => void;
+  },
 ) {
-  const { logAdminAction, sendKycEmail: _sendKycEmail, blockchainConfig, getDb, hasDatabase, sql } = helpers;
+  const { logAdminAction } = ctx;
 
   // ─── Admin: Rake & Revenue Reports ─────────────────────────────────────
 
@@ -285,7 +264,7 @@ export async function registerAdminRoutes(
   // Global lock status
   app.get("/api/admin/system-status", requireAuth, requireAdmin, async (_req, res, next) => {
     try {
-      res.json({ locked: globalSystemLocked, reason: globalLockReason });
+      res.json({ locked: ctx.globalSystemLocked, reason: ctx.globalLockReason });
     } catch (err) {
       next(err);
     }
@@ -295,23 +274,22 @@ export async function registerAdminRoutes(
   app.post("/api/admin/system-lock", requireAuth, requireAdmin, async (req, res, next) => {
     try {
       const { locked, reason } = req.body;
-      globalSystemLocked = !!locked;
-      globalLockReason = reason || (locked ? "Manual admin lock" : "");
-      console.warn(`[ADMIN] System lock ${locked ? "ENGAGED" : "RELEASED"}: ${globalLockReason}`);
+      ctx.setGlobalLock(!!locked, reason || (locked ? "Manual admin lock" : ""));
+      console.warn(`[ADMIN] System lock ${locked ? "ENGAGED" : "RELEASED"}: ${ctx.globalLockReason}`);
 
       // Persist to database
       if (hasDatabase()) {
         try {
           const db = getDb();
           const { platformSettings: ps } = await import("@shared/schema");
-          await db.insert(ps).values({ key: "maintenance.enabled", value: globalSystemLocked, updatedBy: req.user!.id })
-            .onConflictDoUpdate({ target: ps.key, set: { value: globalSystemLocked, updatedBy: req.user!.id, updatedAt: new Date() } });
-          await db.insert(ps).values({ key: "maintenance.reason", value: globalLockReason, updatedBy: req.user!.id })
-            .onConflictDoUpdate({ target: ps.key, set: { value: globalLockReason, updatedBy: req.user!.id, updatedAt: new Date() } });
+          await db.insert(ps).values({ key: "maintenance.enabled", value: ctx.globalSystemLocked, updatedBy: req.user!.id })
+            .onConflictDoUpdate({ target: ps.key, set: { value: ctx.globalSystemLocked, updatedBy: req.user!.id, updatedAt: new Date() } });
+          await db.insert(ps).values({ key: "maintenance.reason", value: ctx.globalLockReason, updatedBy: req.user!.id })
+            .onConflictDoUpdate({ target: ps.key, set: { value: ctx.globalLockReason, updatedBy: req.user!.id, updatedAt: new Date() } });
         } catch {}
       }
 
-      res.json({ locked: globalSystemLocked, reason: globalLockReason });
+      res.json({ locked: ctx.globalSystemLocked, reason: ctx.globalLockReason });
     } catch (err) {
       next(err);
     }
@@ -576,33 +554,12 @@ export async function registerAdminRoutes(
     res.json(keys);
   });
 
-  // Keys that must never be mutated at runtime — they require a server restart
-  const BLOCKED_ENV_KEYS = new Set([
-    "SESSION_SECRET",
-    "DATABASE_URL",
-    "STRIPE_API_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "POLYGON_WALLET_KEY",
-    "NOWPAYMENTS_API_KEY",
-    "ALCHEMY_API_KEY",
-  ]);
-
   app.put("/api/admin/env-keys", requireAuth, requireAdmin, async (req, res) => {
     const { key, value } = req.body;
     if (!key || typeof key !== "string") return res.status(400).json({ message: "Key is required" });
 
     const def = ENV_KEY_DEFINITIONS.find(d => d.key === key);
     if (!def) return res.status(400).json({ message: "Unknown key" });
-
-    // Block mutation of security-critical keys at runtime
-    if (BLOCKED_ENV_KEYS.has(key)) {
-      await logAdminAction(req.user!.id, "env_key_change_blocked", "system", key,
-        { reason: "blocked_key", description: def.description },
-        req.ip || req.socket.remoteAddress);
-      return res.status(403).json({ message: `Key "${key}" cannot be changed at runtime. Restart the server with the new value.` });
-    }
-
-    const previouslySet = !!process.env[key];
 
     // Update process.env at runtime
     if (value === "" || value === null) {
@@ -612,182 +569,10 @@ export async function registerAdminRoutes(
     }
 
     await logAdminAction(req.user!.id, "env_key_change", "system", key,
-      { description: def.description, sensitive: def.sensitive, previouslySet, newIsSet: !!process.env[key] },
+      { description: def.description, sensitive: def.sensitive },
       req.ip || req.socket.remoteAddress);
 
     res.json({ success: true, key, isSet: !!process.env[key] });
-  });
-
-  // ─── Admin: Music Tracks ──────────────────────────────────────────────────
-
-  // Admin: upload platform track
-  app.post("/api/admin/music/upload", requireAuth, requireAdmin, musicUpload.single("file"), async (req, res, next) => {
-    try {
-      const file = req.file;
-      if (!file) return res.status(400).json({ message: "No file uploaded" });
-      const { title, artist } = req.body;
-
-      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
-      const db = getDb();
-
-      const [track] = await db.insert(musicTracks).values({
-        title: title || path.parse(file.originalname).name,
-        artist: artist || null,
-        filename: file.filename,
-        originalName: file.originalname,
-        uploadedBy: req.user!.id,
-        isAdmin: true,
-      }).returning();
-
-      await logAdminAction(req.user!.id, "music_upload", "music", track.id,
-        { title: track.title, artist: track.artist }, req.ip || req.socket.remoteAddress);
-
-      res.json({ ...track, url: `/api/music/file/${track.filename}` });
-    } catch (err) { next(err); }
-  });
-
-  // Admin: list all tracks (platform + all users)
-  app.get("/api/admin/music", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json([]);
-      const db = getDb();
-      const tracks = await db.select({
-        id: musicTracks.id, title: musicTracks.title, artist: musicTracks.artist,
-        filename: musicTracks.filename, originalName: musicTracks.originalName,
-        isAdmin: musicTracks.isAdmin, uploadedBy: musicTracks.uploadedBy,
-        createdAt: musicTracks.createdAt,
-        username: users.username,
-      }).from(musicTracks)
-        .leftJoin(users, sql`${users.id} = ${musicTracks.uploadedBy}`)
-        .orderBy(sql`${musicTracks.isAdmin} DESC, ${musicTracks.createdAt} DESC`);
-      res.json(tracks.map(t => ({ ...t, url: `/api/music/file/${t.filename}` })));
-    } catch (err) { next(err); }
-  });
-
-  // Admin: delete any track
-  app.delete("/api/admin/music/:id", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
-      const db = getDb();
-      const [track] = await db.select().from(musicTracks).where(sql`${musicTracks.id} = ${req.params.id}`).limit(1);
-      if (!track) return res.status(404).json({ message: "Track not found" });
-
-      const filePath = path.join(MUSIC_UPLOAD_DIR, track.filename);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-      await db.delete(musicTracks).where(sql`${musicTracks.id} = ${req.params.id}`);
-      await logAdminAction(req.user!.id, "music_delete", "music", track.id,
-        { title: track.title }, req.ip || req.socket.remoteAddress);
-      res.json({ success: true });
-    } catch (err) { next(err); }
-  });
-
-  // ─── Admin: Encryption Stats ──────────────────────────────────────────────
-
-  const cardEncryption = await import("../game/card-encryption");
-
-  // Admin: encryption stats
-  app.get("/api/admin/encryption/stats", requireAuth, requireAdmin, async (_req, res) => {
-    res.json(cardEncryption.getEncryptionStats());
-  });
-
-  // Admin: force anchor pending commitments now
-  app.post("/api/admin/encryption/anchor", requireAuth, requireAdmin, async (req, res) => {
-    const result = await cardEncryption.forceAnchor();
-    if (!result) return res.json({ message: "No pending commitments to anchor" });
-    await logAdminAction(req.user!.id, "force_anchor", "system", null,
-      { merkleRoot: result.merkleRoot, txHash: result.txHash, count: result.count },
-      req.ip || req.socket.remoteAddress);
-    res.json(result);
-  });
-
-  // ─── Blockchain Dashboard Data ──────────────────────────────────────────
-
-  // Aggregated blockchain stats for dashboard
-  app.get("/api/admin/blockchain/stats", requireAuth, requireAdmin, async (_req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json({ kycVerified: 0, kycOnChain: 0, handsTotal: 0, handsOnChain: 0, paymentsTx: 0, vrfHands: 0 });
-      const db = getDb();
-      const [kycStats] = await db.select({
-        verified: sql<number>`count(*) filter (where ${users.kycStatus} = 'verified')`,
-        onChain: sql<number>`count(*) filter (where ${users.kycBlockchainTxHash} is not null)`,
-      }).from(users);
-      const [handStats] = await db.select({
-        total: sql<number>`count(*)`,
-        onChain: sql<number>`count(*) filter (where ${gameHands.onChainCommitTx} is not null or ${gameHands.onChainRevealTx} is not null)`,
-        vrf: sql<number>`count(*) filter (where ${gameHands.vrfRequestId} is not null)`,
-      }).from(gameHands);
-      const [payStats] = await db.select({
-        withTx: sql<number>`count(*) filter (where ${payments.txHash} is not null)`,
-      }).from(payments);
-
-      res.json({
-        kycVerified: Number(kycStats.verified),
-        kycOnChain: Number(kycStats.onChain),
-        handsTotal: Number(handStats.total),
-        handsOnChain: Number(handStats.onChain),
-        vrfHands: Number(handStats.vrf),
-        paymentsTx: Number(payStats.withTx),
-        encryption: cardEncryption.getEncryptionStats(),
-        blockchainEnabled: blockchainConfig.enabled,
-        chainId: blockchainConfig.chainId,
-        rpcConfigured: !!blockchainConfig.rpcUrl,
-        contractConfigured: !!blockchainConfig.handVerifierAddress,
-      });
-    } catch (err) { next(err); }
-  });
-
-  // KYC blockchain records — all verified users with on-chain hashes
-  app.get("/api/admin/blockchain/kyc", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json([]);
-      const db = getDb();
-      const search = req.query.search as string | undefined;
-      const onChainOnly = req.query.onChainOnly === "true";
-
-      const conds: ReturnType<typeof sql>[] = [sql`${users.kycStatus} = 'verified'`];
-      if (onChainOnly) conds.push(sql`${users.kycBlockchainTxHash} is not null`);
-      if (search) conds.push(sql`(${users.username} ILIKE ${"%" + search + "%"} OR ${users.memberId} ILIKE ${"%" + search + "%"} OR ${users.kycBlockchainTxHash} ILIKE ${"%" + search + "%"})`);
-
-      const where = conds.reduce((a, b) => sql`${a} AND ${b}`);
-      const rows = await db.select({
-        id: users.id, username: users.username, displayName: users.displayName,
-        memberId: users.memberId, kycStatus: users.kycStatus,
-        kycVerifiedAt: users.kycVerifiedAt, kycBlockchainTxHash: users.kycBlockchainTxHash,
-        tier: users.tier, createdAt: users.createdAt,
-      }).from(users).where(where).orderBy(sql`${users.kycVerifiedAt} DESC`).limit(100);
-      res.json(rows);
-    } catch (err) { next(err); }
-  });
-
-  // Recent on-chain hand activity
-  app.get("/api/admin/blockchain/hands", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json([]);
-      const db = getDb();
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
-      const onChainOnly = req.query.onChainOnly !== "false"; // default true
-      const search = req.query.search as string | undefined;
-
-      const conds: ReturnType<typeof sql>[] = [];
-      if (onChainOnly) conds.push(sql`(${gameHands.onChainCommitTx} is not null or ${gameHands.onChainRevealTx} is not null or ${gameHands.vrfRequestId} is not null)`);
-      if (search) conds.push(sql`(${gameHands.commitmentHash} ILIKE ${"%" + search + "%"} OR ${gameHands.onChainCommitTx} ILIKE ${"%" + search + "%"} OR ${gameHands.onChainRevealTx} ILIKE ${"%" + search + "%"} OR ${gameHands.id} ILIKE ${"%" + search + "%"})`);
-
-      const where = conds.length > 0 ? conds.reduce((a, b) => sql`${a} AND ${b}`) : sql`1=1`;
-
-      const rows = await db.select({
-        id: gameHands.id, tableId: gameHands.tableId, handNumber: gameHands.handNumber,
-        potTotal: gameHands.potTotal, totalRake: gameHands.totalRake,
-        commitmentHash: gameHands.commitmentHash, vrfRequestId: gameHands.vrfRequestId,
-        onChainCommitTx: gameHands.onChainCommitTx, onChainRevealTx: gameHands.onChainRevealTx,
-        createdAt: gameHands.createdAt, tableName: tables.name,
-      }).from(gameHands)
-        .leftJoin(tables, sql`${tables.id} = ${gameHands.tableId}`)
-        .where(where)
-        .orderBy(sql`${gameHands.createdAt} DESC`)
-        .limit(limit);
-      res.json(rows);
-    } catch (err) { next(err); }
   });
 
   // ─── Bot Detection Analysis ────────────────────────────────────────────────
@@ -975,8 +760,60 @@ export async function registerAdminRoutes(
     } catch (err) { next(err); }
   });
 
-  // ─── Admin: Multi-Account Detection ──────────────────────────────────────
+  // ─── Device Fingerprints ──────────────────────────────────────────────────
 
+  // Client submits fingerprint on connect
+  app.post("/api/device-fingerprint", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ ok: true });
+      const db = getDb();
+      const { fingerprint, screenRes, userAgent } = req.body;
+      if (!fingerprint) return res.status(400).json({ message: "fingerprint required" });
+
+      const ip = req.ip || req.socket.remoteAddress || "";
+
+      // Upsert fingerprint record
+      const existing = await db.select().from(deviceFingerprintsTable)
+        .where(sql`${deviceFingerprintsTable.userId} = ${req.user!.id} AND ${deviceFingerprintsTable.fingerprint} = ${fingerprint}`)
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db.update(deviceFingerprintsTable)
+          .set({ lastSeen: new Date(), ipAddress: ip })
+          .where(sql`${deviceFingerprintsTable.id} = ${existing[0].id}`);
+      } else {
+        await db.insert(deviceFingerprintsTable).values({
+          userId: req.user!.id, fingerprint, userAgent: userAgent || null,
+          screenRes: screenRes || null, ipAddress: ip,
+        });
+      }
+
+      // Check for multi-account matches
+      const allFps = await db.select({
+        userId: deviceFingerprintsTable.userId,
+        fingerprint: deviceFingerprintsTable.fingerprint,
+        ipAddress: deviceFingerprintsTable.ipAddress,
+      }).from(deviceFingerprintsTable)
+        .where(sql`${deviceFingerprintsTable.userId} != ${req.user!.id}`)
+        .limit(500);
+
+      const matches = securityEngine.detectMultiAccounts(req.user!.id, fingerprint, ip, allFps as any[]);
+      const sameDevice = matches.filter(m => m.matchType === "same_device");
+
+      if (sameDevice.length > 0) {
+        // Flag but don't block
+        await db.insert(accountActionsTable).values({
+          userId: req.user!.id, action: "multi_account_flag", severity: "warning",
+          message: `Device shared with ${sameDevice.length} other account(s)`,
+          automated: true, details: { matchedUsers: sameDevice.map(m => m.matchedUserId.slice(0, 8)) },
+        });
+      }
+
+      res.json({ ok: true, matches: matches.length });
+    } catch (err) { next(err); }
+  });
+
+  // Admin: view multi-account flags
   app.get("/api/admin/multi-accounts", requireAuth, requireAdmin, async (_req, res, next) => {
     try {
       if (!hasDatabase()) return res.json([]);
@@ -1120,288 +957,25 @@ export async function registerAdminRoutes(
     } catch (err) { next(err); }
   });
 
-  // ─── Admin: Sponsorship Payouts ──────────────────────────────────────────
+  // ─── Admin: Tournament Schedule ──────────────────────────────────────────
+  app.get("/api/admin/tournament-schedule", requireAuth, async (req, res) => {
+    const schedule = getTournamentSchedule();
+    res.json({ schedule });
+  });
 
-  app.get("/api/admin/sponsorship/payouts", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json([]);
-      const db = getDb();
-      const { search, status, clubId } = req.query as { search?: string; status?: string; clubId?: string };
-
-      const conditions: string[] = [];
-      if (status) conditions.push(`${sponsorshipPayouts.status.name} = '${status}'`);
-      if (clubId) conditions.push(`${sponsorshipPayouts.clubId.name} = '${clubId}'`);
-
-      let where = sql`1=1`;
-      if (status && clubId) {
-        where = sql`${sponsorshipPayouts.status} = ${status} AND ${sponsorshipPayouts.clubId} = ${clubId}`;
-      } else if (status) {
-        where = sql`${sponsorshipPayouts.status} = ${status}`;
-      } else if (clubId) {
-        where = sql`${sponsorshipPayouts.clubId} = ${clubId}`;
+  app.put("/api/admin/tournament-schedule", requireAuth, async (req, res) => {
+    const { schedule } = req.body;
+    if (!Array.isArray(schedule)) {
+      return res.status(400).json({ message: "schedule must be an array" });
+    }
+    for (const entry of schedule) {
+      if (!entry.name || typeof entry.hourUTC !== "number" || typeof entry.buyIn !== "number" ||
+          typeof entry.startingChips !== "number" || typeof entry.maxPlayers !== "number") {
+        return res.status(400).json({ message: "Each entry requires name, hourUTC, buyIn, startingChips, maxPlayers" });
       }
-
-      if (search) {
-        const searchWhere = sql`(${sponsorshipPayouts.transactionId} ILIKE ${'%' + search + '%'} OR ${sponsorshipPayouts.recipientWallet} ILIKE ${'%' + search + '%'} OR ${sponsorshipPayouts.notes} ILIKE ${'%' + search + '%'})`;
-        where = status || clubId ? sql`${where} AND ${searchWhere}` : searchWhere;
-      }
-
-      const payouts = await db.select().from(sponsorshipPayouts)
-        .where(where)
-        .orderBy(sql`${sponsorshipPayouts.createdAt} DESC`)
-        .limit(200);
-
-      res.json(payouts);
-    } catch (err) { next(err); }
-  });
-
-  // Create a new payout
-  app.post("/api/admin/sponsorship/payouts", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.status(503).json({ message: "Database not available" });
-      const db = getDb();
-      const { clubId, recipientUserId, recipientWallet, amount, currency, scheduledDate, notes } = req.body;
-
-      if (!recipientWallet || !amount) {
-        return res.status(400).json({ message: "recipientWallet and amount are required" });
-      }
-
-      // Auto-generate TX-XXXXXXXX transaction ID (collision-resistant)
-      const txNum = randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
-      const transactionId = `TX-${txNum}`;
-
-      const [payout] = await db.insert(sponsorshipPayouts).values({
-        transactionId,
-        clubId: clubId || null,
-        recipientUserId: recipientUserId || null,
-        recipientWallet,
-        amount: Number(amount),
-        currency: currency || "USDT",
-        status: "pending",
-        scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-        notes: notes || null,
-        createdBy: req.user!.id,
-      }).returning();
-
-      res.status(201).json(payout);
-    } catch (err) { next(err); }
-  });
-
-  // Update payout status
-  app.patch("/api/admin/sponsorship/payouts/:id", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.status(503).json({ message: "Database not available" });
-      const db = getDb();
-      const { id } = req.params;
-      const { status, txHash, notes, processedAt } = req.body;
-
-      const updates: Record<string, unknown> = {};
-      if (status) updates.status = status;
-      if (txHash !== undefined) updates.txHash = txHash;
-      if (notes !== undefined) updates.notes = notes;
-      if (processedAt) updates.processedAt = new Date(processedAt);
-      if (status === "completed" && !processedAt) updates.processedAt = new Date();
-
-      const [updated] = await db.update(sponsorshipPayouts)
-        .set(updates)
-        .where(sql`${sponsorshipPayouts.id} = ${id}`)
-        .returning();
-
-      if (!updated) return res.status(404).json({ message: "Payout not found" });
-      res.json(updated);
-    } catch (err) { next(err); }
-  });
-
-  // Delete a payout
-  app.delete("/api/admin/sponsorship/payouts/:id", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.status(503).json({ message: "Database not available" });
-      const db = getDb();
-      const { id } = req.params;
-
-      const [deleted] = await db.delete(sponsorshipPayouts)
-        .where(sql`${sponsorshipPayouts.id} = ${id}`)
-        .returning();
-
-      if (!deleted) return res.status(404).json({ message: "Payout not found" });
-      res.json({ message: "Payout deleted", id });
-    } catch (err) { next(err); }
-  });
-
-  // ─── Admin: Announcement Management (DB-backed) ──────────────────────────
-
-  // Admin: create announcement
-  app.post("/api/admin/announcements/create", requireAuth, requireAdmin, async (req: any, res, next) => {
-    try {
-      if (!hasDatabase()) return res.status(503).json({ message: "Database unavailable" });
-      const db = getDb();
-      const { title, message, targetAudience, deliveryStyle, expiresAt, clubId } = req.body;
-      if (!title || !message) return res.status(400).json({ message: "title and message are required" });
-      const [row] = await db.insert(announcements).values({
-        title,
-        message,
-        targetAudience: targetAudience || "all",
-        deliveryStyle: deliveryStyle || "notification",
-        clubId: clubId || null,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-        createdBy: req.user!.id,
-      }).returning();
-      await logAdminAction(req.user!.id, "announcement_create", "announcement", row.id, { title, targetAudience, deliveryStyle }, req.ip);
-      res.json(row);
-    } catch (err) { next(err); }
-  });
-
-  // Admin: delete announcement
-  app.delete("/api/admin/announcements/:id", requireAuth, requireAdmin, async (req: any, res, next) => {
-    try {
-      if (!hasDatabase()) return res.status(503).json({ message: "Database unavailable" });
-      const db = getDb();
-      const { id } = req.params;
-      const [deleted] = await db.delete(announcements).where(sql`${announcements.id} = ${id}`).returning();
-      if (!deleted) return res.status(404).json({ message: "Announcement not found" });
-      await logAdminAction(req.user!.id, "announcement_delete", "announcement", id, null, req.ip);
-      res.json({ message: "Announcement deleted", id });
-    } catch (err) { next(err); }
-  });
-
-  // Admin: broadcast announcement to all connected WebSocket clients
-  app.post("/api/admin/announcements/:id/broadcast", requireAuth, requireAdmin, async (req: any, res, next) => {
-    try {
-      if (!hasDatabase()) return res.status(503).json({ message: "Database unavailable" });
-      const db = getDb();
-      const { id } = req.params;
-      const [announcement] = await db.select().from(announcements).where(sql`${announcements.id} = ${id}`);
-      if (!announcement) return res.status(404).json({ message: "Announcement not found" });
-
-      const clients = getClients();
-      const wsMessage = {
-        type: "announcement" as const,
-        announcement: {
-          id: announcement.id,
-          title: announcement.title,
-          message: announcement.message,
-          deliveryStyle: announcement.deliveryStyle,
-        },
-      };
-
-      // Broadcast to all connected clients via their individual connections
-      const sentUserIds = new Set<string>();
-      for (const client of clients.values()) {
-        if (client.userId && !sentUserIds.has(client.userId)) {
-          sentUserIds.add(client.userId);
-          sendToUser(client.userId, wsMessage as any);
-        }
-      }
-
-      await logAdminAction(req.user!.id, "announcement_broadcast", "announcement", id, { recipientCount: sentUserIds.size }, req.ip);
-      res.json({ message: "Broadcast sent", recipientCount: sentUserIds.size });
-    } catch (err) { next(err); }
-  });
-
-  // ─── Chart Data Routes ─────────────────────────────────────────────────────
-
-  // Daily revenue trend (last 30 days)
-  app.get("/api/admin/charts/revenue-trend", requireAuth, requireAdmin, async (_req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json([]);
-      const db = getDb();
-      const rows = await db.execute(sql`
-        SELECT date_trunc('day', created_at)::date as day,
-          coalesce(sum(case when type = 'rake' then abs(amount) else 0 end), 0) as rake,
-          coalesce(sum(case when type = 'deposit' then abs(amount) else 0 end), 0) as deposits,
-          coalesce(sum(case when type = 'cashout' then amount else 0 end), 0) as cashouts,
-          coalesce(sum(case when type = 'buyin' then abs(amount) else 0 end), 0) as buyins
-        FROM ${transactions}
-        WHERE created_at > now() - interval '30 days'
-        GROUP BY date_trunc('day', created_at)::date
-        ORDER BY day
-      `);
-      res.json(rows);
-    } catch (err) { next(err); }
-  });
-
-  // Revenue by source (pie chart)
-  app.get("/api/admin/charts/revenue-sources", requireAuth, requireAdmin, async (_req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json([]);
-      const db = getDb();
-      const rows = await db.execute(sql`
-        SELECT type, coalesce(sum(abs(amount)), 0) as total
-        FROM ${transactions}
-        WHERE type IN ('rake', 'deposit', 'purchase', 'buyin')
-        GROUP BY type ORDER BY total DESC
-      `);
-      res.json(rows);
-    } catch (err) { next(err); }
-  });
-
-  // ─── Admin: Ledger Overview ─────────────────────────────────────────────
-
-  const { tableSessions, tableLedgerEntries } = await import("@shared/schema");
-
-  app.get("/api/admin/ledger/overview", requireAuth, requireAdmin, async (_req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json({});
-      const db = getDb();
-      const [stats] = await db.select({
-        totalSessions: sql<number>`count(*)`,
-        totalBuyIns: sql<number>`coalesce(sum(${tableSessions.buyInTotal}), 0)`,
-        totalCashOuts: sql<number>`coalesce(sum(${tableSessions.cashOutTotal}), 0)`,
-        totalRake: sql<number>`coalesce(sum(${tableSessions.buyInTotal}) - sum(${tableSessions.cashOutTotal}), 0)`,
-        unsettled: sql<number>`count(*) filter (where ${tableSessions.settled} = false AND ${tableSessions.endedAt} IS NOT NULL)`,
-      }).from(tableSessions);
-      const [ledgerStats] = await db.select({
-        totalLedgerEntries: sql<number>`count(*)`,
-        totalSettled: sql<number>`count(*) filter (where ${tableLedgerEntries.settledAt} IS NOT NULL)`,
-      }).from(tableLedgerEntries);
-      res.json({
-        sessions: { total: Number(stats.totalSessions), unsettled: Number(stats.unsettled) },
-        financial: { totalBuyIns: Number(stats.totalBuyIns), totalCashOuts: Number(stats.totalCashOuts), totalRake: Number(stats.totalRake) },
-        ledger: { entries: Number(ledgerStats.totalLedgerEntries), settled: Number(ledgerStats.totalSettled) },
-      });
-    } catch (err) { next(err); }
-  });
-
-  // Admin: all settlements with blockchain proof data
-  app.get("/api/admin/blockchain/settlements", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json([]);
-      const db = getDb();
-      const search = req.query.search as string | undefined;
-      const onChainOnly = req.query.onChainOnly === "true";
-
-      const conds: ReturnType<typeof sql>[] = [];
-      if (onChainOnly) conds.push(sql`${tableLedgerEntries.settlementTxHash} IS NOT NULL`);
-      if (search) conds.push(sql`(${tableLedgerEntries.settlementHash} ILIKE ${"%" + search + "%"} OR ${tableLedgerEntries.settlementTxHash} ILIKE ${"%" + search + "%"} OR ${tableLedgerEntries.id} ILIKE ${"%" + search + "%"})`);
-
-      const where = conds.length > 0 ? conds.reduce((a, b) => sql`${a} AND ${b}`) : sql`1=1`;
-
-      const entries = await db.select({
-        id: tableLedgerEntries.id,
-        tableId: tableLedgerEntries.tableId,
-        clubId: tableLedgerEntries.clubId,
-        sessionDate: tableLedgerEntries.sessionDate,
-        entries: tableLedgerEntries.entries,
-        settlements: tableLedgerEntries.settlements,
-        totalRake: tableLedgerEntries.totalRake,
-        totalPot: tableLedgerEntries.totalPot,
-        playerCount: tableLedgerEntries.playerCount,
-        handsPlayed: tableLedgerEntries.handsPlayed,
-        settledBy: tableLedgerEntries.settledBy,
-        settledAt: tableLedgerEntries.settledAt,
-        notes: tableLedgerEntries.notes,
-        settlementHash: tableLedgerEntries.settlementHash,
-        settlementTxHash: tableLedgerEntries.settlementTxHash,
-        createdAt: tableLedgerEntries.createdAt,
-        tableName: tables.name,
-      }).from(tableLedgerEntries)
-        .leftJoin(tables, sql`${tables.id} = ${tableLedgerEntries.tableId}`)
-        .where(where)
-        .orderBy(sql`${tableLedgerEntries.createdAt} DESC`)
-        .limit(100);
-
-      res.json(entries);
-    } catch (err) { next(err); }
+    }
+    setTournamentSchedule(schedule as ScheduledTournament[]);
+    res.json({ message: "Schedule updated", schedule: getTournamentSchedule() });
   });
 
   // ─── Admin Audit Log Routes ────────────────────────────────────────────────
@@ -1461,191 +1035,6 @@ export async function registerAdminRoutes(
       await storage.updateUser(req.params.userId, { role: "frozen" as any });
 
       res.json({ ok: true, message: `Account ${targetUser.username} has been frozen` });
-    } catch (err) { next(err); }
-  });
-
-  // ─── Admin: Support Ticket Management ─────────────────────────────────
-
-  app.post("/api/admin/support/tickets/:id/status", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      const { status } = req.body;
-      const validStatuses = ["open", "in-progress", "resolved", "closed"];
-      if (!status || !validStatuses.includes(status)) {
-        return res.status(400).json({ message: `Status must be one of: ${validStatuses.join(", ")}` });
-      }
-
-      if (!hasDatabase()) return res.status(503).json({ message: "Database required" });
-      const db = getDb();
-      const { supportTickets } = await import("@shared/schema");
-
-      const now = new Date();
-      const updateData: any = { status, updatedAt: now };
-      if (status === "resolved") updateData.resolvedAt = now;
-
-      await db.update(supportTickets)
-        .set(updateData)
-        .where(sql`${supportTickets.id} = ${req.params.id}`);
-
-      const [updated] = await db
-        .select()
-        .from(supportTickets)
-        .where(sql`${supportTickets.id} = ${req.params.id}`)
-        .limit(1);
-
-      if (!updated) return res.status(404).json({ message: "Ticket not found" });
-      res.json(updated);
-    } catch (err) { next(err); }
-  });
-
-  app.get("/api/admin/support/tickets", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      if (!hasDatabase()) return res.json([]);
-      const db = getDb();
-      const { supportTickets } = await import("@shared/schema");
-
-      const status = req.query.status as string | undefined;
-      const priority = req.query.priority as string | undefined;
-
-      let tickets;
-      if (status) {
-        tickets = await db.select().from(supportTickets).where(sql`${supportTickets.status} = ${status}`).orderBy(sql`${supportTickets.createdAt} desc`).limit(100);
-      } else {
-        tickets = await db.select().from(supportTickets).orderBy(sql`${supportTickets.createdAt} desc`).limit(100);
-      }
-
-      const filtered = priority ? tickets.filter(t => t.priority === priority) : tickets;
-      res.json(filtered);
-    } catch (err) { next(err); }
-  });
-
-  // ─── Admin: Tournament Schedule ────────────────────────────────────────────
-
-  app.get("/api/admin/tournament-schedule", requireAuth, async (req, res) => {
-    const schedule = getTournamentSchedule();
-    res.json({ schedule });
-  });
-
-  app.put("/api/admin/tournament-schedule", requireAuth, async (req, res) => {
-    const { schedule } = req.body;
-    if (!Array.isArray(schedule)) {
-      return res.status(400).json({ message: "schedule must be an array" });
-    }
-    for (const entry of schedule) {
-      if (!entry.name || typeof entry.hourUTC !== "number" || typeof entry.buyIn !== "number" ||
-          typeof entry.startingChips !== "number" || typeof entry.maxPlayers !== "number") {
-        return res.status(400).json({ message: "Each entry requires name, hourUTC, buyIn, startingChips, maxPlayers" });
-      }
-    }
-    setTournamentSchedule(schedule as ScheduledTournament[]);
-    res.json({ message: "Schedule updated", schedule: getTournamentSchedule() });
-  });
-
-  // ─── Admin: KYC Document Access ────────────────────────────────────────────
-
-  const KYC_UPLOAD_DIR = path.join(process.cwd(), "uploads", "kyc");
-
-  app.get("/api/admin/kyc/document/:filename", requireAuth, requireAdmin, async (req, res, next) => {
-    try {
-      const filename = path.basename(req.params.filename); // prevent path traversal
-      const filePath = path.join(KYC_UPLOAD_DIR, filename);
-      if (!fs.existsSync(filePath)) return res.status(404).json({ message: "File not found" });
-      res.sendFile(filePath);
-    } catch (err) { next(err); }
-  });
-
-  // Admin KYC routes
-  app.get("/api/admin/kyc/pending", requireAuth, async (req, res, next) => {
-    try {
-      if (req.user!.role !== "admin") return res.status(403).json({ message: "Admin only" });
-      const pending = await storage.getAllUsersByKycStatus("pending");
-      const sanitized = pending.map(u => ({
-        id: u.id,
-        username: u.username,
-        displayName: u.displayName,
-        memberId: u.memberId,
-        kycStatus: u.kycStatus,
-        kycData: u.kycData,
-        tier: u.tier,
-        createdAt: u.createdAt,
-      }));
-      res.json(sanitized);
-    } catch (err) { next(err); }
-  });
-
-  app.post("/api/admin/kyc/:userId/verify", requireAuth, async (req, res, next) => {
-    try {
-      if (req.user!.role !== "admin") return res.status(403).json({ message: "Admin only" });
-      const user = await storage.getUser(req.params.userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-      if (user.kycStatus !== "pending") {
-        return res.status(400).json({ message: "User KYC is not pending" });
-      }
-      const updated = await storage.updateUser(user.id, {
-        kycStatus: "verified",
-        kycVerifiedAt: new Date(),
-      });
-
-      // Audit log
-      await logAdminAction(req.user!.id, "kyc_approve", "user", user.id,
-        { username: user.username, kycData: user.kycData },
-        req.ip || req.socket.remoteAddress
-      );
-
-      // Email notification
-      if (user.email) {
-        _sendKycEmail(user.email, "KYC Verified - HighRollers Club",
-          `<h2>Identity Verified!</h2>
-           <p>Congratulations! Your identity has been successfully verified.</p>
-           <p>You now have access to all verified member features, including on-chain identity recording and higher withdrawal limits.</p>
-           <br/><p style="color:#888;">— HighRollers Club Team</p>`
-        );
-      }
-
-      // In-app notification
-      await storage.createNotification(user.id, "kyc_status", "KYC Approved",
-        "Your identity verification has been approved!", { status: "verified" });
-
-      res.json(updated);
-    } catch (err) { next(err); }
-  });
-
-  app.post("/api/admin/kyc/:userId/reject", requireAuth, async (req, res, next) => {
-    try {
-      if (req.user!.role !== "admin") return res.status(403).json({ message: "Admin only" });
-      const { reason } = req.body;
-      const user = await storage.getUser(req.params.userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-      if (user.kycStatus !== "pending") {
-        return res.status(400).json({ message: "User KYC is not pending" });
-      }
-      const rejectReason = reason || "Application rejected";
-      const updated = await storage.updateUser(user.id, {
-        kycStatus: "rejected",
-        kycRejectionReason: rejectReason,
-      });
-
-      // Audit log
-      await logAdminAction(req.user!.id, "kyc_reject", "user", user.id,
-        { username: user.username, reason: rejectReason },
-        req.ip || req.socket.remoteAddress
-      );
-
-      // Email notification
-      if (user.email) {
-        _sendKycEmail(user.email, "KYC Update - HighRollers Club",
-          `<h2>Identity Verification Update</h2>
-           <p>Unfortunately, your identity verification application was not approved.</p>
-           <p><strong>Reason:</strong> ${rejectReason}</p>
-           <p>You may resubmit your application with corrected documents at any time.</p>
-           <br/><p style="color:#888;">— HighRollers Club Team</p>`
-        );
-      }
-
-      // In-app notification
-      await storage.createNotification(user.id, "kyc_status", "KYC Update",
-        `Your verification was not approved: ${rejectReason}`, { status: "rejected", reason: rejectReason });
-
-      res.json(updated);
     } catch (err) { next(err); }
   });
 }

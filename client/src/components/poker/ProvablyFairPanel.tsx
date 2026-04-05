@@ -8,6 +8,17 @@ import {
 } from "lucide-react";
 import type { VerificationStatus, PlayerSeedStatus } from "@/lib/multiplayer-engine";
 
+/** Escape a string for safe interpolation into HTML */
+function escapeHtml(str: string | number | null | undefined): string {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 interface ProvablyFairPanelProps {
   onClose?: () => void;
   commitmentHash?: string | null;
@@ -71,27 +82,27 @@ export function ProvablyFairPanel({
       : `for(let i=deck.length-1;i>0;i--){const h=await hmacSha256(seed,"shuffle-index-"+i);const rand=(h[0]<<24|h[1]<<16|h[2]<<8|h[3])>>>0;const j=rand%(i+1);[deck[i],deck[j]]=[deck[j],deck[i]]}`;
 
     const onChainInfo = hasOnChainProof
-      ? `\n<h3>On-Chain Proof</h3>\n<pre>Commitment TX: ${onChainCommitTx || "N/A"}\nReveal TX: ${onChainRevealTx || "N/A"}\nVerify on Polygonscan: https://amoy.polygonscan.com/tx/${onChainCommitTx || ""}</pre>`
+      ? `\n<h3>On-Chain Proof</h3>\n<pre>Commitment TX: ${escapeHtml(onChainCommitTx || "N/A")}\nReveal TX: ${escapeHtml(onChainRevealTx || "N/A")}\nVerify on Polygonscan: https://amoy.polygonscan.com/tx/${escapeHtml(onChainCommitTx || "")}</pre>`
       : "";
 
     const playerSeedInfo = hasPlayerSeeds
-      ? `\n<h3>Player Seeds (${shuffleProof.playerSeeds.length})</h3>\n<pre>${shuffleProof.playerSeeds.map((ps: any) => `Player ${ps.playerId}: seed=${ps.seed || "hidden"} commit=${ps.commitmentHash}`).join("\n")}</pre>`
+      ? `\n<h3>Player Seeds (${escapeHtml(shuffleProof.playerSeeds.length)})</h3>\n<pre>${shuffleProof.playerSeeds.map((ps: any) => `Player ${escapeHtml(ps.playerId)}: seed=${escapeHtml(ps.seed || "hidden")} commit=${escapeHtml(ps.commitmentHash)}`).join("\n")}</pre>`
       : "";
 
     const html = `<!DOCTYPE html>
-<html><head><title>Poker Hand Verification - Hand #${shuffleProof.handNumber}</title>
+<html><head><title>Poker Hand Verification - Hand #${escapeHtml(shuffleProof.handNumber)}</title>
 <style>body{font-family:monospace;background:#0a0a0a;color:#e0e0e0;padding:2rem;max-width:800px;margin:0 auto}
 h1{color:#d4af37}pre{background:#111;padding:1rem;border-radius:8px;overflow-x:auto;border:1px solid #222}
 .pass{color:#22c55e;font-weight:bold}.fail{color:#ef4444;font-weight:bold}button{background:#d4af37;color:#000;border:none;padding:0.75rem 1.5rem;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1rem}button:hover{opacity:0.9}</style></head>
-<body><h1>Provably Fair Verification (v${version})</h1>
-<p>Hand #${shuffleProof.handNumber} | Table: ${shuffleProof.tableId}</p>
+<body><h1>Provably Fair Verification (v${escapeHtml(version)})</h1>
+<p>Hand #${escapeHtml(shuffleProof.handNumber)} | Table: ${escapeHtml(shuffleProof.tableId)}</p>
 <h3>Proof Data</h3>
-<pre>Server Seed: ${shuffleProof.serverSeed}
-Commitment Hash: ${shuffleProof.commitmentHash}
-Deck Order: ${shuffleProof.deckOrder}
-Nonce: ${shuffleProof.nonce}
-Timestamp: ${shuffleProof.timestamp}
-Shuffle Version: ${version}${shuffleProof.vrfRandomWord ? `\nVRF Random Word: ${shuffleProof.vrfRandomWord}` : ""}</pre>${playerSeedInfo}${onChainInfo}
+<pre>Server Seed: ${escapeHtml(shuffleProof.serverSeed)}
+Commitment Hash: ${escapeHtml(shuffleProof.commitmentHash)}
+Deck Order: ${escapeHtml(shuffleProof.deckOrder)}
+Nonce: ${escapeHtml(shuffleProof.nonce)}
+Timestamp: ${escapeHtml(shuffleProof.timestamp)}
+Shuffle Version: ${escapeHtml(version)}${shuffleProof.vrfRandomWord ? `\nVRF Random Word: ${escapeHtml(shuffleProof.vrfRandomWord)}` : ""}</pre>${playerSeedInfo}${onChainInfo}
 <button onclick="verify()">Run Verification</button>
 <pre id="result"></pre>
 <script>
@@ -101,10 +112,10 @@ async function verify(){const el=document.getElementById("result");el.textConten
 const suits=["hearts","diamonds","clubs","spades"];const ranks=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
 const sh={hearts:"h",diamonds:"d",clubs:"c",spades:"s"};
 const deck=[];for(const s of suits)for(const r of ranks)deck.push({suit:s,rank:r});
-const seed="${shuffleProof.serverSeed}";
+const seed="${escapeHtml(shuffleProof.serverSeed)}";
 ${shuffleCode}
 const order=deck.map(c=>c.rank+sh[c.suit]).join(",");const hash=await sha256Hex(order);
-const expected="${shuffleProof.commitmentHash}";
+const expected="${escapeHtml(shuffleProof.commitmentHash)}";
 const valid=hash===expected;
 el.innerHTML="Computed Hash: "+hash+"\\nExpected Hash: "+expected+"\\nDeck Order: "+order+"\\n\\nResult: "+(valid?'<span class="pass">VERIFIED \\u2713</span>':'<span class="fail">FAILED \\u2717</span>')}</script></body></html>`;
     const blob = new Blob([html], { type: "text/html" });

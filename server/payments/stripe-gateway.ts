@@ -25,6 +25,9 @@ export class StripeGateway implements IPaymentGateway {
   constructor(config: PaymentGatewayConfig) {
     this.apiKey = config.apiKey;
     this.webhookSecret = config.webhookSecret || "";
+    if (!this.webhookSecret && process.env.NODE_ENV === "production") {
+      console.warn("[stripe] WARNING: No STRIPE_WEBHOOK_SECRET configured — all Stripe webhooks will be REJECTED in production");
+    }
   }
 
   /**
@@ -185,6 +188,10 @@ export class StripeGateway implements IPaymentGateway {
       if (!signature) throw new Error("Missing stripe-signature header");
 
       this.verifyWebhookSignature(body, signature);
+    } else if (process.env.NODE_ENV === "production") {
+      // In production, never process unsigned webhooks
+      console.error("[stripe] REJECTING webhook: no webhook secret configured in production");
+      throw new Error("Stripe webhook secret not configured — refusing unsigned webhook in production");
     }
 
     // Parse the event — body may be raw string or parsed object

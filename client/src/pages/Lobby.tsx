@@ -813,11 +813,11 @@ export default function Lobby() {
 
   const handlePasswordSubmit = () => {
     if (!passwordModal) return;
-    // Store password temporarily for the join attempt — cleared on failed join
-    sessionStorage.setItem(`table-password-${passwordModal.tableId}`, passwordInput);
+    const pw = passwordInput;
     setPasswordInput("");
     setPasswordModal(null);
-    navigate(`/game/${passwordModal.tableId}`);
+    // Pass password via navigation state — never stored in sessionStorage
+    navigate(`/game/${passwordModal.tableId}?tp=${encodeURIComponent(pw)}`);
   };
 
   const handleCreateTable = async (config: any) => {

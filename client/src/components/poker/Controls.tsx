@@ -30,6 +30,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
   }, [minBet]);
   const [isPending, setIsPending] = useState(false);
   const [foldConfirm, setFoldConfirm] = useState(false);
+  const [kbFlash, setKbFlash] = useState<string | null>(null);
   const [autoFold, setAutoFold] = useState(false);
   const [autoCheckFold, setAutoCheckFold] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -80,7 +81,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
     setBetAmount(minBet);
   }, [phase, currentTurnSeat, minBet]);
 
-  const sliderStep = Math.max(1, Math.floor(bb / 2)) || 1;
+  const sliderStep = Math.max(1, Math.floor(bb)) || 1;
   const potRaiseTotal = Math.min(Math.max(pot + callAmount * 2, minBet), maxBet);
   const clamp = (v: number) => Math.min(Math.max(Math.round(v), minBet), maxBet);
 
@@ -172,17 +173,21 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
 
       switch (e.key.toLowerCase()) {
         case "f":
+          setKbFlash("fold"); setTimeout(() => setKbFlash(null), 150);
           handleFoldKeyboard();
           break;
         case "c":
+          setKbFlash("call"); setTimeout(() => setKbFlash(null), 150);
           if (needsToCall) handleCall();
           else handleCheck();
           break;
         case "r":
+          setKbFlash("raise"); setTimeout(() => setKbFlash(null), 150);
           if (isAllIn) handleAllIn();
           else handleRaise();
           break;
         case "a":
+          setKbFlash("raise"); setTimeout(() => setKbFlash(null), 150);
           handleAllIn();
           break;
         case "escape":
@@ -450,6 +455,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     relative overflow-hidden rounded-xl min-w-[100px] min-h-[3.25rem]
                     font-bold uppercase tracking-wider transition-all
                     ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                    ${kbFlash === "fold" ? "ring-2 ring-white/60 brightness-125" : ""}
                   `}
                   style={{
                     padding: "0.7rem 1.25rem",
@@ -490,6 +496,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     relative overflow-hidden rounded-xl min-w-[100px] min-h-[3.25rem]
                     font-bold uppercase tracking-wider transition-all
                     ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                    ${kbFlash === "call" ? "ring-2 ring-white/60 brightness-125" : ""}
                   `}
                   style={{
                     padding: "0.7rem 1.25rem",
@@ -532,6 +539,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     relative overflow-hidden rounded-xl min-w-[100px] min-h-[3.25rem]
                     font-bold uppercase tracking-wider transition-all
                     ${buttonsDisabled ? "opacity-50 pointer-events-none" : ""}
+                    ${kbFlash === "raise" ? "ring-2 ring-white/60 brightness-125" : ""}
                   `}
                   style={{
                     padding: "0.7rem 1.25rem",

@@ -104,7 +104,7 @@ export function InsurancePanel({ offer, onAccept, onDecline }: InsurancePanelPro
               <div className="text-2xl font-bold font-mono" style={{ color: "#ffd700" }}>
                 ${offer.cashOutAmount.toLocaleString()}
               </div>
-              <div className="text-[0.5rem] text-gray-600 font-mono">1% fee: ${offer.fee.toLocaleString()}</div>
+              <div className="text-[0.5rem] text-gray-600 font-mono">{offer.fee}% fee: ${Math.round(offer.cashOutAmount * offer.fee / 100).toLocaleString()}</div>
             </div>
           </div>
 

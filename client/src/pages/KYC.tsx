@@ -572,7 +572,7 @@ function KycForm({
 
       <button
         type="submit"
-        disabled={submitting || !fullName || !dateOfBirth || !country || !idType}
+        disabled={submitting || !fullName || !dateOfBirth || !country || !idType || !idDocument || !selfie}
         className="w-full py-3 rounded-lg bg-primary/20 text-primary font-bold text-sm border border-primary/30 hover:bg-primary/30 transition-all disabled:opacity-50"
       >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Submit Application"}

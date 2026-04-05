@@ -380,7 +380,7 @@ function DepositPanel() {
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [currency, setCurrency] = useState("USDT");
-  const [gateway, setGateway] = useState("nowpayments");
+  const [gateway, setGateway] = useState("");
   const [amount, setAmount] = useState("");
   const [allocation, setAllocation] = useState<Record<string, number>>({ main: 100, cash_game: 0, sng: 0, tournament: 0 });
   const [lockedWallets, setLockedWallets] = useState<Set<string>>(new Set());
@@ -442,6 +442,13 @@ function DepositPanel() {
   // Use fetched data if available, otherwise fall back to hardcoded constants
   const activeCurrencies = fetchedCurrencies || FALLBACK_CURRENCIES;
   const activeGateways = fetchedGateways || FALLBACK_GATEWAYS;
+
+  // Default gateway to first available if not set
+  useEffect(() => {
+    if (!gateway && activeGateways.length > 0) {
+      setGateway(activeGateways[0].id);
+    }
+  }, [gateway, activeGateways]);
 
   const totalPercent = Object.values(allocation).reduce((s, v) => s + v, 0);
   const amountNum = parseInt(amount) || 0;
@@ -507,7 +514,12 @@ function DepositPanel() {
   const handleDeposit = async () => {
     const amountCents = amountNum * 100;
     if (!amountCents || amountCents < 100) return;
-    const allocationEntries = Object.entries(allocation)
+    // Guard: if all allocations are 0%, distribute equally
+    const totalAlloc = Object.values(allocation).reduce((s, v) => s + v, 0);
+    const effectiveAllocation = totalAlloc === 0
+      ? Object.fromEntries(Object.keys(allocation).map((k, _, arr) => [k, Math.round(100 / arr.length)]))
+      : allocation;
+    const allocationEntries = Object.entries(effectiveAllocation)
       .filter(([_, pct]) => pct > 0)
       .map(([walletType, pct]) => ({ walletType: walletType as WalletType, amount: Math.round(amountCents * pct / 100) }));
     const allocSum = allocationEntries.reduce((s, a) => s + a.amount, 0);

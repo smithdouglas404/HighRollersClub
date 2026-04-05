@@ -175,6 +175,8 @@ export default function AdminDashboard() {
   const [socialSaved, setSocialSaved] = useState(false);
   const [kycApplications, setKycApplications] = useState<KycApplication[]>([]);
   const [kycProcessing, setKycProcessing] = useState<string | null>(null);
+  const [kycRejectId, setKycRejectId] = useState<string | null>(null);
+  const [kycRejectReason, setKycRejectReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [processingRakeback, setProcessingRakeback] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
@@ -1074,28 +1076,54 @@ export default function AdminDashboard() {
                     >
                       <CheckCircle className="w-3 h-3" /> Verify
                     </button>
-                    <button
-                      onClick={async () => {
-                        const reason = prompt("Rejection reason:");
-                        if (reason === null) return;
-                        setKycProcessing(app.id);
-                        try {
-                          const res = await fetch(`/api/admin/kyc/${app.id}/reject`, {
-                            method: "POST",
-                            credentials: "include",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ reason }),
-                          });
-                          if (res.ok) {
-                            setKycApplications(prev => prev.filter(a => a.id !== app.id));
-                          }
-                        } finally { setKycProcessing(null); }
-                      }}
-                      disabled={kycProcessing === app.id}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
-                    >
-                      <XCircle className="w-3 h-3" /> Reject
-                    </button>
+                    {kycRejectId === app.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={kycRejectReason}
+                          onChange={e => setKycRejectReason(e.target.value)}
+                          placeholder="Rejection reason..."
+                          className="px-2 py-1 rounded bg-black/30 border border-white/10 text-white text-xs focus:outline-none focus:border-red-500/40"
+                          autoFocus
+                          onKeyDown={e => { if (e.key === "Escape") { setKycRejectId(null); setKycRejectReason(""); } }}
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!kycRejectReason.trim()) return;
+                            setKycProcessing(app.id);
+                            try {
+                              const res = await fetch(`/api/admin/kyc/${app.id}/reject`, {
+                                method: "POST",
+                                credentials: "include",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ reason: kycRejectReason }),
+                              });
+                              if (res.ok) {
+                                setKycApplications(prev => prev.filter(a => a.id !== app.id));
+                              }
+                            } finally { setKycProcessing(null); setKycRejectId(null); setKycRejectReason(""); }
+                          }}
+                          disabled={kycProcessing === app.id || !kycRejectReason.trim()}
+                          className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/20 hover:bg-red-500/30 disabled:opacity-50"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => { setKycRejectId(null); setKycRejectReason(""); }}
+                          className="px-2 py-1 rounded bg-white/5 text-gray-400 text-[10px] font-bold border border-white/10 hover:bg-white/10"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setKycRejectId(app.id)}
+                        disabled={kycProcessing === app.id}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
+                      >
+                        <XCircle className="w-3 h-3" /> Reject
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1562,7 +1590,7 @@ export default function AdminDashboard() {
                           <div className="flex gap-1">
                             <button onClick={() => { setEditingUser(u); setEditForm({ role: u.role, tier: u.tier, chipBalance: u.chipBalance, displayName: u.displayName || "" }); }} className="p-1 rounded hover:bg-white/10" title="Edit"><Edit3 className="w-3.5 h-3.5 text-cyan-400" /></button>
                             {u.role !== "admin" && !u.selfExcludedUntil && <button onClick={async () => { if (!confirm(`Ban ${u.username}?`)) return; await fetch(`/api/admin/users/${u.id}/ban`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "Banned by admin" }) }); fetchUsers(); }} className="p-1 rounded hover:bg-white/10" title="Ban"><Ban className="w-3.5 h-3.5 text-red-400" /></button>}
-                            {u.selfExcludedUntil && <button onClick={async () => { await fetch(`/api/admin/users/${u.id}/unban`, { method: "POST" }); fetchUsers(); }} className="p-1 rounded hover:bg-white/10" title="Unban"><UserCheck className="w-3.5 h-3.5 text-green-400" /></button>}
+                            {u.selfExcludedUntil && <button onClick={async () => { if (!confirm(`Unban ${u.username}?`)) return; await fetch(`/api/admin/users/${u.id}/unban`, { method: "POST" }); fetchUsers(); }} className="p-1 rounded hover:bg-white/10" title="Unban"><UserCheck className="w-3.5 h-3.5 text-green-400" /></button>}
                             <button onClick={async () => { if (!confirm(`Force logout ${u.username}?`)) return; await fetch(`/api/admin/force-logout/${u.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "Admin force logout" }) }); }} className="p-1 rounded hover:bg-white/10" title="Force Logout"><LogOut className="w-3.5 h-3.5 text-orange-400" /></button>
                           </div>
                         </td>
@@ -1615,7 +1643,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Chip Balance</label>
-                      <input type="number" value={editForm.chipBalance || 0} onChange={e => setEditForm(f => ({ ...f, chipBalance: parseInt(e.target.value) || 0 }))} className="w-full px-3 py-2 rounded bg-black/30 border border-white/10 text-white text-sm" />
+                      <input type="number" min={0} max={10000000} value={editForm.chipBalance || 0} onChange={e => setEditForm(f => ({ ...f, chipBalance: Math.min(10000000, Math.max(0, parseInt(e.target.value) || 0)) }))} className="w-full px-3 py-2 rounded bg-black/30 border border-white/10 text-white text-sm" />
                     </div>
                   </div>
                   <button

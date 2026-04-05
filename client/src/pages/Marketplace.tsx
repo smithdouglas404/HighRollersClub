@@ -261,8 +261,12 @@ export default function Marketplace() {
   }, [listings, items, tab, search, rarityFilter, sortBy, user?.id]);
 
   /* ── handlers (preserved API patterns) ── */
+  const [listError, setListError] = useState("");
   const handleList = async () => {
     if (!listItemId || !listPrice) return;
+    const price = parseInt(listPrice);
+    if (isNaN(price) || price <= 0) { setListError("Price must be positive"); return; }
+    setListError("");
     await fetch("/api/marketplace/list", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -275,8 +279,10 @@ export default function Marketplace() {
     fetchData();
   };
 
+  const [buyError, setBuyError] = useState("");
   const handleBuy = async (listing: Listing) => {
     setBuyProcessing(true);
+    setBuyError("");
     try {
       const res = await fetch(`/api/marketplace/${listing.id}/buy`, {
         method: "POST",
@@ -284,12 +290,12 @@ export default function Marketplace() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({ message: "Purchase failed" }));
-        alert(data.message || "Purchase failed");
+        setBuyError(data.message || "Purchase failed");
         setBuyProcessing(false);
         return;
       }
     } catch {
-      alert("Network error — purchase failed");
+      setBuyError("Network error — purchase failed");
       setBuyProcessing(false);
       return;
     }
@@ -653,6 +659,11 @@ export default function Marketplace() {
                   </div>
                 </div>
 
+                {/* Error display */}
+                {buyError && (
+                  <p className="text-xs text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{buyError}</p>
+                )}
+
                 {/* Confirm button */}
                 <button
                   onClick={() => handleBuy(confirmBuy)}
@@ -816,6 +827,9 @@ export default function Marketplace() {
                       </div>
                     )}
 
+                    {listError && (
+                      <p className="text-xs text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{listError}</p>
+                    )}
                     <button
                       onClick={handleList}
                       disabled={!listItemId || !listPrice || parseInt(listPrice) < 1}

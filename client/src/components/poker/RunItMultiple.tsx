@@ -55,8 +55,17 @@ export function RunItVotePanel({ onVote }: RunItVotePanelProps) {
         <div className="text-[0.625rem] font-bold uppercase tracking-[0.2em] text-amber-400 mb-1">
           All-In Runout
         </div>
-        <div className="text-xs text-gray-400 mb-4">
-          How many times should the board run? ({countdown}s)
+        <div className="text-xs text-gray-400 mb-2">
+          How many times should the board run?
+        </div>
+        <div className="flex items-center justify-center mb-3">
+          <div className="relative w-10 h-10">
+            <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke={countdown <= 3 ? "#ef4444" : "#d4af37"} strokeWidth="2" strokeDasharray={`${(countdown / 10) * 97.4} 97.4`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.3s ease" }} />
+            </svg>
+            <span className={`absolute inset-0 flex items-center justify-center text-sm font-mono font-bold ${countdown <= 3 ? "text-red-400" : "text-amber-300"}`}>{countdown}</span>
+          </div>
         </div>
         <div className="flex gap-3 justify-center">
           {([1, 2, 3] as const).map(count => (

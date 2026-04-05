@@ -10,41 +10,50 @@ import { isSystemLocked } from "./routes";
 import { subscribeCommentary, unsubscribeCommentary, setOmniscientMode, getCommentaryState } from "./game/commentary-engine";
 import { antiCheatEngine } from "./anti-cheat";
 import { fastFoldManager } from "./game/fast-fold-manager";
+import { generateSessionKey, clearSessionKey, encryptCards, hasSessionKey, getSessionKeyHex } from "./game/card-encryption";
+import { obfuscateCards, getEncryptedSpriteMapping, clearSpriteMapping, getOrCreateSpriteMapping } from "./game/card-obfuscation";
 
-// Client connection with metadata
+// Rate limiting for table password attempts
+const passwordAttempts = new Map<string, number>();
+
+// Client connection with metadata — supports multi-tabling
 export interface WsClient {
   ws: WebSocket;
   userId: string;
   displayName: string;
-  tableId: string | null;
+  tableIds: Set<string>;  // player can be at multiple tables simultaneously
+  ip?: string;
 }
 
+const MAX_TABLES_PER_USER = 4;
+
 // Message types: Client → Server
+// All table-scoped messages include tableId so the server knows which table the action targets
 export type ClientMessage =
   | { type: "join_table"; tableId: string; seatIndex?: number; buyIn: number; password?: string; inviteCode?: string }
-  | { type: "leave_table" }
-  | { type: "player_action"; action: "fold" | "check" | "call" | "raise"; amount?: number; actionNumber?: number }
-  | { type: "sit_out" }
-  | { type: "sit_in" }
-  | { type: "add_chips"; amount: number }
-  | { type: "add_bots" }
-  | { type: "chat"; message: string }
-  | { type: "emote"; emoteId: string }
-  | { type: "taunt"; tauntId: string }
-  | { type: "seed_commit"; commitmentHash: string }
-  | { type: "seed_reveal"; seed: string }
-  | { type: "buy_time" }
-  | { type: "accept_insurance" }
-  | { type: "decline_insurance" }
-  | { type: "run_it_vote"; count: 1 | 2 | 3 }
-  | { type: "post_blinds" }
-  | { type: "wait_for_bb" }
-  | { type: "commentary_toggle"; enabled: boolean }
-  | { type: "commentary_omniscient"; enabled: boolean }
+  | { type: "leave_table"; tableId?: string }
+  | { type: "player_action"; tableId?: string; action: "fold" | "check" | "call" | "raise"; amount?: number; actionNumber?: number }
+  | { type: "sit_out"; tableId?: string }
+  | { type: "sit_in"; tableId?: string }
+  | { type: "add_chips"; tableId?: string; amount: number }
+  | { type: "add_bots"; tableId?: string }
+  | { type: "chat"; tableId?: string; message: string }
+  | { type: "emote"; tableId?: string; emoteId: string }
+  | { type: "taunt"; tableId?: string; tauntId: string }
+  | { type: "seed_commit"; tableId?: string; commitmentHash: string }
+  | { type: "seed_reveal"; tableId?: string; seed: string }
+  | { type: "buy_time"; tableId?: string }
+  | { type: "accept_insurance"; tableId?: string }
+  | { type: "decline_insurance"; tableId?: string }
+  | { type: "run_it_vote"; tableId?: string; count: 1 | 2 | 3 }
+  | { type: "post_blinds"; tableId?: string }
+  | { type: "wait_for_bb"; tableId?: string }
+  | { type: "commentary_toggle"; tableId?: string; enabled: boolean }
+  | { type: "commentary_omniscient"; tableId?: string; enabled: boolean }
   // Fast-fold pool messages
   | { type: "join_fast_fold_pool"; poolId: string; buyIn: number }
   | { type: "leave_fast_fold_pool" }
-  // Admin controls
+  // Admin controls (already have tableId)
   | { type: "admin_pause_game"; tableId: string }
   | { type: "admin_resume_game"; tableId: string }
   | { type: "admin_approve_player"; tableId: string; playerId: string }
@@ -166,35 +175,79 @@ export function sendToUser(userId: string, msg: ServerMessage) {
 }
 
 // Clear a user's table association (used when pending-leave cash-out completes)
-export function clearClientTable(userId: string) {
+export function clearClientTable(userId: string, tableId?: string) {
   const client = clients.get(userId);
   if (client) {
-    client.tableId = null;
+    if (tableId) {
+      client.tableIds.delete(tableId);
+    } else {
+      client.tableIds.clear();
+    }
   }
 }
 
 // Broadcast to all users at a table
 export function broadcastToTable(tableId: string, msg: ServerMessage, excludeUserId?: string) {
+  const tagged = { ...msg, tableId } as any; // tag with tableId so client can route
   clients.forEach((client) => {
-    if (client.tableId === tableId && client.userId !== excludeUserId) {
+    if (client.tableIds.has(tableId) && client.userId !== excludeUserId) {
       if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(JSON.stringify(msg));
+        client.ws.send(JSON.stringify(tagged));
       }
     }
   });
 }
 
 // Send personalized game state to each player at a table
+// 4-Level Anti-Scraping Protection:
+//   L1: Card indices obfuscated (encrypted sprite positions)
+//   L2: Canvas rendering flag (client renders to canvas, not DOM)
+//   L3: Per-session randomized sprite mapping
+//   L4: Encrypted React state (cards stored as AES ciphertext)
 export function sendGameStateToTable(tableId: string) {
   const instance = tableManager.getTable(tableId);
   if (!instance) return;
 
   clients.forEach((client) => {
-    if (client.tableId === tableId && client.ws.readyState === WebSocket.OPEN) {
+    if (client.tableIds.has(tableId) && client.ws.readyState === WebSocket.OPEN) {
       const state = instance.getStateForPlayer(client.userId);
-      client.ws.send(JSON.stringify({ type: "game_state", state }));
+
+      if (state && state.players && hasSessionKey(client.userId)) {
+        // Get the session key hex for this user
+        const sessionKeyHex = getSessionKeyHex(client.userId);
+
+        for (const p of state.players) {
+          if (p.cards && Array.isArray(p.cards) && p.cards.length > 0) {
+            if (p.id === client.userId && !p.cards[0]?.hidden) {
+              // Hero's own cards: encrypt with AES-256-GCM (Level 4)
+              const encrypted = encryptCards(client.userId, p.cards);
+              if (encrypted) {
+                // Level 1+3: Also obfuscate for sprite mapping
+                (p as any)._encryptedCards = encrypted;
+                (p as any)._obfuscatedCards = obfuscateCards(p.cards, client.userId, sessionKeyHex || "0".repeat(64));
+                p.cards = p.cards.map(() => ({ encrypted: true }));
+              }
+            }
+            // Other players' cards are already { hidden: true } from getStateForPlayer
+          }
+        }
+
+        // Level 2: Signal client to use canvas rendering
+        (state as any)._renderMode = "canvas";
+      }
+
+      client.ws.send(JSON.stringify({ type: "game_state", tableId, state }));
     }
   });
+}
+
+
+/** Resolve and validate a tableId from a client message. Falls back to first table if only at one. */
+function resolveTableId(client: WsClient, msg: { tableId?: string }): string | null {
+  if (msg.tableId && client.tableIds.has(msg.tableId)) return msg.tableId;
+  // Backward compat: if client only at 1 table, use it
+  if (client.tableIds.size === 1) return client.tableIds.values().next().value!;
+  return null;
 }
 
 export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler) {
@@ -253,24 +306,33 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
       ws,
       userId: user.id,
       displayName: user.displayName || user.username,
-      tableId: null,
+      tableIds: new Set(),
+      ip: clientIp,
     };
 
     // Replace any existing connection for this user (reconnection)
     const existing = clients.get(user.id);
     if (existing) {
-      // Reconnection: transfer table context and notify table manager
-      if (existing.tableId) {
-        client.tableId = existing.tableId;
-        tableManager.handleReconnect(existing.tableId, user.id);
+      // Reconnection: transfer ALL table contexts and notify table manager
+      if (existing.tableIds.size > 0) {
+        client.tableIds = new Set(existing.tableIds);
+        for (const tid of client.tableIds) {
+          tableManager.handleReconnect(tid, user.id);
+        }
       }
       existing.ws.close(1000, "Replaced by new connection");
     }
     clients.set(user.id, client);
 
-    // If reconnecting to a table, send current game state
-    if (client.tableId) {
-      sendGameStateToTable(client.tableId);
+    // Generate per-session card encryption key + sprite mapping and send to client
+    const cardKey = generateSessionKey(user.id);
+    const spriteMapping = getOrCreateSpriteMapping(user.id);
+    const encryptedMapping = getEncryptedSpriteMapping(user.id, cardKey);
+    ws.send(JSON.stringify({ type: "session_key", cardKey, spriteMapping: encryptedMapping }));
+
+    // If reconnecting to tables, send current game state for each
+    for (const tid of client.tableIds) {
+      sendGameStateToTable(tid);
     }
 
     ws.on("message", async (data) => {
@@ -281,7 +343,8 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
           return;
         }
         const msg = JSON.parse(data.toString()) as ClientMessage;
-        console.log(`[ws] ${client.displayName}: ${msg.type}${client.tableId ? ` (table: ${client.tableId.slice(0,8)})` : " (no table)"}`);
+        const logTableId = (msg as any).tableId?.slice(0, 8) || (client.tableIds.size === 1 ? [...client.tableIds][0].slice(0, 8) : `${client.tableIds.size} tables`);
+        console.log(`[ws] ${client.displayName}: ${msg.type} (${logTableId})`);
         await handleMessage(client, msg);
       } catch (err: any) {
         sendToUser(user.id, { type: "error", message: err.message || "Invalid message" });
@@ -289,18 +352,20 @@ export function setupWebSocket(server: Server, sessionMiddleware: RequestHandler
     });
 
     ws.on("close", () => {
-      // Handle disconnect — grace period handled by table manager
-      if (client.tableId) {
-        tableManager.handleDisconnect(client.tableId, client.userId);
+      // Handle disconnect for ALL tables
+      for (const tid of client.tableIds) {
+        tableManager.handleDisconnect(tid, client.userId);
       }
       antiCheatEngine.removeConnection(user.id);
+      clearSessionKey(user.id);
+      clearSpriteMapping(user.id);
       clients.delete(user.id);
       rateLimitBuckets.delete(user.id);
     });
 
     ws.on("error", () => {
-      if (client.tableId) {
-        tableManager.handleDisconnect(client.tableId, client.userId);
+      for (const tid of client.tableIds) {
+        tableManager.handleDisconnect(tid, client.userId);
       }
       clients.delete(user.id);
     });
@@ -329,12 +394,24 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       if (tableInfo?.isPrivate && tableInfo.password) {
         const hasValidInvite = msg.inviteCode && tableInfo.inviteCode === msg.inviteCode;
         if (!hasValidInvite && (!msg.password || msg.password !== tableInfo.password)) {
+          // Rate limit password attempts per user per table
+          const pwKey = `pw:${client.userId}:${msg.tableId}`;
+          const pwAttempts = (passwordAttempts.get(pwKey) || 0) + 1;
+          passwordAttempts.set(pwKey, pwAttempts);
+          if (pwAttempts >= 5) {
+            sendToUser(client.userId, { type: "error", message: "Too many password attempts. Try again later." });
+            setTimeout(() => passwordAttempts.delete(pwKey), 5 * 60 * 1000); // reset after 5 min
+            return;
+          }
           sendToUser(client.userId, { type: "error", message: "Incorrect table password" });
           return;
         }
       }
-      // Try joining the new table first before leaving the old one
-      const previousTableId = client.tableId;
+      // Multi-table limit check
+      if (client.tableIds.size >= MAX_TABLES_PER_USER && !client.tableIds.has(msg.tableId)) {
+        sendToUser(client.userId, { type: "error", message: `Maximum ${MAX_TABLES_PER_USER} tables at once` });
+        return;
+      }
       const result = await tableManager.joinTable(
         msg.tableId,
         client.userId,
@@ -346,12 +423,7 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
       }
-      // Join succeeded — now leave the old table
-      if (previousTableId && previousTableId !== msg.tableId) {
-        await tableManager.leaveTable(previousTableId, client.userId);
-        sendGameStateToTable(previousTableId);
-      }
-      client.tableId = msg.tableId;
+      client.tableIds.add(msg.tableId);
       antiCheatEngine.setPlayerTable(client.userId, msg.tableId);
       sendGameStateToTable(msg.tableId);
 
@@ -373,17 +445,15 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
     }
 
     case "leave_table": {
-      if (!client.tableId) return;
-      const leaveTableId = client.tableId;
+      const leaveTableId = resolveTableId(client, msg);
+      if (!leaveTableId) return;
       await tableManager.leaveTable(leaveTableId, client.userId);
 
       // Check if the player was flagged as pending leave (still in hand)
       const stillAtTable = tableManager.getTable(leaveTableId)?.engine.getPlayer(client.userId);
       if (!stillAtTable) {
-        // Immediate removal — clear client table reference
-        client.tableId = null;
+        client.tableIds.delete(leaveTableId);
       } else {
-        // Pending leave — player stays until hand ends, then auto-removed
         sendToUser(client.userId, { type: "info", message: "You will leave after this hand completes" } as any);
       }
       sendGameStateToTable(leaveTableId);
@@ -391,55 +461,46 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
     }
 
     case "player_action": {
-      if (!client.tableId) return;
-      const result = tableManager.handleAction(
-        client.tableId,
-        client.userId,
-        msg.action,
-        msg.amount,
-        msg.actionNumber
-      );
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
+      const result = tableManager.handleAction(tid, client.userId, msg.action, msg.amount, msg.actionNumber);
       if (!result.ok) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
       }
-      // Broadcast specific action performed (lightweight update)
-      broadcastToTable(client.tableId, {
-        type: "action_performed",
-        userId: client.userId,
-        action: msg.action,
-        amount: msg.amount,
-      });
-      sendGameStateToTable(client.tableId);
+      broadcastToTable(tid, { type: "action_performed", userId: client.userId, action: msg.action, amount: msg.amount });
+      sendGameStateToTable(tid);
       break;
     }
 
     case "sit_out": {
-      if (!client.tableId) return;
-      tableManager.setSitOut(client.tableId, client.userId, true);
-      sendGameStateToTable(client.tableId);
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
+      tableManager.setSitOut(tid, client.userId, true);
+      sendGameStateToTable(tid);
       break;
     }
 
     case "sit_in": {
-      if (!client.tableId) return;
-      tableManager.setSitOut(client.tableId, client.userId, false);
-      sendGameStateToTable(client.tableId);
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
+      tableManager.setSitOut(tid, client.userId, false);
+      sendGameStateToTable(tid);
       break;
     }
 
     case "add_chips": {
-      if (!client.tableId) return;
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
       if (isSystemLocked()) {
         sendToUser(client.userId, { type: "error", message: "System is temporarily locked for maintenance" });
         return;
       }
       const amount = msg.amount;
       if (!amount || amount <= 0) return;
-      // Verify user has enough chips in cash_game wallet and add to stack
-      const table = await storage.getTable(client.tableId);
+      const table = await storage.getTable(tid);
       if (!table) return;
-      const instance = tableManager.getTable(client.tableId);
+      const instance = tableManager.getTable(tid);
       if (!instance) return;
       const player = instance.engine.getPlayer(client.userId);
       if (!player) return;
@@ -469,7 +530,7 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         amount: -addAmount,
         balanceBefore: newWalletBalance + addAmount,
         balanceAfter: newWalletBalance,
-        tableId: client.tableId,
+        tableId: tid,
         description: "Added chips to table",
         walletType: "cash_game",
         relatedTransactionId: null,
@@ -479,7 +540,7 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       player.chips += addAmount;
       // Persist chip change to table_players for atomicity
       try {
-        await storage.updateTablePlayerChips(client.tableId, client.userId, player.chips);
+        await storage.updateTablePlayerChips(tid, client.userId, player.chips);
       } catch (persistErr) {
         // Rollback in-memory change and refund wallet
         player.chips -= addAmount;
@@ -494,28 +555,29 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         newTableStack: player.chips,
         newWalletBalance,
       } as any);
-      sendGameStateToTable(client.tableId);
+      sendGameStateToTable(tid);
       break;
     }
 
     case "add_bots": {
-      if (!client.tableId) {
+      const tid = resolveTableId(client, msg);
+      if (!tid) {
         sendToUser(client.userId, { type: "error", message: "Not seated at a table — please rejoin" });
         return;
       }
-      await tableManager.addBots(client.tableId);
-      sendGameStateToTable(client.tableId);
+      await tableManager.addBots(tid);
+      sendGameStateToTable(tid);
       break;
     }
 
     case "chat": {
-      if (!client.tableId) return;
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
       const rawMsg = msg.message?.slice(0, 200);
       if (!rawMsg) return;
       const chatMsg = rawMsg.replace(/[<>&"']/g, (c: string) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c] || c));
-      // Persist chat message
-      storage.saveChatMessage(client.tableId, client.userId, client.displayName, chatMsg).catch(() => {});
-      broadcastToTable(client.tableId, {
+      storage.saveChatMessage(tid, client.userId, client.displayName, chatMsg).catch(() => {});
+      broadcastToTable(tid, {
         type: "chat",
         userId: client.userId,
         displayName: client.displayName,
@@ -525,10 +587,11 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
     }
 
     case "emote": {
-      if (!client.tableId) return;
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
       const emoteId = msg.emoteId?.slice(0, 20);
       if (!emoteId) return;
-      broadcastToTable(client.tableId, {
+      broadcastToTable(tid, {
         type: "emote",
         userId: client.userId,
         displayName: client.displayName,
@@ -538,7 +601,8 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
     }
 
     case "taunt": {
-      if (!client.tableId) return;
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
       const tauntId = msg.tauntId?.slice(0, 30);
       if (!tauntId) return;
 
@@ -573,7 +637,7 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       }
 
       tauntCooldowns.set(client.userId, now);
-      broadcastToTable(client.tableId, {
+      broadcastToTable(tid, {
         type: "taunt",
         userId: client.userId,
         displayName: client.displayName,
@@ -584,89 +648,98 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
     }
 
     case "seed_commit": {
-      if (!client.tableId) return;
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
       const hash = msg.commitmentHash?.slice(0, 128);
       if (!hash) return;
-      tableManager.handleSeedCommit(client.tableId, client.userId, hash);
+      tableManager.handleSeedCommit(tid, client.userId, hash);
       break;
     }
 
     case "seed_reveal": {
-      if (!client.tableId) return;
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
       const seed = msg.seed?.slice(0, 128);
       if (!seed) return;
-      tableManager.handleSeedReveal(client.tableId, client.userId, seed);
+      tableManager.handleSeedReveal(tid, client.userId, seed);
       break;
     }
 
     case "buy_time": {
-      if (!client.tableId) return;
-      const result = tableManager.handleBuyTime(client.tableId, client.userId);
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
+      const result = tableManager.handleBuyTime(tid, client.userId);
       if (!result.ok) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
       }
-      sendGameStateToTable(client.tableId);
+      sendGameStateToTable(tid);
       break;
     }
 
     case "accept_insurance": {
-      if (!client.tableId) return;
-      const result = tableManager.handleInsuranceResponse(client.tableId, client.userId, true);
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
+      const result = tableManager.handleInsuranceResponse(tid, client.userId, true);
       if (!result.ok) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
       }
-      sendGameStateToTable(client.tableId);
+      sendGameStateToTable(tid);
       break;
     }
 
     case "decline_insurance": {
-      if (!client.tableId) return;
-      const result = tableManager.handleInsuranceResponse(client.tableId, client.userId, false);
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
+      const result = tableManager.handleInsuranceResponse(tid, client.userId, false);
       if (!result.ok) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
       }
-      sendGameStateToTable(client.tableId);
+      sendGameStateToTable(tid);
       break;
     }
 
     case "run_it_vote": {
-      if (!client.tableId) return;
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
       const count = msg.count;
       if (count !== 1 && count !== 2 && count !== 3) return;
-      const result = tableManager.handleRunItVote(client.tableId, client.userId, count);
+      const result = tableManager.handleRunItVote(tid, client.userId, count);
       if (!result.ok) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
       }
-      sendGameStateToTable(client.tableId);
+      sendGameStateToTable(tid);
       break;
     }
 
     case "post_blinds": {
-      if (!client.tableId) return;
-      tableManager.handlePostBlindChoice(client.tableId, client.userId, "post");
-      sendGameStateToTable(client.tableId);
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
+      tableManager.handlePostBlindChoice(tid, client.userId, "post");
+      sendGameStateToTable(tid);
       break;
     }
 
     case "wait_for_bb": {
-      if (!client.tableId) return;
-      tableManager.handlePostBlindChoice(client.tableId, client.userId, "wait");
-      sendGameStateToTable(client.tableId);
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
+      tableManager.handlePostBlindChoice(tid, client.userId, "wait");
+      sendGameStateToTable(tid);
       break;
     }
 
     case "commentary_toggle": {
-      if (!client.tableId) return;
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
       if (msg.enabled) {
-        subscribeCommentary(client.tableId, client.userId, false);
+        subscribeCommentary(tid, client.userId, false);
       } else {
-        unsubscribeCommentary(client.tableId, client.userId);
+        unsubscribeCommentary(tid, client.userId);
       }
-      const cState = getCommentaryState(client.tableId);
+      const cState = getCommentaryState(tid);
       sendToUser(client.userId, {
         type: "commentary_status",
         enabled: msg.enabled,
@@ -676,8 +749,14 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
     }
 
     case "commentary_omniscient": {
-      if (!client.tableId) return;
-      setOmniscientMode(client.tableId, client.userId, msg.enabled);
+      const tid = resolveTableId(client, msg);
+      if (!tid) return;
+      const canOmniscient = await isTableAdmin(client.userId, tid);
+      if (!canOmniscient) {
+        sendToUser(client.userId, { type: "error", message: "Only table admins can enable omniscient mode" } as any);
+        return;
+      }
+      setOmniscientMode(tid, client.userId, msg.enabled);
       sendToUser(client.userId, {
         type: "commentary_status",
         enabled: true,
@@ -704,7 +783,7 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         return;
       }
       if (result.tableId) {
-        client.tableId = result.tableId;
+        client.tableIds.add(result.tableId);
         sendGameStateToTable(result.tableId);
       }
       break;
@@ -716,7 +795,8 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
         sendToUser(client.userId, { type: "error", message: result.error! });
         return;
       }
-      client.tableId = null;
+      // Fast-fold: remove all table associations when leaving pool
+      client.tableIds.clear();
       break;
     }
 
@@ -782,7 +862,7 @@ async function handleMessage(client: WsClient, msg: ClientMessage) {
       // Set the approved player's WS client table association
       const approvedClient = clients.get(playerId);
       if (approvedClient) {
-        approvedClient.tableId = adminTableId;
+        approvedClient.tableIds.add(adminTableId);
       }
       broadcastToTable(adminTableId, { type: "player_approved", playerId, displayName: approved.name });
       // Send updated waiting list to admin

@@ -10,7 +10,8 @@ import {
   User, Coins, Trophy, TrendingUp, Gamepad2,
   Zap, BookOpen, Wallet, Users, Loader2, Mic, Volume2, Check,
   Star, Shield, Crown, Clock, ChevronRight, Award, Flame, Target,
-  StickyNote, Trash2, ShoppingBag, Swords
+  StickyNote, Trash2, ShoppingBag, Swords,
+  Link as LinkIcon, ExternalLink, Copy, Lock, ShieldCheck, Key, Fingerprint, Hash,
 } from "lucide-react";
 import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
 
@@ -100,6 +101,194 @@ const BADGES = [
   { name: "Champion", img: "/badges/badge_tournament_champ.webp", glow: "#ffd700", criteria: "Win a tournament", check: (s: PlayerStats) => s.sngWins >= 1, progress: (s: PlayerStats) => ({ current: Math.min(s.sngWins, 1), max: 1 }) },
   { name: "Legend", img: "/badges/badge_club_legend.webp", glow: "#a855f7", criteria: "Play 1,000 hands", check: (s: PlayerStats) => s.handsPlayed >= 1000, progress: (s: PlayerStats) => ({ current: Math.min(s.handsPlayed, 1000), max: 1000 }) },
 ];
+
+// ─── My Blockchain Records ──────────────────────────────────────────────────
+function MyBlockchainRecords({ user }: { user: any }) {
+  const [hands, setHands] = useState<any[]>([]);
+  const [encVerify, setEncVerify] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Fetch recent hands with on-chain proof
+      const handsRes = await fetch("/api/explorer/hands?onChainOnly=true&limit=5");
+      if (handsRes.ok) { const data = await handsRes.json(); setHands(data.results || []); }
+      // Verify current session encryption
+      const encRes = await fetch("/api/encryption/verify");
+      if (encRes.ok) setEncVerify(await encRes.json());
+    } catch {} finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { if (expanded && hands.length === 0) fetchData(); }, [expanded]);
+
+  const kycHash = user?.kycBlockchainTxHash;
+  const memberId = user?.memberId;
+  const kycVerified = user?.kycStatus === "verified";
+
+  const getExplorerUrl = (hash: string) => hash?.startsWith("0x") ? `https://amoy.polygonscan.com/tx/${hash}` : null;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full rounded-xl p-4 text-left transition-all hover:bg-white/[0.02]"
+        style={{ background: "rgba(15,15,20,0.7)", border: "1px solid rgba(168,85,247,0.15)" }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <LinkIcon className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">My Blockchain Records</h3>
+              <p className="text-[10px] text-gray-500">KYC hash, hand proofs, encryption verification</p>
+            </div>
+          </div>
+          <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${expanded ? "rotate-90" : ""}`} />
+        </div>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-b-xl px-4 pb-4 space-y-4" style={{ background: "rgba(15,15,20,0.5)", borderLeft: "1px solid rgba(168,85,247,0.1)", borderRight: "1px solid rgba(168,85,247,0.1)", borderBottom: "1px solid rgba(168,85,247,0.1)" }}>
+
+              {/* KYC Identity Section */}
+              <div className="rounded-lg bg-black/20 border border-white/5 p-3 space-y-2">
+                <h4 className="text-[10px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Fingerprint className="w-3.5 h-3.5" /> Identity Verification
+                </h4>
+                <div className="space-y-1.5">
+                  {memberId && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-400">Member ID</span>
+                      <span className="font-mono text-xs text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded">{memberId}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">KYC Status</span>
+                    {kycVerified ? (
+                      <span className="flex items-center gap-1 text-xs text-green-400"><ShieldCheck className="w-3 h-3" /> Verified</span>
+                    ) : (
+                      <span className="text-xs text-gray-500">{user?.kycStatus || "Not submitted"}</span>
+                    )}
+                  </div>
+                  {kycHash && (
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">On-Chain Hash</span>
+                        <span className="flex items-center gap-1 text-[10px] text-green-400"><Lock className="w-3 h-3" /> Anchored</span>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="font-mono text-[11px] text-purple-400 truncate">{kycHash}</span>
+                        <button onClick={() => navigator.clipboard.writeText(kycHash)} className="p-0.5 hover:bg-white/5 rounded shrink-0">
+                          <Copy className="w-3 h-3 text-gray-600" />
+                        </button>
+                        {getExplorerUrl(kycHash) && (
+                          <a href={getExplorerUrl(kycHash)!} target="_blank" rel="noopener noreferrer" className="shrink-0 text-purple-400 hover:text-purple-300">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {!kycHash && kycVerified && (
+                    <Link href="/kyc">
+                      <button className="w-full mt-1 py-1.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20">
+                        Record Identity On-Chain
+                      </button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              {/* Session Encryption Verification */}
+              <div className="rounded-lg bg-black/20 border border-white/5 p-3 space-y-2">
+                <h4 className="text-[10px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5" /> Session Encryption
+                </h4>
+                {loading ? (
+                  <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-purple-400" /></div>
+                ) : encVerify?.verified ? (
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
+                      <span className="text-green-400 font-bold">Active Encrypted Session</span>
+                    </div>
+                    <div className="text-gray-500">Commitment: <span className="font-mono text-[10px] text-gray-300">{encVerify.commitment?.commitmentHash?.slice(0, 24)}...</span></div>
+                    {encVerify.anchored ? (
+                      <div className="p-2 rounded bg-green-500/5 border border-green-500/10">
+                        <div className="flex items-center gap-1 text-green-400 text-[10px] font-bold">
+                          <Lock className="w-3 h-3" /> Anchored to Polygon
+                        </div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">Merkle Root: {encVerify.batch?.merkleRoot?.slice(0, 20)}...</div>
+                        {encVerify.batch?.txHash && (
+                          <a href={`https://amoy.polygonscan.com/tx/${encVerify.batch.txHash}`} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-[10px] text-purple-400 hover:text-purple-300 mt-1">
+                            <ExternalLink className="w-3 h-3" /> View on Polygonscan
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-amber-400">Pending anchor (next batch in ~10 min)</div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-600">No active game session. Join a table to see encryption status.</p>
+                )}
+              </div>
+
+              {/* Recent Verified Hands */}
+              <div className="rounded-lg bg-black/20 border border-white/5 p-3 space-y-2">
+                <h4 className="text-[10px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Hash className="w-3.5 h-3.5" /> Recent On-Chain Hands
+                </h4>
+                {loading ? (
+                  <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-purple-400" /></div>
+                ) : hands.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {hands.map((h: any) => (
+                      <div key={h.id} className="flex items-center justify-between px-2 py-1.5 rounded bg-white/[0.02]">
+                        <div>
+                          <span className="text-xs font-bold text-white">Hand #{h.hand_number}</span>
+                          <span className="text-[10px] text-gray-600 ml-2">{h.table_name || ""}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {h.vrf_request_id && <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400">VRF</span>}
+                          {h.on_chain_commit_tx && (
+                            <a href={`https://amoy.polygonscan.com/tx/${h.on_chain_commit_tx}`} target="_blank" rel="noopener noreferrer"
+                              className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-0.5">
+                              <ExternalLink className="w-3 h-3" /> Proof
+                            </a>
+                          )}
+                          <span className="text-[10px] text-amber-400 font-bold">{(h.pot_total || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <Link href="/explorer">
+                      <button className="w-full py-1.5 rounded text-[10px] font-bold text-gray-400 hover:text-gray-300 hover:bg-white/5 transition-colors">
+                        View All in Explorer &rarr;
+                      </button>
+                    </Link>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-600">No on-chain hand records yet. Play at a table with blockchain verification enabled.</p>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
 
 export default function Profile() {
   const { user } = useAuth();
@@ -421,6 +610,9 @@ export default function Profile() {
 
           {/* ── Player Notes ── */}
           <PlayerNotesSection />
+
+          {/* ── My Blockchain Records ── */}
+          <MyBlockchainRecords user={user} />
 
           {/* ── Quick Links ── */}
           <motion.div

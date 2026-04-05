@@ -360,7 +360,14 @@ export class PaymentService {
       }
     }
 
-    throw new Error("No gateway could process this withdrawal");
+    // All gateways failed — refund the player's chips
+    console.error(`[PaymentService] All gateways failed for withdrawal ${requestId}. Refunding.`);
+    try {
+      await this.rejectWithdrawal(requestId, adminUserId, "Automatic refund: no payment gateway could process this withdrawal");
+    } catch (refundErr) {
+      console.error("[PaymentService] Refund also failed:", refundErr);
+    }
+    throw new Error("Withdrawal could not be processed. Chips have been refunded.");
   }
 
   async rejectWithdrawal(requestId: string, adminUserId: string, note?: string): Promise<void> {

@@ -8,6 +8,12 @@ export interface PlayerSeedData {
   commitmentHash: string;
 }
 
+export interface PlayerBlockchainIdentity {
+  playerId: string;
+  memberId: string | null;
+  kycHash: string | null;
+}
+
 export interface ShuffleProof {
   serverSeed: string;
   timestamp: number;
@@ -16,8 +22,9 @@ export interface ShuffleProof {
   deckOrder: string;
   handNumber: number;
   tableId: string;
-  shuffleVersion: 1 | 2;
+  shuffleVersion: 1 | 2 | 3; // v3 = with blockchain identity entropy
   playerSeeds?: PlayerSeedData[];
+  playerIdentities?: PlayerBlockchainIdentity[];
   vrfRequestId?: string;
   vrfRandomWord?: string;
 }
@@ -164,12 +171,34 @@ export function createProvablyFairShuffle(
   };
 }
 
+// ─── Blockchain Identity Entropy ─────────────────────────────────────────────
+// Each player's on-chain identity (memberId + kycHash) is mixed into the shuffle.
+// This means the shuffle is partially seeded by each player's immutable blockchain
+// identity — no single party (including the server) fully controls the randomness.
+export function mixBlockchainIdentities(baseSeed: string, identities: PlayerBlockchainIdentity[]): string {
+  if (identities.length === 0) return baseSeed;
+
+  const hash = createHash("sha512");
+  hash.update(baseSeed);
+
+  // Sort by playerId for deterministic ordering
+  const sorted = [...identities].sort((a, b) => a.playerId.localeCompare(b.playerId));
+  for (const id of sorted) {
+    if (id.memberId) hash.update(`member:${id.memberId}`);
+    if (id.kycHash) hash.update(`kyc:${id.kycHash}`);
+    hash.update(`player:${id.playerId}`);
+  }
+
+  return hash.digest("hex");
+}
+
 // ─── Create Multi-Party Provably Fair Shuffle ────────────────────────────────
 export function createProvablyFairShuffleMultiParty(
   tableId: string,
   handNumber: number,
   playerSeedData: PlayerSeedData[],
-  vrfRandomWord?: string
+  vrfRandomWord?: string,
+  playerIdentities?: PlayerBlockchainIdentity[]
 ): { deck: CardType[]; proof: ShuffleProof } {
   const { osRandom, nonce, timestamp } = generateEntropy();
 
@@ -178,28 +207,35 @@ export function createProvablyFairShuffleMultiParty(
     ? createSuperSeedWithVRF(osRandom, nonce, timestamp, vrfRandomWord)
     : createSuperSeed(osRandom, nonce, timestamp);
 
-  // Mix in player seeds if any
+  // Mix in player seeds
   const playerSeedValues = playerSeedData.map(ps => ps.seed);
-  const finalSeed = playerSeedValues.length > 0
+  let combinedSeed = playerSeedValues.length > 0
     ? createCombinedSeed(baseSeed, playerSeedValues)
     : baseSeed;
 
-  const deck = deterministicShuffle(finalSeed);
+  // Mix in player blockchain identities (v3 enhancement)
+  const hasIdentities = playerIdentities && playerIdentities.some(id => id.memberId || id.kycHash);
+  if (hasIdentities) {
+    combinedSeed = mixBlockchainIdentities(combinedSeed, playerIdentities!);
+  }
+
+  const deck = deterministicShuffle(combinedSeed);
   const commitmentHash = commitDeck(deck);
   const deckOrder = deckToCanonicalString(deck);
 
   return {
     deck,
     proof: {
-      serverSeed: finalSeed,
+      serverSeed: combinedSeed,
       timestamp,
       nonce,
       commitmentHash,
       deckOrder,
       handNumber,
       tableId,
-      shuffleVersion: 2,
+      shuffleVersion: hasIdentities ? 3 : 2,
       playerSeeds: playerSeedData.length > 0 ? playerSeedData : undefined,
+      playerIdentities: hasIdentities ? playerIdentities : undefined,
       vrfRequestId: undefined,
       vrfRandomWord: vrfRandomWord || undefined,
     },

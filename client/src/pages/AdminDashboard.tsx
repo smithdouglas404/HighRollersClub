@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save, ShieldAlert, Loader2, MessageSquare, Ticket } from "lucide-react";
+import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save, ShieldAlert, Loader2, MessageSquare, Ticket, Users, Search, Edit3, Ban, UserCheck, Building2, Table2, FileText, X, Trash2, Key, Music, Upload } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;
@@ -132,7 +133,7 @@ interface AdminTicket {
   resolvedAt: string | null;
 }
 
-type Tab = "overview" | "withdrawals" | "collusion" | "system" | "payments" | "settings" | "kyc" | "security" | "support";
+type Tab = "overview" | "users" | "clubs" | "tables" | "withdrawals" | "collusion" | "system" | "payments" | "settings" | "kyc" | "security" | "support" | "audit" | "env" | "music";
 
 export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -157,6 +158,45 @@ export default function AdminDashboard() {
   const [processingRakeback, setProcessingRakeback] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // User management
+  const [userSearch, setUserSearch] = useState("");
+  const [userResults, setUserResults] = useState<any[]>([]);
+  const [userTotal, setUserTotal] = useState(0);
+  const [userPage, setUserPage] = useState(0);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, any>>({});
+  const [savingUser, setSavingUser] = useState(false);
+
+  // Club management
+  const [clubSearch, setClubSearch] = useState("");
+  const [clubResults, setClubResults] = useState<any[]>([]);
+  const [clubDetail, setClubDetail] = useState<any | null>(null);
+
+  // Table management
+  const [tableSearch, setTableSearch] = useState("");
+  const [tableResults, setTableResults] = useState<any[]>([]);
+
+  // Audit log
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditAction, setAuditAction] = useState("");
+
+  // Chart data
+  const [revenueTrend, setRevenueTrend] = useState<any[]>([]);
+  const [revenueSources, setRevenueSources] = useState<any[]>([]);
+
+  // Music management
+  const [adminMusic, setAdminMusic] = useState<any[]>([]);
+  const [musicTitle, setMusicTitle] = useState("");
+  const [musicArtist, setMusicArtist] = useState("");
+  const [musicFile, setMusicFile] = useState<File | null>(null);
+  const [uploadingMusic, setUploadingMusic] = useState(false);
+
+  // Environment keys
+  const [envKeys, setEnvKeys] = useState<any[]>([]);
+  const [envEditing, setEnvEditing] = useState<string | null>(null);
+  const [envEditValue, setEnvEditValue] = useState("");
+  const [envSaving, setEnvSaving] = useState(false);
   const [expandedAlert, setExpandedAlert] = useState<string | null>(null);
   const [antiCheatData, setAntiCheatData] = useState<AntiCheatLiveData | null>(null);
   const [antiCheatLoading, setAntiCheatLoading] = useState(false);
@@ -197,6 +237,9 @@ export default function AdminDashboard() {
         if (rev) setRevenueSummary(rev);
         if (rake) setRakeReport(rake);
         if (tb) setTrialBalance(tb);
+        // Fetch chart data
+        fetch("/api/admin/charts/revenue-trend").then(r => r.ok ? r.json() : []).then(setRevenueTrend).catch(() => {});
+        fetch("/api/admin/charts/revenue-sources").then(r => r.ok ? r.json() : []).then(setRevenueSources).catch(() => {});
       }).catch(err => {
         setError(err.message || "Failed to load overview data");
       }).finally(() => setLoading(false));
@@ -378,8 +421,99 @@ export default function AdminDashboard() {
     }
   };
 
+  // ── Fetch functions for new tabs ──
+  const fetchUsers = async () => {
+    try {
+      const params = new URLSearchParams({ limit: "25", offset: String(userPage * 25), ...(userSearch && { search: userSearch }) });
+      const res = await fetch(`/api/admin/users?${params}`);
+      const data = await res.json();
+      setUserResults(data.results || []);
+      setUserTotal(data.total || 0);
+    } catch {}
+  };
+
+  const fetchClubs = async () => {
+    try {
+      const params = new URLSearchParams({ ...(clubSearch && { search: clubSearch }) });
+      const res = await fetch(`/api/admin/clubs?${params}`);
+      setClubResults(await res.json());
+    } catch {}
+  };
+
+  const fetchTables = async () => {
+    try {
+      const params = new URLSearchParams({ ...(tableSearch && { search: tableSearch }) });
+      const res = await fetch(`/api/admin/tables?${params}`);
+      setTableResults(await res.json());
+    } catch {}
+  };
+
+  const fetchAuditLogs = async () => {
+    try {
+      const params = new URLSearchParams({ limit: "50", ...(auditAction && { action: auditAction }) });
+      const res = await fetch(`/api/admin/audit-log?${params}`);
+      setAuditLogs(await res.json());
+    } catch {}
+  };
+
+  const fetchAdminMusic = async () => {
+    try {
+      const res = await fetch("/api/admin/music");
+      setAdminMusic(await res.json());
+    } catch {}
+  };
+
+  const handleMusicUpload = async () => {
+    if (!musicFile) return;
+    setUploadingMusic(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", musicFile);
+      formData.append("title", musicTitle || musicFile.name.replace(/\.[^.]+$/, ""));
+      if (musicArtist) formData.append("artist", musicArtist);
+      await fetch("/api/admin/music/upload", { method: "POST", body: formData });
+      setMusicFile(null);
+      setMusicTitle("");
+      setMusicArtist("");
+      fetchAdminMusic();
+    } catch {} finally { setUploadingMusic(false); }
+  };
+
+  const fetchEnvKeys = async () => {
+    try {
+      const res = await fetch("/api/admin/env-keys");
+      setEnvKeys(await res.json());
+    } catch {}
+  };
+
+  const saveEnvKey = async (key: string, value: string) => {
+    setEnvSaving(true);
+    try {
+      await fetch("/api/admin/env-keys", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value }),
+      });
+      setEnvEditing(null);
+      fetchEnvKeys();
+    } catch {} finally { setEnvSaving(false); }
+  };
+
+  // Auto-fetch when switching to new tabs
+  useEffect(() => {
+    if (activeTab === "users" && userResults.length === 0) fetchUsers();
+    if (activeTab === "clubs" && clubResults.length === 0) fetchClubs();
+    if (activeTab === "tables" && tableResults.length === 0) fetchTables();
+    if (activeTab === "audit" && auditLogs.length === 0) fetchAuditLogs();
+    if (activeTab === "env" && envKeys.length === 0) fetchEnvKeys();
+    if (activeTab === "music" && adminMusic.length === 0) fetchAdminMusic();
+  }, [activeTab]);
+
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "overview", label: "Overview", icon: <Shield className="w-4 h-4" /> },
+    { key: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
+    { key: "clubs", label: "Clubs", icon: <Building2 className="w-4 h-4" /> },
+    { key: "tables", label: "Tables", icon: <Table2 className="w-4 h-4" /> },
     { key: "withdrawals", label: "Withdrawals", icon: <DollarSign className="w-4 h-4" /> },
     { key: "collusion", label: "Collusion", icon: <AlertTriangle className="w-4 h-4" /> },
     { key: "payments", label: "Payments", icon: <Eye className="w-4 h-4" /> },
@@ -388,6 +522,9 @@ export default function AdminDashboard() {
     { key: "settings", label: "Settings", icon: <Settings className="w-4 h-4" /> },
     { key: "security", label: "Security", icon: <ShieldAlert className="w-4 h-4" /> },
     { key: "support", label: "Support", icon: <Ticket className="w-4 h-4" /> },
+    { key: "music", label: "Music", icon: <Music className="w-4 h-4" /> },
+    { key: "audit", label: "Audit Log", icon: <FileText className="w-4 h-4" /> },
+    { key: "env", label: "Env Keys", icon: <Key className="w-4 h-4" /> },
   ];
 
   if (authLoading) {
@@ -478,6 +615,68 @@ export default function AdminDashboard() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Revenue Trend Chart */}
+            {revenueTrend.length > 0 && (
+              <div className="glass rounded-xl p-4">
+                <h3 className="text-sm font-bold text-white mb-3">Daily Revenue Trend (30 Days)</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={revenueTrend}>
+                    <defs>
+                      <linearGradient id="rakeGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#d4af37" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#d4af37" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="depositGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="day" tick={{ fill: "#6b7280", fontSize: 10 }} tickFormatter={(v: string) => new Date(v).toLocaleDateString("en", { month: "short", day: "numeric" })} />
+                    <YAxis tick={{ fill: "#6b7280", fontSize: 10 }} tickFormatter={(v: number) => `${(v / 100).toFixed(0)}`} />
+                    <Tooltip contentStyle={{ background: "rgba(10,14,22,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
+                    <Area type="monotone" dataKey="rake" name="Rake" stroke="#d4af37" fill="url(#rakeGrad)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="deposits" name="Deposits" stroke="#22c55e" fill="url(#depositGrad)" strokeWidth={2} />
+                    <Legend wrapperStyle={{ fontSize: 10, color: "#9ca3af" }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Revenue Sources Pie Chart */}
+            {revenueSources.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="glass rounded-xl p-4">
+                  <h3 className="text-sm font-bold text-white mb-3">Revenue by Source</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie data={revenueSources} dataKey="total" nameKey="type" cx="50%" cy="50%" outerRadius={70} strokeWidth={0} label={({ type, percent }: any) => `${type} ${(percent * 100).toFixed(0)}%`}>
+                        {revenueSources.map((_: any, i: number) => (
+                          <Cell key={i} fill={["#d4af37", "#22c55e", "#3b82f6", "#a855f7", "#ef4444"][i % 5]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ background: "rgba(10,14,22,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {trialBalance && (
+                  <div className="glass rounded-xl p-4">
+                    <h3 className="text-sm font-bold text-white mb-3">Financial Health</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-xs"><span className="text-gray-400">Money In</span><span className="text-green-400 font-bold">${((trialBalance.moneyIn || 0) / 100).toFixed(2)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-gray-400">Player Balances</span><span className="text-cyan-400 font-bold">${((trialBalance.playerBalanceSum || 0) / 100).toFixed(2)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-gray-400">Escrow (At Tables)</span><span className="text-amber-400 font-bold">${((trialBalance.escrowedAtTables || 0) / 100).toFixed(2)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-gray-400">Total Rake</span><span className="text-purple-400 font-bold">${((trialBalance.totalRake || 0) / 100).toFixed(2)}</span></div>
+                      <div className={`flex justify-between text-xs pt-2 border-t border-white/10 ${(trialBalance.discrepancy || 0) === 0 ? "text-green-400" : "text-red-400"}`}>
+                        <span className="font-bold">Discrepancy</span>
+                        <span className="font-bold">${((trialBalance.discrepancy || 0) / 100).toFixed(2)} {(trialBalance.discrepancy || 0) === 0 ? "✓" : "⚠"}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1171,6 +1370,426 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+            )}
+          </div>
+        )}
+        {/* ── Users Tab ── */}
+        {activeTab === "users" && (
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <input
+                  type="text" placeholder="Search by username, email, or ID..."
+                  value={userSearch} onChange={e => setUserSearch(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") fetchUsers(); }}
+                  className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/40"
+                />
+              </div>
+              <button onClick={fetchUsers} className="px-4 py-2 rounded-lg bg-primary/20 text-primary font-bold text-xs border border-primary/30 hover:bg-primary/30">Search</button>
+            </div>
+
+            {userResults.length > 0 && (
+              <div className="overflow-x-auto rounded-lg border border-white/10">
+                <table className="w-full text-xs">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-gray-400">Username</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Email</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Role</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Tier</th>
+                      <th className="px-3 py-2 text-right text-gray-400">Chips</th>
+                      <th className="px-3 py-2 text-left text-gray-400">KYC</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Joined</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {userResults.map(u => (
+                      <tr key={u.id} className="hover:bg-white/[0.02]">
+                        <td className="px-3 py-2 text-white font-bold">{u.username}</td>
+                        <td className="px-3 py-2 text-gray-400">{u.email || "—"}</td>
+                        <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${u.role === "admin" ? "bg-red-500/10 text-red-400" : u.role === "member" ? "bg-green-500/10 text-green-400" : "bg-gray-500/10 text-gray-400"}`}>{u.role}</span></td>
+                        <td className="px-3 py-2 text-gray-300">{u.tier}</td>
+                        <td className="px-3 py-2 text-right text-amber-400 font-mono">{(u.chipBalance || 0).toLocaleString()}</td>
+                        <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${u.kycStatus === "verified" ? "bg-green-500/10 text-green-400" : u.kycStatus === "pending" ? "bg-yellow-500/10 text-yellow-400" : "bg-gray-500/10 text-gray-500"}`}>{u.kycStatus}</span></td>
+                        <td className="px-3 py-2 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex gap-1">
+                            <button onClick={() => { setEditingUser(u); setEditForm({ role: u.role, tier: u.tier, chipBalance: u.chipBalance, displayName: u.displayName || "" }); }} className="p-1 rounded hover:bg-white/10" title="Edit"><Edit3 className="w-3.5 h-3.5 text-cyan-400" /></button>
+                            {u.role !== "admin" && !u.selfExcludedUntil && <button onClick={async () => { if (!confirm(`Ban ${u.username}?`)) return; await fetch(`/api/admin/users/${u.id}/ban`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "Banned by admin" }) }); fetchUsers(); }} className="p-1 rounded hover:bg-white/10" title="Ban"><Ban className="w-3.5 h-3.5 text-red-400" /></button>}
+                            {u.selfExcludedUntil && <button onClick={async () => { await fetch(`/api/admin/users/${u.id}/unban`, { method: "POST" }); fetchUsers(); }} className="p-1 rounded hover:bg-white/10" title="Unban"><UserCheck className="w-3.5 h-3.5 text-green-400" /></button>}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {userTotal > 25 && (
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>{userPage * 25 + 1}–{Math.min((userPage + 1) * 25, userTotal)} of {userTotal}</span>
+                <div className="flex gap-1">
+                  <button onClick={() => { setUserPage(p => Math.max(0, p - 1)); setTimeout(fetchUsers, 0); }} disabled={userPage === 0} className="px-2 py-1 rounded bg-white/5 border border-white/10 disabled:opacity-30">Prev</button>
+                  <button onClick={() => { setUserPage(p => p + 1); setTimeout(fetchUsers, 0); }} disabled={(userPage + 1) * 25 >= userTotal} className="px-2 py-1 rounded bg-white/5 border border-white/10 disabled:opacity-30">Next</button>
+                </div>
+              </div>
+            )}
+
+            {/* Edit User Modal */}
+            {editingUser && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setEditingUser(null)}>
+                <div className="bg-[#0d1117] border border-white/10 rounded-xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-white font-bold">Edit User: {editingUser.username}</h3>
+                    <button onClick={() => setEditingUser(null)} className="p-1 hover:bg-white/10 rounded"><X className="w-4 h-4 text-gray-400" /></button>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Display Name</label>
+                      <input value={editForm.displayName || ""} onChange={e => setEditForm(f => ({ ...f, displayName: e.target.value }))} className="w-full px-3 py-2 rounded bg-black/30 border border-white/10 text-white text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Role</label>
+                      <select value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))} className="w-full px-3 py-2 rounded bg-black/30 border border-white/10 text-white text-sm">
+                        <option value="guest">Guest</option>
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tier</label>
+                      <select value={editForm.tier} onChange={e => setEditForm(f => ({ ...f, tier: e.target.value }))} className="w-full px-3 py-2 rounded bg-black/30 border border-white/10 text-white text-sm">
+                        <option value="free">Free</option>
+                        <option value="bronze">Bronze</option>
+                        <option value="silver">Silver</option>
+                        <option value="gold">Gold</option>
+                        <option value="platinum">Platinum</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Chip Balance</label>
+                      <input type="number" value={editForm.chipBalance || 0} onChange={e => setEditForm(f => ({ ...f, chipBalance: parseInt(e.target.value) || 0 }))} className="w-full px-3 py-2 rounded bg-black/30 border border-white/10 text-white text-sm" />
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setSavingUser(true);
+                      try {
+                        await fetch(`/api/admin/users/${editingUser.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+                        setEditingUser(null);
+                        fetchUsers();
+                      } catch {} finally { setSavingUser(false); }
+                    }}
+                    disabled={savingUser}
+                    className="w-full py-2.5 rounded-lg bg-primary/20 text-primary font-bold text-sm border border-primary/30 hover:bg-primary/30 disabled:opacity-50"
+                  >
+                    {savingUser ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Clubs Tab ── */}
+        {activeTab === "clubs" && (
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <input type="text" placeholder="Search clubs..." value={clubSearch} onChange={e => setClubSearch(e.target.value)} onKeyDown={e => { if (e.key === "Enter") fetchClubs(); }} className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/40" />
+              </div>
+              <button onClick={fetchClubs} className="px-4 py-2 rounded-lg bg-primary/20 text-primary font-bold text-xs border border-primary/30 hover:bg-primary/30">Search</button>
+            </div>
+
+            {clubResults.length > 0 && (
+              <div className="overflow-x-auto rounded-lg border border-white/10">
+                <table className="w-full text-xs">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-gray-400">Name</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Owner</th>
+                      <th className="px-3 py-2 text-right text-gray-400">Members</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Visibility</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Created</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {clubResults.map(c => (
+                      <tr key={c.id} className="hover:bg-white/[0.02]">
+                        <td className="px-3 py-2 text-white font-bold">{c.name}</td>
+                        <td className="px-3 py-2 text-gray-400">{c.ownerId?.slice(0, 8) || "—"}</td>
+                        <td className="px-3 py-2 text-right text-cyan-400">{c.memberCount}</td>
+                        <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${c.isPublic ? "bg-green-500/10 text-green-400" : "bg-gray-500/10 text-gray-400"}`}>{c.isPublic ? "Public" : "Private"}</span></td>
+                        <td className="px-3 py-2 text-gray-500">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—"}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex gap-1">
+                            <button onClick={async () => { const res = await fetch(`/api/admin/clubs/${c.id}`); setClubDetail(await res.json()); }} className="p-1 rounded hover:bg-white/10" title="View Details"><Eye className="w-3.5 h-3.5 text-cyan-400" /></button>
+                            <button onClick={async () => { if (!confirm(`Delete club "${c.name}"?`)) return; await fetch(`/api/admin/clubs/${c.id}`, { method: "DELETE" }); fetchClubs(); }} className="p-1 rounded hover:bg-white/10" title="Delete"><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Club Detail Modal */}
+            {clubDetail && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setClubDetail(null)}>
+                <div className="bg-[#0d1117] border border-white/10 rounded-xl p-6 w-full max-w-lg space-y-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-white font-bold">{clubDetail.name}</h3>
+                    <button onClick={() => setClubDetail(null)} className="p-1 hover:bg-white/10 rounded"><X className="w-4 h-4 text-gray-400" /></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                    <div>Owner: <span className="text-white">{clubDetail.ownerName}</span></div>
+                    <div>Members: <span className="text-cyan-400">{clubDetail.members?.length || 0}</span></div>
+                    <div>Visibility: <span className="text-white">{clubDetail.isPublic ? "Public" : "Private"}</span></div>
+                    <div>Max Members: <span className="text-white">{clubDetail.maxMembers || "∞"}</span></div>
+                  </div>
+                  {clubDetail.description && <p className="text-xs text-gray-500">{clubDetail.description}</p>}
+                  {clubDetail.members && clubDetail.members.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Members ({clubDetail.members.length})</h4>
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {clubDetail.members.map((m: any) => (
+                          <div key={m.userId || m.id} className="flex items-center justify-between px-2 py-1 rounded bg-white/[0.02] text-xs">
+                            <span className="text-white">{m.userId || m.id}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${m.role === "owner" ? "bg-amber-500/10 text-amber-400" : m.role === "admin" ? "bg-purple-500/10 text-purple-400" : "bg-gray-500/10 text-gray-400"}`}>{m.role}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Tables Tab ── */}
+        {activeTab === "tables" && (
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <input type="text" placeholder="Search tables..." value={tableSearch} onChange={e => setTableSearch(e.target.value)} onKeyDown={e => { if (e.key === "Enter") fetchTables(); }} className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/40" />
+              </div>
+              <button onClick={fetchTables} className="px-4 py-2 rounded-lg bg-primary/20 text-primary font-bold text-xs border border-primary/30 hover:bg-primary/30">Load Tables</button>
+            </div>
+
+            {tableResults.length > 0 && (
+              <div className="overflow-x-auto rounded-lg border border-white/10">
+                <table className="w-full text-xs">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-gray-400">Name</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Status</th>
+                      <th className="px-3 py-2 text-right text-gray-400">Players</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Blinds</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Format</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Live Engine</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {tableResults.map(t => (
+                      <tr key={t.id} className="hover:bg-white/[0.02]">
+                        <td className="px-3 py-2 text-white font-bold">{t.name || "Unnamed"}</td>
+                        <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${t.status === "active" ? "bg-green-500/10 text-green-400" : t.status === "closed" ? "bg-red-500/10 text-red-400" : "bg-gray-500/10 text-gray-400"}`}>{t.status || "active"}</span></td>
+                        <td className="px-3 py-2 text-right text-cyan-400">{t.activePlayers || 0}/{t.maxPlayers || 10}</td>
+                        <td className="px-3 py-2 text-gray-300">{t.smallBlind || 0}/{t.bigBlind || 0}</td>
+                        <td className="px-3 py-2 text-gray-400">{t.gameFormat || "cash"}</td>
+                        <td className="px-3 py-2">{t.hasEngine ? <span className="text-green-400 text-[10px] font-bold">LIVE</span> : <span className="text-gray-600 text-[10px]">Idle</span>}</td>
+                        <td className="px-3 py-2">
+                          {t.status !== "closed" && (
+                            <button onClick={async () => { if (!confirm(`Close table "${t.name}"? This will end the game.`)) return; await fetch(`/api/admin/tables/${t.id}/close`, { method: "POST" }); fetchTables(); }} className="p-1 rounded hover:bg-white/10" title="Force Close"><Lock className="w-3.5 h-3.5 text-red-400" /></button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Music Tab ── */}
+        {activeTab === "music" && (
+          <div className="space-y-4">
+            {/* Upload form */}
+            <div className="rounded-lg border border-white/10 p-4 space-y-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2"><Upload className="w-4 h-4 text-primary" /> Upload Platform Track</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input type="text" placeholder="Track title" value={musicTitle} onChange={e => setMusicTitle(e.target.value)} className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/40" />
+                <input type="text" placeholder="Artist (optional)" value={musicArtist} onChange={e => setMusicArtist(e.target.value)} className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/40" />
+                <label className="flex items-center justify-center px-3 py-2 rounded-lg bg-black/30 border border-dashed border-white/10 cursor-pointer hover:border-primary/30 transition-all">
+                  <input type="file" accept="audio/*" onChange={e => setMusicFile(e.target.files?.[0] || null)} className="hidden" />
+                  <span className="text-sm text-gray-400">{musicFile ? musicFile.name : "Choose audio file..."}</span>
+                </label>
+              </div>
+              <button onClick={handleMusicUpload} disabled={!musicFile || uploadingMusic} className="px-4 py-2 rounded-lg bg-primary/20 text-primary font-bold text-xs border border-primary/30 hover:bg-primary/30 disabled:opacity-50">
+                {uploadingMusic ? "Uploading..." : "Upload Track"}
+              </button>
+            </div>
+
+            {/* Track list */}
+            <div className="rounded-lg border border-white/10 overflow-hidden">
+              <div className="px-4 py-2 bg-white/5 border-b border-white/5 flex items-center justify-between">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">All Music Tracks ({adminMusic.length})</h3>
+                <button onClick={fetchAdminMusic} className="text-xs text-gray-500 hover:text-gray-300">Refresh</button>
+              </div>
+              {adminMusic.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-8">No tracks uploaded yet.</p>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {adminMusic.map((track: any) => (
+                    <div key={track.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02]">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                        <Music className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white truncate">{track.title}</span>
+                          {track.artist && <span className="text-xs text-gray-500">— {track.artist}</span>}
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${track.isAdmin ? "bg-amber-500/10 text-amber-400" : "bg-cyan-500/10 text-cyan-400"}`}>
+                            {track.isAdmin ? "PLATFORM" : "USER"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px] text-gray-500">
+                          {track.username && <span>by @{track.username}</span>}
+                          {track.originalName && <span>{track.originalName}</span>}
+                          {track.createdAt && <span>{new Date(track.createdAt).toLocaleDateString()}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {track.url && (
+                          <audio controls preload="none" className="h-8 w-40" style={{ filter: "invert(1) hue-rotate(180deg)", opacity: 0.7 }}>
+                            <source src={track.url} />
+                          </audio>
+                        )}
+                        <button onClick={async () => { if (!confirm(`Delete "${track.title}"?`)) return; await fetch(`/api/admin/music/${track.id}`, { method: "DELETE" }); fetchAdminMusic(); }} className="p-1.5 rounded hover:bg-white/10" title="Delete"><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Env Keys Tab ── */}
+        {activeTab === "env" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">Runtime environment configuration. Changes take effect immediately but don't persist across restarts — update your .env file for permanent changes.</p>
+              <button onClick={fetchEnvKeys} className="px-3 py-1.5 rounded bg-white/5 border border-white/10 text-gray-400 text-xs font-bold hover:bg-white/10">Refresh</button>
+            </div>
+
+            {(() => {
+              const categories = [...new Set(envKeys.map((k: any) => k.category))];
+              return categories.map(cat => (
+                <div key={cat} className="rounded-lg border border-white/10 overflow-hidden">
+                  <div className="px-4 py-2 bg-white/5 border-b border-white/5">
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">{cat}</h3>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {envKeys.filter((k: any) => k.category === cat).map((env: any) => (
+                      <div key={env.key} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02]">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs font-mono text-cyan-400">{env.key}</code>
+                            {env.isSet ? <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-green-500/10 text-green-400">SET</span> : <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-gray-500/10 text-gray-500">NOT SET</span>}
+                            {env.sensitive && <Lock className="w-3 h-3 text-amber-500" />}
+                          </div>
+                          <p className="text-[10px] text-gray-500 mt-0.5">{env.description}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {envEditing === env.key ? (
+                            <>
+                              <input
+                                type={env.sensitive ? "password" : "text"}
+                                value={envEditValue}
+                                onChange={e => setEnvEditValue(e.target.value)}
+                                placeholder={env.sensitive ? "Enter new value..." : env.value || "Not set"}
+                                className="w-48 px-2 py-1 rounded bg-black/30 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-primary/40"
+                                autoFocus
+                                onKeyDown={e => { if (e.key === "Enter") saveEnvKey(env.key, envEditValue); if (e.key === "Escape") setEnvEditing(null); }}
+                              />
+                              <button onClick={() => saveEnvKey(env.key, envEditValue)} disabled={envSaving} className="px-2 py-1 rounded bg-green-500/10 text-green-400 text-[10px] font-bold border border-green-500/20 hover:bg-green-500/20 disabled:opacity-50">
+                                {envSaving ? "..." : "Save"}
+                              </button>
+                              <button onClick={() => setEnvEditing(null)} className="px-2 py-1 rounded bg-white/5 text-gray-400 text-[10px] font-bold border border-white/10 hover:bg-white/10">Cancel</button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-xs font-mono text-gray-400 max-w-[200px] truncate">{env.sensitive ? (env.isSet ? "••••••••" : "") : (env.value || "")}</span>
+                              <button onClick={() => { setEnvEditing(env.key); setEnvEditValue(""); }} className="p-1 rounded hover:bg-white/10" title="Edit"><Edit3 className="w-3.5 h-3.5 text-cyan-400" /></button>
+                              {env.isSet && <button onClick={() => saveEnvKey(env.key, "")} className="p-1 rounded hover:bg-white/10" title="Clear"><X className="w-3.5 h-3.5 text-red-400" /></button>}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        )}
+
+        {/* ── Audit Log Tab ── */}
+        {activeTab === "audit" && (
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <select value={auditAction} onChange={e => { setAuditAction(e.target.value); setTimeout(fetchAuditLogs, 0); }} className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-xs">
+                <option value="">All Actions</option>
+                <option value="kyc_approve">KYC Approve</option>
+                <option value="kyc_reject">KYC Reject</option>
+                <option value="user_edit">User Edit</option>
+                <option value="user_ban">User Ban</option>
+                <option value="user_unban">User Unban</option>
+                <option value="club_delete">Club Delete</option>
+                <option value="table_close">Table Close</option>
+              </select>
+              <button onClick={fetchAuditLogs} className="px-4 py-2 rounded-lg bg-primary/20 text-primary font-bold text-xs border border-primary/30 hover:bg-primary/30">Load Logs</button>
+            </div>
+
+            {auditLogs.length > 0 ? (
+              <div className="overflow-x-auto rounded-lg border border-white/10">
+                <table className="w-full text-xs">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-gray-400">Time</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Admin</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Action</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Target</th>
+                      <th className="px-3 py-2 text-left text-gray-400">Details</th>
+                      <th className="px-3 py-2 text-left text-gray-400">IP</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {auditLogs.map((log: any) => (
+                      <tr key={log.id} className="hover:bg-white/[0.02]">
+                        <td className="px-3 py-2 text-gray-500">{new Date(log.createdAt).toLocaleString()}</td>
+                        <td className="px-3 py-2 text-white">{log.adminId?.slice(0, 8) || "system"}</td>
+                        <td className="px-3 py-2"><span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400">{log.action}</span></td>
+                        <td className="px-3 py-2 text-gray-400">{log.targetType}: {log.targetId?.slice(0, 8) || "—"}</td>
+                        <td className="px-3 py-2 text-gray-500 max-w-[200px] truncate">{log.details ? JSON.stringify(log.details).slice(0, 60) : "—"}</td>
+                        <td className="px-3 py-2 text-gray-600 font-mono">{log.ipAddress || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm text-center py-8">No audit logs found. Actions will appear here when admins take actions.</p>
             )}
           </div>
         )}

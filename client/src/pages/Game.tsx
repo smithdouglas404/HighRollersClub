@@ -5,10 +5,19 @@ import { Seat } from "../components/poker/Seat";
 import { Card } from "../components/poker/Card";
 import { ImageTable } from "../components/poker/ImageTable";
 import { PokerSceneCanvas } from "../scene/canvas/PokerSceneCanvas";
+import { useWebSocketBridge } from "../hooks/useWebSocketBridge";
 import { RANK_FRAMES } from "@/lib/game-constants";
 
-// Feature flag: flip to true to use the 3D R3F table scene
-const USE_3D_TABLE = false;
+// 3D table preference — persisted in localStorage, fallback to true
+function get3DPreference(): boolean {
+  if (typeof window === "undefined") return false;
+  const stored = localStorage.getItem("poker_use_3d_table");
+  if (stored === "true") return true;
+  return false; // Default: 2D table (the working, polished one)
+}
+function set3DPreference(val: boolean) {
+  localStorage.setItem("poker_use_3d_table", String(val));
+}
 
 import { PokerControls } from "../components/poker/Controls";
 import { ProvablyFairPanel } from "../components/poker/ProvablyFairPanel";
@@ -19,6 +28,7 @@ import { EmotePicker } from "../components/poker/EmoteSystem";
 import { TauntPicker, setTauntVoice } from "../components/poker/TauntSystem";
 import { ChatPanel } from "../components/poker/ChatPanel";
 import { HandHistoryDrawer } from "../components/poker/HandHistoryDrawer";
+import { TableLedger } from "../components/poker/TableLedger";
 import { VideoControlBar, VideoThumbnail } from "../components/poker/VideoOverlay";
 import { HandStrengthMeter } from "../components/poker/HandStrengthMeter";
 import { HandBadge } from "../components/poker/HandBadge";
@@ -44,7 +54,7 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS, CARD_BACK_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, MicOff, Eye, EyeOff, Link2, Palette, Settings2, LogOut, MoreVertical, DoorOpen, UserCheck, UserX, Sliders, ChevronRight } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, MicOff, Eye, EyeOff, Link2, Palette, Settings2, LogOut, MoreVertical, DoorOpen, UserCheck, UserX, Sliders, ChevronRight, DollarSign } from "lucide-react";
 import { InGameAdminPanel, type InGameSettings } from "@/components/game/InGameAdminPanel";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
@@ -198,6 +208,118 @@ function useSpeechToChat(sendChat?: (msg: string) => void, isMultiplayer?: boole
 }
 
 // Player style classification from VPIP + PFR thresholds
+// ─── Music Library Component ────────────────────────────────────────────────
+function MusicLibrary({ bgmUrl, bgmPlaying, onSelect, onStop }: {
+  bgmUrl: string; bgmPlaying: boolean;
+  onSelect: (url: string) => void; onStop: () => void;
+}) {
+  const [tracks, setTracks] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (loaded) return;
+    fetch("/api/music").then(r => r.json()).then(data => { setTracks(data); setLoaded(true); }).catch(() => {
+      setTracks([]);
+      setLoaded(true);
+    });
+  }, [loaded]);
+
+  const platformTracks = tracks.filter(t => t.isAdmin);
+  const myTracks = tracks.filter(t => !t.isAdmin);
+
+  const handleUpload = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", file.name.replace(/\.[^.]+$/, ""));
+    try {
+      const res = await fetch("/api/music/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const track = await res.json();
+        setTracks(prev => [...prev, track]);
+        onSelect(track.url);
+      } else {
+        // Fallback: local playback
+        const localUrl = URL.createObjectURL(file);
+        onSelect(localUrl);
+      }
+    } catch {
+      const localUrl = URL.createObjectURL(file);
+      onSelect(localUrl);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`/api/music/${id}`, { method: "DELETE" });
+      setTracks(prev => prev.filter(t => t.id !== id));
+    } catch {}
+  };
+
+  const renderTrack = (track: any, canDelete = false) => {
+    const isActive = bgmUrl === track.url;
+    return (
+      <div key={track.id} className="flex items-center gap-1">
+        <button
+          onClick={() => { if (isActive && bgmPlaying) onStop(); else onSelect(track.url); }}
+          className={`flex-1 flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all ${
+            isActive && bgmPlaying ? "bg-amber-500/15 border border-amber-500/25" : "bg-white/5 border border-transparent hover:bg-white/8"
+          }`}
+        >
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isActive && bgmPlaying ? "bg-amber-500/25" : "bg-white/10"}`}>
+            {isActive && bgmPlaying ? <Pause className="w-3 h-3 text-primary" /> : <Play className="w-3 h-3 text-gray-400 ml-0.5" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className={`text-[0.6875rem] font-bold truncate ${isActive && bgmPlaying ? "text-primary" : "text-white"}`}>{track.title}</div>
+            <div className="text-[0.5625rem] text-gray-500 truncate">{track.artist || ""}</div>
+          </div>
+          {isActive && bgmPlaying && (
+            <div className="flex items-end gap-[2px] h-3">
+              {[0.6, 1, 0.4, 0.8, 0.5].map((h, i) => (
+                <div key={i} className="w-[2px] bg-amber-400 rounded-full animate-pulse" style={{ height: `${h * 12}px`, animationDelay: `${i * 0.15}s` }} />
+              ))}
+            </div>
+          )}
+        </button>
+        {canDelete && (
+          <button onClick={() => handleDelete(track.id)} className="p-1 rounded hover:bg-white/10 shrink-0" title="Delete">
+            <X className="w-3 h-3 text-red-400" />
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-2 max-h-[280px] overflow-y-auto">
+      {/* Platform tracks */}
+      {platformTracks.length > 0 && (
+        <div className="space-y-1">
+          <span className="text-[0.5rem] text-gray-600 uppercase tracking-wider">Platform Music</span>
+          {platformTracks.map(t => renderTrack(t))}
+        </div>
+      )}
+
+      {/* User tracks */}
+      {myTracks.length > 0 && (
+        <div className="space-y-1">
+          <span className="text-[0.5rem] text-gray-600 uppercase tracking-wider">My Uploads</span>
+          {myTracks.map(t => renderTrack(t, true))}
+        </div>
+      )}
+
+      {/* Upload */}
+      <label className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/5 border border-dashed border-white/10 cursor-pointer hover:bg-white/8 transition-colors">
+        <Music className="w-3 h-3 text-gray-500" />
+        <span className="text-[0.625rem] text-gray-400">Upload your own track...</span>
+        <input type="file" accept="audio/*" className="hidden" onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleUpload(file);
+        }} />
+      </label>
+    </div>
+  );
+}
+
 function classifyPlayerStyle(stats: OpponentHudStats): { label: string; color: string; tooltip: string } | null {
   if (stats.handsPlayed < 4) return null;
   const vpip = (stats.vpipCount / stats.handsPlayed) * 100;
@@ -289,7 +411,9 @@ function GameTable({
   onDeclinePlayer?: (playerId: string) => void;
   onUpdateTableSettings?: (settings: { walletLimit?: number; smallBlind?: number; bigBlind?: number }) => void;
 }) {
+  const [use3D, setUse3D] = useState(get3DPreference);
   const [showProvablyFair, setShowProvablyFair] = useState(false);
+  const [showLedger, setShowLedger] = useState(false);
   const [showAddChips, setShowAddChips] = useState(false);
   const [addChipsAmount, setAddChipsAmount] = useState(maxBuyIn || 300);
   const [isMuted, setIsMuted] = useState(() => soundEngine.muted);
@@ -324,6 +448,9 @@ function GameTable({
   const { opponentStats, hudEnabled, setHudEnabled } = useOpponentStats(gameState, players, heroId);
   const tableRef = useRef<HTMLDivElement>(null);
   const prevHeroTurn = useRef(false);
+
+  // Sync game state → Zustand stores for the 3D scene
+  useWebSocketBridge({ players, gameState, showdown });
 
   // Animated pot counter for the top bar (smooth count-up/down)
   const { value: topBarPot } = useAnimatedCounter(gameState.pot || 0, 400);
@@ -882,84 +1009,13 @@ function GameTable({
                   <button onClick={() => setShowBgmPanel(false)} className="p-0.5 hover:bg-white/10 rounded"><X className="w-3 h-3 text-gray-500" /></button>
                 </div>
 
-                {/* Track library */}
-                <div className="space-y-1">
-                  {[
-                    { name: "Fever", artist: "KLICKAUD", url: "/music/Fever_KLICKAUD.mp3" },
-                    { name: "Rather Be", artist: "KLICKAUD", url: "/music/Rather_Be_KLICKAUD.mp3" },
-                    { name: "There It Is", artist: "Uploaded", url: "/music/02 There It Is.m4a" },
-                    { name: "Soar", artist: "KLICKAUD", url: "/music/soar.mp3" },
-                  ].map((track) => {
-                    const isActive = bgmUrl === track.url || bgmUrl === track.name;
-                    return (
-                      <button
-                        key={track.url}
-                        onClick={() => {
-                          setBgmUrl(track.url);
-                          sound.setBgmUrl(track.url);
-                          if (isActive && bgmPlaying) { sound.stopBgm(); setBgmPlaying(false); }
-                          else { sound.playBgm(); setBgmPlaying(true); }
-                        }}
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all ${
-                          isActive && bgmPlaying ? "bg-amber-500/15 border border-amber-500/25" : "bg-white/5 border border-transparent hover:bg-white/8"
-                        }`}
-                      >
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                          isActive && bgmPlaying ? "bg-amber-500/25" : "bg-white/10"
-                        }`}>
-                          {isActive && bgmPlaying
-                            ? <Pause className="w-3 h-3 text-primary" />
-                            : <Play className="w-3 h-3 text-gray-400 ml-0.5" />
-                          }
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-[0.6875rem] font-bold truncate ${isActive && bgmPlaying ? "text-primary" : "text-white"}`}>{track.name}</div>
-                          <div className="text-[0.5625rem] text-gray-500 truncate">{track.artist}</div>
-                        </div>
-                        {isActive && bgmPlaying && (
-                          <div className="flex items-end gap-[2px] h-3">
-                            {[0.6, 1, 0.4, 0.8, 0.5].map((h, i) => (
-                              <div key={i} className="w-[2px] bg-amber-400 rounded-full animate-pulse" style={{ height: `${h * 12}px`, animationDelay: `${i * 0.15}s` }} />
-                            ))}
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Custom URL */}
-                <div className="flex gap-1.5">
-                  <input
-                    type="text" value={bgmUrl.startsWith("/music/") ? "" : bgmUrl}
-                    onChange={(e) => setBgmUrl(e.target.value)}
-                    onBlur={() => { if (bgmUrl && !bgmUrl.startsWith("/music/")) sound.setBgmUrl(bgmUrl); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && bgmUrl) { sound.setBgmUrl(bgmUrl); sound.playBgm(); setBgmPlaying(true); } }}
-                    placeholder="Paste audio URL..."
-                    className="flex-1 text-[0.625rem] px-2 py-1.5 rounded text-white placeholder-gray-600 outline-none bg-white/5 border border-white/10"
-                  />
-                  <button
-                    onClick={() => { if (bgmUrl) { sound.setBgmUrl(bgmUrl); if (bgmPlaying) { sound.stopBgm(); setBgmPlaying(false); } else { sound.playBgm(); setBgmPlaying(true); } } }}
-                    className={`px-2 py-1.5 rounded text-[0.625rem] font-bold ${bgmPlaying ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-primary"}`}
-                  >
-                    {bgmPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                  </button>
-                </div>
-
-                {/* Upload */}
-                <label className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/5 border border-dashed border-white/10 cursor-pointer hover:bg-white/8 transition-colors">
-                  <Music className="w-3 h-3 text-gray-500" />
-                  <span className="text-[0.625rem] text-gray-400">Upload from your device...</span>
-                  <input type="file" accept="audio/*" className="hidden" onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const localUrl = URL.createObjectURL(file);
-                    setBgmUrl(file.name);
-                    sound.setBgmUrl(localUrl);
-                    sound.playBgm();
-                    setBgmPlaying(true);
-                  }} />
-                </label>
+                {/* Track library — loaded from API */}
+                <MusicLibrary
+                  bgmUrl={bgmUrl}
+                  bgmPlaying={bgmPlaying}
+                  onSelect={(url) => { setBgmUrl(url); sound.setBgmUrl(url); sound.playBgm(); setBgmPlaying(true); }}
+                  onStop={() => { sound.stopBgm(); setBgmPlaying(false); }}
+                />
 
                 {/* Volume */}
                 <div className="flex items-center gap-2">
@@ -973,6 +1029,15 @@ function GameTable({
               </div>
             )}
           </div>
+
+          {/* 2D/3D toggle */}
+          <button
+            onClick={() => { const next = !use3D; setUse3D(next); set3DPreference(next); }}
+            className={`p-1.5 rounded transition-colors ${use3D ? "bg-cyan-500/15" : "hover:bg-white/5"}`}
+            title={use3D ? "Switch to 2D table" : "Switch to 3D table"}
+          >
+            <span className={`text-[10px] font-bold ${use3D ? "text-cyan-400" : "text-gray-500"}`}>{use3D ? "3D" : "2D"}</span>
+          </button>
 
           {/* Theme picker */}
           <div className="relative">
@@ -1044,6 +1109,13 @@ function GameTable({
           <button onClick={() => setShowProvablyFair(!showProvablyFair)} className="p-1.5 hover:bg-white/5 rounded transition-colors">
             <ShieldCheck className={`w-3.5 h-3.5 ${verificationStatus === "verified" ? "text-green-400" : "text-gray-500"}`} />
           </button>
+
+          {/* Ledger toggle */}
+          {isMultiplayer && tableId && (
+            <button onClick={() => setShowLedger(!showLedger)} className={`p-1.5 rounded transition-colors ${showLedger ? "bg-amber-500/15" : "hover:bg-white/5"}`} title="Session Ledger">
+              <DollarSign className={`w-3.5 h-3.5 ${showLedger ? "text-amber-400" : "text-gray-500"}`} />
+            </button>
+          )}
 
           {/* Next hand starts automatically after showdown — show countdown instead of decorative button */}
         </div>
@@ -1159,9 +1231,10 @@ function GameTable({
                 className="relative w-full poker-table-container"
                 style={{ aspectRatio: "16 / 9", maxHeight: screen.tableMaxHeight, maxWidth: screen.isUltrawide ? "min(90%, 180vh)" : "min(95%, 140vh)" }}
               >
-                {USE_3D_TABLE ? (
+                {use3D ? (
                   <PokerSceneCanvas
-                    quality="high"
+                    activeSeat={players.findIndex(p => p.id === gameState.currentTurnPlayerId)}
+                    winnerSeat={showdown?.results?.find((r: any) => r.isWinner) ? players.findIndex(p => p.id === showdown.results.find((r: any) => r.isWinner)?.playerId) : undefined}
                     className="absolute inset-0 z-[1]"
                   />
                 ) : (
@@ -1637,6 +1710,25 @@ function GameTable({
             onChainCommitTx={onChainCommitTx}
             onChainRevealTx={onChainRevealTx}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ═══ LEDGER PANEL ═══ */}
+      <AnimatePresence>
+        {showLedger && tableId && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="absolute right-2 top-14 z-40 w-72 max-h-[60vh] overflow-y-auto rounded-xl p-3"
+            style={{ background: "rgba(10,14,22,0.92)", border: "1px solid rgba(212,175,55,0.15)", backdropFilter: "blur(12px)" }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Session Ledger</span>
+              <button onClick={() => setShowLedger(false)} className="p-0.5 hover:bg-white/10 rounded"><X className="w-3 h-3 text-gray-500" /></button>
+            </div>
+            <TableLedger tableId={tableId} isOwner={isAdmin || false} />
+          </motion.div>
         )}
       </AnimatePresence>
 

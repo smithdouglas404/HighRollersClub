@@ -14,17 +14,9 @@ interface ClubChatSidebarProps {
   className?: string;
 }
 
-const MOCK_MESSAGES: ChatMessage[] = [
-  { id: "1", username: "AceKing", message: "Anyone up for a high stakes game?", timestamp: new Date(Date.now() - 300000) },
-  { id: "2", username: "System", message: "Jaitey5 joined the club", timestamp: new Date(Date.now() - 240000), isSystem: true },
-  { id: "3", username: "ChipQueen", message: "GG everyone on that last tournament!", timestamp: new Date(Date.now() - 180000) },
-  { id: "4", username: "BluffMaster", message: "Table 3 needs one more player", timestamp: new Date(Date.now() - 60000) },
-  { id: "5", username: "System", message: "Weekly High Stakes tournament starts in 30 min", timestamp: new Date(Date.now() - 30000), isSystem: true },
-];
-
 export function ClubChatSidebar({ clubName = "Club", className }: ClubChatSidebarProps) {
   const [message, setMessage] = useState("");
-  const [messages] = useState<ChatMessage[]>(MOCK_MESSAGES);
+  const [messages] = useState<ChatMessage[]>([]);
 
   const handleSend = () => {
     if (!message.trim()) return;

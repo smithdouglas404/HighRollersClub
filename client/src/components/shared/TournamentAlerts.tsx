@@ -21,14 +21,10 @@ const ALERT_CONFIG = {
   completed: { icon: AlertTriangle, color: "#ef4444", label: "Completed" },
 };
 
-const MOCK_ALERTS: TournamentAlert[] = [
-  { id: "1", type: "registration", title: "Final Table Marathon", message: "Registration closes in 15 min", timestamp: new Date() },
-  { id: "2", type: "starting", title: "Weekly High Stakes", message: "Tournament starts in 5 min", timestamp: new Date(Date.now() - 120000) },
-  { id: "3", type: "final_table", title: "Sunday Special", message: "Final table reached — 6 players remain", timestamp: new Date(Date.now() - 300000) },
-];
-
 export function TournamentAlerts({ alerts, className }: TournamentAlertsProps) {
-  const items = alerts || MOCK_ALERTS;
+  const items = alerts || [];
+
+  if (items.length === 0) return null;
 
   return (
     <div className={className}>

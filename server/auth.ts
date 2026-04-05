@@ -11,6 +11,7 @@ import { randomUUID, scrypt, randomBytes, timingSafeEqual, createHmac, createHas
 import { promisify } from "util";
 import nodemailer from "nodemailer";
 import { verifyFirebaseToken } from "./firebase-admin";
+import { AVATAR_IDS as GUEST_AVATAR_IDS } from "@shared/avatar-ids";
 
 const scryptAsync = promisify(scrypt);
 
@@ -82,7 +83,13 @@ export function setupAuth(app: Express) {
   }
 
   const sessionMiddleware = session({
-    secret: process.env.SESSION_SECRET || "poker-platform-dev-secret-change-me-in-prod",
+    secret: (() => {
+      const s = process.env.SESSION_SECRET;
+      if (!s || s === "poker-platform-dev-secret-change-me-in-prod") {
+        console.warn("[SECURITY] SESSION_SECRET not set or using default. Set a strong secret in production!");
+      }
+      return s || require("crypto").randomBytes(32).toString("hex"); // Generate random if missing (won't persist across restarts)
+    })(),
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -149,12 +156,6 @@ function generateGuestName(): string {
   return `${adj}${noun}${num}`;
 }
 
-// Avatar IDs that can be randomly assigned to guest users
-const GUEST_AVATAR_IDS = [
-  "neon-viper", "chrome-siren", "gold-phantom", "shadow-king",
-  "red-wolf", "ice-queen", "tech-monk", "cyber-punk",
-  "steel-ghost", "neon-fox", "dark-ace", "bolt-runner",
-];
 
 // Rate limiting for registration/guest creation
 const registrationAttempts = new Map<string, { count: number; resetAt: number }>();
@@ -274,6 +275,34 @@ export function registerAuthRoutes(app: Express) {
       await storage.ensureWallets(user.id);
       await storage.atomicAddToWallet(user.id, "main", 10000);
 
+      // Send email verification if email provided and SMTP configured
+      const email = req.body.email;
+      if (email) {
+        const token = randomUUID();
+        await storage.updateUser(user.id, { email, emailVerificationToken: token } as any);
+        if (process.env.SMTP_HOST) {
+          try {
+            const transport = nodemailer.createTransport({
+              host: process.env.SMTP_HOST,
+              port: parseInt(process.env.SMTP_PORT || "587", 10),
+              secure: process.env.SMTP_SECURE === "true",
+              auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+            });
+            const verifyUrl = `${req.protocol}://${req.get("host")}/api/auth/verify-email?token=${token}`;
+            await transport.sendMail({
+              from: process.env.SMTP_FROM || "noreply@highrollers.club",
+              to: email,
+              subject: "Verify your email - HighRollers Club",
+              html: `<h2>Welcome to HighRollers Club!</h2><p>Click the link below to verify your email:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 24 hours.</p>`,
+            });
+          } catch (emailErr: any) {
+            console.error("Verification email error:", emailErr.message);
+          }
+        } else if (process.env.NODE_ENV !== "production") {
+          console.log(`[DEV] Email verification token for ${username}: ${token}`);
+        }
+      }
+
       const safeUser = sanitizeUser(user);
       req.login(safeUser, (err) => {
         if (err) return next(err);
@@ -281,6 +310,28 @@ export function registerAuthRoutes(app: Express) {
       });
     } catch (err) {
       next(err);
+    }
+  });
+
+  // Email verification endpoint
+  app.get("/api/auth/verify-email", async (req, res) => {
+    const token = req.query.token as string;
+    if (!token) return res.status(400).send("Missing token");
+    try {
+      // Find user by verification token
+      const { hasDatabase, getDb } = await import("./db");
+      if (hasDatabase()) {
+        const db = getDb();
+        const { users } = await import("@shared/schema");
+        const { sql } = await import("drizzle-orm");
+        const [user] = await db.select().from(users).where(sql`${users.emailVerificationToken} = ${token}`).limit(1);
+        if (!user) return res.status(400).send("Invalid or expired verification link");
+        await db.update(users).set({ emailVerified: true, emailVerificationToken: null } as any).where(sql`${users.id} = ${user.id}`);
+        return res.redirect("/?emailVerified=true");
+      }
+      res.status(400).send("Database required for email verification");
+    } catch {
+      res.status(500).send("Verification failed");
     }
   });
 
@@ -313,6 +364,31 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ message: info?.message || "Login failed" });
       }
       loginAttempts.delete(ip);
+
+      // Check if 2FA is enabled — require TOTP code before completing login
+      if ((user as any).twoFactorEnabled) {
+        const totpCode = req.body.totpCode;
+        if (!totpCode) {
+          // Don't log in yet — tell client to prompt for 2FA code
+          return res.status(206).json({ requires2FA: true, userId: (user as any).id, message: "2FA code required" });
+        }
+        // Verify TOTP code
+        try {
+          const speakeasy = require("speakeasy");
+          const verified = speakeasy.totp.verify({
+            secret: (user as any).twoFactorSecret,
+            encoding: "base32",
+            token: totpCode,
+            window: 1, // allow 1 step tolerance
+          });
+          if (!verified) {
+            return res.status(401).json({ message: "Invalid 2FA code" });
+          }
+        } catch {
+          return res.status(401).json({ message: "2FA verification failed" });
+        }
+      }
+
       req.login(user, (err) => {
         if (err) return next(err);
         res.json(user);
@@ -639,7 +715,9 @@ export function registerAuthRoutes(app: Express) {
         res.json({ sent: true });
       } else {
         // Dev mode: log code to console
-        console.log(`[DEV] Recovery code for ${user.username}: ${code}`);
+        if (process.env.NODE_ENV !== "production") {
+          console.log(`[DEV] Recovery code for ${user.username}: ${code}`);
+        }
         res.json({ sent: true, dev: true });
       }
     } catch (err) {

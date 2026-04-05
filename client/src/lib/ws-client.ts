@@ -2,6 +2,33 @@
 
 type MessageHandler = (msg: any) => void;
 
+/** Decrypt AES-256-GCM encrypted cards using session key */
+async function decryptCardsClient(encrypted: string, keyHex: string): Promise<any[] | null> {
+  try {
+    const [ivHex, authTagHex, ciphertextHex] = encrypted.split(":");
+    const key = await crypto.subtle.importKey("raw", hexToBytes(keyHex), "AES-GCM", false, ["decrypt"]);
+    const iv = hexToBytes(ivHex);
+    const authTag = hexToBytes(authTagHex);
+    const ciphertext = hexToBytes(ciphertextHex);
+    // GCM auth tag is appended to ciphertext for Web Crypto
+    const combined = new Uint8Array(ciphertext.length + authTag.length);
+    combined.set(ciphertext);
+    combined.set(authTag, ciphertext.length);
+    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, combined);
+    return JSON.parse(new TextDecoder().decode(decrypted));
+  } catch {
+    return null;
+  }
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
 class WsClient {
   private ws: WebSocket | null = null;
   private url: string = "";
@@ -11,6 +38,7 @@ class WsClient {
   private maxReconnectDelay = 30000;
   private shouldReconnect = false;
   private _connected = false;
+  private _cardKey: string | null = null;
 
   get connected() { return this._connected; }
 
@@ -34,9 +62,36 @@ class WsClient {
         this.emit("_connected", {});
       };
 
-      this.ws.onmessage = (event) => {
+      this.ws.onmessage = async (event) => {
         try {
           const msg = JSON.parse(event.data);
+
+          // Store session encryption key + sprite mapping
+          if (msg.type === "session_key" && msg.cardKey) {
+            this._cardKey = msg.cardKey;
+            // Store in card security module
+            import("./card-security").then(cs => {
+              cs.setSessionCardKey(msg.cardKey);
+              if (msg.spriteMapping) {
+                cs.decryptSpriteMapping(msg.spriteMapping, msg.cardKey);
+              }
+            }).catch(() => {});
+            return;
+          }
+
+          // Decrypt encrypted cards in game state
+          if (msg.type === "game_state" && msg.state?.players && this._cardKey) {
+            for (const p of msg.state.players) {
+              if (p._encryptedCards) {
+                const decrypted = await decryptCardsClient(p._encryptedCards, this._cardKey);
+                if (decrypted) {
+                  p.cards = decrypted;
+                }
+                delete p._encryptedCards;
+              }
+            }
+          }
+
           this.emit(msg.type, msg);
         } catch {
           // ignore invalid messages

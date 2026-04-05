@@ -1,7 +1,18 @@
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useState, Component, type ReactNode, type ErrorInfo } from "react";
+import { Suspense, useState, useMemo, Component, type ReactNode, type ErrorInfo } from "react";
 import * as THREE from "three";
 import { SceneRoot } from "./SceneRoot";
+
+/** Auto-detect optimal quality based on device capabilities */
+function detectQuality(): "low" | "medium" | "high" | "cinematic" {
+  if (typeof window === "undefined") return "medium";
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+  const isLowEnd = navigator.hardwareConcurrency !== undefined && navigator.hardwareConcurrency <= 4;
+  const isSmallScreen = window.innerWidth < 1024;
+  if (isMobile || isLowEnd) return "low";
+  if (isSmallScreen) return "medium";
+  return "high";
+}
 
 class SceneErrorBoundary extends Component<
   { children: ReactNode; onError: (err: Error) => void },
@@ -29,12 +40,13 @@ interface PokerSceneCanvasProps {
 }
 
 export function PokerSceneCanvas({
-  quality = "high",
+  quality: qualityOverride,
   activeSeat,
   winnerSeat,
   className,
 }: PokerSceneCanvasProps) {
   const [error, setError] = useState<string | false>(false);
+  const quality = useMemo(() => qualityOverride || detectQuality(), [qualityOverride]);
   const dpr = quality === "cinematic" ? 2 : quality === "high" ? 1.5 : quality === "medium" ? 1.25 : 1;
 
   if (error) {

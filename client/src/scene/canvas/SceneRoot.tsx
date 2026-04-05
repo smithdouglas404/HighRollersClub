@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import * as THREE from "three";
 import { CameraRig } from "./CameraRig";
 import { TableBase } from "../table/TableBase";
 import { FeltSurface } from "../table/FeltSurface";
@@ -5,6 +7,10 @@ import { OuterMetalRing } from "../table/OuterMetalRing";
 import { InnerGoldRing } from "../table/InnerGoldRing";
 import { SeatRingGroup } from "../table/SeatRing";
 import { PostFx } from "../fx/PostFx";
+import { PlayersGroup } from "../players/PlayerSeat3D";
+import { BoardCardsGroup } from "../cards/BoardCardsGroup";
+import { PlayerLabelOverlay } from "../overlays/PlayerLabelOverlay";
+import { PotOverlay } from "../overlays/PotOverlay";
 
 /**
  * Scene graph root — orchestrates all 3D scene children.
@@ -21,7 +27,18 @@ interface SceneRootProps {
   winnerSeat?: number;
 }
 
+function getSeatPositions(count: number, rx: number, rz: number): THREE.Vector3[] {
+  const positions: THREE.Vector3[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI / 2) + (2 * Math.PI * i) / count;
+    positions.push(new THREE.Vector3(rx * Math.cos(angle), 0.03, rz * Math.sin(angle)));
+  }
+  return positions;
+}
+
 export function SceneRoot({ quality = "high", activeSeat, winnerSeat }: SceneRootProps) {
+  const seatPositions = useMemo(() => getSeatPositions(10, 2.55, 1.68), []);
+
   return (
     <>
       <CameraRig />
@@ -83,6 +100,16 @@ export function SceneRoot({ quality = "high", activeSeat, winnerSeat }: SceneRoo
           </mesh>
         ))}
       </group>
+
+      {/* ── Player seats (3D avatars) ── */}
+      <PlayersGroup seatPositions={seatPositions} />
+
+      {/* ── Board cards (3D) ── */}
+      <BoardCardsGroup />
+
+      {/* ── HTML Overlays (anchored to 3D) ── */}
+      <PlayerLabelOverlay seatPositions={seatPositions} />
+      <PotOverlay />
 
       {/* ── Post-processing ── */}
       <PostFx quality={quality} />

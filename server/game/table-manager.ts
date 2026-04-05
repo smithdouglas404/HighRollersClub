@@ -13,13 +13,10 @@ import { SNGLifecycle, type EliminationInfo } from "./format-lifecycle";
 import { LotterySNGLifecycle } from "./lottery-sng-lifecycle";
 import { STANDARD_SNG_SCHEDULE, HYPER_TURBO_SCHEDULE, getDefaultPayouts, type BlindLevel, type PayoutEntry } from "./blind-presets";
 import { fastFoldManager } from "./fast-fold-manager";
+import { antiCheatEngine } from "../anti-cheat";
+import { hasDatabase, getDb } from "../db";
 
-// 12 cinematic avatar IDs available for players
-const AVATAR_IDS = [
-  "neon-viper", "chrome-siren", "gold-phantom", "shadow-king",
-  "red-wolf", "ice-queen", "tech-monk", "cyber-punk",
-  "steel-ghost", "neon-fox", "dark-ace", "bolt-runner",
-] as const;
+import { AVATAR_IDS } from "@shared/avatar-ids";
 
 // Bots start at index 4 ("red-wolf") to avoid clashing with human defaults
 const BOT_AVATAR_START_INDEX = 4;
@@ -218,24 +215,34 @@ class TableManager {
     engine.onHandComplete = (proof: ShuffleProof, summary: HandSummary) => {
       const winnerIds = summary.winners.map(w => w.playerId);
 
+      // Fire blockchain reveal at showdown (commit already fired during deal)
+      const revealPromise = this.contractClient
+        ? (() => {
+            const playerSeedStrings = (proof.playerSeeds || []).map(ps => ps.seed);
+            return this.contractClient!.revealHand(tableId, proof.handNumber, proof.serverSeed, playerSeedStrings, proof.deckOrder);
+          })()
+        : Promise.resolve(null);
+
       // Persist to storage with real summary + relational hand history
-      storage.createGameHand({
-        tableId,
-        handNumber: proof.handNumber,
-        dealerSeat: summary.dealerSeat,
-        communityCards: summary.communityCards,
-        potTotal: summary.pot,
-        totalRake: engine.lastHandRake,
-        winnerIds,
-        summary: summary as any,
-        serverSeed: proof.serverSeed,
-        commitmentHash: proof.commitmentHash,
-        deckOrder: proof.deckOrder,
-        playerSeeds: proof.playerSeeds || null,
-        vrfRequestId: proof.vrfRequestId || null,
-        vrfRandomWord: proof.vrfRandomWord || null,
-        onChainCommitTx: null,
-        onChainRevealTx: null,
+      revealPromise.then((revealResult) => {
+        return storage.createGameHand({
+          tableId,
+          handNumber: proof.handNumber,
+          dealerSeat: summary.dealerSeat,
+          communityCards: summary.communityCards,
+          potTotal: summary.pot,
+          totalRake: engine.lastHandRake,
+          winnerIds,
+          summary: summary as any,
+          serverSeed: proof.serverSeed,
+          commitmentHash: proof.commitmentHash,
+          deckOrder: proof.deckOrder,
+          playerSeeds: proof.playerSeeds || null,
+          vrfRequestId: proof.vrfRequestId || null,
+          vrfRandomWord: proof.vrfRandomWord || null,
+          onChainCommitTx: null, // commit tx hash broadcast separately during deal
+          onChainRevealTx: revealResult?.txHash || null,
+        });
       }).then((savedHand) => {
         // Persist relational hand_players records
         const playerRecords = summary.players.map(p => {
@@ -272,25 +279,12 @@ class TableManager {
         storage.createHandActions(actionRecords).catch(() => {});
       }).catch(() => {});
 
-      // Fire blockchain reveal in background
-      if (this.contractClient) {
-        const playerSeedStrings = (proof.playerSeeds || []).map(ps => ps.seed);
-        this.contractClient.revealHand(
-          tableId,
-          proof.handNumber,
-          proof.serverSeed,
-          playerSeedStrings,
-          proof.deckOrder
-        ).then((result) => {
-          if (result?.txHash) {
-            broadcastToTable(tableId, {
-              type: "onchain_proof",
-              commitTx: null,
-              revealTx: result.txHash,
-            } as any);
-          }
-        }).catch(() => {});
-      }
+      // Broadcast reveal tx hash when available
+      revealPromise.then(revealResult => {
+        if (revealResult?.txHash) {
+          broadcastToTable(tableId, { type: "onchain_proof", commitTx: null, revealTx: revealResult.txHash } as any);
+        }
+      }).catch(() => {});
 
       // Record rake as a transaction for the house ledger
       const rakeAmount = engine.lastHandRake;
@@ -385,6 +379,9 @@ class TableManager {
           console.warn(`[COLLUSION ALERT] ${alert.severity.toUpperCase()}: ${alert.reason} between ${alert.player1} and ${alert.player2} — ${alert.details}`);
         }
       }
+
+      // Run advanced anti-cheat analysis (same IP, chip dumping, soft play)
+      antiCheatEngine.runPostHandChecks(tableId, [summary] as any).catch(() => {});
 
       // Fire AI commentary (async, non-blocking)
       if (hasSubscribers(tableId)) {
@@ -676,9 +673,12 @@ class TableManager {
         return { ok: false, error: "Game already started" };
       }
 
-      // Atomically deduct fixed buy-in from SNG wallet
+      // KYC required for all tournament formats
       const user = await storage.getUser(userId);
       if (!user) return { ok: false, error: "User not found" };
+      if (user.kycStatus !== "verified") {
+        return { ok: false, error: "KYC verification required for tournaments. Visit your profile to verify." };
+      }
 
       await storage.ensureWallets(userId);
       const deductResult = await storage.atomicDeductFromWallet(userId, "sng", fixedBuyIn);
@@ -780,9 +780,12 @@ class TableManager {
         return { ok: false, error: "Tournament already started" };
       }
 
-      // Atomically deduct fixed buy-in from SNG wallet
+      // KYC required for all tournament formats
       const user = await storage.getUser(userId);
       if (!user) return { ok: false, error: "User not found" };
+      if (user.kycStatus !== "verified") {
+        return { ok: false, error: "KYC verification required for tournaments. Visit your profile to verify." };
+      }
 
       await storage.ensureWallets(userId);
       const deductResult = await storage.atomicDeductFromWallet(userId, "sng", fixedBuyIn);
@@ -846,6 +849,38 @@ class TableManager {
       }
 
       return { ok: true };
+    }
+
+    // ── KYC Access Control ──
+    // Check if this table/club/tournament requires KYC verification
+    const tableRow = await storage.getTable(tableId);
+    const isTournament = config.gameFormat === "sng" || config.gameFormat === "tournament";
+
+    // Tournaments ALWAYS require KYC
+    if (isTournament) {
+      const kycUser = await storage.getUser(userId);
+      if (!kycUser || kycUser.kycStatus !== "verified") {
+        return { ok: false, error: "KYC verification required for tournaments. Visit your profile to verify." };
+      }
+    }
+
+    // Check table-level KYC requirement (null = inherit from club)
+    let kycRequirement = tableRow?.kycRequired || null;
+
+    // If table doesn't set it, inherit from club
+    if (!kycRequirement && tableRow?.clubId) {
+      const club = await storage.getClub(tableRow.clubId);
+      kycRequirement = (club as any)?.kycRequired || "none";
+    }
+
+    // Default for standalone tables: none
+    if (!kycRequirement) kycRequirement = "none";
+
+    if (kycRequirement === "verified") {
+      const kycUser = await storage.getUser(userId);
+      if (!kycUser || kycUser.kycStatus !== "verified") {
+        return { ok: false, error: "This table requires KYC verification. Visit your profile to verify your identity." };
+      }
     }
 
     // Normal cash game path — enforce return buy-in minimum
@@ -930,6 +965,27 @@ class TableManager {
     if (seat === undefined) return { ok: false, error: "No seats available" };
 
     engine.addPlayer(userId, displayName, seat, buyIn, false);
+
+    // Fetch player's blockchain identity for shuffle entropy
+    storage.getUser(userId).then(u => {
+      if (u) {
+        engine.playerBlockchainIdentities.set(userId, {
+          memberId: u.memberId || null,
+          kycHash: u.kycBlockchainTxHash || null,
+        });
+      }
+    }).catch(() => {});
+
+    // Record ledger session start
+    if (hasDatabase()) {
+      try {
+        const db = getDb();
+        const { tableSessions } = require("@shared/schema");
+        db.insert(tableSessions).values({
+          tableId, userId, displayName, buyInTotal: buyIn, startedAt: new Date(),
+        }).catch(() => {});
+      } catch {}
+    }
 
     // Clear return buy-in record after successful rejoin
     this.lastChipCounts.delete(returnKey);
@@ -1235,8 +1291,28 @@ class TableManager {
 
     await storage.removeTablePlayer(tableId, userId);
 
+    // Complete ledger session
+    if (hasDatabase()) {
+      try {
+        const db = getDb();
+        const { tableSessions: ts } = require("@shared/schema");
+        const { sql: sqlDrizzle } = require("drizzle-orm");
+        // Find the open session for this user at this table and close it
+        const [openSession] = await db.select().from(ts)
+          .where(sqlDrizzle`${ts.tableId} = ${tableId} AND ${ts.userId} = ${userId} AND ${ts.endedAt} IS NULL`)
+          .orderBy(sqlDrizzle`${ts.startedAt} DESC`).limit(1);
+        if (openSession) {
+          await db.update(ts).set({
+            cashOutTotal: cashOut,
+            netResult: cashOut - openSession.buyInTotal,
+            endedAt: new Date(),
+          }).where(sqlDrizzle`${ts.id} = ${openSession.id}`);
+        }
+      } catch {}
+    }
+
     // Clear the websocket client's table reference (important for pending leaves)
-    clearClientTable(userId);
+    clearClientTable(userId, tableId);
 
     // Remove from pending leaves if present
     this.pendingLeaves.get(tableId)?.delete(userId);
@@ -1250,6 +1326,23 @@ class TableManager {
     }
 
     broadcastToTable(tableId, { type: "player_left", userId, displayName, seatIndex });
+
+    // Notify next player in waitlist if seat is now available
+    if (instance.waitingPlayers.length > 0 && instance.engine.state.players.length < instance.config.maxPlayers) {
+      const nextWaiting = instance.waitingPlayers[0];
+      if (nextWaiting) {
+        sendToUser(nextWaiting.id, {
+          type: "info",
+          message: `A seat is available at the table! You have 30 seconds to join.`,
+        } as any);
+        // Also send a specific seat_available event the client can handle
+        sendToUser(nextWaiting.id, {
+          type: "player_approved",
+          playerId: nextWaiting.id,
+          displayName: nextWaiting.name,
+        } as any);
+      }
+    }
 
     // Cancel hand countdown if no longer enough players to start
     if (instance.handCountdownTimer && !instance.engine.canStartHand()) {

@@ -1,11 +1,15 @@
 import type { Express, Request, Response, NextFunction, RequestHandler } from "express";
 import { createServer, type Server } from "http";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
+import nodemailer from "nodemailer";
 import { storage } from "./storage";
 import { registerAuthRoutes, requireAuth } from "./auth";
-import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema, users, gameHands, handPlayers, playerStats, tables } from "@shared/schema";
+import { insertTableSchema, insertClubSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema, createTournamentSchema, users, gameHands, handPlayers, playerStats, tables, adminAuditLogs, transactions, payments, musicTracks, sponsorshipPayouts, announcements } from "@shared/schema";
 import { sql } from "drizzle-orm";
-import { setupWebSocket, sendGameStateToTable, getClients, sendToUser } from "./websocket";
+import { setupWebSocket, sendGameStateToTable, getClients, sendToUser, broadcastToTable } from "./websocket";
 import { getBlindPreset } from "./game/blind-presets";
 import { tableManager } from "./game/table-manager";
 import { analyzeHand } from "./game/hand-analyzer";
@@ -15,6 +19,78 @@ import { hasDatabase, getDb } from "./db";
 import { MTTManager, activeMTTs } from "./game/mtt-manager";
 import { getTournamentSchedule, setTournamentSchedule, type ScheduledTournament } from "./scheduler";
 import { fastFoldManager, type FastFoldPoolConfig } from "./game/fast-fold-manager";
+import { blockchainConfig } from "./blockchain/config";
+
+// ─── File Upload Setup (KYC documents) ────────────────────────────────────
+const KYC_UPLOAD_DIR = path.join(process.cwd(), "uploads", "kyc");
+fs.mkdirSync(KYC_UPLOAD_DIR, { recursive: true });
+
+const kycUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, KYC_UPLOAD_DIR),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
+      cb(null, `${randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (_req, file, cb) => {
+    const allowed = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) cb(null, true);
+    else cb(new Error("Only JPG, PNG, WebP, and PDF files are allowed"));
+  },
+});
+
+// ─── Email Helper ──────────────────────────────────────────────────────────
+function getMailTransport() {
+  if (!process.env.SMTP_HOST) return null;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || "587", 10),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+  });
+}
+
+async function sendKycEmail(to: string, subject: string, html: string) {
+  const transport = getMailTransport();
+  if (!transport) {
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[DEV] KYC email to ${to}: ${subject}`);
+    }
+    return;
+  }
+  const from = process.env.SMTP_FROM || "noreply@highrollers.club";
+  await transport.sendMail({ from, to, subject, html }).catch((err: any) => {
+    console.error("KYC email send error:", err.message);
+  });
+}
+
+// ─── Admin Audit Logger ────────────────────────────────────────────────────
+async function logAdminAction(
+  adminId: string,
+  action: string,
+  targetType: string | null,
+  targetId: string | null,
+  details: Record<string, any> | null,
+  ipAddress?: string
+) {
+  try {
+    if (!hasDatabase()) return;
+    const db = getDb();
+    await db.insert(adminAuditLogs).values({
+      adminId,
+      action,
+      targetType,
+      targetId,
+      details,
+      ipAddress: ipAddress || null,
+    });
+  } catch (err: any) {
+    console.error("Audit log error:", err.message);
+  }
+}
 
 // ─── Tier System Constants ──────────────────────────────────────────────────
 const TIER_ORDER = ["free", "bronze", "silver", "gold", "platinum"] as const;
@@ -66,8 +142,23 @@ function requireTier(minTier: string) {
 }
 
 // Global kill switch — blocks buy-ins and withdrawals if integrity check fails
+// Persisted via platformSettings table if database available
 let globalSystemLocked = false;
 let globalLockReason = "";
+
+// Load lock status from database on startup
+(async () => {
+  try {
+    if (hasDatabase()) {
+      const db = getDb();
+      const { platformSettings: ps } = await import("@shared/schema");
+      const [lockSetting] = await db.select().from(ps).where(sql`${ps.key} = 'maintenance.enabled'`).limit(1);
+      const [reasonSetting] = await db.select().from(ps).where(sql`${ps.key} = 'maintenance.reason'`).limit(1);
+      if (lockSetting?.value === true) globalSystemLocked = true;
+      if (reasonSetting?.value) globalLockReason = String(reasonSetting.value);
+    }
+  } catch {}
+})();
 
 // In-memory social link settings
 let socialLinks: { twitter: string; discord: string; telegram: string } = {
@@ -1429,25 +1520,37 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
+  // In-memory lock to prevent daily bonus race condition
+  const dailyClaimLocks = new Set<string>();
+
   app.post("/api/wallet/claim-daily", requireAuth, async (req, res, next) => {
     try {
-      const user = await storage.getUser(req.user!.id);
-      if (!user) return res.status(404).json({ message: "User not found" });
+      const userId = req.user!.id;
 
-      const now = new Date();
-      if (user.lastDailyClaim) {
-        const hoursSince = (now.getTime() - user.lastDailyClaim.getTime()) / (1000 * 60 * 60);
-        if (hoursSince < 24) {
-          return res.status(429).json({
-            message: "Daily bonus already claimed",
-            nextClaimAt: new Date(user.lastDailyClaim.getTime() + 24 * 60 * 60 * 1000),
-          });
-        }
+      // Prevent concurrent claims with in-memory lock
+      if (dailyClaimLocks.has(userId)) {
+        return res.status(429).json({ message: "Claim already in progress" });
       }
+      dailyClaimLocks.add(userId);
 
-      // Atomically set lastDailyClaim to prevent race conditions
-      // (re-read user to get fresh state after the check)
-      await storage.updateUser(user.id, { lastDailyClaim: now });
+      try {
+        const user = await storage.getUser(userId);
+        if (!user) { dailyClaimLocks.delete(userId); return res.status(404).json({ message: "User not found" }); }
+
+        const now = new Date();
+        if (user.lastDailyClaim) {
+          const hoursSince = (now.getTime() - user.lastDailyClaim.getTime()) / (1000 * 60 * 60);
+          if (hoursSince < 24) {
+            dailyClaimLocks.delete(userId);
+            return res.status(429).json({
+              message: "Daily bonus already claimed",
+              nextClaimAt: new Date(user.lastDailyClaim.getTime() + 24 * 60 * 60 * 1000),
+            });
+          }
+        }
+
+        // Set lastDailyClaim immediately to prevent race conditions
+        await storage.updateUser(userId, { lastDailyClaim: now });
 
       // Check if user has Elite Pass for 2x bonus
       const userInventory = await storage.getUserInventory(user.id);
@@ -1478,9 +1581,13 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         metadata: null,
       });
 
-      const totalBal = await storage.getUserTotalBalance(user.id);
+      const totalBal = await storage.getUserTotalBalance(userId);
       res.json({ balance: totalBal, bonus, nextClaimAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) });
+      } finally {
+        dailyClaimLocks.delete(userId);
+      }
     } catch (err) {
+      dailyClaimLocks.delete(req.user!.id);
       next(err);
     }
   });
@@ -1799,17 +1906,56 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // ─── Hand Routes ─────────────────────────────────────────────────────────
-  app.get("/api/hands/:id", async (req, res, next) => {
+  // ─── Secure Hand History Routes ──────────────────────────────────────────
+  // ALL hand endpoints require authentication. Sensitive fields are stripped.
+
+  app.get("/api/hands/:id", requireAuth, async (req, res, next) => {
     try {
       const hand = await storage.getGameHand(req.params.id);
       if (!hand) return res.status(404).json({ message: "Hand not found" });
-      res.json(hand);
+
+      // Strip sensitive fields — never expose raw deck order, seeds, or full summary
+      // Only admins or participants can see verification data
+      const isAdmin = req.user!.role === "admin";
+      const handPlayers = await storage.getHandPlayers(req.params.id);
+      const isParticipant = handPlayers.some((p: any) => p.userId === req.user!.id);
+
+      const safe: Record<string, any> = {
+        id: hand.id,
+        tableId: hand.tableId,
+        handNumber: hand.handNumber,
+        dealerSeat: hand.dealerSeat,
+        communityCards: hand.communityCards,
+        potTotal: hand.potTotal,
+        totalRake: hand.totalRake,
+        winnerIds: hand.winnerIds,
+        commitmentHash: hand.commitmentHash, // hash is safe — it's the public commitment
+        onChainCommitTx: hand.onChainCommitTx,
+        onChainRevealTx: hand.onChainRevealTx,
+        createdAt: hand.createdAt,
+      };
+
+      // Only participants and admins can see verification proof data (post-hand)
+      if (isAdmin || isParticipant) {
+        safe.serverSeed = hand.serverSeed;
+        safe.deckOrder = hand.deckOrder;
+        safe.playerSeeds = hand.playerSeeds;
+        safe.vrfRequestId = hand.vrfRequestId;
+        safe.vrfRandomWord = hand.vrfRandomWord;
+      }
+
+      // Never expose raw summary to non-admins (contains all hole cards)
+      if (isAdmin) {
+        safe.summary = hand.summary;
+      }
+
+      res.json(safe);
     } catch (err) {
       next(err);
     }
   });
 
-  // ─── Hand Verification Route ──────────────────────────────────────────────
+  // Hand verification — only for participants and admins
   app.get("/api/hands/:id/verify", requireAuth, async (req, res, next) => {
     try {
       const hand = await storage.getGameHand(req.params.id);
@@ -1817,6 +1963,15 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (!hand.serverSeed || !hand.commitmentHash || !hand.deckOrder) {
         return res.status(404).json({ message: "No proof data for this hand" });
       }
+
+      // Only participants or admins can verify
+      const isAdmin = req.user!.role === "admin";
+      const handPlayers = await storage.getHandPlayers(req.params.id);
+      const isParticipant = handPlayers.some((p: any) => p.userId === req.user!.id);
+      if (!isAdmin && !isParticipant) {
+        return res.status(403).json({ message: "Only hand participants can verify" });
+      }
+
       res.json({
         serverSeed: hand.serverSeed,
         commitmentHash: hand.commitmentHash,
@@ -1829,23 +1984,29 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // ─── Hand History Routes ────────────────────────────────────────────────
+  // Table hands list
   app.get("/api/tables/:id/hands", requireAuth, async (req, res, next) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const hands = await storage.getGameHands(req.params.id, limit);
-      res.json(hands);
+      // Strip sensitive fields from list view
+      const safe = hands.map((h: any) => ({
+        id: h.id, tableId: h.tableId, handNumber: h.handNumber,
+        potTotal: h.potTotal, totalRake: h.totalRake, winnerIds: h.winnerIds,
+        communityCards: h.communityCards, commitmentHash: h.commitmentHash,
+        createdAt: h.createdAt,
+      }));
+      res.json(safe);
     } catch (err) {
       next(err);
     }
   });
 
-  // Hand players (per-player records for a specific hand) — strip hole cards for non-showdown players
+  // Hand players — strip hole cards for non-showdown non-self players
   app.get("/api/hands/:id/players", requireAuth, async (req, res, next) => {
     try {
       const players = await storage.getHandPlayers(req.params.id);
       const safePlayers = players.map((p: any) => {
-        // Only reveal hole cards for the requesting user or if player went to showdown
         if (p.userId === req.user!.id || p.finalAction === "showdown") {
           return p;
         }
@@ -1858,8 +2019,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  // Hand actions (action-by-action replay log)
-  app.get("/api/hands/:id/actions", async (req, res, next) => {
+  // Hand actions — require authentication
+  app.get("/api/hands/:id/actions", requireAuth, async (req, res, next) => {
     try {
       const actions = await storage.getHandActions(req.params.id);
       res.json(actions);
@@ -2777,7 +2938,14 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
 
       const user = await storage.getUser(req.user!.id);
-      if (!user || user.chipBalance < tourney.buyIn) {
+      if (!user) return res.status(400).json({ message: "User not found" });
+
+      // KYC required for all tournaments
+      if (user.kycStatus !== "verified") {
+        return res.status(403).json({ message: "KYC verification required for tournaments. Visit /kyc to verify your identity." });
+      }
+
+      if (user.chipBalance < tourney.buyIn) {
         return res.status(400).json({ message: "Insufficient chips" });
       }
 
@@ -3457,6 +3625,19 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       globalSystemLocked = !!locked;
       globalLockReason = reason || (locked ? "Manual admin lock" : "");
       console.warn(`[ADMIN] System lock ${locked ? "ENGAGED" : "RELEASED"}: ${globalLockReason}`);
+
+      // Persist to database
+      if (hasDatabase()) {
+        try {
+          const db = getDb();
+          const { platformSettings: ps } = await import("@shared/schema");
+          await db.insert(ps).values({ key: "maintenance.enabled", value: globalSystemLocked, updatedBy: req.user!.id })
+            .onConflictDoUpdate({ target: ps.key, set: { value: globalSystemLocked, updatedBy: req.user!.id, updatedAt: new Date() } });
+          await db.insert(ps).values({ key: "maintenance.reason", value: globalLockReason, updatedBy: req.user!.id })
+            .onConflictDoUpdate({ target: ps.key, set: { value: globalLockReason, updatedBy: req.user!.id, updatedAt: new Date() } });
+        } catch {}
+      }
+
       res.json({ locked: globalSystemLocked, reason: globalLockReason });
     } catch (err) {
       next(err);
@@ -3538,6 +3719,914 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) {
       next(err);
     }
+  });
+
+  // ─── Admin: User Management ──────────────────────────────────────────────
+
+  app.get("/api/admin/users", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ results: [], total: 0 });
+      const db = getDb();
+      const limit = Math.min(parseInt(req.query.limit as string) || 25, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const search = req.query.search as string | undefined;
+      const roleFilter = req.query.role as string | undefined;
+      const tierFilter = req.query.tier as string | undefined;
+
+      const conds: ReturnType<typeof sql>[] = [];
+      if (search) conds.push(sql`(${users.username} ILIKE ${"%" + search + "%"} OR ${users.displayName} ILIKE ${"%" + search + "%"} OR ${users.email} ILIKE ${"%" + search + "%"} OR ${users.id} ILIKE ${"%" + search + "%"})`);
+      if (roleFilter) conds.push(sql`${users.role} = ${roleFilter}`);
+      if (tierFilter) conds.push(sql`${users.tier} = ${tierFilter}`);
+
+      const where = conds.length > 0 ? conds.reduce((a, b) => sql`${a} AND ${b}`) : sql`1=1`;
+
+      const [countRow] = await db.select({ count: sql<number>`count(*)` }).from(users).where(where);
+      const total = Number(countRow.count);
+
+      const rows = await db.select({
+        id: users.id, username: users.username, displayName: users.displayName,
+        email: users.email, role: users.role, tier: users.tier,
+        chipBalance: users.chipBalance, kycStatus: users.kycStatus,
+        provider: users.provider, createdAt: users.createdAt,
+        selfExcludedUntil: users.selfExcludedUntil,
+      }).from(users).where(where)
+        .orderBy(sql`${users.createdAt} DESC`)
+        .limit(limit).offset(offset);
+
+      res.json({ results: rows, total });
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/admin/users/:id", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const { password, twoFactorSecret, recoveryCodes, ...safe } = user as any;
+      res.json(safe);
+    } catch (err) { next(err); }
+  });
+
+  app.patch("/api/admin/users/:id", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const { role, tier, chipBalance, displayName, kycStatus, selfExcludedUntil } = req.body;
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const updates: Record<string, any> = {};
+      if (role !== undefined) updates.role = role;
+      if (tier !== undefined) updates.tier = tier;
+      if (chipBalance !== undefined) updates.chipBalance = parseInt(chipBalance);
+      if (displayName !== undefined) updates.displayName = displayName;
+      if (kycStatus !== undefined) updates.kycStatus = kycStatus;
+      if (selfExcludedUntil !== undefined) updates.selfExcludedUntil = selfExcludedUntil ? new Date(selfExcludedUntil) : null;
+
+      if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No fields to update" });
+
+      const updated = await storage.updateUser(req.params.id, updates);
+      await logAdminAction(req.user!.id, "user_edit", "user", req.params.id,
+        { changes: updates, username: user.username }, req.ip || req.socket.remoteAddress);
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/users/:id/ban", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.role === "admin") return res.status(400).json({ message: "Cannot ban an admin" });
+      const { reason } = req.body;
+      // Set self-exclusion far in the future as a ban
+      await storage.updateUser(req.params.id, { selfExcludedUntil: new Date("2099-12-31") });
+      await logAdminAction(req.user!.id, "user_ban", "user", req.params.id,
+        { username: user.username, reason }, req.ip || req.socket.remoteAddress);
+      await storage.createNotification(req.params.id, "account_action", "Account Suspended",
+        reason || "Your account has been suspended by an administrator.", {});
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/users/:id/unban", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      await storage.updateUser(req.params.id, { selfExcludedUntil: null });
+      await logAdminAction(req.user!.id, "user_unban", "user", req.params.id,
+        { username: user.username }, req.ip || req.socket.remoteAddress);
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Admin: Club Management ────────────────────────────────────────────────
+
+  app.get("/api/admin/clubs", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const allClubs = await storage.getClubs();
+      const search = req.query.search as string | undefined;
+      let filtered = allClubs;
+      if (search) {
+        const s = search.toLowerCase();
+        filtered = allClubs.filter(c => c.name.toLowerCase().includes(s) || c.id.toLowerCase().includes(s));
+      }
+      // Enrich with member counts
+      const enriched = await Promise.all(filtered.map(async (club) => {
+        const members = await storage.getClubMembers(club.id);
+        return { ...club, memberCount: members.length };
+      }));
+      res.json(enriched);
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/admin/clubs/:id", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+      const members = await storage.getClubMembers(club.id);
+      const owner = await storage.getUser(club.ownerId);
+      res.json({ ...club, members, ownerName: owner?.username || "unknown" });
+    } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/clubs/:id", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+      await storage.deleteClub(req.params.id);
+      await logAdminAction(req.user!.id, "club_delete", "club", req.params.id,
+        { clubName: club.name }, req.ip || req.socket.remoteAddress);
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Admin: Table Management ───────────────────────────────────────────────
+
+  app.get("/api/admin/tables", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const allTables = await storage.getTables();
+      const search = req.query.search as string | undefined;
+      let filtered = allTables;
+      if (search) {
+        const s = search.toLowerCase();
+        filtered = allTables.filter(t => (t.name || "").toLowerCase().includes(s) || t.id.toLowerCase().includes(s));
+      }
+      // Enrich with active player count from table manager
+      const enriched = filtered.map(t => {
+        const instance = tableManager.getTable(t.id);
+        const activePlayers = instance ? instance.engine.state.players.filter((p: any) => p.status !== "sitting-out").length : 0;
+        return { ...t, activePlayers, hasEngine: !!instance };
+      });
+      res.json(enriched);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/tables/:id/close", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const table = await storage.getTable(req.params.id);
+      if (!table) return res.status(404).json({ message: "Table not found" });
+      // Close the table — update status in storage
+      await storage.updateTable(req.params.id, { status: "closed" });
+      await logAdminAction(req.user!.id, "table_close", "table", req.params.id,
+        { tableName: table.name }, req.ip || req.socket.remoteAddress);
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Admin: Environment Keys ─────────────────────────────────────────────
+
+  const ENV_KEY_DEFINITIONS = [
+    // Blockchain
+    { key: "POLYGON_ENABLED", category: "Blockchain", description: "Enable Polygon blockchain integration", sensitive: false },
+    { key: "POLYGON_RPC_URL", category: "Blockchain", description: "Polygon RPC endpoint URL", sensitive: false },
+    { key: "POLYGON_CHAIN_ID", category: "Blockchain", description: "Polygon chain ID (80002=Amoy, 137=Mainnet)", sensitive: false },
+    { key: "POLYGON_WALLET_KEY", category: "Blockchain", description: "Hot wallet private key for transactions", sensitive: true },
+    { key: "HAND_VERIFIER_ADDRESS", category: "Blockchain", description: "PokerHandVerifier contract address", sensitive: false },
+    { key: "VRF_CONSUMER_ADDRESS", category: "Blockchain", description: "PokerVRFConsumer contract address", sensitive: false },
+    { key: "VRF_SUBSCRIPTION_ID", category: "Blockchain", description: "Chainlink VRF subscription ID", sensitive: false },
+    { key: "VRF_KEY_HASH", category: "Blockchain", description: "Chainlink VRF key hash", sensitive: false },
+    { key: "VRF_CALLBACK_GAS_LIMIT", category: "Blockchain", description: "VRF callback gas limit", sensitive: false },
+    { key: "POLYGON_USDC_ADDRESS", category: "Blockchain", description: "USDC token contract on Polygon", sensitive: false },
+    { key: "POLYGON_DEPOSIT_ADDRESS", category: "Blockchain", description: "Deposit address for Polygon payments", sensitive: false },
+    // Solana
+    { key: "SOL_WALLET_KEY", category: "Solana", description: "SOL hot wallet private key (JSON array)", sensitive: true },
+    { key: "SOL_RPC_URL", category: "Solana", description: "Solana RPC endpoint", sensitive: false },
+    { key: "SOL_HOT_WALLET", category: "Solana", description: "SOL hot wallet public address", sensitive: false },
+    // Payments
+    { key: "STRIPE_API_KEY", category: "Payments", description: "Stripe secret API key", sensitive: true },
+    { key: "STRIPE_WEBHOOK_SECRET", category: "Payments", description: "Stripe webhook signing secret", sensitive: true },
+    { key: "NOWPAYMENTS_API_KEY", category: "Payments", description: "NOWPayments API key", sensitive: true },
+    { key: "NOWPAYMENTS_WEBHOOK_SECRET", category: "Payments", description: "NOWPayments webhook secret", sensitive: true },
+    { key: "NOWPAYMENTS_SANDBOX", category: "Payments", description: "Use NOWPayments sandbox mode", sensitive: false },
+    { key: "DIRECT_WALLET_ENABLED", category: "Payments", description: "Enable direct wallet monitoring", sensitive: false },
+    { key: "BTC_XPUB", category: "Payments", description: "BTC HD wallet extended public key", sensitive: true },
+    { key: "ETH_HOT_WALLET", category: "Payments", description: "ETH/Polygon hot wallet address", sensitive: false },
+    { key: "BLOCKCYPHER_TOKEN", category: "Payments", description: "BlockCypher API token (BTC)", sensitive: true },
+    { key: "ALCHEMY_API_KEY", category: "Payments", description: "Alchemy API key (ETH/Polygon)", sensitive: true },
+    { key: "HELIUS_API_KEY", category: "Payments", description: "Helius API key (Solana)", sensitive: true },
+    // Email
+    { key: "SMTP_HOST", category: "Email", description: "SMTP server hostname", sensitive: false },
+    { key: "SMTP_PORT", category: "Email", description: "SMTP server port", sensitive: false },
+    { key: "SMTP_SECURE", category: "Email", description: "Use TLS (true/false)", sensitive: false },
+    { key: "SMTP_USER", category: "Email", description: "SMTP username", sensitive: false },
+    { key: "SMTP_PASS", category: "Email", description: "SMTP password", sensitive: true },
+    { key: "SMTP_FROM", category: "Email", description: "From address for emails", sensitive: false },
+    // KYC
+    { key: "KYC_PROVIDER", category: "KYC", description: "KYC provider (manual|onfido|sumsub)", sensitive: false },
+    { key: "KYC_WEBHOOK_SECRET", category: "KYC", description: "KYC webhook signing secret", sensitive: true },
+    { key: "ONFIDO_API_TOKEN", category: "KYC", description: "Onfido API token for identity verification", sensitive: true },
+    { key: "ONFIDO_REGION", category: "KYC", description: "Onfido region (us|eu)", sensitive: false },
+    { key: "ONFIDO_REFERRER", category: "KYC", description: "Onfido SDK referrer pattern (e.g., *://*/*)", sensitive: false },
+    // AI & Services
+    { key: "ANTHROPIC_API_KEY", category: "AI", description: "Anthropic API key for AI bots", sensitive: true },
+    { key: "AI_BOT_MODEL", category: "AI", description: "AI bot model ID", sensitive: false },
+    { key: "ELEVENLABS_API_KEY", category: "AI", description: "ElevenLabs TTS API key", sensitive: true },
+    { key: "OPENAI_API_KEY", category: "AI", description: "OpenAI API key (commentary)", sensitive: true },
+    // Firebase
+    { key: "FIREBASE_PROJECT_ID", category: "Firebase", description: "Firebase project ID", sensitive: false },
+    { key: "FIREBASE_SERVICE_ACCOUNT_KEY", category: "Firebase", description: "Firebase service account JSON", sensitive: true },
+    // Video
+    { key: "DAILY_API_KEY", category: "Video", description: "Daily.co API key for video calls", sensitive: true },
+    // Infrastructure
+    { key: "DATABASE_URL", category: "Infrastructure", description: "PostgreSQL connection string", sensitive: true },
+    { key: "SESSION_SECRET", category: "Infrastructure", description: "Session encryption secret", sensitive: true },
+    { key: "WEBHOOK_BASE_URL", category: "Infrastructure", description: "Base URL for webhook callbacks", sensitive: false },
+    { key: "BLOCKED_COUNTRIES", category: "Infrastructure", description: "Comma-separated blocked country codes", sensitive: false },
+    { key: "NODE_ENV", category: "Infrastructure", description: "Environment (development|production)", sensitive: false },
+    { key: "PORT", category: "Infrastructure", description: "Server listen port", sensitive: false },
+  ];
+
+  app.get("/api/admin/env-keys", requireAuth, requireAdmin, async (_req, res) => {
+    const keys = ENV_KEY_DEFINITIONS.map(def => ({
+      ...def,
+      value: def.sensitive
+        ? (process.env[def.key] ? "••••••••" : "")
+        : (process.env[def.key] || ""),
+      isSet: !!process.env[def.key],
+    }));
+    res.json(keys);
+  });
+
+  app.put("/api/admin/env-keys", requireAuth, requireAdmin, async (req, res) => {
+    const { key, value } = req.body;
+    if (!key || typeof key !== "string") return res.status(400).json({ message: "Key is required" });
+
+    const def = ENV_KEY_DEFINITIONS.find(d => d.key === key);
+    if (!def) return res.status(400).json({ message: "Unknown key" });
+
+    // Update process.env at runtime
+    if (value === "" || value === null) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+
+    await logAdminAction(req.user!.id, "env_key_change", "system", key,
+      { description: def.description, sensitive: def.sensitive },
+      req.ip || req.socket.remoteAddress);
+
+    res.json({ success: true, key, isSet: !!process.env[key] });
+  });
+
+  // ─── Music Tracks ──────────────────────────────────────────────────────────
+
+  const MUSIC_UPLOAD_DIR = path.join(process.cwd(), "uploads", "music");
+  fs.mkdirSync(MUSIC_UPLOAD_DIR, { recursive: true });
+
+  const musicUpload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, MUSIC_UPLOAD_DIR),
+      filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase() || ".mp3";
+        cb(null, `${randomUUID()}${ext}`);
+      },
+    }),
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max
+    fileFilter: (_req, file, cb) => {
+      const allowed = [".mp3", ".m4a", ".ogg", ".wav", ".aac", ".flac", ".webm"];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowed.includes(ext)) cb(null, true);
+      else cb(new Error("Only audio files are allowed (MP3, M4A, OGG, WAV, AAC, FLAC)"));
+    },
+  });
+
+  // List all available music — platform tracks + user's own tracks
+  app.get("/api/music", requireAuth, async (req, res, next) => {
+    try {
+      // Static platform tracks from /client/public/music/
+      const staticDir = path.join(process.cwd(), "client", "public", "music");
+      const staticTracks: any[] = [];
+      if (fs.existsSync(staticDir)) {
+        const allowed = [".mp3", ".m4a", ".ogg", ".wav", ".aac", ".flac", ".webm"];
+        for (const file of fs.readdirSync(staticDir)) {
+          const ext = path.extname(file).toLowerCase();
+          if (!allowed.includes(ext)) continue;
+          const name = path.parse(file).name;
+          const artist = name.includes("_KLICKAUD") ? "KLICKAUD" : name.includes("_") ? name.split("_").pop() : null;
+          const title = name.replace(/_KLICKAUD$/, "").replace(/_/g, " ");
+          staticTracks.push({
+            id: `static-${file}`,
+            title,
+            artist,
+            filename: file,
+            url: `/music/${file}`,
+            isAdmin: true,
+            uploadedBy: "system",
+            createdAt: new Date("2025-01-01"),
+          });
+        }
+      }
+
+      if (!hasDatabase()) return res.json(staticTracks);
+      const db = getDb();
+      const tracks = await db.select().from(musicTracks)
+        .where(sql`${musicTracks.isAdmin} = true OR ${musicTracks.uploadedBy} = ${req.user!.id}`)
+        .orderBy(sql`${musicTracks.isAdmin} DESC, ${musicTracks.createdAt} DESC`);
+
+      const dbTracks = tracks.map(t => ({
+        ...t,
+        url: `/api/music/file/${t.filename}`,
+      }));
+
+      res.json([...staticTracks, ...dbTracks]);
+    } catch (err) { next(err); }
+  });
+
+  // Serve music file
+  app.get("/api/music/file/:filename", (req, res) => {
+    const filename = path.basename(req.params.filename);
+    const filePath = path.join(MUSIC_UPLOAD_DIR, filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "File not found" });
+    res.sendFile(filePath);
+  });
+
+  // User upload their own track
+  app.post("/api/music/upload", requireAuth, musicUpload.single("file"), async (req, res, next) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "No file uploaded" });
+      const { title, artist } = req.body;
+
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required for music uploads" });
+      const db = getDb();
+
+      const [track] = await db.insert(musicTracks).values({
+        title: title || path.parse(file.originalname).name,
+        artist: artist || null,
+        filename: file.filename,
+        originalName: file.originalname,
+        uploadedBy: req.user!.id,
+        isAdmin: false,
+      }).returning();
+
+      res.json({ ...track, url: `/api/music/file/${track.filename}` });
+    } catch (err) { next(err); }
+  });
+
+  // User delete their own track
+  app.delete("/api/music/:id", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
+      const db = getDb();
+      const [track] = await db.select().from(musicTracks).where(sql`${musicTracks.id} = ${req.params.id}`).limit(1);
+      if (!track) return res.status(404).json({ message: "Track not found" });
+
+      // Users can only delete their own; admins can delete any
+      if (track.uploadedBy !== req.user!.id && req.user!.role !== "admin") {
+        return res.status(403).json({ message: "You can only delete your own tracks" });
+      }
+
+      // Delete file from disk
+      const filePath = path.join(MUSIC_UPLOAD_DIR, track.filename);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+      await db.delete(musicTracks).where(sql`${musicTracks.id} = ${req.params.id}`);
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  // Admin: upload platform track
+  app.post("/api/admin/music/upload", requireAuth, requireAdmin, musicUpload.single("file"), async (req, res, next) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "No file uploaded" });
+      const { title, artist } = req.body;
+
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
+      const db = getDb();
+
+      const [track] = await db.insert(musicTracks).values({
+        title: title || path.parse(file.originalname).name,
+        artist: artist || null,
+        filename: file.filename,
+        originalName: file.originalname,
+        uploadedBy: req.user!.id,
+        isAdmin: true,
+      }).returning();
+
+      await logAdminAction(req.user!.id, "music_upload", "music", track.id,
+        { title: track.title, artist: track.artist }, req.ip || req.socket.remoteAddress);
+
+      res.json({ ...track, url: `/api/music/file/${track.filename}` });
+    } catch (err) { next(err); }
+  });
+
+  // Admin: list all tracks (platform + all users)
+  app.get("/api/admin/music", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const tracks = await db.select({
+        id: musicTracks.id, title: musicTracks.title, artist: musicTracks.artist,
+        filename: musicTracks.filename, originalName: musicTracks.originalName,
+        isAdmin: musicTracks.isAdmin, uploadedBy: musicTracks.uploadedBy,
+        createdAt: musicTracks.createdAt,
+        username: users.username,
+      }).from(musicTracks)
+        .leftJoin(users, sql`${users.id} = ${musicTracks.uploadedBy}`)
+        .orderBy(sql`${musicTracks.isAdmin} DESC, ${musicTracks.createdAt} DESC`);
+      res.json(tracks.map(t => ({ ...t, url: `/api/music/file/${t.filename}` })));
+    } catch (err) { next(err); }
+  });
+
+  // Admin: delete any track
+  app.delete("/api/admin/music/:id", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
+      const db = getDb();
+      const [track] = await db.select().from(musicTracks).where(sql`${musicTracks.id} = ${req.params.id}`).limit(1);
+      if (!track) return res.status(404).json({ message: "Track not found" });
+
+      const filePath = path.join(MUSIC_UPLOAD_DIR, track.filename);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+      await db.delete(musicTracks).where(sql`${musicTracks.id} = ${req.params.id}`);
+      await logAdminAction(req.user!.id, "music_delete", "music", track.id,
+        { title: track.title }, req.ip || req.socket.remoteAddress);
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Card Encryption Verification ───────────────────────────────────────
+
+  const cardEncryption = await import("./game/card-encryption");
+
+  // Player can verify their own session key commitment
+  app.get("/api/encryption/verify", requireAuth, async (req, res) => {
+    const result = cardEncryption.verifySessionCommitment(req.user!.id);
+    if (!result.found) return res.json({ verified: false, message: "No active session commitment" });
+
+    const explorerUrl = result.batch?.txHash
+      ? `https://${blockchainConfig.chainId === 137 ? "" : "amoy."}polygonscan.com/tx/${result.batch.txHash}`
+      : null;
+
+    res.json({
+      verified: true,
+      commitment: result.commitment,
+      anchored: !!result.batch,
+      batch: result.batch ? {
+        merkleRoot: result.batch.merkleRoot,
+        txHash: result.batch.txHash,
+        explorerUrl,
+        anchoredAt: new Date(result.batch.anchoredAt).toISOString(),
+      } : null,
+      merkleProof: result.merkleProof || null,
+    });
+  });
+
+  // Admin: encryption stats
+  app.get("/api/admin/encryption/stats", requireAuth, requireAdmin, async (_req, res) => {
+    res.json(cardEncryption.getEncryptionStats());
+  });
+
+  // Admin: force anchor pending commitments now
+  app.post("/api/admin/encryption/anchor", requireAuth, requireAdmin, async (req, res) => {
+    const result = await cardEncryption.forceAnchor();
+    if (!result) return res.json({ message: "No pending commitments to anchor" });
+    await logAdminAction(req.user!.id, "force_anchor", "system", null,
+      { merkleRoot: result.merkleRoot, txHash: result.txHash, count: result.count },
+      req.ip || req.socket.remoteAddress);
+    res.json(result);
+  });
+
+  // ─── Blockchain Dashboard Data ──────────────────────────────────────────
+
+  // Aggregated blockchain stats for dashboard
+  app.get("/api/admin/blockchain/stats", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ kycVerified: 0, kycOnChain: 0, handsTotal: 0, handsOnChain: 0, paymentsTx: 0, vrfHands: 0 });
+      const db = getDb();
+      const [kycStats] = await db.select({
+        verified: sql<number>`count(*) filter (where ${users.kycStatus} = 'verified')`,
+        onChain: sql<number>`count(*) filter (where ${users.kycBlockchainTxHash} is not null)`,
+      }).from(users);
+      const [handStats] = await db.select({
+        total: sql<number>`count(*)`,
+        onChain: sql<number>`count(*) filter (where ${gameHands.onChainCommitTx} is not null or ${gameHands.onChainRevealTx} is not null)`,
+        vrf: sql<number>`count(*) filter (where ${gameHands.vrfRequestId} is not null)`,
+      }).from(gameHands);
+      const [payStats] = await db.select({
+        withTx: sql<number>`count(*) filter (where ${payments.txHash} is not null)`,
+      }).from(payments);
+
+      res.json({
+        kycVerified: Number(kycStats.verified),
+        kycOnChain: Number(kycStats.onChain),
+        handsTotal: Number(handStats.total),
+        handsOnChain: Number(handStats.onChain),
+        vrfHands: Number(handStats.vrf),
+        paymentsTx: Number(payStats.withTx),
+        encryption: cardEncryption.getEncryptionStats(),
+        blockchainEnabled: blockchainConfig.enabled,
+        chainId: blockchainConfig.chainId,
+        rpcConfigured: !!blockchainConfig.rpcUrl,
+        contractConfigured: !!blockchainConfig.handVerifierAddress,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // KYC blockchain records — all verified users with on-chain hashes
+  app.get("/api/admin/blockchain/kyc", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const search = req.query.search as string | undefined;
+      const onChainOnly = req.query.onChainOnly === "true";
+
+      const conds: ReturnType<typeof sql>[] = [sql`${users.kycStatus} = 'verified'`];
+      if (onChainOnly) conds.push(sql`${users.kycBlockchainTxHash} is not null`);
+      if (search) conds.push(sql`(${users.username} ILIKE ${"%" + search + "%"} OR ${users.memberId} ILIKE ${"%" + search + "%"} OR ${users.kycBlockchainTxHash} ILIKE ${"%" + search + "%"})`);
+
+      const where = conds.reduce((a, b) => sql`${a} AND ${b}`);
+      const rows = await db.select({
+        id: users.id, username: users.username, displayName: users.displayName,
+        memberId: users.memberId, kycStatus: users.kycStatus,
+        kycVerifiedAt: users.kycVerifiedAt, kycBlockchainTxHash: users.kycBlockchainTxHash,
+        tier: users.tier, createdAt: users.createdAt,
+      }).from(users).where(where).orderBy(sql`${users.kycVerifiedAt} DESC`).limit(100);
+      res.json(rows);
+    } catch (err) { next(err); }
+  });
+
+  // Recent on-chain hand activity
+  app.get("/api/admin/blockchain/hands", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const onChainOnly = req.query.onChainOnly !== "false"; // default true
+      const search = req.query.search as string | undefined;
+
+      const conds: ReturnType<typeof sql>[] = [];
+      if (onChainOnly) conds.push(sql`(${gameHands.onChainCommitTx} is not null or ${gameHands.onChainRevealTx} is not null or ${gameHands.vrfRequestId} is not null)`);
+      if (search) conds.push(sql`(${gameHands.commitmentHash} ILIKE ${"%" + search + "%"} OR ${gameHands.onChainCommitTx} ILIKE ${"%" + search + "%"} OR ${gameHands.onChainRevealTx} ILIKE ${"%" + search + "%"} OR ${gameHands.id} ILIKE ${"%" + search + "%"})`);
+
+      const where = conds.length > 0 ? conds.reduce((a, b) => sql`${a} AND ${b}`) : sql`1=1`;
+
+      const rows = await db.select({
+        id: gameHands.id, tableId: gameHands.tableId, handNumber: gameHands.handNumber,
+        potTotal: gameHands.potTotal, totalRake: gameHands.totalRake,
+        commitmentHash: gameHands.commitmentHash, vrfRequestId: gameHands.vrfRequestId,
+        onChainCommitTx: gameHands.onChainCommitTx, onChainRevealTx: gameHands.onChainRevealTx,
+        createdAt: gameHands.createdAt, tableName: tables.name,
+      }).from(gameHands)
+        .leftJoin(tables, sql`${tables.id} = ${gameHands.tableId}`)
+        .where(where)
+        .orderBy(sql`${gameHands.createdAt} DESC`)
+        .limit(limit);
+      res.json(rows);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Bot Detection Analysis ────────────────────────────────────────────────
+
+  app.get("/api/admin/bot-detection/:userId", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ error: "Database required" });
+      const db = getDb();
+      const { handActions: handActionsTable } = await import("@shared/schema");
+      const { analyzePlayerTiming } = await import("./game/bot-detection");
+
+      // Get last 200 actions for the player
+      const actions = await db.select({
+        actionType: handActionsTable.actionType,
+        timeSpent: handActionsTable.timeSpent,
+        street: handActionsTable.street,
+      }).from(handActionsTable)
+        .where(sql`${handActionsTable.playerId} = ${req.params.userId}`)
+        .orderBy(sql`${handActionsTable.sequenceNum} DESC`)
+        .limit(200);
+
+      const timings = actions
+        .filter(a => a.timeSpent !== null && a.timeSpent > 0)
+        .map(a => ({
+          actionType: a.actionType,
+          timeSpentMs: a.timeSpent!,
+          street: a.street,
+        }));
+
+      const result = analyzePlayerTiming(req.params.userId, timings);
+      res.json(result);
+    } catch (err) { next(err); }
+  });
+
+  // Scan all active players for bot patterns
+  app.get("/api/admin/bot-detection/scan/all", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const { handActions: handActionsTable } = await import("@shared/schema");
+      const { analyzePlayerTiming } = await import("./game/bot-detection");
+
+      // Get distinct players with recent activity (last 24h)
+      const recentPlayers = await db.select({
+        playerId: handActionsTable.playerId,
+      }).from(handActionsTable)
+        .where(sql`${handActionsTable.timeSpent} is not null`)
+        .groupBy(handActionsTable.playerId)
+        .having(sql`count(*) >= 10`)
+        .limit(50);
+
+      const results = [];
+      for (const { playerId } of recentPlayers) {
+        if (!playerId || playerId.startsWith("bot-")) continue; // skip known bots
+
+        const actions = await db.select({
+          actionType: handActionsTable.actionType,
+          timeSpent: handActionsTable.timeSpent,
+          street: handActionsTable.street,
+        }).from(handActionsTable)
+          .where(sql`${handActionsTable.playerId} = ${playerId} AND ${handActionsTable.timeSpent} > 0`)
+          .orderBy(sql`${handActionsTable.sequenceNum} DESC`)
+          .limit(200);
+
+        const timings = actions.filter(a => a.timeSpent !== null).map(a => ({
+          actionType: a.actionType,
+          timeSpentMs: a.timeSpent!,
+          street: a.street,
+        }));
+
+        const result = analyzePlayerTiming(playerId, timings);
+        if (result.riskScore > 0) results.push(result);
+      }
+
+      // Sort by risk score descending
+      results.sort((a, b) => b.riskScore - a.riskScore);
+      res.json(results);
+    } catch (err) { next(err); }
+  });
+
+  // ─── IP Rules Management ────────────────────────────────────────────────
+
+  const { ipRules: ipRulesTable, accountActions: accountActionsTable, botActionQueue: botActionQueueTable, platformSettings: platformSettingsTable, deviceFingerprints: deviceFingerprintsTable } = await import("@shared/schema");
+  const securityEngine = await import("./middleware/security-engine");
+  const adminBot = await import("./admin-bot");
+
+  // Refresh IP rules cache on startup
+  if (hasDatabase()) securityEngine.refreshIpRules(getDb(), ipRulesTable, sql);
+
+  app.get("/api/admin/ip-rules", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const rules = await db.select().from(ipRulesTable).orderBy(sql`${ipRulesTable.createdAt} DESC`).limit(200);
+      res.json(rules);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/ip-rules", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
+      const db = getDb();
+      const { ip, type, reason, expiresAt } = req.body;
+      if (!ip || !type || !["ban", "allow"].includes(type)) return res.status(400).json({ message: "ip and type (ban|allow) required" });
+
+      const [rule] = await db.insert(ipRulesTable).values({
+        ip, type, reason: reason || null, createdBy: req.user!.id,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      }).returning();
+
+      await securityEngine.refreshIpRules(db, ipRulesTable, sql);
+      await logAdminAction(req.user!.id, `ip_${type}`, "ip", ip, { reason }, req.ip || req.socket.remoteAddress);
+      res.json(rule);
+    } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/ip-rules/:id", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
+      const db = getDb();
+      await db.delete(ipRulesTable).where(sql`${ipRulesTable.id} = ${req.params.id}`);
+      await securityEngine.refreshIpRules(db, ipRulesTable, sql);
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  // IP Geo lookup (admin tool)
+  app.get("/api/admin/ip-lookup/:ip", requireAuth, requireAdmin, async (req, res) => {
+    const geo = await securityEngine.getIpGeoInfo(req.params.ip);
+    const isTor = securityEngine.isTorExitNode(req.params.ip);
+    const ipCheck = securityEngine.checkIpRules(req.params.ip);
+    res.json({ geo, isTor, ipRules: ipCheck });
+  });
+
+  // ─── Platform Settings ────────────────────────────────────────────────────
+
+  app.get("/api/admin/platform-settings", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json(securityEngine.DEFAULT_PLATFORM_SETTINGS);
+      const db = getDb();
+      const settings = await db.select().from(platformSettingsTable);
+      const result = { ...securityEngine.DEFAULT_PLATFORM_SETTINGS };
+      for (const s of settings) (result as any)[s.key] = s.value;
+      res.json(result);
+    } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/platform-settings", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
+      const db = getDb();
+      const { key, value } = req.body;
+      if (!key) return res.status(400).json({ message: "key required" });
+
+      await db.insert(platformSettingsTable).values({ key, value, updatedBy: req.user!.id })
+        .onConflictDoUpdate({ target: platformSettingsTable.key, set: { value, updatedBy: req.user!.id, updatedAt: new Date() } });
+
+      // Update cache
+      securityEngine.updatePlatformSettingsCache([{ key, value }]);
+      await logAdminAction(req.user!.id, "platform_setting", "system", key, { value }, req.ip || req.socket.remoteAddress);
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Force Logout ─────────────────────────────────────────────────────────
+
+  app.post("/api/admin/force-logout/:userId", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const { reason } = req.body;
+      const clients = getClients();
+      const client = clients.get(req.params.userId);
+      if (client) {
+        (client as any).ws?.close(1008, reason || "Session terminated by admin");
+      }
+      // Log it
+      if (hasDatabase()) {
+        const db = getDb();
+        await db.insert(accountActionsTable).values({
+          userId: req.params.userId, action: "session_kill", severity: "warning",
+          message: reason || "Session terminated by administrator", automated: false,
+        });
+      }
+      await logAdminAction(req.user!.id, "force_logout", "user", req.params.userId, { reason }, req.ip || req.socket.remoteAddress);
+      res.json({ success: true, wasConnected: !!client });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Device Fingerprints ──────────────────────────────────────────────────
+
+  // Client submits fingerprint on connect
+  app.post("/api/device-fingerprint", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ ok: true });
+      const db = getDb();
+      const { fingerprint, screenRes, userAgent } = req.body;
+      if (!fingerprint) return res.status(400).json({ message: "fingerprint required" });
+
+      const ip = req.ip || req.socket.remoteAddress || "";
+
+      // Upsert fingerprint record
+      const existing = await db.select().from(deviceFingerprintsTable)
+        .where(sql`${deviceFingerprintsTable.userId} = ${req.user!.id} AND ${deviceFingerprintsTable.fingerprint} = ${fingerprint}`)
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db.update(deviceFingerprintsTable)
+          .set({ lastSeen: new Date(), ipAddress: ip })
+          .where(sql`${deviceFingerprintsTable.id} = ${existing[0].id}`);
+      } else {
+        await db.insert(deviceFingerprintsTable).values({
+          userId: req.user!.id, fingerprint, userAgent: userAgent || null,
+          screenRes: screenRes || null, ipAddress: ip,
+        });
+      }
+
+      // Check for multi-account matches
+      const allFps = await db.select({
+        userId: deviceFingerprintsTable.userId,
+        fingerprint: deviceFingerprintsTable.fingerprint,
+        ipAddress: deviceFingerprintsTable.ipAddress,
+      }).from(deviceFingerprintsTable)
+        .where(sql`${deviceFingerprintsTable.userId} != ${req.user!.id}`)
+        .limit(500);
+
+      const matches = securityEngine.detectMultiAccounts(req.user!.id, fingerprint, ip, allFps as any[]);
+      const sameDevice = matches.filter(m => m.matchType === "same_device");
+
+      if (sameDevice.length > 0) {
+        // Flag but don't block
+        await db.insert(accountActionsTable).values({
+          userId: req.user!.id, action: "multi_account_flag", severity: "warning",
+          message: `Device shared with ${sameDevice.length} other account(s)`,
+          automated: true, details: { matchedUsers: sameDevice.map(m => m.matchedUserId.slice(0, 8)) },
+        });
+      }
+
+      res.json({ ok: true, matches: matches.length });
+    } catch (err) { next(err); }
+  });
+
+  // Admin: view multi-account flags
+  app.get("/api/admin/multi-accounts", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const flags = await db.select({
+        fingerprint: deviceFingerprintsTable.fingerprint,
+        count: sql<number>`count(distinct ${deviceFingerprintsTable.userId})`,
+      }).from(deviceFingerprintsTable)
+        .groupBy(deviceFingerprintsTable.fingerprint)
+        .having(sql`count(distinct ${deviceFingerprintsTable.userId}) > 1`)
+        .orderBy(sql`count(distinct ${deviceFingerprintsTable.userId}) DESC`)
+        .limit(50);
+
+      const results = [];
+      for (const flag of flags) {
+        const accounts = await db.select({
+          userId: deviceFingerprintsTable.userId,
+          ipAddress: deviceFingerprintsTable.ipAddress,
+          lastSeen: deviceFingerprintsTable.lastSeen,
+          username: users.username,
+        }).from(deviceFingerprintsTable)
+          .leftJoin(users, sql`${users.id} = ${deviceFingerprintsTable.userId}`)
+          .where(sql`${deviceFingerprintsTable.fingerprint} = ${flag.fingerprint}`);
+        results.push({ fingerprint: flag.fingerprint.slice(0, 16) + "...", accountCount: Number(flag.count), accounts });
+      }
+      res.json(results);
+    } catch (err) { next(err); }
+  });
+
+  // ─── HITL Bot Action Queue ────────────────────────────────────────────────
+
+  app.get("/api/admin/hitl/queue", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const statusFilter = req.query.status as string || "pending";
+      const typeFilter = req.query.type as string | undefined;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+
+      const conds: ReturnType<typeof sql>[] = [];
+      if (statusFilter !== "all") conds.push(sql`${botActionQueueTable.status} = ${statusFilter}`);
+      if (typeFilter) conds.push(sql`${botActionQueueTable.type} = ${typeFilter}`);
+      const where = conds.length > 0 ? conds.reduce((a, b) => sql`${a} AND ${b}`) : sql`1=1`;
+
+      const items = await db.select().from(botActionQueueTable).where(where)
+        .orderBy(sql`${botActionQueueTable.createdAt} DESC`).limit(limit);
+      res.json(items);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/hitl/:id/review", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
+      const db = getDb();
+      const { status } = req.body; // actioned | dismissed
+      if (!status || !["actioned", "dismissed", "reviewed"].includes(status)) return res.status(400).json({ message: "Invalid status" });
+
+      await db.update(botActionQueueTable)
+        .set({ status, reviewedBy: req.user!.id, reviewedAt: new Date() })
+        .where(sql`${botActionQueueTable.id} = ${req.params.id}`);
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/admin/hitl/stats", requireAuth, requireAdmin, async (_req, res) => {
+    const botStats = adminBot.getBotStats();
+    if (!hasDatabase()) return res.json({ bot: botStats, queue: { pending: 0, autoActions: 0, recommendations: 0, insights: 0 } });
+    const db = getDb();
+    const [counts] = await db.select({
+      pending: sql<number>`count(*) filter (where ${botActionQueueTable.status} = 'pending')`,
+      autoActions: sql<number>`count(*) filter (where ${botActionQueueTable.type} = 'auto_action')`,
+      recommendations: sql<number>`count(*) filter (where ${botActionQueueTable.type} = 'recommendation')`,
+      insights: sql<number>`count(*) filter (where ${botActionQueueTable.type} = 'insight')`,
+    }).from(botActionQueueTable);
+    res.json({
+      bot: botStats,
+      queue: { pending: Number(counts.pending), autoActions: Number(counts.autoActions), recommendations: Number(counts.recommendations), insights: Number(counts.insights) },
+    });
+  });
+
+  // ─── Player Account Actions (visible to player) ──────────────────────────
+
+  app.get("/api/account/actions", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const actions = await db.select().from(accountActionsTable)
+        .where(sql`${accountActionsTable.userId} = ${req.user!.id}`)
+        .orderBy(sql`${accountActionsTable.createdAt} DESC`)
+        .limit(limit);
+      res.json(actions);
+    } catch (err) { next(err); }
   });
 
   // ─── Admin Collusion Alerts ─────────────────────────────────────────────
@@ -3982,7 +5071,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // ─── Support Contact ────────────────────────────────────────────────────
   const supportMessages: Array<{ id: string; name: string; email: string; subject: string; message: string; createdAt: string }> = [];
 
-  app.post("/api/support/contact", (req, res) => {
+  app.post("/api/support/contact", async (req, res) => {
     const { name, email, subject, message } = req.body || {};
     if (!name || !email || !subject || !message) {
       return res.status(400).json({ message: "All fields are required: name, email, subject, message" });
@@ -4002,6 +5091,31 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       createdAt: new Date().toISOString(),
     };
     supportMessages.push(entry);
+
+    // Persist to database if available — create a support ticket + first message
+    if (hasDatabase()) {
+      try {
+        const db = getDb();
+        const { supportTickets, ticketMessages } = await import("@shared/schema");
+        // Contact form may not have a userId — use a placeholder system user
+        const [ticket] = await db.insert(supportTickets).values({
+          userId: "system", // system placeholder for unauthenticated contacts
+          subject: `[Contact] ${entry.subject}`,
+          category: "other",
+          priority: "medium",
+          status: "open",
+        }).returning();
+        if (ticket) {
+          await db.insert(ticketMessages).values({
+            ticketId: ticket.id,
+            userId: "system",
+            message: `From: ${entry.name} (${entry.email})\n\n${entry.message}`,
+            isStaff: false,
+          });
+        }
+      } catch {}
+    }
+
     res.json({ success: true, id: entry.id });
   });
 
@@ -4682,7 +5796,123 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) { next(err); }
   });
 
-  app.post("/api/kyc/submit", requireAuth, requireTier("gold"), async (req, res, next) => {
+  // ─── Onfido SDK Integration (Professional KYC) ──────────────────────────
+  // Creates an Onfido applicant + SDK token for the client-side verification flow.
+  // Onfido handles: ID capture, liveness detection, face matching, document authenticity.
+  // We NEVER see or store the actual ID documents — they live on Onfido's infrastructure.
+
+  app.post("/api/kyc/onfido/start", requireAuth, requireTier("gold"), async (req, res, next) => {
+    try {
+      const onfidoApiToken = process.env.ONFIDO_API_TOKEN;
+      if (!onfidoApiToken) {
+        // Fallback to manual KYC mode if Onfido not configured
+        return res.json({ mode: "manual", message: "Use the manual KYC form" });
+      }
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.kycStatus === "verified") return res.status(400).json({ message: "Already verified" });
+      if (user.kycStatus === "pending") return res.status(400).json({ message: "Verification already in progress" });
+
+      const { fullName, dateOfBirth } = req.body;
+      const onfidoBaseUrl = process.env.ONFIDO_REGION === "eu" ? "https://api.eu.onfido.com/v3.6" : "https://api.us.onfido.com/v3.6";
+
+      // Step 1: Create applicant on Onfido
+      const nameParts = (fullName || user.displayName || "User").split(" ");
+      const applicantRes = await fetch(`${onfidoBaseUrl}/applicants`, {
+        method: "POST",
+        headers: { "Authorization": `Token token=${onfidoApiToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: nameParts[0] || "User",
+          last_name: nameParts.slice(1).join(" ") || "Unknown",
+          email: user.email || undefined,
+          dob: dateOfBirth || undefined,
+        }),
+      });
+      if (!applicantRes.ok) {
+        const err = await applicantRes.json();
+        return res.status(500).json({ message: "Failed to create Onfido applicant", error: err });
+      }
+      const applicant = await applicantRes.json();
+
+      // Step 2: Generate SDK token for client-side verification
+      const tokenRes = await fetch(`${onfidoBaseUrl}/sdk_token`, {
+        method: "POST",
+        headers: { "Authorization": `Token token=${onfidoApiToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicant_id: applicant.id,
+          referrer: process.env.ONFIDO_REFERRER || "*://*/*",
+        }),
+      });
+      if (!tokenRes.ok) {
+        return res.status(500).json({ message: "Failed to generate SDK token" });
+      }
+      const tokenData = await tokenRes.json();
+
+      // Step 3: Store applicant ID on the user for webhook matching
+      await storage.updateUser(user.id, {
+        kycStatus: "pending",
+        kycData: {
+          ...(user.kycData as any || {}),
+          fullName: fullName || user.displayName,
+          dateOfBirth,
+          providerApplicantId: applicant.id,
+          provider: "onfido",
+          submittedAt: new Date().toISOString(),
+        },
+      });
+
+      res.json({
+        mode: "onfido",
+        sdkToken: tokenData.token,
+        applicantId: applicant.id,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Onfido check creation — called after client-side SDK completes
+  app.post("/api/kyc/onfido/check", requireAuth, async (req, res, next) => {
+    try {
+      const onfidoApiToken = process.env.ONFIDO_API_TOKEN;
+      if (!onfidoApiToken) return res.status(400).json({ message: "Onfido not configured" });
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const kycData = user.kycData as any;
+      if (!kycData?.providerApplicantId) return res.status(400).json({ message: "No Onfido applicant found" });
+
+      const onfidoBaseUrl = process.env.ONFIDO_REGION === "eu" ? "https://api.eu.onfido.com/v3.6" : "https://api.us.onfido.com/v3.6";
+
+      // Create a check (triggers Onfido's AI verification)
+      const checkRes = await fetch(`${onfidoBaseUrl}/checks`, {
+        method: "POST",
+        headers: { "Authorization": `Token token=${onfidoApiToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicant_id: kycData.providerApplicantId,
+          report_names: ["document", "facial_similarity_photo"],
+        }),
+      });
+      if (!checkRes.ok) {
+        const err = await checkRes.json();
+        return res.status(500).json({ message: "Failed to create check", error: err });
+      }
+      const check = await checkRes.json();
+
+      // Update KYC data with check ID
+      await storage.updateUser(user.id, {
+        kycData: { ...kycData, checkId: check.id, checkStatus: "in_progress" },
+      });
+
+      // Result will arrive via webhook (POST /api/webhooks/kyc-verification)
+      res.json({ checkId: check.id, status: "processing", message: "Verification in progress. You'll be notified when complete." });
+    } catch (err) { next(err); }
+  });
+
+  // Manual KYC submit (fallback when Onfido is not configured)
+  app.post("/api/kyc/submit", requireAuth, requireTier("gold"), kycUpload.fields([
+    { name: "idDocument", maxCount: 1 },
+    { name: "selfie", maxCount: 1 },
+  ]), async (req, res, next) => {
     try {
       const { fullName, dateOfBirth, country, idType } = req.body;
       if (!fullName || !dateOfBirth || !country || !idType) {
@@ -4698,13 +5928,47 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "KYC already verified" });
       }
 
-      const kycData = { fullName, dateOfBirth, country, idType, submittedAt: new Date().toISOString() };
+      // Extract uploaded file paths
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+      const idDocumentPath = files?.idDocument?.[0]?.filename || null;
+      const selfiePath = files?.selfie?.[0]?.filename || null;
+
+      const kycData = {
+        fullName, dateOfBirth, country, idType,
+        submittedAt: new Date().toISOString(),
+        idDocumentPath,
+        selfiePath,
+      };
       const updated = await storage.updateUser(user.id, {
         kycStatus: "pending",
         kycData,
         kycRejectionReason: null,
       });
+
+      // Send confirmation email
+      if (user.email) {
+        sendKycEmail(user.email, "KYC Application Received - HighRollers Club",
+          `<h2>KYC Application Received</h2>
+           <p>Hi ${fullName},</p>
+           <p>We've received your identity verification application. Our team will review your documents and get back to you within 24-48 hours.</p>
+           <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
+           <p><strong>ID Type:</strong> ${idType}</p>
+           <p>You'll receive an email when your verification status is updated.</p>
+           <br/><p style="color:#888;">— HighRollers Club Team</p>`
+        );
+      }
+
       res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  // Serve KYC document files to admins only
+  app.get("/api/admin/kyc/document/:filename", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const filename = path.basename(req.params.filename); // prevent path traversal
+      const filePath = path.join(KYC_UPLOAD_DIR, filename);
+      if (!fs.existsSync(filePath)) return res.status(404).json({ message: "File not found" });
+      res.sendFile(filePath);
     } catch (err) { next(err); }
   });
 
@@ -4739,6 +6003,27 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         kycStatus: "verified",
         kycVerifiedAt: new Date(),
       });
+
+      // Audit log
+      await logAdminAction(req.user!.id, "kyc_approve", "user", user.id,
+        { username: user.username, kycData: user.kycData },
+        req.ip || req.socket.remoteAddress
+      );
+
+      // Email notification
+      if (user.email) {
+        sendKycEmail(user.email, "KYC Verified - HighRollers Club",
+          `<h2>Identity Verified!</h2>
+           <p>Congratulations! Your identity has been successfully verified.</p>
+           <p>You now have access to all verified member features, including on-chain identity recording and higher withdrawal limits.</p>
+           <br/><p style="color:#888;">— HighRollers Club Team</p>`
+        );
+      }
+
+      // In-app notification
+      await storage.createNotification(user.id, "kyc_status", "KYC Approved",
+        "Your identity verification has been approved!", { status: "verified" });
+
       res.json(updated);
     } catch (err) { next(err); }
   });
@@ -4752,10 +6037,33 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (user.kycStatus !== "pending") {
         return res.status(400).json({ message: "User KYC is not pending" });
       }
+      const rejectReason = reason || "Application rejected";
       const updated = await storage.updateUser(user.id, {
         kycStatus: "rejected",
-        kycRejectionReason: reason || "Application rejected",
+        kycRejectionReason: rejectReason,
       });
+
+      // Audit log
+      await logAdminAction(req.user!.id, "kyc_reject", "user", user.id,
+        { username: user.username, reason: rejectReason },
+        req.ip || req.socket.remoteAddress
+      );
+
+      // Email notification
+      if (user.email) {
+        sendKycEmail(user.email, "KYC Update - HighRollers Club",
+          `<h2>Identity Verification Update</h2>
+           <p>Unfortunately, your identity verification application was not approved.</p>
+           <p><strong>Reason:</strong> ${rejectReason}</p>
+           <p>You may resubmit your application with corrected documents at any time.</p>
+           <br/><p style="color:#888;">— HighRollers Club Team</p>`
+        );
+      }
+
+      // In-app notification
+      await storage.createNotification(user.id, "kyc_status", "KYC Update",
+        `Your verification was not approved: ${rejectReason}`, { status: "rejected", reason: rejectReason });
+
       res.json(updated);
     } catch (err) { next(err); }
   });
@@ -4791,13 +6099,917 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "Already recorded on-chain", txHash: user.kycBlockchainTxHash });
       }
 
-      // Simulate on-chain recording — in production this would call a smart contract on Base/Polygon
-      const txHash = "0x" + createHash("sha256")
-        .update(user.id + JSON.stringify(user.kycData) + Date.now().toString())
-        .digest("hex");
+      let txHash: string;
+      let onChain = false;
+
+      if (blockchainConfig.enabled && blockchainConfig.handVerifierAddress && blockchainConfig.walletPrivateKey) {
+        // Real on-chain recording via Polygon
+        try {
+          const { ethers } = await import("ethers");
+          const provider = new ethers.JsonRpcProvider(blockchainConfig.rpcUrl);
+          const signer = new ethers.Wallet(blockchainConfig.walletPrivateKey, provider);
+
+          // Create a commitment hash of the KYC verification
+          const kycHash = ethers.keccak256(ethers.toUtf8Bytes(
+            JSON.stringify({ userId: user.id, memberId: user.memberId, kycData: user.kycData, verifiedAt: user.kycVerifiedAt })
+          ));
+
+          // Send a simple transaction with the KYC hash as data
+          const tx = await signer.sendTransaction({
+            to: blockchainConfig.handVerifierAddress,
+            data: kycHash,
+            value: 0,
+          });
+          const receipt = await tx.wait();
+          txHash = receipt?.hash || tx.hash;
+          onChain = true;
+        } catch (chainErr: any) {
+          console.warn("On-chain KYC recording failed, falling back to hash:", chainErr.message);
+          // Fallback to local hash if chain call fails
+          txHash = "0x" + createHash("sha256")
+            .update(user.id + JSON.stringify(user.kycData) + Date.now().toString())
+            .digest("hex");
+        }
+      } else {
+        // Local hash when blockchain is not configured
+        txHash = "0x" + createHash("sha256")
+          .update(user.id + JSON.stringify(user.kycData) + Date.now().toString())
+          .digest("hex");
+      }
 
       await storage.updateUser(user.id, { kycBlockchainTxHash: txHash });
-      res.json({ txHash, message: "KYC verification recorded on-chain (simulated)" });
+      res.json({ txHash, onChain, message: onChain ? "KYC recorded on Polygon" : "KYC hash recorded locally (blockchain not configured)" });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Ledger Routes ──────────────────────────────────────────────────────────
+
+  const { tableSessions, tableLedgerEntries } = await import("@shared/schema");
+  const { calculateSettlements, summarizeSessions } = await import("./game/ledger");
+
+  // Player: my sessions at a specific table
+  app.get("/api/tables/:id/my-ledger", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const sessions = await db.select().from(tableSessions)
+        .where(sql`${tableSessions.tableId} = ${req.params.id} AND ${tableSessions.userId} = ${req.user!.id}`)
+        .orderBy(sql`${tableSessions.startedAt} DESC`).limit(50);
+      res.json(sessions);
+    } catch (err) { next(err); }
+  });
+
+  // Player: all my sessions across all tables
+  app.get("/api/ledger/my-history", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const sessions = await db.select({
+        id: tableSessions.id, tableId: tableSessions.tableId,
+        buyInTotal: tableSessions.buyInTotal, cashOutTotal: tableSessions.cashOutTotal,
+        netResult: tableSessions.netResult, handsPlayed: tableSessions.handsPlayed,
+        startedAt: tableSessions.startedAt, endedAt: tableSessions.endedAt,
+        settled: tableSessions.settled, tableName: tables.name,
+      }).from(tableSessions)
+        .leftJoin(tables, sql`${tables.id} = ${tableSessions.tableId}`)
+        .where(sql`${tableSessions.userId} = ${req.user!.id} AND ${tableSessions.endedAt} IS NOT NULL`)
+        .orderBy(sql`${tableSessions.startedAt} DESC`).limit(100);
+      res.json(sessions);
+    } catch (err) { next(err); }
+  });
+
+  // Club owner/table creator: full table ledger
+  app.get("/api/tables/:id/ledger", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ sessions: [], summary: null });
+      const db = getDb();
+      // Verify user is table creator or admin
+      const table = await storage.getTable(req.params.id);
+      if (!table) return res.status(404).json({ message: "Table not found" });
+      const isOwner = String(table.createdById) === String(req.user!.id);
+      const isAdmin = req.user!.role === "admin";
+      // Club owners can also view
+      let isClubOwner = false;
+      if (table.clubId) {
+        const club = await storage.getClub(table.clubId);
+        if (club && String(club.ownerId) === String(req.user!.id)) isClubOwner = true;
+      }
+      if (!isOwner && !isAdmin && !isClubOwner) return res.status(403).json({ message: "Only table creator or club owner can view the ledger" });
+
+      const sessions = await db.select().from(tableSessions)
+        .where(sql`${tableSessions.tableId} = ${req.params.id} AND ${tableSessions.endedAt} IS NOT NULL`)
+        .orderBy(sql`${tableSessions.startedAt} DESC`).limit(200);
+
+      const summary = summarizeSessions(sessions as any[]);
+      res.json({ sessions, summary });
+    } catch (err) { next(err); }
+  });
+
+  // Settlement calculation for a table
+  app.get("/api/tables/:id/ledger/settlement", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ settlements: [] });
+      const db = getDb();
+      const sessions = await db.select().from(tableSessions)
+        .where(sql`${tableSessions.tableId} = ${req.params.id} AND ${tableSessions.endedAt} IS NOT NULL AND ${tableSessions.settled} = false`)
+        .orderBy(sql`${tableSessions.startedAt} DESC`);
+      const summary = summarizeSessions(sessions as any[]);
+      res.json(summary);
+    } catch (err) { next(err); }
+  });
+
+  // Mark sessions as settled
+  app.post("/api/tables/:id/ledger/settle", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
+      const db = getDb();
+      const table = await storage.getTable(req.params.id);
+      if (!table) return res.status(404).json({ message: "Table not found" });
+
+      // Only table creator, club owner, or admin can settle
+      const isOwner = String(table.createdById) === String(req.user!.id);
+      const isAdmin = req.user!.role === "admin";
+      if (!isOwner && !isAdmin) return res.status(403).json({ message: "Only table creator or admin can settle" });
+
+      // Get unsettled sessions and create a ledger entry
+      const sessions = await db.select().from(tableSessions)
+        .where(sql`${tableSessions.tableId} = ${req.params.id} AND ${tableSessions.endedAt} IS NOT NULL AND ${tableSessions.settled} = false`);
+      if (sessions.length === 0) return res.json({ message: "No unsettled sessions" });
+
+      const summary = summarizeSessions(sessions as any[]);
+
+      // Create settlement hash — immutable proof of the payout
+      const settlementData = JSON.stringify({
+        tableId: req.params.id,
+        clubId: table.clubId,
+        settledBy: req.user!.id,
+        settledAt: new Date().toISOString(),
+        results: summary.results,
+        settlements: summary.settlements,
+        totalRake: summary.totalRake,
+        totalPot: summary.totalPot,
+        playerCount: summary.playerCount,
+      });
+      const settlementHash = createHash("sha256").update(settlementData).digest("hex");
+
+      // Anchor settlement hash to Polygon blockchain
+      let settlementTxHash: string | null = null;
+      if (blockchainConfig.enabled && blockchainConfig.walletPrivateKey && blockchainConfig.rpcUrl) {
+        try {
+          const { ethers } = await import("ethers");
+          const provider = new ethers.JsonRpcProvider(blockchainConfig.rpcUrl);
+          const signer = new ethers.Wallet(blockchainConfig.walletPrivateKey, provider);
+          // Self-send transaction with settlement hash as calldata
+          const tx = await signer.sendTransaction({
+            to: signer.address,
+            value: 0,
+            data: "0x" + settlementHash,
+          });
+          const receipt = await tx.wait();
+          settlementTxHash = receipt?.hash || tx.hash;
+          console.log(`[Ledger] Settlement anchored to Polygon: ${settlementTxHash}`);
+        } catch (chainErr: any) {
+          console.warn(`[Ledger] Blockchain anchor failed: ${chainErr.message}`);
+        }
+      }
+
+      // Create ledger entry with blockchain proof
+      const [ledgerEntry] = await db.insert(tableLedgerEntries).values({
+        tableId: req.params.id,
+        clubId: table.clubId || null,
+        sessionDate: new Date(),
+        entries: summary.results,
+        settlements: summary.settlements,
+        totalRake: summary.totalRake,
+        totalPot: summary.totalPot,
+        playerCount: summary.playerCount,
+        handsPlayed: summary.handsPlayed,
+        settledBy: req.user!.id,
+        settledAt: new Date(),
+        notes: req.body.notes || null,
+        settlementHash,
+        settlementTxHash,
+      }).returning();
+
+      // Mark all sessions as settled
+      await db.update(tableSessions)
+        .set({ settled: true })
+        .where(sql`${tableSessions.tableId} = ${req.params.id} AND ${tableSessions.endedAt} IS NOT NULL AND ${tableSessions.settled} = false`);
+
+      // Log the settlement action
+      await logAdminAction(req.user!.id, "ledger_settle", "table", req.params.id,
+        { settlementHash, settlementTxHash, playerCount: summary.playerCount, totalPot: summary.totalPot },
+        req.ip || req.socket.remoteAddress);
+
+      res.json({
+        settled: sessions.length,
+        summary,
+        settlementHash,
+        settlementTxHash,
+        explorerUrl: settlementTxHash ? `https://amoy.polygonscan.com/tx/${settlementTxHash}` : null,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Verify a settlement on-chain
+  app.get("/api/ledger/:id/verify", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(500).json({ message: "Database required" });
+      const db = getDb();
+      const [entry] = await db.select().from(tableLedgerEntries).where(sql`${tableLedgerEntries.id} = ${req.params.id}`).limit(1);
+      if (!entry) return res.status(404).json({ message: "Ledger entry not found" });
+
+      // Reconstruct the hash from stored data to verify integrity
+      const reconstructedData = JSON.stringify({
+        tableId: entry.tableId,
+        clubId: entry.clubId,
+        settledBy: entry.settledBy,
+        settledAt: entry.settledAt?.toISOString(),
+        results: entry.entries,
+        settlements: entry.settlements,
+        totalRake: entry.totalRake,
+        totalPot: entry.totalPot,
+        playerCount: entry.playerCount,
+      });
+      const reconstructedHash = createHash("sha256").update(reconstructedData).digest("hex");
+      const hashMatches = reconstructedHash === (entry as any).settlementHash;
+
+      res.json({
+        ledgerEntry: {
+          id: entry.id,
+          tableId: entry.tableId,
+          sessionDate: entry.sessionDate,
+          playerCount: entry.playerCount,
+          totalPot: entry.totalPot,
+          totalRake: entry.totalRake,
+          settledAt: entry.settledAt,
+          entries: entry.entries,
+          settlements: entry.settlements,
+        },
+        verification: {
+          settlementHash: (entry as any).settlementHash,
+          settlementTxHash: (entry as any).settlementTxHash,
+          hashIntegrity: hashMatches ? "VALID" : "TAMPERED",
+          explorerUrl: (entry as any).settlementTxHash ? `https://amoy.polygonscan.com/tx/${(entry as any).settlementTxHash}` : null,
+          onChain: !!(entry as any).settlementTxHash,
+        },
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Club-wide ledger
+  app.get("/api/clubs/:id/ledger", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const entries = await db.select({
+        id: tableLedgerEntries.id, tableId: tableLedgerEntries.tableId,
+        sessionDate: tableLedgerEntries.sessionDate, entries: tableLedgerEntries.entries,
+        settlements: tableLedgerEntries.settlements, totalRake: tableLedgerEntries.totalRake,
+        totalPot: tableLedgerEntries.totalPot, playerCount: tableLedgerEntries.playerCount,
+        settledAt: tableLedgerEntries.settledAt, notes: tableLedgerEntries.notes,
+        tableName: tables.name,
+      }).from(tableLedgerEntries)
+        .leftJoin(tables, sql`${tables.id} = ${tableLedgerEntries.tableId}`)
+        .where(sql`${tableLedgerEntries.clubId} = ${req.params.id}`)
+        .orderBy(sql`${tableLedgerEntries.sessionDate} DESC`).limit(100);
+      res.json(entries);
+    } catch (err) { next(err); }
+  });
+
+  // Admin: platform-wide ledger overview
+  app.get("/api/admin/ledger/overview", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({});
+      const db = getDb();
+      const [stats] = await db.select({
+        totalSessions: sql<number>`count(*)`,
+        totalBuyIns: sql<number>`coalesce(sum(${tableSessions.buyInTotal}), 0)`,
+        totalCashOuts: sql<number>`coalesce(sum(${tableSessions.cashOutTotal}), 0)`,
+        totalRake: sql<number>`coalesce(sum(${tableSessions.buyInTotal}) - sum(${tableSessions.cashOutTotal}), 0)`,
+        unsettled: sql<number>`count(*) filter (where ${tableSessions.settled} = false AND ${tableSessions.endedAt} IS NOT NULL)`,
+      }).from(tableSessions);
+      const [ledgerStats] = await db.select({
+        totalLedgerEntries: sql<number>`count(*)`,
+        totalSettled: sql<number>`count(*) filter (where ${tableLedgerEntries.settledAt} IS NOT NULL)`,
+      }).from(tableLedgerEntries);
+      res.json({
+        sessions: { total: Number(stats.totalSessions), unsettled: Number(stats.unsettled) },
+        financial: { totalBuyIns: Number(stats.totalBuyIns), totalCashOuts: Number(stats.totalCashOuts), totalRake: Number(stats.totalRake) },
+        ledger: { entries: Number(ledgerStats.totalLedgerEntries), settled: Number(ledgerStats.totalSettled) },
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Admin: all settlements with blockchain proof data
+  app.get("/api/admin/blockchain/settlements", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const search = req.query.search as string | undefined;
+      const onChainOnly = req.query.onChainOnly === "true";
+
+      const conds: ReturnType<typeof sql>[] = [];
+      if (onChainOnly) conds.push(sql`${tableLedgerEntries.settlementTxHash} IS NOT NULL`);
+      if (search) conds.push(sql`(${tableLedgerEntries.settlementHash} ILIKE ${"%" + search + "%"} OR ${tableLedgerEntries.settlementTxHash} ILIKE ${"%" + search + "%"} OR ${tableLedgerEntries.id} ILIKE ${"%" + search + "%"})`);
+
+      const where = conds.length > 0 ? conds.reduce((a, b) => sql`${a} AND ${b}`) : sql`1=1`;
+
+      const entries = await db.select({
+        id: tableLedgerEntries.id,
+        tableId: tableLedgerEntries.tableId,
+        clubId: tableLedgerEntries.clubId,
+        sessionDate: tableLedgerEntries.sessionDate,
+        entries: tableLedgerEntries.entries,
+        settlements: tableLedgerEntries.settlements,
+        totalRake: tableLedgerEntries.totalRake,
+        totalPot: tableLedgerEntries.totalPot,
+        playerCount: tableLedgerEntries.playerCount,
+        handsPlayed: tableLedgerEntries.handsPlayed,
+        settledBy: tableLedgerEntries.settledBy,
+        settledAt: tableLedgerEntries.settledAt,
+        notes: tableLedgerEntries.notes,
+        settlementHash: tableLedgerEntries.settlementHash,
+        settlementTxHash: tableLedgerEntries.settlementTxHash,
+        createdAt: tableLedgerEntries.createdAt,
+        tableName: tables.name,
+      }).from(tableLedgerEntries)
+        .leftJoin(tables, sql`${tables.id} = ${tableLedgerEntries.tableId}`)
+        .where(where)
+        .orderBy(sql`${tableLedgerEntries.createdAt} DESC`)
+        .limit(100);
+
+      res.json(entries);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Sponsorship Payout Routes ──────────────────────────────────────────────
+
+  // List all payouts with optional search/filter
+  app.get("/api/admin/sponsorship/payouts", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const { search, status, clubId } = req.query as { search?: string; status?: string; clubId?: string };
+
+      const conditions: string[] = [];
+      if (status) conditions.push(`${sponsorshipPayouts.status.name} = '${status}'`);
+      if (clubId) conditions.push(`${sponsorshipPayouts.clubId.name} = '${clubId}'`);
+
+      let where = sql`1=1`;
+      if (status && clubId) {
+        where = sql`${sponsorshipPayouts.status} = ${status} AND ${sponsorshipPayouts.clubId} = ${clubId}`;
+      } else if (status) {
+        where = sql`${sponsorshipPayouts.status} = ${status}`;
+      } else if (clubId) {
+        where = sql`${sponsorshipPayouts.clubId} = ${clubId}`;
+      }
+
+      if (search) {
+        const searchWhere = sql`(${sponsorshipPayouts.transactionId} ILIKE ${'%' + search + '%'} OR ${sponsorshipPayouts.recipientWallet} ILIKE ${'%' + search + '%'} OR ${sponsorshipPayouts.notes} ILIKE ${'%' + search + '%'})`;
+        where = status || clubId ? sql`${where} AND ${searchWhere}` : searchWhere;
+      }
+
+      const payouts = await db.select().from(sponsorshipPayouts)
+        .where(where)
+        .orderBy(sql`${sponsorshipPayouts.createdAt} DESC`)
+        .limit(200);
+
+      res.json(payouts);
+    } catch (err) { next(err); }
+  });
+
+  // Create a new payout
+  app.post("/api/admin/sponsorship/payouts", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(503).json({ message: "Database not available" });
+      const db = getDb();
+      const { clubId, recipientUserId, recipientWallet, amount, currency, scheduledDate, notes } = req.body;
+
+      if (!recipientWallet || !amount) {
+        return res.status(400).json({ message: "recipientWallet and amount are required" });
+      }
+
+      // Auto-generate TX-XXXXXX transaction ID
+      const txNum = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+      const transactionId = `TX-${txNum}`;
+
+      const [payout] = await db.insert(sponsorshipPayouts).values({
+        transactionId,
+        clubId: clubId || null,
+        recipientUserId: recipientUserId || null,
+        recipientWallet,
+        amount: Number(amount),
+        currency: currency || "USDT",
+        status: "pending",
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+        notes: notes || null,
+        createdBy: req.user!.id,
+      }).returning();
+
+      res.status(201).json(payout);
+    } catch (err) { next(err); }
+  });
+
+  // Update payout status
+  app.patch("/api/admin/sponsorship/payouts/:id", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(503).json({ message: "Database not available" });
+      const db = getDb();
+      const { id } = req.params;
+      const { status, txHash, notes, processedAt } = req.body;
+
+      const updates: Record<string, unknown> = {};
+      if (status) updates.status = status;
+      if (txHash !== undefined) updates.txHash = txHash;
+      if (notes !== undefined) updates.notes = notes;
+      if (processedAt) updates.processedAt = new Date(processedAt);
+      if (status === "completed" && !processedAt) updates.processedAt = new Date();
+
+      const [updated] = await db.update(sponsorshipPayouts)
+        .set(updates)
+        .where(sql`${sponsorshipPayouts.id} = ${id}`)
+        .returning();
+
+      if (!updated) return res.status(404).json({ message: "Payout not found" });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
+  // Delete a payout
+  app.delete("/api/admin/sponsorship/payouts/:id", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(503).json({ message: "Database not available" });
+      const db = getDb();
+      const { id } = req.params;
+
+      const [deleted] = await db.delete(sponsorshipPayouts)
+        .where(sql`${sponsorshipPayouts.id} = ${id}`)
+        .returning();
+
+      if (!deleted) return res.status(404).json({ message: "Payout not found" });
+      res.json({ message: "Payout deleted", id });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Announcement Routes ──────────────────────────────────────────────────
+
+  // Get active announcements for the current user (filtered by audience)
+  app.get("/api/announcements/active", requireAuth, async (req: any, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const rows = await db
+        .select()
+        .from(announcements)
+        .where(sql`${announcements.active} = true AND (${announcements.expiresAt} IS NULL OR ${announcements.expiresAt} > NOW())`)
+        .orderBy(sql`${announcements.createdAt} DESC`);
+      res.json(rows);
+    } catch (err) { next(err); }
+  });
+
+  // Admin: create announcement
+  app.post("/api/admin/announcements/create", requireAuth, requireAdmin, async (req: any, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(503).json({ message: "Database unavailable" });
+      const db = getDb();
+      const { title, message, targetAudience, deliveryStyle, expiresAt, clubId } = req.body;
+      if (!title || !message) return res.status(400).json({ message: "title and message are required" });
+      const [row] = await db.insert(announcements).values({
+        title,
+        message,
+        targetAudience: targetAudience || "all",
+        deliveryStyle: deliveryStyle || "notification",
+        clubId: clubId || null,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        createdBy: req.user!.id,
+      }).returning();
+      await logAdminAction(req.user!.id, "announcement_create", "announcement", row.id, { title, targetAudience, deliveryStyle }, req.ip);
+      res.json(row);
+    } catch (err) { next(err); }
+  });
+
+  // Admin: delete announcement
+  app.delete("/api/admin/announcements/:id", requireAuth, requireAdmin, async (req: any, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(503).json({ message: "Database unavailable" });
+      const db = getDb();
+      const { id } = req.params;
+      const [deleted] = await db.delete(announcements).where(sql`${announcements.id} = ${id}`).returning();
+      if (!deleted) return res.status(404).json({ message: "Announcement not found" });
+      await logAdminAction(req.user!.id, "announcement_delete", "announcement", id, null, req.ip);
+      res.json({ message: "Announcement deleted", id });
+    } catch (err) { next(err); }
+  });
+
+  // Admin: broadcast announcement to all connected WebSocket clients
+  app.post("/api/admin/announcements/:id/broadcast", requireAuth, requireAdmin, async (req: any, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(503).json({ message: "Database unavailable" });
+      const db = getDb();
+      const { id } = req.params;
+      const [announcement] = await db.select().from(announcements).where(sql`${announcements.id} = ${id}`);
+      if (!announcement) return res.status(404).json({ message: "Announcement not found" });
+
+      const clients = getClients();
+      const wsMessage = {
+        type: "announcement" as const,
+        announcement: {
+          id: announcement.id,
+          title: announcement.title,
+          message: announcement.message,
+          deliveryStyle: announcement.deliveryStyle,
+        },
+      };
+
+      // Broadcast to all connected clients via their individual connections
+      const sentUserIds = new Set<string>();
+      for (const client of clients.values()) {
+        if (client.userId && !sentUserIds.has(client.userId)) {
+          sentUserIds.add(client.userId);
+          sendToUser(client.userId, wsMessage as any);
+        }
+      }
+
+      await logAdminAction(req.user!.id, "announcement_broadcast", "announcement", id, { recipientCount: sentUserIds.size }, req.ip);
+      res.json({ message: "Broadcast sent", recipientCount: sentUserIds.size });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Chart Data Routes ─────────────────────────────────────────────────────
+
+  // Daily revenue trend (last 30 days)
+  app.get("/api/admin/charts/revenue-trend", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const rows = await db.execute(sql`
+        SELECT date_trunc('day', created_at)::date as day,
+          coalesce(sum(case when type = 'rake' then abs(amount) else 0 end), 0) as rake,
+          coalesce(sum(case when type = 'deposit' then abs(amount) else 0 end), 0) as deposits,
+          coalesce(sum(case when type = 'cashout' then amount else 0 end), 0) as cashouts,
+          coalesce(sum(case when type = 'buyin' then abs(amount) else 0 end), 0) as buyins
+        FROM ${transactions}
+        WHERE created_at > now() - interval '30 days'
+        GROUP BY date_trunc('day', created_at)::date
+        ORDER BY day
+      `);
+      res.json(rows);
+    } catch (err) { next(err); }
+  });
+
+  // Revenue by source (pie chart)
+  app.get("/api/admin/charts/revenue-sources", requireAuth, requireAdmin, async (_req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const rows = await db.execute(sql`
+        SELECT type, coalesce(sum(abs(amount)), 0) as total
+        FROM ${transactions}
+        WHERE type IN ('rake', 'deposit', 'purchase', 'buyin')
+        GROUP BY type ORDER BY total DESC
+      `);
+      res.json(rows);
+    } catch (err) { next(err); }
+  });
+
+  // Club analytics — member activity over time
+  app.get("/api/clubs/:id/charts/activity", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const rows = await db.execute(sql`
+        SELECT date_trunc('day', created_at)::date as day,
+          count(distinct user_id) as active_players,
+          count(*) as total_actions
+        FROM ${transactions}
+        WHERE table_id IN (SELECT id FROM ${tables} WHERE club_id = ${req.params.id})
+          AND created_at > now() - interval '30 days'
+        GROUP BY date_trunc('day', created_at)::date
+        ORDER BY day
+      `);
+      res.json(rows);
+    } catch (err) { next(err); }
+  });
+
+  // ─── Transaction Explorer Routes ────────────────────────────────────────────
+
+  // Helper: build SQL conditions using drizzle sql template
+  function buildSqlConditions(conditions: ReturnType<typeof sql>[]) {
+    if (conditions.length === 0) return sql`1=1`;
+    return conditions.reduce((acc, cond) => sql`${acc} AND ${cond}`);
+  }
+
+  // Unified search across transactions
+  app.get("/api/explorer/transactions", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ results: [], total: 0 });
+      const db = getDb();
+      const userId = req.user!.id;
+      const isAdmin = req.user!.role === "admin";
+      const limit = Math.min(parseInt(req.query.limit as string) || 25, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const typeFilter = req.query.type as string | undefined;
+      const search = req.query.search as string | undefined;
+      const dateFrom = req.query.from as string | undefined;
+      const dateTo = req.query.to as string | undefined;
+      const walletFilter = req.query.wallet as string | undefined;
+
+      const effectiveUserId = isAdmin && req.query.all === "true" ? null : userId;
+      const conds: ReturnType<typeof sql>[] = [];
+      if (effectiveUserId) conds.push(sql`${transactions.userId} = ${effectiveUserId}`);
+      if (typeFilter && typeFilter !== "all") conds.push(sql`${transactions.type} = ${typeFilter}`);
+      if (walletFilter && walletFilter !== "all") conds.push(sql`${transactions.walletType} = ${walletFilter}`);
+      if (dateFrom) conds.push(sql`${transactions.createdAt} >= ${dateFrom}::timestamp`);
+      if (dateTo) conds.push(sql`${transactions.createdAt} <= ${dateTo + "T23:59:59Z"}::timestamp`);
+      if (search) conds.push(sql`(${transactions.id} ILIKE ${"%" + search + "%"} OR ${transactions.description} ILIKE ${"%" + search + "%"})`);
+
+      const where = buildSqlConditions(conds);
+
+      const [countRow] = await db.select({ count: sql<number>`count(*)` }).from(transactions).where(where);
+      const total = Number(countRow.count);
+
+      const rows = await db.select({
+        id: transactions.id, user_id: transactions.userId, type: transactions.type,
+        amount: transactions.amount, balance_before: transactions.balanceBefore,
+        balance_after: transactions.balanceAfter, description: transactions.description,
+        wallet_type: transactions.walletType, payment_id: transactions.paymentId,
+        metadata: transactions.metadata, created_at: transactions.createdAt,
+        username: users.username, display_name: users.displayName,
+      }).from(transactions)
+        .leftJoin(users, sql`${users.id} = ${transactions.userId}`)
+        .where(where)
+        .orderBy(sql`${transactions.createdAt} DESC`)
+        .limit(limit).offset(offset);
+
+      res.json({ results: rows, total });
+    } catch (err) { next(err); }
+  });
+
+  // Payments explorer
+  app.get("/api/explorer/payments", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ results: [], total: 0 });
+      const db = getDb();
+      const userId = req.user!.id;
+      const isAdmin = req.user!.role === "admin";
+      const limit = Math.min(parseInt(req.query.limit as string) || 25, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const direction = req.query.direction as string | undefined;
+      const statusFilter = req.query.status as string | undefined;
+      const currency = req.query.currency as string | undefined;
+      const search = req.query.search as string | undefined;
+
+      const effectiveUserId = isAdmin && req.query.all === "true" ? null : userId;
+      const conds: ReturnType<typeof sql>[] = [];
+      if (effectiveUserId) conds.push(sql`${payments.userId} = ${effectiveUserId}`);
+      if (direction) conds.push(sql`${payments.direction} = ${direction}`);
+      if (statusFilter) conds.push(sql`${payments.status} = ${statusFilter}`);
+      if (currency) conds.push(sql`${payments.currency} = ${currency}`);
+      if (search) conds.push(sql`(${payments.id} ILIKE ${"%" + search + "%"} OR ${payments.txHash} ILIKE ${"%" + search + "%"})`);
+
+      const where = buildSqlConditions(conds);
+
+      const [countRow] = await db.select({ count: sql<number>`count(*)` }).from(payments).where(where);
+      const total = Number(countRow.count);
+
+      const rows = await db.select({
+        id: payments.id, user_id: payments.userId, direction: payments.direction,
+        status: payments.status, amount_fiat: payments.amountFiat,
+        amount_crypto: payments.amountCrypto, currency: payments.currency,
+        chip_amount: payments.chipAmount, gateway_provider: payments.gatewayProvider,
+        deposit_address: payments.depositAddress, tx_hash: payments.txHash,
+        confirmations: payments.confirmations, required_confirmations: payments.requiredConfirmations,
+        withdrawal_address: payments.withdrawalAddress, created_at: payments.createdAt,
+        username: users.username, display_name: users.displayName,
+      }).from(payments)
+        .leftJoin(users, sql`${users.id} = ${payments.userId}`)
+        .where(where)
+        .orderBy(sql`${payments.createdAt} DESC`)
+        .limit(limit).offset(offset);
+
+      res.json({ results: rows, total });
+    } catch (err) { next(err); }
+  });
+
+  // Game hands explorer
+  app.get("/api/explorer/hands", requireAuth, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.json({ results: [], total: 0 });
+      const db = getDb();
+      const limit = Math.min(parseInt(req.query.limit as string) || 25, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const tableIdFilter = req.query.tableId as string | undefined;
+      const search = req.query.search as string | undefined;
+      const onChainOnly = req.query.onChainOnly === "true";
+
+      const conds: ReturnType<typeof sql>[] = [];
+      if (tableIdFilter) conds.push(sql`${gameHands.tableId} = ${tableIdFilter}`);
+      if (search) conds.push(sql`(${gameHands.id} ILIKE ${"%" + search + "%"} OR ${gameHands.commitmentHash} ILIKE ${"%" + search + "%"})`);
+      if (onChainOnly) conds.push(sql`(${gameHands.onChainCommitTx} IS NOT NULL OR ${gameHands.onChainRevealTx} IS NOT NULL)`);
+
+      const where = buildSqlConditions(conds);
+
+      const [countRow] = await db.select({ count: sql<number>`count(*)` }).from(gameHands).where(where);
+      const total = Number(countRow.count);
+
+      const rows = await db.select({
+        id: gameHands.id, table_id: gameHands.tableId, hand_number: gameHands.handNumber,
+        pot_total: gameHands.potTotal, total_rake: gameHands.totalRake,
+        commitment_hash: gameHands.commitmentHash, vrf_request_id: gameHands.vrfRequestId,
+        vrf_random_word: gameHands.vrfRandomWord,
+        on_chain_commit_tx: gameHands.onChainCommitTx, on_chain_reveal_tx: gameHands.onChainRevealTx,
+        winner_ids: gameHands.winnerIds, created_at: gameHands.createdAt,
+        table_name: tables.name,
+      }).from(gameHands)
+        .leftJoin(tables, sql`${tables.id} = ${gameHands.tableId}`)
+        .where(where)
+        .orderBy(sql`${gameHands.createdAt} DESC`)
+        .limit(limit).offset(offset);
+
+      res.json({ results: rows, total });
+    } catch (err) { next(err); }
+  });
+
+  // Blockchain verification endpoint — verify a hand on-chain
+  app.get("/api/explorer/verify/:tableId/:handNumber", async (req, res, next) => {
+    try {
+      const { tableId, handNumber } = req.params;
+      if (!hasDatabase()) return res.json({ verified: false, message: "No database" });
+      const db = getDb();
+
+      // Get local record
+      const [hand] = await db.select().from(gameHands)
+        .where(sql`${gameHands.tableId} = ${tableId} AND ${gameHands.handNumber} = ${parseInt(handNumber)}`)
+        .limit(1);
+
+      if (!hand) return res.status(404).json({ verified: false, message: "Hand not found" });
+
+      // Check on-chain if blockchain is enabled
+      let onChainResult = null;
+      if (blockchainConfig.enabled && blockchainConfig.handVerifierAddress) {
+        try {
+          const { ethers } = await import("ethers");
+          const provider = new ethers.JsonRpcProvider(blockchainConfig.rpcUrl);
+          const abi = [
+            "function verifyHand(string tableId, uint256 handNumber) external view returns (bool committed, bool revealed, bytes32 commitHash, uint256 timestamp)",
+          ];
+          const contract = new ethers.Contract(blockchainConfig.handVerifierAddress, abi, provider);
+          const result = await contract.verifyHand(tableId, parseInt(handNumber));
+          onChainResult = {
+            committed: result[0],
+            revealed: result[1],
+            commitHash: result[2],
+            timestamp: Number(result[3]),
+            explorerUrl: `https://amoy.polygonscan.com/address/${blockchainConfig.handVerifierAddress}`,
+          };
+        } catch (chainErr: any) {
+          onChainResult = { error: chainErr.message };
+        }
+      }
+
+      res.json({
+        hand: {
+          id: hand.id,
+          tableId: hand.tableId,
+          handNumber: hand.handNumber,
+          commitmentHash: hand.commitmentHash,
+          onChainCommitTx: hand.onChainCommitTx,
+          onChainRevealTx: hand.onChainRevealTx,
+          vrfRequestId: hand.vrfRequestId,
+          createdAt: hand.createdAt,
+        },
+        onChain: onChainResult,
+        explorerLinks: {
+          commitTx: hand.onChainCommitTx ? `https://amoy.polygonscan.com/tx/${hand.onChainCommitTx}` : null,
+          revealTx: hand.onChainRevealTx ? `https://amoy.polygonscan.com/tx/${hand.onChainRevealTx}` : null,
+        },
+      });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Admin Audit Log Routes ────────────────────────────────────────────────
+
+  app.get("/api/admin/audit-log", requireAuth, async (req, res, next) => {
+    try {
+      if (req.user!.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      if (!hasDatabase()) return res.json([]);
+      const db = getDb();
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const actionFilter = req.query.action as string | undefined;
+
+      const logs = actionFilter
+        ? await db.select().from(adminAuditLogs).where(sql`${adminAuditLogs.action} = ${actionFilter}`).orderBy(sql`${adminAuditLogs.createdAt} DESC`).limit(limit).offset(offset)
+        : await db.select().from(adminAuditLogs).orderBy(sql`${adminAuditLogs.createdAt} DESC`).limit(limit).offset(offset);
+      res.json(logs);
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/admin/audit-log/stats", requireAuth, async (req, res, next) => {
+    try {
+      if (req.user!.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      if (!hasDatabase()) return res.json({ total: 0, byAction: {} });
+      const db = getDb();
+      const [countResult] = await db.select({ count: sql<number>`count(*)` }).from(adminAuditLogs);
+      const actionCounts = await db.select({
+        action: adminAuditLogs.action,
+        count: sql<number>`count(*)`,
+      }).from(adminAuditLogs).groupBy(adminAuditLogs.action);
+      const byAction: Record<string, number> = {};
+      for (const row of actionCounts) byAction[row.action] = Number(row.count);
+      res.json({ total: Number(countResult.count), byAction });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Third-Party KYC Verification Webhook ─────────────────────────────────
+  // Supports Onfido / Sumsub webhook callbacks
+  // Provider configured via KYC_PROVIDER env var (onfido | sumsub | manual)
+
+  app.post("/api/webhooks/kyc-verification", async (req, res, next) => {
+    try {
+      const provider = process.env.KYC_PROVIDER || "manual";
+      const webhookSecret = process.env.KYC_WEBHOOK_SECRET;
+
+      // Verify webhook signature based on provider
+      if (provider === "onfido") {
+        const sig = req.headers["x-sha2-signature"] as string;
+        if (webhookSecret && sig) {
+          const expected = createHash("sha256").update(JSON.stringify(req.body) + webhookSecret).digest("hex");
+          if (sig !== expected) return res.status(401).json({ message: "Invalid signature" });
+        }
+
+        const { payload } = req.body;
+        if (!payload?.resource_type || payload.resource_type !== "check") {
+          return res.json({ received: true });
+        }
+
+        const applicantId = payload.object?.applicant_id;
+        const result = payload.object?.result; // "clear" | "consider"
+        if (!applicantId) return res.json({ received: true });
+
+        // Look up user by kycData.providerApplicantId
+        const allPending = await storage.getAllUsersByKycStatus("pending");
+        const user = allPending.find(u => (u.kycData as any)?.providerApplicantId === applicantId);
+        if (!user) return res.json({ received: true, matched: false });
+
+        if (result === "clear") {
+          await storage.updateUser(user.id, { kycStatus: "verified", kycVerifiedAt: new Date() });
+          if (user.email) {
+            sendKycEmail(user.email, "KYC Verified - HighRollers Club",
+              `<h2>Identity Verified!</h2><p>Your identity has been automatically verified. You now have full access.</p>`);
+          }
+          await storage.createNotification(user.id, "kyc_status", "KYC Approved", "Your identity has been verified!", { status: "verified" });
+          await logAdminAction("system:onfido", "kyc_auto_approve", "user", user.id, { applicantId, result });
+        } else {
+          await storage.updateUser(user.id, { kycStatus: "rejected", kycRejectionReason: `Auto-review: ${result}` });
+          if (user.email) {
+            sendKycEmail(user.email, "KYC Update - HighRollers Club",
+              `<h2>Verification Update</h2><p>Your application requires manual review. We'll notify you when complete.</p>`);
+          }
+          await storage.createNotification(user.id, "kyc_status", "KYC Review", "Your documents need additional review.", { status: "review" });
+          await logAdminAction("system:onfido", "kyc_auto_reject", "user", user.id, { applicantId, result });
+        }
+        return res.json({ received: true, processed: true });
+
+      } else if (provider === "sumsub") {
+        const sig = req.headers["x-payload-digest"] as string;
+        if (webhookSecret && sig) {
+          const hmac = createHash("sha256").update(JSON.stringify(req.body) + webhookSecret).digest("hex");
+          if (sig !== hmac) return res.status(401).json({ message: "Invalid signature" });
+        }
+
+        const { applicantId, reviewResult, type: eventType } = req.body;
+        if (eventType !== "applicantReviewed" || !applicantId) return res.json({ received: true });
+
+        const allPending = await storage.getAllUsersByKycStatus("pending");
+        const user = allPending.find(u => (u.kycData as any)?.providerApplicantId === applicantId);
+        if (!user) return res.json({ received: true, matched: false });
+
+        const approved = reviewResult?.reviewAnswer === "GREEN";
+        if (approved) {
+          await storage.updateUser(user.id, { kycStatus: "verified", kycVerifiedAt: new Date() });
+          if (user.email) {
+            sendKycEmail(user.email, "KYC Verified - HighRollers Club",
+              `<h2>Identity Verified!</h2><p>Your identity has been verified successfully.</p>`);
+          }
+          await storage.createNotification(user.id, "kyc_status", "KYC Approved", "Your identity has been verified!", { status: "verified" });
+          await logAdminAction("system:sumsub", "kyc_auto_approve", "user", user.id, { applicantId, reviewResult });
+        } else {
+          const rejectReason = reviewResult?.rejectLabels?.join(", ") || "Verification failed";
+          await storage.updateUser(user.id, { kycStatus: "rejected", kycRejectionReason: rejectReason });
+          if (user.email) {
+            sendKycEmail(user.email, "KYC Update - HighRollers Club",
+              `<h2>Verification Update</h2><p>Your application was not approved: ${rejectReason}</p>`);
+          }
+          await storage.createNotification(user.id, "kyc_status", "KYC Update", `Verification not approved: ${rejectReason}`, { status: "rejected" });
+          await logAdminAction("system:sumsub", "kyc_auto_reject", "user", user.id, { applicantId, reviewResult });
+        }
+        return res.json({ received: true, processed: true });
+      }
+
+      // Manual provider — no webhook processing
+      res.json({ received: true, provider });
     } catch (err) { next(err); }
   });
 
@@ -4921,7 +7133,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       entry.disconnectTimer = setTimeout(() => {
         sendToUser(userId, { type: "error", message: `Session time limit reached (${limitMinutes * 2} minutes). You have been disconnected.` });
         const client = getClients().get(userId);
-        if (client && client.tableId) { tableManager.leaveTable(client.tableId, userId).catch(() => {}); client.tableId = null; }
+        if (client && client.tableIds.size > 0) { for (const tid of client.tableIds) { tableManager.leaveTable(tid, userId).catch(() => {}); } client.tableIds.clear(); }
       }, limitMinutes * 2 * 60 * 1000);
     }
     sessionJoinTimes.set(userId, entry);

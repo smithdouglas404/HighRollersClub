@@ -19,6 +19,8 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   email: text("email"),
   walletAddress: text("wallet_address"),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  emailVerificationToken: text("email_verification_token"),
   firebaseUid: text("firebase_uid").unique(),
   connectedWallets: jsonb("connected_wallets"), // [{provider, address}]
   recoveryCodes: jsonb("recovery_codes"), // hashed recovery codes [{hash, salt, used}]
@@ -29,7 +31,7 @@ export const users = pgTable("users", {
   tierExpiresAt: timestamp("tier_expires_at"), // null for free tier
   // KYC verification
   kycStatus: text("kyc_status").notNull().default("none"), // none | pending | verified | rejected
-  kycData: jsonb("kyc_data"), // { fullName, dateOfBirth, country, idType, submittedAt }
+  kycData: jsonb("kyc_data"), // { fullName, dateOfBirth, country, idType, submittedAt, idDocumentPath?, selfiePath? }
   kycVerifiedAt: timestamp("kyc_verified_at"),
   kycRejectionReason: text("kyc_rejection_reason"),
   // Blockchain member ID
@@ -78,6 +80,12 @@ export const clubs = pgTable("clubs", {
   antiCollusion: boolean("anti_collusion").notNull().default(false),
   themeColor: text("theme_color").notNull().default("gold"),
   eloRating: integer("elo_rating").notNull().default(1200),
+  // Geofence restrictions (club-level)
+  allowedCountries: jsonb("allowed_countries"), // ["US","CA"] or null = platform default
+  allowedStates: jsonb("allowed_states"), // ["CA","NV","NJ"] or null = all states
+  blockVpn: boolean("block_vpn").notNull().default(false),
+  // KYC access control — "none" = no KYC needed, "verified" = KYC required to join games
+  kycRequired: text("kyc_required").notNull().default("none"), // none | verified
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -204,6 +212,12 @@ export const tables = pgTable("tables", {
   scheduledStartTime: timestamp("scheduled_start_time"),
   scheduledEndTime: timestamp("scheduled_end_time"),
   recurringSchedule: jsonb("recurring_schedule"), // { days: string[], startTime: "HH:MM", endTime: "HH:MM" }
+  // Table-level geofence
+  allowedCountries: jsonb("allowed_countries"), // ["US"] or null = inherit from club/platform
+  allowedStates: jsonb("allowed_states"), // ["NV","NJ","PA"] or null = all
+  blockVpn: boolean("block_vpn").notNull().default(false),
+  // KYC access control — null = inherit from club, "none" = no KYC, "verified" = KYC required
+  kycRequired: text("kyc_required"), // null = inherit from club setting
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   index("tables_club_idx").on(table.clubId),
@@ -919,3 +933,211 @@ export const ticketMessages = pgTable("ticket_messages", {
 ]);
 
 export type TicketMessage = typeof ticketMessages.$inferSelect;
+
+// ─── Admin Audit Log ────────────────────────────────────────────────────────
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull(), // who performed the action
+  action: text("action").notNull(), // kyc_approve, kyc_reject, user_ban, settings_change, etc.
+  targetType: text("target_type"), // user, table, club, system
+  targetId: varchar("target_id"), // ID of the affected entity
+  details: jsonb("details"), // action-specific metadata
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_audit_admin").on(table.adminId),
+  index("idx_audit_action").on(table.action),
+  index("idx_audit_created").on(table.createdAt),
+]);
+
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+
+// ─── Music Tracks ───────────────────────────────────────────────────────────
+export const musicTracks = pgTable("music_tracks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  artist: text("artist"),
+  filename: text("filename").notNull(), // stored filename on disk
+  originalName: text("original_name"), // original upload filename
+  duration: integer("duration"), // seconds, if known
+  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
+  isAdmin: boolean("is_admin").notNull().default(false), // true = platform track, false = user track
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_music_uploaded_by").on(table.uploadedBy),
+  index("idx_music_is_admin").on(table.isAdmin),
+]);
+
+export type MusicTrack = typeof musicTracks.$inferSelect;
+
+// ─── IP Blacklist/Whitelist ─────────────────────────────────────────────────
+export const ipRules = pgTable("ip_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ip: text("ip").notNull(), // single IP or CIDR range
+  type: text("type").notNull(), // ban | allow
+  reason: text("reason"),
+  createdBy: varchar("created_by"),
+  expiresAt: timestamp("expires_at"), // null = permanent
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_ip_rules_ip").on(table.ip),
+  index("idx_ip_rules_type").on(table.type),
+]);
+
+export type IpRule = typeof ipRules.$inferSelect;
+
+// ─── Device Fingerprints ────────────────────────────────────────────────────
+export const deviceFingerprints = pgTable("device_fingerprints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  fingerprint: text("fingerprint").notNull(), // hash of canvas + webgl + fonts + screen
+  userAgent: text("user_agent"),
+  screenRes: text("screen_res"),
+  ipAddress: text("ip_address"),
+  lastSeen: timestamp("last_seen").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_device_fp_user").on(table.userId),
+  index("idx_device_fp_hash").on(table.fingerprint),
+]);
+
+export type DeviceFingerprint = typeof deviceFingerprints.$inferSelect;
+
+// ─── Account Actions (player-visible system log) ────────────────────────────
+export const accountActions = pgTable("account_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  action: text("action").notNull(), // warning, session_kill, geo_block, vpn_block, loss_limit, ban, unban, multi_account_flag
+  severity: text("severity").notNull().default("info"), // info, warning, critical
+  message: text("message").notNull(),
+  details: jsonb("details"),
+  automated: boolean("automated").notNull().default(false), // true = bot action, false = admin action
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_account_actions_user").on(table.userId),
+  index("idx_account_actions_created").on(table.createdAt),
+]);
+
+export type AccountAction = typeof accountActions.$inferSelect;
+
+// ─── Platform Settings (persistent key-value config) ────────────────────────
+export const platformSettings = pgTable("platform_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedBy: varchar("updated_by"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type PlatformSetting = typeof platformSettings.$inferSelect;
+
+// ─── HITL Bot Action Queue ──────────────────────────────────────────────────
+export const botActionQueue = pgTable("bot_action_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // insight, recommendation, auto_action
+  category: text("category").notNull(), // vpn, multi_account, collusion, geo, bot, loss_limit, suspicious
+  severity: text("severity").notNull(), // low, medium, high, critical
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  targetUserId: varchar("target_user_id"),
+  targetType: text("target_type"), // user, table, club, ip
+  targetId: varchar("target_id"),
+  actionTaken: text("action_taken"), // what the bot did (for auto_actions)
+  status: text("status").notNull().default("pending"), // pending, reviewed, actioned, dismissed
+  reviewedBy: varchar("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  details: jsonb("details"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_bot_queue_status").on(table.status),
+  index("idx_bot_queue_type").on(table.type),
+  index("idx_bot_queue_created").on(table.createdAt),
+])
+
+export type BotAction = typeof botActionQueue.$inferSelect;
+
+// ─── Table Sessions (Ledger Foundation) ─────────────────────────────────────
+// Tracks each player's complete sit-down → stand-up lifecycle at a table
+export const tableSessions = pgTable("table_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tableId: varchar("table_id").notNull().references(() => tables.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  displayName: text("display_name").notNull(),
+  buyInTotal: integer("buy_in_total").notNull().default(0), // sum of all buy-ins during session
+  cashOutTotal: integer("cash_out_total").notNull().default(0), // final cash-out amount
+  netResult: integer("net_result").notNull().default(0), // cashOut - buyIn
+  handsPlayed: integer("hands_played").notNull().default(0),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  endedAt: timestamp("ended_at"),
+  settled: boolean("settled").notNull().default(false), // club owner marks as settled
+}, (table) => [
+  index("idx_table_sessions_table").on(table.tableId),
+  index("idx_table_sessions_user").on(table.userId),
+  index("idx_table_sessions_date").on(table.startedAt),
+]);
+
+export type TableSession = typeof tableSessions.$inferSelect;
+
+// ─── Table Ledger Entries (Settlement Records) ──────────────────────────────
+// One row per "game night" — aggregates all sessions into a settlement
+export const tableLedgerEntries = pgTable("table_ledger_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tableId: varchar("table_id").notNull().references(() => tables.id),
+  clubId: varchar("club_id").references(() => clubs.id),
+  sessionDate: timestamp("session_date").notNull(), // date of the game
+  entries: jsonb("entries").notNull(), // [{ userId, displayName, buyIn, cashOut, net }]
+  settlements: jsonb("settlements"), // [{ from, to, amount }] — who owes who
+  totalRake: integer("total_rake").notNull().default(0),
+  totalPot: integer("total_pot").notNull().default(0),
+  playerCount: integer("player_count").notNull().default(0),
+  handsPlayed: integer("hands_played").notNull().default(0),
+  settledBy: varchar("settled_by"), // club owner who confirmed settlement
+  settledAt: timestamp("settled_at"),
+  notes: text("notes"),
+  // Blockchain proof of settlement
+  settlementHash: text("settlement_hash"), // SHA-256 hash of settlement data
+  settlementTxHash: text("settlement_tx_hash"), // Polygon transaction hash anchoring this settlement
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_ledger_table").on(table.tableId),
+  index("idx_ledger_club").on(table.clubId),
+  index("idx_ledger_date").on(table.sessionDate),
+]);
+
+export type TableLedgerEntry = typeof tableLedgerEntries.$inferSelect;
+
+// ─── Sponsorship Payouts ─────────────────────────────────────────────────────
+export const sponsorshipPayouts = pgTable("sponsorship_payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  transactionId: text("transaction_id").notNull(), // TX-001234 format
+  clubId: varchar("club_id").references(() => clubs.id),
+  recipientUserId: varchar("recipient_user_id").references(() => users.id),
+  recipientWallet: text("recipient_wallet").notNull(),
+  amount: integer("amount").notNull(),
+  currency: text("currency").notNull().default("USDT"),
+  status: text("status").notNull().default("pending"), // pending | processing | completed | failed
+  scheduledDate: timestamp("scheduled_date"),
+  processedAt: timestamp("processed_at"),
+  txHash: text("tx_hash"), // blockchain tx hash
+  notes: text("notes"),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_sponsorship_club").on(table.clubId),
+  index("idx_sponsorship_status").on(table.status),
+]);
+export type SponsorshipPayout = typeof sponsorshipPayouts.$inferSelect;
+
+// ─── Announcements ─────────────────────────────────────────────────────────
+export const announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  targetAudience: text("target_audience").notNull().default("all"), // all | private_tables | tournament_players | club_members
+  deliveryStyle: text("delivery_style").notNull().default("notification"), // notification | breaking_news_modal | chat_blast
+  clubId: varchar("club_id"), // null = platform-wide
+  active: boolean("active").notNull().default(true),
+  expiresAt: timestamp("expires_at"),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type Announcement = typeof announcements.$inferSelect;

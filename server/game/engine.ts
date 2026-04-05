@@ -172,6 +172,8 @@ export class GameEngine {
 
   // VRF integration
   public vrfClient: VRFClient | null = null;
+  // Blockchain identities for shuffle entropy (memberId + kycHash per player)
+  public playerBlockchainIdentities = new Map<string, { memberId: string | null; kycHash: string | null }>();
   private currentVRFRequestId: string | null = null;
   private currentVRFRandomWord: string | null = null;
 
@@ -673,12 +675,21 @@ export class GameEngine {
     let deck: CardType[];
     let proof: ShuffleProof;
 
-    if (playerSeedData.length > 0 || this.currentVRFRandomWord) {
+    // Collect blockchain identities of seated players
+    const blockchainIds = eligible
+      .map(p => {
+        const bi = this.playerBlockchainIdentities.get(p.id);
+        return bi ? { playerId: p.id, memberId: bi.memberId, kycHash: bi.kycHash } : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    if (playerSeedData.length > 0 || this.currentVRFRandomWord || blockchainIds.length > 0) {
       const result = createProvablyFairShuffleMultiParty(
         this.tableId,
         this.state.handNumber,
         playerSeedData,
-        this.currentVRFRandomWord || undefined
+        this.currentVRFRandomWord || undefined,
+        blockchainIds.length > 0 ? blockchainIds : undefined
       );
       deck = result.deck;
       proof = result.proof;
@@ -861,6 +872,10 @@ export class GameEngine {
       }
 
       case "raise": {
+        // Reject negative or non-numeric amounts
+        if (amount !== undefined && (typeof amount !== "number" || amount <= 0 || !isFinite(amount))) {
+          return { ok: false, error: "Invalid raise amount" };
+        }
         // All-in is always allowed regardless of min raise
         const isAllIn = amount && amount >= player.chips + player.currentBet;
         if (!isAllIn && (!amount || amount < this.state.minRaise)) {

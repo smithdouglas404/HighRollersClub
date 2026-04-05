@@ -218,6 +218,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
     unsubs.push(
       wsClient.on("game_state", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return; // multi-table filter
         const state = msg.state;
         if (!state) return;
 
@@ -273,7 +274,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
             // Send seed reveal if we committed one
             if (localSeedRef.current) {
-              wsClient.send({ type: "seed_reveal", seed: localSeedRef.current });
+              wsClient.send({ type: "seed_reveal", tableId: tableIdRef.current, seed: localSeedRef.current });
               setPlayerSeedStatus("revealed");
             }
 
@@ -307,6 +308,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     // Handle seed request — auto-generate and commit
     unsubs.push(
       wsClient.on("seed_request", (_msg: any) => {
+        if (_msg.tableId && _msg.tableId !== tableIdRef.current) return;
         // Generate 32-byte random seed
         const seedBytes = new Uint8Array(32);
         crypto.getRandomValues(seedBytes);
@@ -316,7 +318,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
         // Compute SHA-256 commitment hash
         crypto.subtle.digest("SHA-256", new TextEncoder().encode(seedHex)).then(hashBuf => {
           const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
-          wsClient.send({ type: "seed_commit", commitmentHash: hashHex });
+          wsClient.send({ type: "seed_commit", tableId: tableIdRef.current, commitmentHash: hashHex });
           setPlayerSeedStatus("committed");
         }).catch(() => {});
       })
@@ -325,6 +327,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     // Handle on-chain proof TX hashes
     unsubs.push(
       wsClient.on("onchain_proof", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
         if (msg.commitTx) setOnChainCommitTx(msg.commitTx);
         if (msg.revealTx) setOnChainRevealTx(msg.revealTx);
       })
@@ -333,6 +336,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     // Handle format-specific messages
     unsubs.push(
       wsClient.on("format_info", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
         setFormatInfo({
           gameFormat: msg.gameFormat,
           currentBlindLevel: msg.currentBlindLevel,
@@ -347,6 +351,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
     unsubs.push(
       wsClient.on("blind_increase", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
         setBlindIncrease({ level: msg.level, sb: msg.sb, bb: msg.bb, ante: msg.ante });
         setTimeout(() => setBlindIncrease(null), 5000);
       })
@@ -354,6 +359,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
     unsubs.push(
       wsClient.on("player_eliminated", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
         setElimination({
           playerId: msg.playerId,
           displayName: msg.displayName,
@@ -366,6 +372,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
     unsubs.push(
       wsClient.on("tournament_complete", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
         setTournamentComplete({
           results: msg.results,
           prizePool: msg.prizePool,
@@ -416,6 +423,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     // Player join/leave notifications
     unsubs.push(
       wsClient.on("player_joined", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
         const name = msg.player?.displayName || "A player";
         const id = ++notifIdRef.current;
         setNotifications(prev => [...prev, { id, message: `${name} joined the table`, type: "join" }]);
@@ -425,6 +433,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
     unsubs.push(
       wsClient.on("player_left", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
         const name = msg.displayName || "A player";
         const id = ++notifIdRef.current;
         setNotifications(prev => [...prev, { id, message: `${name} left the table`, type: "leave" }]);
@@ -435,6 +444,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     // Chips added confirmation — update wallet balance
     unsubs.push(
       wsClient.on("chips_added", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
         if (msg.newWalletBalance !== undefined) {
           setWalletBalance(msg.newWalletBalance);
         }
@@ -444,6 +454,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     // AI Commentary — enqueue segments for audio playback
     unsubs.push(
       wsClient.on("commentary", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
         if (msg.segment) {
           commentaryPlayer.enqueue(msg.segment);
         }
@@ -471,7 +482,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     return () => {
       // Cleanup: leave current table and unsubscribe
       if (joinedRef.current) {
-        wsClient.send({ type: "leave_table" });
+        wsClient.send({ type: "leave_table", tableId: tableIdRef.current });
         joinedRef.current = false;
       }
       if (countdownTimerRef.current) {
@@ -536,6 +547,7 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
       wsClient.send({
         type: "player_action",
+        tableId: tableIdRef.current,
         action,
         amount,
         actionNumber: actionNumberRef.current,
@@ -546,26 +558,26 @@ export function useMultiplayerGame(tableId: string, userId: string) {
 
   // Buy extra time
   const buyTime = useCallback(() => {
-    wsClient.send({ type: "buy_time" } as any);
+    wsClient.send({ type: "buy_time", tableId: tableIdRef.current } as any);
   }, []);
 
   // Insurance responses
   const acceptInsurance = useCallback(() => {
-    wsClient.send({ type: "accept_insurance" } as any);
+    wsClient.send({ type: "accept_insurance", tableId: tableIdRef.current } as any);
   }, []);
 
   const declineInsurance = useCallback(() => {
-    wsClient.send({ type: "decline_insurance" } as any);
+    wsClient.send({ type: "decline_insurance", tableId: tableIdRef.current } as any);
   }, []);
 
   // Run it vote
   const voteRunIt = useCallback((count: 1 | 2 | 3) => {
-    wsClient.send({ type: "run_it_vote", count } as any);
+    wsClient.send({ type: "run_it_vote", tableId: tableIdRef.current, count } as any);
   }, []);
 
   // Add chips to table stack (between hands only)
   const addChips = useCallback((amount: number) => {
-    wsClient.send({ type: "add_chips", amount } as any);
+    wsClient.send({ type: "add_chips", tableId: tableIdRef.current, amount } as any);
   }, []);
 
   // Join table
@@ -600,29 +612,29 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       setError("Not connected to server — please refresh the page");
       return;
     }
-    wsClient.send({ type: "add_bots" });
+    wsClient.send({ type: "add_bots", tableId: tableIdRef.current });
   }, []);
 
   // Send chat
   const sendChat = useCallback((message: string) => {
-    wsClient.send({ type: "chat", message });
+    wsClient.send({ type: "chat", tableId: tableIdRef.current, message });
   }, []);
 
   // Sit out / Sit in
   const sitOut = useCallback(() => {
-    wsClient.send({ type: "sit_out" });
+    wsClient.send({ type: "sit_out", tableId: tableIdRef.current });
   }, []);
 
   const sitIn = useCallback(() => {
-    wsClient.send({ type: "sit_in" });
+    wsClient.send({ type: "sit_in", tableId: tableIdRef.current });
   }, []);
 
   const postBlinds = useCallback(() => {
-    wsClient.send({ type: "post_blinds" });
+    wsClient.send({ type: "post_blinds", tableId: tableIdRef.current });
   }, []);
 
   const waitForBB = useCallback(() => {
-    wsClient.send({ type: "wait_for_bb" });
+    wsClient.send({ type: "wait_for_bb", tableId: tableIdRef.current });
   }, []);
 
   return {

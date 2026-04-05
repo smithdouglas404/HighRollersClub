@@ -63,8 +63,77 @@ export class DirectWalletGateway implements IPaymentGateway {
   }
 
   async getPaymentStatus(gatewayPaymentId: string): Promise<PaymentStatusResponse> {
-    // Parse currency and address from gateway ID
-    // In production, this would query the blockchain API
+    // Check blockchain for deposit confirmations
+    const parts = gatewayPaymentId.split("_");
+    // Attempt to extract currency from stored metadata
+    const currency = parts[3] || "ETH";
+
+    // For Polygon/ETH: check via Alchemy or public RPC
+    if ((currency === "ETH" || currency === "USDT" || currency === "MATIC") && this.config.alchemyApiKey) {
+      try {
+        const txHash = parts[4]; // stored when deposit detected
+        if (txHash && txHash.startsWith("0x")) {
+          const rpcUrl = `https://polygon-amoy.g.alchemy.com/v2/${this.config.alchemyApiKey}`;
+          const res = await fetch(rpcUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [txHash],
+            }),
+          });
+          const data = await res.json();
+          if (data.result?.status === "0x1") {
+            const blockNum = parseInt(data.result.blockNumber, 16);
+            // Get current block for confirmation count
+            const blockRes = await fetch(rpcUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "eth_blockNumber", params: [] }),
+            });
+            const blockData = await blockRes.json();
+            const currentBlock = parseInt(blockData.result, 16);
+            const confirmations = currentBlock - blockNum;
+            const requiredConfs = CONFIRMATIONS[currency] || 12;
+            return {
+              gatewayPaymentId,
+              status: confirmations >= requiredConfs ? "finished" : "confirming",
+              actuallyPaid: "0",
+              confirmations,
+              rawResponse: { txHash, blockNum, currentBlock },
+            };
+          }
+        }
+      } catch {
+        // Fallback to waiting
+      }
+    }
+
+    // For SOL: check via Helius
+    if (currency === "SOL" && this.config.heliusApiKey) {
+      try {
+        const txSig = parts[4];
+        if (txSig) {
+          const res = await fetch(`https://api.helius.xyz/v0/transactions/?api-key=${this.config.heliusApiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ transactions: [txSig] }),
+          });
+          const data = await res.json();
+          if (data[0]?.transactionError === null) {
+            return {
+              gatewayPaymentId,
+              status: "finished",
+              actuallyPaid: "0",
+              confirmations: 1,
+              rawResponse: data[0],
+            };
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
     return {
       gatewayPaymentId,
       status: "waiting",
@@ -112,17 +181,109 @@ export class DirectWalletGateway implements IPaymentGateway {
   }
 
   async createWithdrawal(req: CreateWithdrawalRequest): Promise<CreateWithdrawalResponse> {
-    // Direct withdrawals require signing transactions with the hot wallet
-    // In production, this would use ethers.js / @solana/web3.js / bitcoinjs-lib
     const withdrawalId = `direct_wd_${req.orderId}_${Date.now()}`;
+    const currency = req.currency.toUpperCase();
 
-    // This would be replaced with actual blockchain transaction submission
-    console.log(`[DirectWallet] Withdrawal queued: ${req.amount} ${req.currency} to ${req.address}`);
+    // Polygon USDT/USDC withdrawal via hot wallet
+    if ((currency === "USDT" || currency === "ETH" || currency === "MATIC") && this.config.ethAddress) {
+      try {
+        const polygonRpcUrl = process.env.POLYGON_RPC_URL;
+        if (!polygonRpcUrl) throw new Error("POLYGON_RPC_URL not configured");
+        const walletKey = process.env.POLYGON_WALLET_KEY;
 
+        if (walletKey) {
+          const { ethers } = await import("ethers");
+          const provider = new ethers.JsonRpcProvider(polygonRpcUrl);
+          const signer = new ethers.Wallet(walletKey, provider);
+
+          let txHash: string;
+
+          if (currency === "USDT" || (currency as string) === "USDC") {
+            // ERC-20 transfer — USDT/USDC contract on Polygon
+            const usdcAddress = process.env.POLYGON_USDC_ADDRESS;
+            if (!usdcAddress) throw new Error("POLYGON_USDC_ADDRESS not configured");
+            const erc20Abi = ["function transfer(address to, uint256 amount) returns (bool)"];
+            const contract = new ethers.Contract(usdcAddress, erc20Abi, signer);
+            // USDC has 6 decimals
+            const amount = ethers.parseUnits(req.amount, 6);
+            const tx = await contract.transfer(req.address, amount);
+            const receipt = await tx.wait();
+            txHash = receipt?.hash || tx.hash;
+          } else {
+            // Native MATIC/ETH transfer
+            const tx = await signer.sendTransaction({
+              to: req.address,
+              value: ethers.parseEther(req.amount),
+            });
+            const receipt = await tx.wait();
+            txHash = receipt?.hash || tx.hash;
+          }
+
+          console.log(`[DirectWallet] Polygon withdrawal sent: ${txHash}`);
+          return {
+            gatewayWithdrawalId: withdrawalId,
+            status: "completed",
+            rawResponse: { currency, amount: req.amount, address: req.address, txHash, chain: "polygon" },
+          };
+        }
+      } catch (err: any) {
+        console.error(`[DirectWallet] Polygon withdrawal failed:`, err.message);
+        return {
+          gatewayWithdrawalId: withdrawalId,
+          status: "failed",
+          rawResponse: { error: err.message, currency, amount: req.amount, address: req.address },
+        };
+      }
+    }
+
+    // SOL withdrawal via hot wallet
+    if (currency === "SOL" && this.config.solAddress) {
+      try {
+        const solWalletKey = process.env.SOL_WALLET_KEY;
+        if (solWalletKey) {
+          // Dynamic import for Solana web3
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const solWeb3: any = await (async () => { try { return require("@solana/web3.js"); } catch { return null; } })();
+          if (!solWeb3) throw new Error("@solana/web3.js not installed");
+          const { Connection, Keypair, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } = solWeb3;
+          const solRpcUrl = process.env.SOL_RPC_URL;
+          if (!solRpcUrl) throw new Error("SOL_RPC_URL not configured");
+          const connection = new Connection(solRpcUrl, "confirmed");
+          const keypair = Keypair.fromSecretKey(Buffer.from(JSON.parse(solWalletKey)));
+
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: keypair.publicKey,
+              toPubkey: new PublicKey(req.address),
+              lamports: Math.floor(parseFloat(req.amount) * LAMPORTS_PER_SOL),
+            })
+          );
+          const signature = await connection.sendTransaction(tx, [keypair]);
+          await connection.confirmTransaction(signature, "confirmed");
+
+          console.log(`[DirectWallet] SOL withdrawal sent: ${signature}`);
+          return {
+            gatewayWithdrawalId: withdrawalId,
+            status: "completed",
+            rawResponse: { currency: "SOL", amount: req.amount, address: req.address, txHash: signature, chain: "solana" },
+          };
+        }
+      } catch (err: any) {
+        console.error(`[DirectWallet] SOL withdrawal failed:`, err.message);
+        return {
+          gatewayWithdrawalId: withdrawalId,
+          status: "failed",
+          rawResponse: { error: err.message, currency, amount: req.amount, address: req.address },
+        };
+      }
+    }
+
+    // Fallback: queue for manual processing
+    console.log(`[DirectWallet] Withdrawal queued for manual processing: ${req.amount} ${currency} to ${req.address}`);
     return {
       gatewayWithdrawalId: withdrawalId,
       status: "processing",
-      rawResponse: { currency: req.currency, amount: req.amount, address: req.address },
+      rawResponse: { currency, amount: req.amount, address: req.address, manual: true },
     };
   }
 
@@ -182,9 +343,16 @@ export class DirectWalletGateway implements IPaymentGateway {
         return this.generateBTCAddress(orderId);
       case "ETH":
       case "USDT":
-        return this.config.ethAddress || "0x0000000000000000000000000000000000000000";
+      case "USDC":
+      case "MATIC":
+        // For Polygon/ETH: return the hot wallet address
+        // Deposits are tracked via memo/orderId in the transaction data field
+        const addr = this.config.ethAddress || process.env.POLYGON_DEPOSIT_ADDRESS;
+        if (!addr) throw new Error("ETH/Polygon deposit address not configured: set ETH_HOT_WALLET or POLYGON_DEPOSIT_ADDRESS");
+        return addr;
       case "SOL":
-        return this.config.solAddress || "11111111111111111111111111111111";
+        if (!this.config.solAddress) throw new Error("SOL deposit address not configured: set SOL_HOT_WALLET");
+        return this.config.solAddress;
       default:
         throw new Error(`Cannot generate address for ${currency}`);
     }
@@ -206,7 +374,8 @@ export class DirectWalletGateway implements IPaymentGateway {
         // Fallback
       }
     }
-    // Fallback: return configured address
-    return this.config.btcXpub || "bc1qplaceholder";
+    // No fallback — BTC deposits require configured xpub
+    if (!this.config.btcXpub) throw new Error("BTC deposits not configured: BTC_XPUB required");
+    return this.config.btcXpub;
   }
 }

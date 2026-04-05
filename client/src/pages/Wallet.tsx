@@ -1278,16 +1278,31 @@ const WALLET_PROVIDERS: WalletProviderInfo[] = [
   { id: "phantom", name: "Phantom", letter: "P", color: "text-purple-400", bgColor: "bg-purple-500/15", borderColor: "border-purple-500/25", glowRgb: "168,85,247" },
 ];
 
-function generateMockAddress(providerId: string): string {
-  const prefixes: Record<string, string> = {
-    metamask: "0x7a3b",
-    coinbase: "0x4e2d",
-    walletconnect: "0x9f1c",
-    phantom: "Gh4x",
-  };
-  const prefix = prefixes[providerId] || "0x0000";
-  const suffix = Math.random().toString(36).substring(2, 10);
-  return `${prefix}...${suffix}`;
+async function requestWalletAddress(providerId: string): Promise<string | null> {
+  // Try real wallet connection via browser extension APIs
+  if (providerId === "metamask" || providerId === "coinbase" || providerId === "walletconnect") {
+    if (typeof window !== "undefined" && (window as any).ethereum) {
+      try {
+        const accounts = await (window as any).ethereum.request({ method: "eth_requestAccounts" });
+        if (accounts && accounts.length > 0) return accounts[0];
+      } catch {
+        // User rejected or extension not available
+      }
+    }
+  }
+  if (providerId === "phantom") {
+    if (typeof window !== "undefined" && (window as any).solana?.isPhantom) {
+      try {
+        const resp = await (window as any).solana.connect();
+        if (resp?.publicKey) return resp.publicKey.toString();
+      } catch {
+        // User rejected
+      }
+    }
+  }
+  // Fallback: prompt user to paste address manually
+  const address = prompt(`Enter your ${providerId} wallet address:`);
+  return address && address.trim().length > 10 ? address.trim() : null;
 }
 
 function truncateWalletAddress(addr: string): string {
@@ -1326,7 +1341,8 @@ function ConnectedWalletsSection() {
   const handleConnect = useCallback(async (providerId: string) => {
     setConnecting(providerId);
     try {
-      const address = generateMockAddress(providerId);
+      const address = await requestWalletAddress(providerId);
+      if (!address) { setConnecting(null); return; }
       const res = await fetch("/api/auth/wallet/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

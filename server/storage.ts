@@ -350,6 +350,8 @@ export class MemStorage implements IStorage {
       kycRejectionReason: data.kycRejectionReason ?? null,
       memberId: data.memberId ?? null,
       kycBlockchainTxHash: data.kycBlockchainTxHash ?? null,
+      emailVerified: (data as any).emailVerified ?? false,
+      emailVerificationToken: (data as any).emailVerificationToken ?? null,
       selfExcludedUntil: data.selfExcludedUntil ?? null,
       depositLimitDaily: data.depositLimitDaily ?? 0,
       depositLimitWeekly: data.depositLimitWeekly ?? 0,
@@ -414,6 +416,10 @@ export class MemStorage implements IStorage {
       antiCollusion: false,
       themeColor: "gold",
       eloRating: 1200,
+      allowedCountries: null,
+      allowedStates: null,
+      blockVpn: false,
+      kycRequired: "none",
       createdAt: new Date(),
     };
     this.clubs.set(id, club);
@@ -564,6 +570,10 @@ export class MemStorage implements IStorage {
       scheduledStartTime: data.scheduledStartTime ? new Date(data.scheduledStartTime) : null,
       scheduledEndTime: data.scheduledEndTime ? new Date(data.scheduledEndTime) : null,
       recurringSchedule: data.recurringSchedule || null,
+      allowedCountries: null,
+      allowedStates: null,
+      blockVpn: false,
+      kycRequired: null,
       createdAt: new Date(),
     };
     this.tablesList.set(id, table);

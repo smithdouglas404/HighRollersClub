@@ -42,10 +42,13 @@ import Marketplace from "@/pages/Marketplace";
 import Stakes from "@/pages/Stakes";
 import Tiers from "@/pages/Tiers";
 import KYC from "@/pages/KYC";
+import TransactionExplorer from "@/pages/TransactionExplorer";
+import BlockchainDashboard from "@/pages/BlockchainDashboard";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import Support from "@/pages/Support";
 import ResponsibleGambling from "@/pages/ResponsibleGambling";
+import PremiumTable from "@/pages/PremiumTable";
 import NotFound from "@/pages/not-found";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -158,6 +161,18 @@ function ProtectedKYC() {
   return <AuthGate><KYC /></AuthGate>;
 }
 
+function ProtectedTransactionExplorer() {
+  return <AuthGate><TransactionExplorer /></AuthGate>;
+}
+
+function ProtectedBlockchainDashboard() {
+  return <AuthGate><BlockchainDashboard /></AuthGate>;
+}
+
+function ProtectedPremiumTable() {
+  return <AuthGate><PremiumTable /></AuthGate>;
+}
+
 function ProtectedResponsibleGambling() {
   return <AuthGate><ResponsibleGambling /></AuthGate>;
 }
@@ -246,6 +261,9 @@ function Router() {
       <Route path="/stakes" component={ProtectedStakes} />
       <Route path="/tiers" component={ProtectedTiers} />
       <Route path="/kyc" component={ProtectedKYC} />
+      <Route path="/explorer" component={ProtectedTransactionExplorer} />
+      <Route path="/blockchain" component={ProtectedBlockchainDashboard} />
+      <Route path="/premium-table" component={ProtectedPremiumTable} />
       <Route path="/dye-shop">{() => <Redirect to="/shop" />}</Route>
       <Route path="/avatar-customizer">{() => <Redirect to="/wardrobe" />}</Route>
       <Route path="/avatar-render">{() => <Redirect to="/wardrobe" />}</Route>

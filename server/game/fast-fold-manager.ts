@@ -247,7 +247,7 @@ class FastFoldManager {
     const clients = getClients();
     const client = clients.get(userId);
     if (client) {
-      client.tableId = null;
+      client.tableIds.clear();
     }
 
     // Immediately try to assign to a new table (within ~1 second)
@@ -294,7 +294,7 @@ class FastFoldManager {
       const clients = getClients();
       const client = clients.get(p.id);
       if (client) {
-        client.tableId = null;
+        client.tableIds.clear();
       }
 
       poolPlayer.currentTableId = null;
@@ -387,7 +387,7 @@ class FastFoldManager {
         const clients = getClients();
         const client = clients.get(userId);
         if (client) {
-          client.tableId = table.tableId;
+          client.tableIds.add(table.tableId);
         }
 
         // Notify client of reassignment

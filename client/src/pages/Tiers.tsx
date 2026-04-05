@@ -6,7 +6,8 @@ import { Crown, Shield, Star, Zap, Gem, Check, Loader2 } from "lucide-react";
 interface TierDefinition {
   id: string;
   name: string;
-  price: number;
+  monthlyPrice: number;
+  annualPrice: number;
   benefits: string[];
 }
 
@@ -26,14 +27,6 @@ const TIER_COLORS: Record<string, { bg: string; border: string; text: string; gl
   platinum: { bg: "from-purple-500/20 to-indigo-600/20", border: "border-purple-400/40", text: "text-purple-300", glow: "shadow-[0_0_20px_rgba(168,85,247,0.2)]" },
 };
 
-const TIER_FULL_BENEFITS: Record<string, string[]> = {
-  free: ["Play cash games", "Basic statistics"],
-  bronze: ["Coaching access", "Daily challenges", "Everything in Free"],
-  silver: ["Multi-table play", "Replay sharing", "Everything in Bronze"],
-  gold: ["Create clubs", "Host tournaments with rake", "KYC eligible", "Everything in Silver"],
-  platinum: ["Marketplace selling", "Priority support", "Advanced API access", "Everything in Gold"],
-};
-
 export default function Tiers() {
   const { user, refreshUser } = useAuth();
   const [tiers, setTiers] = useState<TierDefinition[]>([]);
@@ -41,6 +34,7 @@ export default function Tiers() {
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
 
   useEffect(() => {
     fetch("/api/tiers")
@@ -58,13 +52,17 @@ export default function Tiers() {
       const res = await fetch("/api/tiers/upgrade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier: tierId }),
+        body: JSON.stringify({ tier: tierId, plan: billingCycle }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || "Upgrade failed");
+        if (data.requiresKyc) {
+          setError("KYC verification required. Please complete identity verification first.");
+        } else {
+          setError(data.message || "Upgrade failed");
+        }
       } else {
-        setSuccess(`Successfully upgraded to ${tierId}!`);
+        setSuccess(`Payment initiated for ${tierId} tier (${data.priceFormatted}/${billingCycle === "annual" ? "year" : "month"})!`);
         await refreshUser();
       }
     } catch {
@@ -98,6 +96,30 @@ export default function Tiers() {
             {(() => { const Icon = TIER_ICONS[currentTier] || Shield; return <Icon className="w-4 h-4 text-primary" />; })()}
             <span className="text-sm font-bold text-primary uppercase tracking-wider">Current: {currentTier}</span>
           </div>
+
+          {/* Billing cycle toggle */}
+          <div className="mt-4 inline-flex items-center gap-1 p-1 rounded-lg bg-gray-800/50 border border-gray-700/50">
+            <button
+              onClick={() => setBillingCycle("monthly")}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
+                billingCycle === "monthly"
+                  ? "bg-primary/20 text-primary border border-primary/30"
+                  : "text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle("annual")}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
+                billingCycle === "annual"
+                  ? "bg-primary/20 text-primary border border-primary/30"
+                  : "text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              Annual <span className="text-green-400 text-[0.6rem] ml-1">Save ~17%</span>
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -116,10 +138,12 @@ export default function Tiers() {
             const tier = tiers.find(t => t.id === tierId);
             const colors = TIER_COLORS[tierId] || TIER_COLORS.free;
             const Icon = TIER_ICONS[tierId] || Shield;
-            const benefits = TIER_FULL_BENEFITS[tierId] || tier?.benefits || [];
+            const benefits = tier?.benefits || [];
             const isCurrent = tierId === currentTier;
             const isLower = idx < currentRank;
-            const price = tier?.price || 0;
+            const price = tier
+              ? billingCycle === "annual" ? tier.annualPrice : tier.monthlyPrice
+              : 0;
 
             return (
               <div
@@ -137,9 +161,13 @@ export default function Tiers() {
                     {tierId}
                   </h3>
                   <p className="text-2xl font-black text-white mt-1">
-                    {price === 0 ? "Free" : `${price.toLocaleString()}`}
+                    {price === 0 ? "Free" : `$${(price / 100).toFixed(2)}`}
                   </p>
-                  {price > 0 && <p className="text-[0.625rem] text-gray-500 uppercase">chips / month</p>}
+                  {price > 0 && (
+                    <p className="text-[0.625rem] text-gray-500 uppercase">
+                      per {billingCycle === "annual" ? "year" : "month"}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex-1 space-y-2 mb-4">

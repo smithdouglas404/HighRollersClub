@@ -426,10 +426,8 @@ export function getPaymentService(): PaymentService {
   if (!paymentServiceInstance) {
     const baseUrl = process.env.WEBHOOK_BASE_URL
       || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
-      || "http://localhost:5000";
-    if (process.env.NODE_ENV === "production" && baseUrl === "http://localhost:5000") {
-      console.warn("[PAYMENTS] WARNING: WEBHOOK_BASE_URL not set — payment webhooks will fail in production!");
-    }
+      || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
+      || (process.env.NODE_ENV === "production" ? (() => { throw new Error("FATAL: WEBHOOK_BASE_URL must be set in production for payment webhooks"); })() : "http://localhost:5000");
     paymentServiceInstance = new PaymentService(baseUrl);
 
     // Register configured gateways

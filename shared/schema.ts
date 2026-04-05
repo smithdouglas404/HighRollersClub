@@ -93,6 +93,7 @@ export const insertClubSchema = createInsertSchema(clubs).pick({
   name: true,
   description: true,
   isPublic: true,
+  avatarUrl: true,
 });
 
 export type Club = typeof clubs.$inferSelect;

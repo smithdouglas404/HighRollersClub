@@ -98,24 +98,66 @@ type Tier = typeof TIER_ORDER[number];
 
 const TIER_DEFINITIONS = [
   {
-    id: "free", name: "Free", price: 0,
-    benefits: ["Play cash games", "Basic statistics"],
+    id: "free", name: "Free", monthlyPrice: 0, annualPrice: 0,
+    benefits: [
+      "Practice mode",
+      "Join public cash games (with table limits)",
+      "Basic statistics (hands played, win rate)",
+      "Basic avatar creation",
+      "Daily bonus: 1,000 chips",
+      "Military rank earned & displayed",
+      "Join clubs (cannot create)",
+    ],
   },
   {
-    id: "bronze", name: "Bronze", price: 1000,
-    benefits: ["Coaching access", "Daily challenges"],
+    id: "bronze", name: "Bronze", monthlyPrice: 499, annualPrice: 4999,
+    benefits: [
+      "Basic membership",
+      "Avatar selection & ownership",
+      "Daily challenges & missions",
+      "Coaching access",
+      "Everything in Free",
+    ],
   },
   {
-    id: "silver", name: "Silver", price: 5000,
-    benefits: ["Multi-table play", "Replay sharing"],
+    id: "silver", name: "Silver", monthlyPrice: 999, annualPrice: 9999,
+    benefits: [
+      "Buy on marketplace (avatars, cosmetics, NFTs)",
+      "Sell on marketplace (KYC required)",
+      "Multi-table play",
+      "Replay sharing",
+      "Enhanced stats dashboard",
+      "2x daily bonus (2,000 chips)",
+      "Custom table themes",
+      "Reduced platform fee (0.25% vs 0.5%)",
+      "Everything in Bronze",
+    ],
   },
   {
-    id: "gold", name: "Gold", price: 15000,
-    benefits: ["Create clubs", "Host tournaments with rake", "KYC eligible"],
+    id: "gold", name: "Gold", monthlyPrice: 1999, annualPrice: 19999,
+    benefits: [
+      "Full stats dashboard",
+      "Advanced API access",
+      "Priority support",
+      "Rakeback eligible",
+      "KYC required to purchase",
+      "Everything in Silver",
+    ],
   },
   {
-    id: "platinum", name: "Platinum", price: 50000,
-    benefits: ["Marketplace selling", "Priority support", "Advanced API access"],
+    id: "platinum", name: "Platinum", monthlyPrice: 4999, annualPrice: 49999,
+    benefits: [
+      "Create & manage clubs",
+      "Host tournaments with admin fees & rake",
+      "Create private games with configurable rake",
+      "Alliance system access",
+      "Credit tournaments from club treasury",
+      "Club rake reports & analytics",
+      "Club marketplace storefront (sell club-branded NFTs)",
+      "Reduced marketplace fee (2.0% vs 2.9%)",
+      "Priority table seating",
+      "Everything in Gold",
+    ],
   },
 ];
 
@@ -915,7 +957,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     }
   });
 
-  app.post("/api/clubs", requireAuth, requireTier("gold"), async (req, res, next) => {
+  app.post("/api/clubs", requireAuth, requireTier("platinum"), async (req, res, next) => {
     try {
       const parsed = insertClubSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -1471,6 +1513,96 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       }
 
       res.json({ mostActiveTable, topWinnerThisWeek, biggestPotToday });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Club Rake Report (for club owners/admins, not just platform admins) ──
+  app.get("/api/clubs/:id/rake-report", requireAuth, requireTier("platinum"), async (req, res, next) => {
+    try {
+      const club = await storage.getClub(req.params.id);
+      if (!club) return res.status(404).json({ message: "Club not found" });
+
+      // Only club owner/admin can see rake report
+      const members = await storage.getClubMembers(club.id);
+      const member = members.find((m: any) => m.userId === req.user!.id);
+      if (!member || (member.role !== "owner" && member.role !== "admin")) {
+        return res.status(403).json({ message: "Only club owner or admin can view rake reports" });
+      }
+
+      if (!hasDatabase()) {
+        return res.json({ totalRake: 0, platformFees: 0, netRake: 0, byTable: [], byPlayer: [] });
+      }
+
+      const db = getDb();
+      const period = (req.query.period as string) || "week"; // day, week, month
+      const intervals: Record<string, string> = { day: "1 day", week: "7 days", month: "30 days" };
+      const interval = intervals[period] || "7 days";
+
+      // Total rake from club tables
+      const rakeRows = await db.execute(sql`
+        SELECT
+          t.id AS table_id, t.name AS table_name,
+          SUM(gh.total_rake)::int AS total_rake,
+          COUNT(gh.id)::int AS hand_count
+        FROM game_hands gh
+        INNER JOIN tables t ON t.id = gh.table_id
+        WHERE t.club_id = ${club.id}
+          AND gh.created_at >= NOW() - CAST(${interval} AS INTERVAL)
+          AND gh.total_rake > 0
+        GROUP BY t.id, t.name
+        ORDER BY total_rake DESC
+      `);
+      const rakeResult = (rakeRows as any).rows ?? rakeRows;
+
+      // Rake by player (top contributors)
+      const playerRakeRows = await db.execute(sql`
+        SELECT
+          u.id, u.username, u.display_name,
+          ABS(SUM(tx.amount))::int AS total_rake
+        FROM transactions tx
+        INNER JOIN users u ON u.id = tx.user_id
+        WHERE tx.type = 'rake'
+          AND tx.table_id IN (SELECT id FROM tables WHERE club_id = ${club.id})
+          AND tx.created_at >= NOW() - CAST(${interval} AS INTERVAL)
+          AND (tx.metadata IS NULL OR tx.metadata::text NOT LIKE '%platform_fee%')
+        GROUP BY u.id, u.username, u.display_name
+        ORDER BY total_rake DESC
+        LIMIT 20
+      `);
+      const playerResult = (playerRakeRows as any).rows ?? playerRakeRows;
+
+      const totalRake = rakeResult.reduce((s: number, r: any) => s + Number(r.total_rake), 0);
+
+      // Platform fees collected from this club's tables
+      const feeRows = await db.execute(sql`
+        SELECT ABS(SUM(tx.amount))::int AS total_fees
+        FROM transactions tx
+        WHERE tx.type = 'rake'
+          AND tx.table_id IN (SELECT id FROM tables WHERE club_id = ${club.id})
+          AND tx.created_at >= NOW() - CAST(${interval} AS INTERVAL)
+          AND tx.metadata::text LIKE '%platform_fee%'
+      `);
+      const feeResult = (feeRows as any).rows ?? feeRows;
+      const platformFees = feeResult.length > 0 ? Number(feeResult[0].total_fees || 0) : 0;
+
+      res.json({
+        period,
+        totalRake,
+        platformFees,
+        netRake: totalRake - platformFees,
+        byTable: rakeResult.map((r: any) => ({
+          tableId: r.table_id,
+          tableName: r.table_name,
+          totalRake: Number(r.total_rake),
+          handCount: Number(r.hand_count),
+        })),
+        byPlayer: playerResult.map((r: any) => ({
+          userId: r.id,
+          username: r.username,
+          displayName: r.display_name,
+          totalRake: Number(r.total_rake),
+        })),
+      });
     } catch (err) { next(err); }
   });
 
@@ -2097,6 +2229,76 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) {
       next(err);
     }
+  });
+
+  // ─── Military Rank System ──────────────────────────────────────────────
+  const MILITARY_RANKS = [
+    { id: "pvt",  label: "Private",             prefix: "Pvt.",  tier: "enlisted", minHands: 0,      minWinRate: 0,  minTournamentWins: 0 },
+    { id: "pfc",  label: "Private First Class",  prefix: "PFC",   tier: "enlisted", minHands: 51,     minWinRate: 0,  minTournamentWins: 0 },
+    { id: "cpl",  label: "Corporal",             prefix: "Cpl.",  tier: "enlisted", minHands: 201,    minWinRate: 40, minTournamentWins: 0 },
+    { id: "sgt",  label: "Sergeant",             prefix: "Sgt.",  tier: "enlisted", minHands: 501,    minWinRate: 45, minTournamentWins: 0 },
+    { id: "ssgt", label: "Staff Sergeant",       prefix: "SSgt.", tier: "enlisted", minHands: 1001,   minWinRate: 48, minTournamentWins: 0 },
+    { id: "msgt", label: "Master Sergeant",      prefix: "MSgt.", tier: "enlisted", minHands: 2501,   minWinRate: 50, minTournamentWins: 1 },
+    { id: "2lt",  label: "2nd Lieutenant",       prefix: "2LT",   tier: "officer",  minHands: 5001,   minWinRate: 52, minTournamentWins: 3 },
+    { id: "1lt",  label: "1st Lieutenant",       prefix: "1LT",   tier: "officer",  minHands: 10001,  minWinRate: 54, minTournamentWins: 5 },
+    { id: "cpt",  label: "Captain",              prefix: "CPT",   tier: "officer",  minHands: 25001,  minWinRate: 55, minTournamentWins: 10 },
+    { id: "maj",  label: "Major",                prefix: "MAJ",   tier: "officer",  minHands: 50001,  minWinRate: 56, minTournamentWins: 20 },
+    { id: "col",  label: "Colonel",              prefix: "COL",   tier: "officer",  minHands: 100001, minWinRate: 57, minTournamentWins: 50 },
+    { id: "gen",  label: "General",              prefix: "GEN",   tier: "officer",  minHands: 250000, minWinRate: 58, minTournamentWins: 100 },
+  ];
+
+  function calculateMilitaryRank(handsPlayed: number, winRate: number, tournamentWins: number) {
+    let rank = MILITARY_RANKS[0];
+    for (const r of MILITARY_RANKS) {
+      if (handsPlayed >= r.minHands && winRate >= r.minWinRate && tournamentWins >= r.minTournamentWins) {
+        rank = r;
+      }
+    }
+    return rank;
+  }
+
+  // Get any player's hover card — safe stats only (no VPIP, PFR, aggression)
+  app.get("/api/players/:id/hover", async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).json({ message: "Player not found" });
+
+      const stats = await storage.getPlayerStats(user.id);
+      const handsPlayed = stats?.handsPlayed ?? 0;
+      const winRate = handsPlayed > 0 ? Math.round(((stats?.potsWon ?? 0) / handsPlayed) * 100 * 10) / 10 : 0;
+      const tournamentWins = stats?.sngWins ?? 0;
+      const rank = calculateMilitaryRank(handsPlayed, winRate, tournamentWins);
+
+      // Find player's club
+      const clubs = await storage.getUserClubs(user.id);
+      const primaryClub = clubs.length > 0 ? clubs[0] : null;
+
+      res.json({
+        username: user.username,
+        displayName: user.displayName,
+        avatarId: user.avatarId,
+        rank: {
+          id: rank.id,
+          label: rank.label,
+          prefix: rank.prefix,
+          tier: rank.tier,
+        },
+        // Safe stats only — no VPIP, PFR, aggression factor, or position stats
+        stats: {
+          handsPlayed,
+          winRate,
+          tournamentWins,
+          bestStreak: stats?.bestWinStreak ?? 0,
+        },
+        memberSince: user.createdAt,
+        club: primaryClub ? { id: primaryClub.id, name: primaryClub.name } : null,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Get military rank definitions
+  app.get("/api/military-ranks", (_req, res) => {
+    res.json(MILITARY_RANKS);
   });
 
   // ─── Stats Breakdown by Variant / Format ───────────────────────────────
@@ -2902,11 +3104,11 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         adminFeePercent, timeBankSeconds } = parsed.data;
       const { blindPreset } = req.body;
 
-      // Gate tournament hosting with rake: require Gold+ tier
+      // Gate tournament hosting with rake/fees: require Platinum tier (club owners only)
       if ((adminFeePercent ?? 0) > 0) {
         const tourUser = await storage.getUser(req.user!.id);
-        if (!tourUser || tierRank(tourUser.tier) < tierRank("gold")) {
-          return res.status(403).json({ message: "Gold tier or higher required to host tournaments with admin fees" });
+        if (!tourUser || tierRank(tourUser.tier) < tierRank("platinum")) {
+          return res.status(403).json({ message: "Platinum tier required to host tournaments with admin fees" });
         }
       }
 
@@ -5274,9 +5476,19 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     } catch (err) { next(err); }
   });
 
-  app.post("/api/marketplace/list", requireAuth, async (req, res, next) => {
+  app.post("/api/marketplace/list", requireAuth, requireTier("silver"), async (req, res, next) => {
     try {
-      const user = req.user as any;
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // KYC required to sell on marketplace
+      if (user.kycStatus !== "verified") {
+        return res.status(403).json({
+          message: "KYC verification required to sell on the marketplace",
+          requiresKyc: true,
+        });
+      }
+
       const { itemId, price } = req.body;
       if (!itemId || !price || price < 1) return res.status(400).json({ message: "itemId and price required" });
 
@@ -5285,20 +5497,24 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const owns = inventory.find(i => i.itemId === itemId);
       if (!owns) return res.status(400).json({ message: "You don't own this item" });
 
+      // Platinum clubs get reduced marketplace fee: 2.0% vs 2.9%
+      const feePercent = tierRank(user.tier) >= tierRank("platinum") ? 0.02 : 0.029;
+      const platformFee = Math.max(1, Math.floor(price * feePercent));
+
       const listing = await storage.createListing({
         sellerId: user.id,
         itemId,
         price,
         status: "active",
         buyerId: null,
-        platformFee: Math.floor(price * 0.1),
+        platformFee,
         soldAt: null,
       });
       res.json(listing);
     } catch (err) { next(err); }
   });
 
-  app.post("/api/marketplace/:id/buy", requireAuth, async (req, res, next) => {
+  app.post("/api/marketplace/:id/buy", requireAuth, requireTier("silver"), async (req, res, next) => {
     try {
       const user = req.user as any;
       const listings = await storage.getListings("active");
@@ -5306,7 +5522,8 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       if (!listing) return res.status(404).json({ message: "Listing not found" });
       if (listing.sellerId === user.id) return res.status(400).json({ message: "Cannot buy your own listing" });
 
-      const fee = Math.floor(listing.price * 0.1);
+      // Use the fee already calculated at listing time
+      const fee = listing.platformFee || Math.max(1, Math.floor(listing.price * 0.029));
       const sellerPayout = listing.price - fee;
 
       // Deduct from buyer
@@ -5337,6 +5554,64 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
       const updated = await storage.cancelListing(req.params.id);
       res.json(updated);
     } catch (err) { next(err); }
+  });
+
+  // ─── NFT Marketplace Routes ──────────────────────────────────────────────
+  // Mint avatar as NFT (platform admin or authorized minter)
+  app.post("/api/nft/mint", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      const { toAddress, metadataURI } = req.body;
+      if (!toAddress || !metadataURI) {
+        return res.status(400).json({ message: "toAddress and metadataURI required" });
+      }
+
+      const { getNFTService } = await import("./nft/nft-service");
+      const nftService = getNFTService();
+      if (!nftService.isAvailable()) {
+        return res.status(503).json({ message: "NFT service not configured" });
+      }
+
+      const result = await nftService.mintAvatar(toAddress, metadataURI);
+      if (!result) {
+        return res.status(500).json({ message: "Minting failed" });
+      }
+
+      res.json({
+        tokenId: result.tokenId,
+        txHash: result.txHash,
+        metadataURI,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Get NFT listing info
+  app.get("/api/nft/listing/:tokenId", async (req, res, next) => {
+    try {
+      const { getNFTService } = await import("./nft/nft-service");
+      const nftService = getNFTService();
+      if (!nftService.isAvailable()) {
+        return res.status(503).json({ message: "NFT service not configured" });
+      }
+
+      const listing = await nftService.getListing(req.params.tokenId);
+      if (!listing) {
+        return res.status(404).json({ message: "Listing not found" });
+      }
+
+      res.json(listing);
+    } catch (err) { next(err); }
+  });
+
+  // Check NFT marketplace status
+  app.get("/api/nft/status", (_req, res) => {
+    const configured = !!(process.env.NFT_MARKETPLACE_ADDRESS && process.env.POLYGON_RPC_URL && process.env.POLYGON_WALLET_KEY);
+    res.json({
+      available: configured,
+      contractAddress: process.env.NFT_MARKETPLACE_ADDRESS || null,
+      network: process.env.POLYGON_CHAIN_ID === "137" ? "Polygon Mainnet" : "Polygon Testnet",
+      defaultFeeBps: 290, // 2.9%
+      platinumFeeBps: 200, // 2.0%
+    });
   });
 
   // ─── Staking System ────────────────────────────────────────────────────
@@ -5780,12 +6055,15 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
 
   app.post("/api/tiers/upgrade", requireAuth, async (req, res, next) => {
     try {
-      const { tier } = req.body;
+      const { tier, plan } = req.body; // plan: "monthly" | "annual"
       if (!tier || !TIER_ORDER.includes(tier)) {
         return res.status(400).json({ message: "Invalid tier" });
       }
       if (tier === "free") {
         return res.status(400).json({ message: "Cannot upgrade to free tier" });
+      }
+      if (!plan || !["monthly", "annual"].includes(plan)) {
+        return res.status(400).json({ message: "Plan must be 'monthly' or 'annual'" });
       }
       const tierDef = TIER_DEFINITIONS.find(t => t.id === tier);
       if (!tierDef) return res.status(400).json({ message: "Unknown tier" });
@@ -5797,19 +6075,84 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
         return res.status(400).json({ message: "You already have this tier or higher" });
       }
 
-      if (user.chipBalance < tierDef.price) {
-        return res.status(400).json({ message: "Insufficient chips" });
+      // KYC requirement for Gold and Platinum
+      if (tierRank(tier) >= tierRank("gold") && user.kycStatus !== "verified") {
+        return res.status(403).json({
+          message: "KYC verification required for Gold and Platinum tiers",
+          requiresKyc: true,
+        });
       }
 
-      const { success } = await storage.atomicDeductChips(user.id, tierDef.price);
-      if (!success) {
-        return res.status(400).json({ message: "Insufficient chips" });
+      // Calculate price in cents — paid via payment gateway (crypto or card)
+      const priceInCents = plan === "annual" ? tierDef.annualPrice : tierDef.monthlyPrice;
+      const durationDays = plan === "annual" ? 365 : 30;
+
+      // Create a payment via the payment service
+      const { getPaymentService } = await import("./payments/payment-service");
+      const paymentService = getPaymentService();
+
+      // Initiate a tier subscription payment (chipAmount=0, subscription only)
+      const gateway = req.body.gateway || "stripe";
+      const currency = req.body.currency || "USD";
+      const depositResult = await paymentService.initiateDeposit(
+        user.id,
+        priceInCents,
+        currency,
+        gateway,
+        [{ walletType: "main", amount: priceInCents }], // allocation must match
+      );
+
+      // Store tier intent in payment metadata so webhook can activate the tier
+      if (depositResult && depositResult.paymentId) {
+        await storage.updatePayment(depositResult.paymentId, {
+          gatewayData: JSON.stringify({
+            tierIntent: { tier, plan, durationDays },
+          }) as any,
+        });
       }
 
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
-      const updated = await storage.updateUser(user.id, { tier, tierExpiresAt: expiresAt });
-      res.json(updated);
+      res.json({
+        message: "Payment initiated for tier upgrade",
+        paymentId: depositResult.paymentId,
+        payAddress: depositResult.payAddress,
+        payAmount: depositResult.payAmount,
+        tier,
+        plan,
+        priceFormatted: `$${(priceInCents / 100).toFixed(2)}`,
+        duration: plan === "annual" ? "1 year" : "30 days",
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Direct tier activation (for admin or after payment confirmation)
+  app.post("/api/tiers/activate", requireAuth, async (req, res, next) => {
+    try {
+      const { tier, plan, userId } = req.body;
+      const targetUserId = userId || req.user!.id;
+
+      // Only admins can activate for other users
+      if (userId && userId !== req.user!.id) {
+        const admin = await storage.getUser(req.user!.id);
+        if (!admin || admin.role !== "admin") {
+          return res.status(403).json({ message: "Admin only" });
+        }
+      }
+
+      const tierDef = TIER_DEFINITIONS.find(t => t.id === tier);
+      if (!tierDef) return res.status(400).json({ message: "Unknown tier" });
+
+      const durationDays = plan === "annual" ? 365 : 30;
+      const user = await storage.getUser(targetUserId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Set or extend tier
+      const now = Date.now();
+      const currentExpiry = user.tierExpiresAt ? new Date(user.tierExpiresAt).getTime() : 0;
+      const baseTime = currentExpiry > now && tierRank(user.tier) >= tierRank(tier) ? currentExpiry : now;
+      const expiresAt = new Date(baseTime + durationDays * 24 * 60 * 60 * 1000);
+
+      const updated = await storage.updateUser(targetUserId, { tier, tierExpiresAt: expiresAt });
+      res.json({ message: `${tier} tier activated until ${expiresAt.toISOString()}`, user: updated });
     } catch (err) { next(err); }
   });
 
@@ -5834,7 +6177,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   // Onfido handles: ID capture, liveness detection, face matching, document authenticity.
   // We NEVER see or store the actual ID documents — they live on Onfido's infrastructure.
 
-  app.post("/api/kyc/onfido/start", requireAuth, requireTier("gold"), async (req, res, next) => {
+  app.post("/api/kyc/onfido/start", requireAuth, requireTier("silver"), async (req, res, next) => {
     try {
       const onfidoApiToken = process.env.ONFIDO_API_TOKEN;
       if (!onfidoApiToken) {
@@ -5942,7 +6285,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   });
 
   // Manual KYC submit (fallback when Onfido is not configured)
-  app.post("/api/kyc/submit", requireAuth, requireTier("gold"), kycUpload.fields([
+  app.post("/api/kyc/submit", requireAuth, requireTier("silver"), kycUpload.fields([
     { name: "idDocument", maxCount: 1 },
     { name: "selfie", maxCount: 1 },
   ]), async (req, res, next) => {

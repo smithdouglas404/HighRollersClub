@@ -27,26 +27,26 @@ const WALLET_CONFIG = [
   { key: "bonus" as WalletType, label: "Bonus", shortLabel: "Bonus", desc: "Rewards & rakeback", icon: Sparkles, color: "text-pink-400", border: "border-pink-500/20", bg: "bg-pink-500/10", gradient: "from-pink-500/20 to-rose-600/10", rgb: "236,72,153" },
 ];
 
-const CRYPTO_CURRENCIES = [
-  { id: "USD", name: "Credit/Debit Card", icon: "💳", color: "text-emerald-400" },
-  { id: "BTC", name: "Bitcoin", icon: "₿", color: "text-orange-400" },
-  { id: "ETH", name: "Ethereum", icon: "Ξ", color: "text-blue-400" },
-  { id: "USDT", name: "Tether", icon: "$", color: "text-green-400" },
-  { id: "SOL", name: "Solana", icon: "◎", color: "text-purple-400" },
-  { id: "LTC", name: "Litecoin", icon: "Ł", color: "text-gray-400" },
-  { id: "DOGE", name: "Dogecoin", icon: "Ð", color: "text-primary" },
-];
+// Display metadata for currencies — actual availability comes from the server
+const CURRENCY_META: Record<string, { name: string; icon: string; color: string }> = {
+  USD: { name: "Credit/Debit Card", icon: "💳", color: "text-emerald-400" },
+  BTC: { name: "Bitcoin", icon: "₿", color: "text-orange-400" },
+  ETH: { name: "Ethereum", icon: "Ξ", color: "text-blue-400" },
+  USDT: { name: "Tether", icon: "$", color: "text-green-400" },
+  SOL: { name: "Solana", icon: "◎", color: "text-purple-400" },
+  LTC: { name: "Litecoin", icon: "Ł", color: "text-gray-400" },
+  DOGE: { name: "Dogecoin", icon: "Ð", color: "text-primary" },
+};
 
-const GATEWAYS = [
+// These are populated from /api/payments/currencies and /api/payments/gateways at runtime
+// Fallback only used if API is unreachable during development
+const FALLBACK_CURRENCIES = Object.entries(CURRENCY_META).map(([id, meta]) => ({ id, ...meta }));
+
+const FALLBACK_GATEWAYS = [
   { id: "stripe", name: "Stripe", desc: "Credit/debit card, instant", badge: "Cards" },
   { id: "nowpayments", name: "NOWPayments", desc: "200+ coins, simple setup", badge: "Most Coins" },
   { id: "direct", name: "Direct Wallet", desc: "No middleman, lowest fees", badge: "Low Fees" },
 ];
-
-const FEE_ESTIMATES: Record<string, string> = {
-  USD: "No fee", USDT: "~1 USDT", BTC: "~0.0001 BTC", ETH: "~0.002 ETH", SOL: "~0.001 SOL",
-  LTC: "~0.001 LTC", DOGE: "~2 DOGE",
-};
 
 type FilterType = "all" | "bonus" | "buy_in" | "cashout" | "purchase" | "prize" | "transfer" | "deposit" | "withdraw";
 
@@ -390,8 +390,8 @@ function DepositPanel() {
   const [expirySeconds, setExpirySeconds] = useState(0);
 
   // Dynamic currencies & gateways from backend
-  const [fetchedCurrencies, setFetchedCurrencies] = useState<typeof CRYPTO_CURRENCIES | null>(null);
-  const [fetchedGateways, setFetchedGateways] = useState<typeof GATEWAYS | null>(null);
+  const [fetchedCurrencies, setFetchedCurrencies] = useState<typeof FALLBACK_CURRENCIES | null>(null);
+  const [fetchedGateways, setFetchedGateways] = useState<typeof FALLBACK_GATEWAYS | null>(null);
 
   useEffect(() => {
     // Fetch supported currencies from backend
@@ -440,8 +440,8 @@ function DepositPanel() {
   }, []);
 
   // Use fetched data if available, otherwise fall back to hardcoded constants
-  const activeCurrencies = fetchedCurrencies || CRYPTO_CURRENCIES;
-  const activeGateways = fetchedGateways || GATEWAYS;
+  const activeCurrencies = fetchedCurrencies || FALLBACK_CURRENCIES;
+  const activeGateways = fetchedGateways || FALLBACK_GATEWAYS;
 
   const totalPercent = Object.values(allocation).reduce((s, v) => s + v, 0);
   const amountNum = parseInt(amount) || 0;
@@ -932,7 +932,7 @@ function WithdrawPanel() {
             </button>
           ))}
         </div>
-        <p className="text-[0.5625rem] text-gray-600 mt-1">Estimated fee: {FEE_ESTIMATES[currency] || "varies"}</p>
+        <p className="text-[0.5625rem] text-gray-600 mt-1">Estimated fee: {"varies by network"}</p>
       </div>
 
       <div>
@@ -958,7 +958,7 @@ function WithdrawPanel() {
                 { label: "Amount", value: `${parseInt(amount || "0").toLocaleString()} chips` },
                 { label: "Currency", value: currency },
                 { label: "Address", value: truncateAddress(address), mono: true },
-                { label: "Est. Network Fee", value: FEE_ESTIMATES[currency] || "varies" },
+                { label: "Est. Network Fee", value: "varies by network" },
                 { label: "Processing", value: "1-24 hours" },
               ].map(row => (
                 <div key={row.label} className="flex items-center justify-between">

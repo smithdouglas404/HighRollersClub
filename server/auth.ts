@@ -76,19 +76,25 @@ export function setupAuth(app: Express) {
       createTableIfMissing: true,
     });
   } else {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("FATAL: Database required for session storage in production. Set DATABASE_URL.");
+    }
     const MemoryStore = createMemoryStore(session);
     store = new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
+      checkPeriod: 86400000,
     });
   }
 
   const sessionMiddleware = session({
     secret: (() => {
       const s = process.env.SESSION_SECRET;
-      if (!s || s === "poker-platform-dev-secret-change-me-in-prod") {
-        console.warn("[SECURITY] SESSION_SECRET not set or using default. Set a strong secret in production!");
+      if (!s && process.env.NODE_ENV === "production") {
+        throw new Error("FATAL: SESSION_SECRET must be set in production. Refusing to start with insecure sessions.");
       }
-      return s || require("crypto").randomBytes(32).toString("hex"); // Generate random if missing (won't persist across restarts)
+      if (!s) {
+        console.warn("[SECURITY] SESSION_SECRET not set — generating ephemeral secret (sessions lost on restart)");
+      }
+      return s || require("crypto").randomBytes(32).toString("hex");
     })(),
     resave: false,
     saveUninitialized: false,

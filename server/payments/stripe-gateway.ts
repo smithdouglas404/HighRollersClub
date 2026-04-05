@@ -107,7 +107,9 @@ export class StripeGateway implements IPaymentGateway {
     } else {
       // Default: redirect back to wallet page with success indicator
       const baseUrl = process.env.WEBHOOK_BASE_URL
-        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : "http://localhost:5000");
+        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
+        || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
+        || (process.env.NODE_ENV === "production" ? (() => { throw new Error("FATAL: WEBHOOK_BASE_URL required for Stripe redirects in production"); })() : "http://localhost:5000");
       params["success_url"] = `${baseUrl}/wallet?deposit=success`;
       params["cancel_url"] = `${baseUrl}/wallet?deposit=cancelled`;
     }
@@ -116,7 +118,9 @@ export class StripeGateway implements IPaymentGateway {
       params["cancel_url"] = req.cancelUrl;
     } else if (!params["cancel_url"]) {
       const baseUrl = process.env.WEBHOOK_BASE_URL
-        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : "http://localhost:5000");
+        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
+        || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
+        || (process.env.NODE_ENV === "production" ? (() => { throw new Error("FATAL: WEBHOOK_BASE_URL required for Stripe redirects in production"); })() : "http://localhost:5000");
       params["cancel_url"] = `${baseUrl}/wallet?deposit=cancelled`;
     }
 

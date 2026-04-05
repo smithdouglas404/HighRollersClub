@@ -2584,4 +2584,8 @@ export class DatabaseStorage implements IStorage {
 }
 
 // Export singleton - use DatabaseStorage if DATABASE_URL exists, otherwise MemStorage
+// In production, refuse to run without a database — in-memory storage loses all data on restart
+if (!hasDatabase() && process.env.NODE_ENV === "production") {
+  throw new Error("FATAL: DATABASE_URL must be set in production. In-memory storage is not safe for real users.");
+}
 export const storage: IStorage = hasDatabase() ? new DatabaseStorage() : new MemStorage();

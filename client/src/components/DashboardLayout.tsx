@@ -44,6 +44,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { icon: Trophy, label: "Club Rankings", href: "/club-rankings", match: ["/club-rankings"] },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
   { icon: Shirt, label: "Wardrobe", href: "/wardrobe", match: ["/wardrobe"] },
+  { icon: Shirt, label: "Avatar Studio", href: "/avatar-customizer", match: ["/avatar-customizer"] },
   { icon: Crown, label: "Premium", href: "/premium", match: ["/premium"] },
   { icon: Shield, label: "Tiers", href: "/tiers", match: ["/tiers"] },
 ];

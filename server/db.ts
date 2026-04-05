@@ -45,8 +45,30 @@ export async function autoMigrate(): Promise<void> {
   const p = getPool();
 
   const migrations = [
-    // Users table — new columns
+    // Users table — new columns (some may have been added by Drizzle, some manually)
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS connected_wallets JSONB`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_codes JSONB`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_until TIMESTAMP`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_daily_claim TIMESTAMP`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'free'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS tier_expires_at TIMESTAMP`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_status TEXT NOT NULL DEFAULT 'none'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_data JSONB`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_verified_at TIMESTAMP`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_rejection_reason TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS member_id TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_blockchain_tx_hash TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS self_excluded_until TIMESTAMP`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS deposit_limit_daily INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS deposit_limit_weekly INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS deposit_limit_monthly INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS session_time_limit_minutes INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS loss_limit_daily INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS cool_off_until TIMESTAMP`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_address TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS taunt_voice TEXT DEFAULT 'default'`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token TEXT`,
 
     // Clubs table — geofence columns

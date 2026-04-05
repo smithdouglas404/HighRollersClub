@@ -11,7 +11,7 @@ import { MemberAvatar } from "./shared/MemberAvatar";
 import { PageTransition } from "./shared/PageTransition";
 import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
-  BarChart3, LogOut, Search, Wallet, Medal,
+  BarChart3, LogOut, Search, Wallet, Medal, Star,
   Shield, ChevronDown, Check, Menu, X, Coins, Crown, Shirt,
   Store, Handshake, FileSearch, Link as LinkChain
 } from "lucide-react";
@@ -31,6 +31,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { icon: Trophy, label: "Games & Tables", href: "/lobby", match: ["/lobby", "/game", "/table"] },
   { icon: Medal, label: "Tournaments", href: "/tournaments", match: ["/tournaments"] },
   { icon: ShoppingBag, label: "Shop", href: "/shop", match: ["/shop"] },
+  { icon: Star, label: "Loyalty", href: "/loyalty", match: ["/loyalty"] },
   { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
   { icon: FileSearch, label: "Explorer", href: "/explorer", match: ["/explorer"] },
   { icon: LinkChain, label: "Blockchain", href: "/blockchain", match: ["/blockchain"] },

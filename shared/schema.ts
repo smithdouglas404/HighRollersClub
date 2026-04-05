@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, index, uniqueIndex, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -46,6 +46,14 @@ export const users = pgTable("users", {
   sessionTimeLimitMinutes: integer("session_time_limit_minutes").notNull().default(0),
   lossLimitDaily: integer("loss_limit_daily").notNull().default(0),
   coolOffUntil: timestamp("cool_off_until"),
+  // Loyalty program fields
+  loyaltyPoints: integer("loyalty_points").notNull().default(0),
+  loyaltyLevel: integer("loyalty_level").notNull().default(1),
+  loyaltyMultiplier: numeric("loyalty_multiplier", { precision: 3, scale: 1 }).notNull().default("1.0"),
+  dailyLoginStreak: integer("daily_login_streak").notNull().default(0),
+  lastLoginRewardAt: timestamp("last_login_reward_at"),
+  referredBy: varchar("referred_by"),
+  referralCode: varchar("referral_code").unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -562,12 +570,13 @@ export const shopItems = pgTable("shop_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
-  category: text("category").notNull(), // avatar | table_theme | emote | premium
+  category: text("category").notNull(), // avatar | table_theme | emote | premium | card_back | frame | seat_effect | win_celebration | chat_effect | entrance_animation | taunt
   rarity: text("rarity").notNull().default("common"), // common | uncommon | rare | epic | legendary
   price: integer("price").notNull(),
   currency: text("currency").notNull().default("chips"), // chips | premium
   imageUrl: text("image_url"),
   isActive: boolean("is_active").notNull().default(true),
+  earnableAtLevel: integer("earnable_at_level"), // loyalty level at which this item is unlocked free
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -1154,3 +1163,134 @@ export const clubMessages = pgTable("club_messages", {
 }, (t) => [index("idx_club_messages_club").on(t.clubId), index("idx_club_messages_created").on(t.createdAt)]);
 
 export type ClubMessage = typeof clubMessages.$inferSelect;
+
+// ─── Achievements ───────────────────────────────────────────────────────────
+export const achievements = pgTable("achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(), // e.g. "first_blood"
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // poker | tournament | social | collection
+  requirementType: text("requirement_type").notNull(), // hands_played | pots_won | royal_flush | tournament_win | etc
+  requirementValue: integer("requirement_value").notNull(),
+  hrpReward: integer("hrp_reward").notNull(),
+  chipReward: integer("chip_reward").notNull().default(0),
+  badgeImageUrl: text("badge_image_url"),
+  rarity: text("rarity"), // common | uncommon | rare | epic | legendary
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type Achievement = typeof achievements.$inferSelect;
+
+// ─── User Achievements ──────────────────────────────────────────────────────
+export const userAchievements = pgTable("user_achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  achievementId: varchar("achievement_id").notNull().references(() => achievements.id),
+  progress: integer("progress").notNull().default(0),
+  unlockedAt: timestamp("unlocked_at"),
+  claimedAt: timestamp("claimed_at"),
+}, (table) => [
+  index("user_achievements_user_idx").on(table.userId),
+  index("user_achievements_achievement_idx").on(table.achievementId),
+  uniqueIndex("user_achievements_unique").on(table.userId, table.achievementId),
+]);
+
+export type UserAchievement = typeof userAchievements.$inferSelect;
+
+// ─── Battle Passes ──────────────────────────────────────────────────────────
+export const battlePasses = pgTable("battle_passes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  seasonNumber: integer("season_number").notNull(),
+  startsAt: timestamp("starts_at").notNull(),
+  endsAt: timestamp("ends_at").notNull(),
+  premiumPriceChips: integer("premium_price_chips").notNull().default(10000),
+  premiumPriceUsd: integer("premium_price_usd").notNull().default(999),
+  maxLevel: integer("max_level").notNull().default(50),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type BattlePass = typeof battlePasses.$inferSelect;
+
+// ─── Battle Pass Rewards ────────────────────────────────────────────────────
+export const battlePassRewards = pgTable("battle_pass_rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  battlePassId: varchar("battle_pass_id").notNull().references(() => battlePasses.id),
+  level: integer("level").notNull(),
+  track: text("track").notNull(), // "free" | "premium"
+  rewardType: text("reward_type").notNull(), // "chips" | "hrp" | "shop_item" | "avatar" | "card_back" | "frame" | "emote"
+  rewardValue: integer("reward_value").notNull(),
+  rewardItemId: varchar("reward_item_id").references(() => shopItems.id),
+  description: text("description"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type BattlePassReward = typeof battlePassRewards.$inferSelect;
+
+// ─── User Battle Passes ─────────────────────────────────────────────────────
+export const userBattlePasses = pgTable("user_battle_passes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  battlePassId: varchar("battle_pass_id").notNull().references(() => battlePasses.id),
+  currentLevel: integer("current_level").notNull().default(0),
+  hrpEarnedThisSeason: integer("hrp_earned_this_season").notNull().default(0),
+  isPremium: boolean("is_premium").notNull().default(false),
+  premiumPurchasedAt: timestamp("premium_purchased_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("user_battle_passes_user_idx").on(table.userId),
+  index("user_battle_passes_bp_idx").on(table.battlePassId),
+  uniqueIndex("user_battle_passes_unique").on(table.userId, table.battlePassId),
+]);
+
+export type UserBattlePass = typeof userBattlePasses.$inferSelect;
+
+// ─── Daily Login Rewards ────────────────────────────────────────────────────
+export const dailyLoginRewards = pgTable("daily_login_rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  dayNumber: integer("day_number").notNull(), // 1-7
+  chipReward: integer("chip_reward").notNull(),
+  hrpReward: integer("hrp_reward").notNull(),
+  itemRewardType: text("item_reward_type"), // optional
+  itemRewardRarity: text("item_reward_rarity"), // optional
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type DailyLoginReward = typeof dailyLoginRewards.$inferSelect;
+
+// ─── Referrals ──────────────────────────────────────────────────────────────
+export const referrals = pgTable("referrals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerId: varchar("referrer_id").notNull().references(() => users.id),
+  referredId: varchar("referred_id").notNull().references(() => users.id),
+  milestone: text("milestone").notNull(), // "signup" | "100_hands" | "first_deposit" | "level_3"
+  referrerHrpReward: integer("referrer_hrp_reward").notNull(),
+  referrerChipReward: integer("referrer_chip_reward").notNull(),
+  referredHrpReward: integer("referred_hrp_reward").notNull(),
+  referredChipReward: integer("referred_chip_reward").notNull(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("referrals_referrer_idx").on(table.referrerId),
+  index("referrals_referred_idx").on(table.referredId),
+]);
+
+export type Referral = typeof referrals.$inferSelect;
+
+// ─── HRP Transactions ───────────────────────────────────────────────────────
+export const hrpTransactions = pgTable("hrp_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  amount: integer("amount").notNull(), // positive or negative
+  source: text("source").notNull(), // "hand_played" | "pot_won" | "mission" | "achievement" | "battle_pass" | "daily_login" | "referral" | "level_up" | "admin"
+  description: text("description"),
+  balanceAfter: integer("balance_after").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("hrp_transactions_user_idx").on(table.userId),
+]);
+
+export type HrpTransaction = typeof hrpTransactions.$inferSelect;

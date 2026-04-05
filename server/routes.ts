@@ -29,6 +29,7 @@ import { registerPlayerRoutes } from "./routes/player-routes";
 import { registerAdminPlatformRoutes } from "./routes/admin-platform-routes";
 import { registerKycRoutes } from "./routes/kyc-routes";
 import { registerPlatformRoutes } from "./routes/platform-routes";
+import { registerLoyaltyRoutes } from "./routes/loyalty-routes";
 
 // ─── ILIKE Wildcard Escape Helper ─────────────────────────────────────────
 /** Escape special characters in user input before using in ILIKE patterns */
@@ -488,6 +489,7 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
   await registerGameRoutes(app, requireAuth, requireAdmin, { logAdminAction });
   await registerClubRoutes(app, requireAuth, requireAdmin, { hasDatabase, getDb, sql });
   await registerTournamentRoutes(app, requireAuth, requireAdmin);
+  await registerLoyaltyRoutes(app, requireAuth, { hasDatabase, getDb, sql });
   // Legacy-compatible logAdminAction wrapper (accepts adminId string instead of req)
   const logAdminActionLegacy = async (
     adminId: string,

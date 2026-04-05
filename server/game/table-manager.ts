@@ -353,6 +353,22 @@ class TableManager {
         }
       }
 
+      // ─── Award Loyalty Points (HRP) for hand participation ──────────────
+      try {
+        const { processHandRewards, checkAchievements } = await import("../loyalty-engine");
+        const isTournament = tableRow.gameFormat === "tournament" || tableRow.gameFormat === "sng";
+        const winnerIdSet = new Set(summary.winners.map(w => w.playerId));
+        for (const p of summary.players) {
+          if (!p.id.startsWith("bot-")) {
+            processHandRewards(p.id, isTournament, winnerIdSet.has(p.id)).catch(() => {});
+            // Check achievements after stats update
+            checkAchievements(p.id).catch(() => {});
+          }
+        }
+      } catch {
+        // Loyalty engine not yet available — skip silently
+      }
+
       // Update club challenges if this table belongs to a club
       if (tableRow.clubId) {
         const clubId = tableRow.clubId;

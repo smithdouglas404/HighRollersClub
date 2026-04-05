@@ -41,6 +41,7 @@ import ClubWars from "@/pages/ClubWars";
 import Marketplace from "@/pages/Marketplace";
 import Stakes from "@/pages/Stakes";
 import Tiers from "@/pages/Tiers";
+import Loyalty from "@/pages/Loyalty";
 import KYC from "@/pages/KYC";
 import TransactionExplorer from "@/pages/TransactionExplorer";
 import BlockchainDashboard from "@/pages/BlockchainDashboard";
@@ -162,6 +163,10 @@ function ProtectedStakes() {
 
 function ProtectedTiers() {
   return <AuthGate><Tiers /></AuthGate>;
+}
+
+function ProtectedLoyalty() {
+  return <AuthGate><Loyalty /></AuthGate>;
 }
 
 function ProtectedKYC() {
@@ -295,6 +300,7 @@ function Router() {
       <Route path="/marketplace" component={ProtectedMarketplace} />
       <Route path="/stakes" component={ProtectedStakes} />
       <Route path="/tiers" component={ProtectedTiers} />
+      <Route path="/loyalty" component={ProtectedLoyalty} />
       <Route path="/kyc" component={ProtectedKYC} />
       <Route path="/explorer" component={ProtectedTransactionExplorer} />
       <Route path="/blockchain" component={ProtectedBlockchainDashboard} />

@@ -66,6 +66,65 @@ async function seedShopItems() {
     { name: "Elite Player's Pass", description: "7-day premium access: 2x daily bonus, exclusive tables, priority support", category: "premium", rarity: "legendary", price: 5000, currency: "chips", imageUrl: null },
     { name: "VIP Chip Bundle", description: "Bonus 2,000 chips added to your balance", category: "premium", rarity: "epic", price: 1500, currency: "chips", imageUrl: null },
     { name: "Lucky Charm", description: "Cosmetic lucky charm shown at your seat", category: "premium", rarity: "rare", price: 2500, currency: "chips", imageUrl: null },
+
+    // Card Backs
+    { name: "Classic Red", description: "Traditional red card back design", category: "card_back", rarity: "common", price: 0, currency: "chips", imageUrl: null },
+    { name: "Midnight Black", description: "Sleek midnight black card back", category: "card_back", rarity: "common", price: 300, currency: "chips", imageUrl: null, earnableAtLevel: 2 },
+    { name: "Royal Blue", description: "Elegant royal blue card back", category: "card_back", rarity: "uncommon", price: 800, currency: "chips", imageUrl: null },
+    { name: "Gold Foil", description: "Luxurious gold foil card back", category: "card_back", rarity: "rare", price: 2500, currency: "chips", imageUrl: null },
+    { name: "Carbon Fiber", description: "Modern carbon fiber card back", category: "card_back", rarity: "rare", price: 3000, currency: "chips", imageUrl: null, earnableAtLevel: 4 },
+    { name: "Holographic Shimmer", description: "Shimmering holographic card back", category: "card_back", rarity: "epic", price: 5000, currency: "chips", imageUrl: null, earnableAtLevel: 6 },
+    { name: "Animated Fire", description: "Blazing animated fire card back", category: "card_back", rarity: "epic", price: 7500, currency: "chips", imageUrl: null },
+    { name: "Animated Lightning", description: "Electrifying animated lightning card back", category: "card_back", rarity: "legendary", price: 12000, currency: "chips", imageUrl: null },
+    { name: "Animated Galaxy", description: "Mesmerizing animated galaxy card back", category: "card_back", rarity: "mythic", price: 25000, currency: "chips", imageUrl: null, earnableAtLevel: 9 },
+
+    // Profile Frames
+    { name: "Simple Silver", description: "Clean simple silver profile frame", category: "frame", rarity: "common", price: 200, currency: "chips", imageUrl: null },
+    { name: "Bronze Laurel", description: "Classic bronze laurel wreath frame", category: "frame", rarity: "uncommon", price: 600, currency: "chips", imageUrl: null },
+    { name: "Gold Crown", description: "Regal gold crown profile frame", category: "frame", rarity: "rare", price: 2000, currency: "chips", imageUrl: null },
+    { name: "Diamond Ring", description: "Sparkling diamond ring profile frame", category: "frame", rarity: "epic", price: 4000, currency: "chips", imageUrl: null, earnableAtLevel: 5 },
+    { name: "Animated Flame Ring", description: "Fiery animated flame ring frame", category: "frame", rarity: "legendary", price: 8000, currency: "chips", imageUrl: null },
+    { name: "Animated Neon Pulse", description: "Pulsing neon animated profile frame", category: "frame", rarity: "legendary", price: 10000, currency: "chips", imageUrl: null, earnableAtLevel: 7 },
+    { name: "Holographic Prism", description: "Stunning holographic prism profile frame", category: "frame", rarity: "mythic", price: 20000, currency: "chips", imageUrl: null, earnableAtLevel: 10 },
+
+    // Seat Effects
+    { name: "Subtle Glow", description: "A soft subtle glow around your seat", category: "seat_effect", rarity: "common", price: 500, currency: "chips", imageUrl: null, earnableAtLevel: 2 },
+    { name: "Smoke Trail", description: "Wispy smoke trail seat effect", category: "seat_effect", rarity: "uncommon", price: 1500, currency: "chips", imageUrl: null },
+    { name: "Electric Sparks", description: "Crackling electric sparks seat effect", category: "seat_effect", rarity: "rare", price: 3000, currency: "chips", imageUrl: null },
+    { name: "Flame Aura", description: "Blazing flame aura around your seat", category: "seat_effect", rarity: "epic", price: 6000, currency: "chips", imageUrl: null },
+    { name: "Ice Crystal", description: "Frozen ice crystal seat effect", category: "seat_effect", rarity: "epic", price: 6000, currency: "chips", imageUrl: null, earnableAtLevel: 6 },
+    { name: "Golden Crown Glow", description: "Majestic golden crown glow seat effect", category: "seat_effect", rarity: "legendary", price: 15000, currency: "chips", imageUrl: null, earnableAtLevel: 8 },
+
+    // Win Celebrations
+    { name: "Confetti Burst", description: "Colorful confetti burst celebration", category: "win_celebration", rarity: "uncommon", price: 1000, currency: "chips", imageUrl: null, earnableAtLevel: 3 },
+    { name: "Gold Rain", description: "Shower of gold coins celebration", category: "win_celebration", rarity: "rare", price: 3000, currency: "chips", imageUrl: null },
+    { name: "Fireworks", description: "Spectacular fireworks celebration", category: "win_celebration", rarity: "epic", price: 5000, currency: "chips", imageUrl: null },
+    { name: "Lightning Strike", description: "Dramatic lightning strike celebration", category: "win_celebration", rarity: "legendary", price: 10000, currency: "chips", imageUrl: null, earnableAtLevel: 7 },
+    { name: "Nuclear Explosion", description: "Over-the-top nuclear explosion celebration", category: "win_celebration", rarity: "mythic", price: 20000, currency: "chips", imageUrl: null },
+
+    // Chat Effects
+    { name: "Gold Text", description: "Messages appear in shimmering gold", category: "chat_effect", rarity: "uncommon", price: 800, currency: "chips", imageUrl: null, earnableAtLevel: 4 },
+    { name: "Animated Border", description: "Animated border around your chat messages", category: "chat_effect", rarity: "rare", price: 2000, currency: "chips", imageUrl: null },
+    { name: "Rainbow Text", description: "Messages cycle through rainbow colors", category: "chat_effect", rarity: "epic", price: 4000, currency: "chips", imageUrl: null, earnableAtLevel: 6 },
+    { name: "Custom Chat Color", description: "Choose a custom color for your chat messages", category: "chat_effect", rarity: "legendary", price: 8000, currency: "chips", imageUrl: null, earnableAtLevel: 8 },
+
+    // Entrance Animations
+    { name: "Slide In", description: "Smooth slide-in entrance animation", category: "entrance_animation", rarity: "common", price: 300, currency: "chips", imageUrl: null },
+    { name: "Smoke Appear", description: "Appear from a puff of smoke", category: "entrance_animation", rarity: "uncommon", price: 1200, currency: "chips", imageUrl: null, earnableAtLevel: 3 },
+    { name: "Portal Open", description: "Step through a portal entrance", category: "entrance_animation", rarity: "rare", price: 3500, currency: "chips", imageUrl: null },
+    { name: "Lightning Strike Entry", description: "Arrive with a dramatic lightning strike", category: "entrance_animation", rarity: "epic", price: 7000, currency: "chips", imageUrl: null, earnableAtLevel: 7 },
+    { name: "Holographic Materialize", description: "Materialize as a hologram", category: "entrance_animation", rarity: "mythic", price: 15000, currency: "chips", imageUrl: null, earnableAtLevel: 9 },
+
+    // Additional Emotes
+    { name: "Ship It", description: "Ship it emote", category: "emote", rarity: "uncommon", price: 400, currency: "chips", imageUrl: null },
+    { name: "Slow Roll", description: "Slow roll taunt emote", category: "emote", rarity: "rare", price: 1500, currency: "chips", imageUrl: null, earnableAtLevel: 4 },
+    { name: "Scared", description: "Scared reaction emote", category: "emote", rarity: "common", price: 200, currency: "chips", imageUrl: null },
+    { name: "Thinking", description: "Thinking face emote", category: "emote", rarity: "common", price: 200, currency: "chips", imageUrl: null },
+    { name: "On Tilt", description: "On tilt frustration emote", category: "emote", rarity: "rare", price: 1500, currency: "chips", imageUrl: null },
+    { name: "Respect", description: "Show respect emote", category: "emote", rarity: "uncommon", price: 600, currency: "chips", imageUrl: null },
+    { name: "Crying", description: "Crying reaction emote", category: "emote", rarity: "uncommon", price: 500, currency: "chips", imageUrl: null },
+    { name: "Dancing", description: "Celebration dancing emote", category: "emote", rarity: "epic", price: 3000, currency: "chips", imageUrl: null, earnableAtLevel: 5 },
+    { name: "Mic Drop", description: "Ultimate mic drop emote", category: "emote", rarity: "legendary", price: 8000, currency: "chips", imageUrl: null, earnableAtLevel: 8 },
   ];
 
   for (const item of items) {

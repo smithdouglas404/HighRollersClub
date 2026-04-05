@@ -7,6 +7,7 @@ import { randomUUID } from "crypto";
 import { storage } from "../storage";
 import { sql as defaultSql } from "drizzle-orm";
 import type { AdminHelpers } from "./admin-routes";
+import { tierRank } from "../tier-config";
 
 // ─── File Upload Setup (KYC documents) ────────────────────────────────────
 const KYC_UPLOAD_DIR = path.join(process.cwd(), "uploads", "kyc");
@@ -28,15 +29,6 @@ const kycUpload = multer({
     else cb(new Error("Only JPG, PNG, WebP, and PDF files are allowed"));
   },
 });
-
-// ─── Tier System Constants (needed for requireTier middleware) ──────────
-const TIER_ORDER = ["free", "bronze", "silver", "gold", "platinum"] as const;
-type Tier = typeof TIER_ORDER[number];
-
-function tierRank(tier: string): number {
-  const idx = TIER_ORDER.indexOf(tier as Tier);
-  return idx >= 0 ? idx : 0;
-}
 
 function requireTier(minTier: string) {
   return async (req: Request, res: Response, next: NextFunction) => {

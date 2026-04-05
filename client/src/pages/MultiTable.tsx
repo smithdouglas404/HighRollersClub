@@ -180,8 +180,22 @@ function TableCell({
 
 // ─── Main Multi-Table Page ──────────────────────────────────────────────────
 
-export default function MultiTable() {
+export default function MultiTable({ maxTables: maxTablesProp }: { maxTables?: number } = {}) {
   const [, navigate] = useLocation();
+  const [maxTables, setMaxTables] = useState(maxTablesProp || 4);
+
+  // Fetch user's multi-table limit from server if not provided via prop
+  useEffect(() => {
+    if (maxTablesProp) return;
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.multiTableLimit && typeof data.multiTableLimit === "number") {
+          setMaxTables(data.multiTableLimit);
+        }
+      })
+      .catch(() => {});
+  }, [maxTablesProp]);
 
   // Parse table IDs from query string
   const initialTableIds = useMemo(() => {
@@ -232,13 +246,13 @@ export default function MultiTable() {
 
   const addTable = useCallback(
     (id: string, name: string) => {
-      if (tables.length >= 4) return;
+      if (tables.length >= maxTables) return;
       const next = [...tables, { id, name, maximized: false }];
       setTables(next);
       setLayout(autoLayout(next.length));
       setShowPicker(false);
     },
-    [tables]
+    [tables, maxTables]
   );
 
   const removeTable = useCallback(
@@ -272,7 +286,7 @@ export default function MultiTable() {
       <div className="flex h-screen flex-col items-center justify-center gap-6 bg-zinc-950 text-white">
         <h1 className="text-2xl font-bold text-amber-400">Multi-Table Mode</h1>
         <p className="max-w-sm text-center text-zinc-400">
-          Play up to 4 tables simultaneously. Add your first table to get started.
+          Play up to {maxTables} tables simultaneously. Add your first table to get started.
         </p>
         <div className="flex gap-3">
           <button
@@ -347,7 +361,7 @@ export default function MultiTable() {
         </div>
 
         {/* Add table */}
-        {tables.length < 4 && (
+        {tables.length < maxTables && (
           <button
             onClick={() => setShowPicker(true)}
             className="ml-1 flex items-center gap-1 rounded-md bg-amber-600/20 px-2.5 py-1.5 text-xs font-medium text-amber-400 hover:bg-amber-600/30"

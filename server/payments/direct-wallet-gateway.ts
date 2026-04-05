@@ -27,12 +27,12 @@ export interface DirectWalletConfig extends PaymentGatewayConfig {
   derivationIndex?: number;    // current HD wallet index
 }
 
-// Confirmation requirements per currency
+// Confirmation requirements per currency (configurable via env vars)
 const CONFIRMATIONS: Record<string, number> = {
-  BTC: 3,
-  ETH: 12,
-  USDT: 12,
-  SOL: 1,
+  BTC: parseInt(process.env.CONFIRM_BTC || "3"),
+  ETH: parseInt(process.env.CONFIRM_ETH || "12"),
+  USDT: parseInt(process.env.CONFIRM_USDT || "12"),
+  SOL: parseInt(process.env.CONFIRM_SOL || "1"),
 };
 
 export class DirectWalletGateway implements IPaymentGateway {
@@ -56,7 +56,7 @@ export class DirectWalletGateway implements IPaymentGateway {
       gatewayPaymentId: `direct_${req.orderId}_${Date.now()}`,
       payAddress,
       payAmount,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour expiry
+      expiresAt: new Date(Date.now() + parseInt(process.env.PAYMENT_EXPIRY_MINUTES || "60") * 60 * 1000),
       status: "waiting",
       rawResponse: { currency, payAddress, payAmount, rate: rate.usdPerCoin },
     };

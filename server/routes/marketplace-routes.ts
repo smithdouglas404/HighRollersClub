@@ -1,5 +1,6 @@
 import type { Express, Request, Response, NextFunction, RequestHandler } from "express";
 import { storage } from "../storage";
+import { getTierDef } from "../tier-config";
 
 export interface MarketplaceHelpers {
   requireTier: (minTier: string) => RequestHandler;
@@ -170,8 +171,8 @@ export async function registerMarketplaceRoutes(
       const owns = inventory.find(i => i.itemId === itemId);
       if (!owns) return res.status(400).json({ message: "You don't own this item" });
 
-      // Platinum clubs get reduced marketplace fee: 2.0% vs 2.9%
-      const feePercent = tierRank(user.tier) >= tierRank("platinum") ? 0.02 : 0.029;
+      // Marketplace fee based on seller's tier
+      const feePercent = getTierDef(user.tier).marketplaceFeePercent;
       const platformFee = Math.max(1, Math.floor(price * feePercent));
 
       const listing = await storage.createListing({
@@ -195,8 +196,8 @@ export async function registerMarketplaceRoutes(
       if (!listing) return res.status(404).json({ message: "Listing not found" });
       if (listing.sellerId === user.id) return res.status(400).json({ message: "Cannot buy your own listing" });
 
-      // Use the fee already calculated at listing time
-      const fee = listing.platformFee || Math.max(1, Math.floor(listing.price * 0.029));
+      // Use the fee already calculated at listing time (fallback to default 2.9%)
+      const fee = listing.platformFee || Math.max(1, Math.floor(listing.price * getTierDef("free").marketplaceFeePercent));
       const sellerPayout = listing.price - fee;
 
       // Deduct from buyer

@@ -8,6 +8,7 @@ import { analyzeHand } from "../game/hand-analyzer";
 import { geofenceMiddleware } from "../middleware/geofence";
 import { fastFoldManager, type FastFoldPoolConfig } from "../game/fast-fold-manager";
 import { blockchainConfig } from "../blockchain/config";
+import { getTierDef } from "../tier-config";
 
 export interface GameHelpers {
   logAdminAction: (
@@ -99,11 +100,6 @@ export async function registerGameRoutes(
     }
   });
 
-  // ─── Tier stake limits (max big blind per tier; 0 = special: free=play-chips-only, platinum=unlimited) ───
-  const TIER_MAX_BIG_BLIND: Record<string, number> = {
-    free: 0, bronze: 10, silver: 50, gold: 400, platinum: 0,
-  };
-
   // REST endpoint for joining a table (professional: REST for join/leave, WS for gameplay)
   app.post("/api/tables/:id/join", requireAuth, geofenceMiddleware(), async (req, res, next) => {
     try {
@@ -123,7 +119,7 @@ export async function registerGameRoutes(
         const joinUser = await storage.getUser(req.user!.id);
         if (joinUser) {
           const tier = joinUser.tier || "free";
-          const maxBB = TIER_MAX_BIG_BLIND[tier] ?? 0;
+          const maxBB = getTierDef(tier).maxBigBlind;
           // Free tier: play-chip tables only (rakePercent=0 and no real-money indicators)
           if (tier === "free" && tableForAuth.rakePercent > 0) {
             return res.status(403).json({ message: "Free tier can only join play-chip tables. Upgrade to Bronze or higher for real-money games." });

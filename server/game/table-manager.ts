@@ -763,14 +763,14 @@ class TableManager {
         } as any);
 
         // After 3-second reveal delay, start the game
-        setTimeout(() => {
+        setTimeout(async () => {
           broadcastToTable(tableId, {
             type: "lottery_result",
             multiplier,
             prizePool,
           } as any);
 
-          lifecycle.start();
+          await lifecycle.start();
           engine.startBlindSchedule();
 
           broadcastToTable(tableId, {
@@ -857,7 +857,7 @@ class TableManager {
 
       // Auto-start when full
       if (lifecycle.canStart()) {
-        lifecycle.start();
+        await lifecycle.start();
         engine.startBlindSchedule();
         broadcastToTable(tableId, {
           type: "tournament_status",
@@ -1789,7 +1789,7 @@ class TableManager {
     for (let i = 0; i < botsToAdd.length; i++) {
       if (i > 0) cumulativeDelay += 1500 + Math.random() * 2500;
       const delay = cumulativeDelay;
-      const addBot = (b: typeof botsToAdd[0]) => {
+      const addBot = async (b: typeof botsToAdd[0]) => {
         const inst = this.tables.get(tableId);
         if (!inst) return; // table may have been deleted
 
@@ -1814,7 +1814,7 @@ class TableManager {
 
         // SNG/Lottery auto-start when full
         if ((config.gameFormat === "sng" || config.gameFormat === "lottery_sng") && inst.lifecycle && inst.lifecycle.canStart()) {
-          inst.lifecycle.start();
+          await inst.lifecycle.start();
           inst.engine.startBlindSchedule();
           broadcastToTable(tableId, {
             type: "tournament_status",

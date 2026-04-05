@@ -316,7 +316,7 @@ export class MemStorage implements IStorage {
     if (this.users.has("system")) return;
     const systemUser = await this.createUser({
       username: "system",
-      password: "system-no-login",
+      password: require("crypto").randomBytes(64).toString("hex"),
       displayName: "System",
       role: "admin",
       chipBalance: 0,
@@ -1426,7 +1426,7 @@ export class DatabaseStorage implements IStorage {
       await this.db.insert(users).values({
         id: "system",
         username: "system",
-        password: "system-no-login",
+        password: require("crypto").randomBytes(64).toString("hex"),
         displayName: "System",
         role: "admin",
         chipBalance: 0,

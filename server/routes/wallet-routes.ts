@@ -1,17 +1,7 @@
 import type { Express, Request, Response, NextFunction, RequestHandler } from "express";
 import { storage } from "../storage";
 import { sql as defaultSql } from "drizzle-orm";
-
-// ─── Tier Bonus / Limit Lookup ─────────────────────────────────────────────
-const TIER_DAILY_BONUS: Record<string, number> = {
-  free: 500, bronze: 1000, silver: 2500, gold: 5000, platinum: 10000,
-};
-const TIER_DEPOSIT_LIMIT_DAILY: Record<string, number> = {
-  free: 0, bronze: 20000, silver: 100000, gold: 500000, platinum: 2500000,
-};
-const TIER_WITHDRAW_LIMIT_WEEKLY: Record<string, number> = {
-  free: 0, bronze: 50000, silver: 250000, gold: 1000000, platinum: 5000000,
-};
+import { getTierDef } from "../tier-config";
 
 export interface WalletHelpers {
   hasDatabase: () => boolean;
@@ -65,7 +55,7 @@ export async function registerWalletRoutes(
       if (!user) return res.status(404).json({ message: "User not found" });
 
       // Determine bonus amount based on subscription tier
-      const bonusAmount = TIER_DAILY_BONUS[user.tier] ?? TIER_DAILY_BONUS.free;
+      const bonusAmount = getTierDef(user.tier).dailyBonus;
 
       if (user.lastDailyClaim) {
         const nextClaimAt = new Date(user.lastDailyClaim.getTime() + 24 * 60 * 60 * 1000);
@@ -112,7 +102,7 @@ export async function registerWalletRoutes(
         await storage.updateUser(userId, { lastDailyClaim: now });
 
       // Bonus amount based on subscription tier
-      const bonus = TIER_DAILY_BONUS[user.tier] ?? TIER_DAILY_BONUS.free;
+      const bonus = getTierDef(user.tier).dailyBonus;
 
       // Credit bonus wallet (ensure wallets exist first)
       await storage.ensureWallets(user.id);
@@ -371,7 +361,7 @@ export async function registerWalletRoutes(
       // ─── Tier-based daily deposit limit enforcement ───────────────────
       const depositUser = await storage.getUser(req.user!.id);
       if (!depositUser) return res.status(404).json({ message: "User not found" });
-      const dailyLimit = TIER_DEPOSIT_LIMIT_DAILY[depositUser.tier] ?? 0;
+      const dailyLimit = getTierDef(depositUser.tier).depositLimitDaily;
       if (dailyLimit === 0) {
         return res.status(403).json({ message: "Your subscription tier does not allow deposits. Upgrade to Bronze or higher." });
       }
@@ -470,7 +460,7 @@ export async function registerWalletRoutes(
       // ─── Tier-based weekly withdrawal limit enforcement ───────────────
       const withdrawUser = await storage.getUser(req.user!.id);
       if (!withdrawUser) return res.status(404).json({ message: "User not found" });
-      const weeklyLimit = TIER_WITHDRAW_LIMIT_WEEKLY[withdrawUser.tier] ?? 0;
+      const weeklyLimit = getTierDef(withdrawUser.tier).withdrawLimitWeekly;
       if (weeklyLimit === 0) {
         return res.status(403).json({ message: "Your subscription tier does not allow withdrawals. Upgrade to Bronze or higher." });
       }

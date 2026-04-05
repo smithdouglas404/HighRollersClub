@@ -29,6 +29,7 @@ import { registerPlayerRoutes } from "./routes/player-routes";
 import { registerAdminPlatformRoutes } from "./routes/admin-platform-routes";
 import { registerKycRoutes } from "./routes/kyc-routes";
 import { registerPlatformRoutes } from "./routes/platform-routes";
+import { TIER_DEFINITIONS, TIER_ORDER, tierRank, getTierDef } from "./tier-config";
 
 // ─── ILIKE Wildcard Escape Helper ─────────────────────────────────────────
 /** Escape special characters in user input before using in ILIKE patterns */
@@ -71,9 +72,6 @@ function getMailTransport() {
 async function sendKycEmail(to: string, subject: string, html: string) {
   const transport = getMailTransport();
   if (!transport) {
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[DEV] KYC email to ${to}: ${subject}`);
-    }
     return;
   }
   const from = process.env.SMTP_FROM || "noreply@highrollers.club";
@@ -132,141 +130,6 @@ async function logSystemAction(
   } catch (err: any) {
     console.error("Audit log error:", err.message);
   }
-}
-
-// ─── Tier System Constants ──────────────────────────────────────────────────
-const TIER_ORDER = ["free", "bronze", "silver", "gold", "platinum"] as const;
-type Tier = typeof TIER_ORDER[number];
-
-const TIER_DEFINITIONS = [
-  {
-    id: "free", name: "Free", monthlyPrice: 0, annualPrice: 0,
-    kycLevel: "email",
-    depositLimitDaily: 0,        // cents — play chips only
-    withdrawLimitWeekly: 0,
-    maxBigBlind: 0,              // 0 = play-chip tables only (no real-money)
-    tournamentBuyInMax: 0,       // freerolls only
-    rakebackPercent: 0,
-    dailyBonus: 500,
-    clubCreateLimit: 0,
-    clubMemberLimit: 0,
-    multiTableLimit: 1,
-    benefits: [
-      "Play-chip tables only",
-      "Email verification",
-      "Daily bonus: 500 chips",
-      "Basic statistics",
-      "Freeroll tournaments only",
-      "Join clubs (cannot create)",
-      "1 table at a time",
-    ],
-  },
-  {
-    id: "bronze", name: "Bronze", monthlyPrice: 499, annualPrice: 4799,
-    kycLevel: "basic",           // Passive liveness + face match
-    depositLimitDaily: 20000,    // $200/day in cents
-    withdrawLimitWeekly: 50000,  // $500/week in cents
-    maxBigBlind: 10,             // Micro stakes (5/10)
-    tournamentBuyInMax: 2500,    // $25 max buy-in in cents
-    rakebackPercent: 0,
-    dailyBonus: 1000,
-    clubCreateLimit: 1,
-    clubMemberLimit: 25,
-    multiTableLimit: 1,
-    benefits: [
-      "Real-money micro stakes (up to 5/10)",
-      "Passive liveness + face match KYC",
-      "$200/day deposit, $500/week withdraw",
-      "Daily bonus: 1,000 chips",
-      "Tournament buy-ins up to $25",
-      "Create 1 club (25 members max)",
-      "1 table at a time",
-      "Everything in Free",
-    ],
-  },
-  {
-    id: "silver", name: "Silver", monthlyPrice: 1499, annualPrice: 14399,
-    kycLevel: "standard",        // + Phone + age estimation
-    depositLimitDaily: 100000,   // $1,000/day in cents
-    withdrawLimitWeekly: 250000, // $2,500/week in cents
-    maxBigBlind: 50,             // Mid stakes (25/50)
-    tournamentBuyInMax: 20000,   // $200 max buy-in in cents
-    rakebackPercent: 10,
-    dailyBonus: 2500,
-    clubCreateLimit: 3,
-    clubMemberLimit: 100,
-    multiTableLimit: 4,
-    benefits: [
-      "Mid stakes (up to 25/50)",
-      "Phone + age estimation KYC",
-      "$1,000/day deposit, $2,500/week withdraw",
-      "10% rakeback",
-      "Daily bonus: 2,500 chips",
-      "Tournament buy-ins up to $200",
-      "Create up to 3 clubs (100 members each)",
-      "Multi-table up to 4 tables",
-      "Everything in Bronze",
-    ],
-  },
-  {
-    id: "gold", name: "Gold", monthlyPrice: 2999, annualPrice: 28799,
-    kycLevel: "full",            // + ID + address + AML
-    depositLimitDaily: 500000,   // $5,000/day in cents
-    withdrawLimitWeekly: 1000000, // $10,000/week in cents
-    maxBigBlind: 400,            // High stakes (200/400)
-    tournamentBuyInMax: 0,       // 0 = unlimited
-    rakebackPercent: 20,
-    dailyBonus: 5000,
-    clubCreateLimit: 5,
-    clubMemberLimit: 500,
-    multiTableLimit: 4,
-    benefits: [
-      "High stakes (up to 200/400)",
-      "Full ID + address + AML verification",
-      "$5,000/day deposit, $10,000/week withdraw",
-      "20% rakeback",
-      "Daily bonus: 5,000 chips",
-      "Unlimited tournament buy-ins",
-      "Create up to 5 clubs (500 members each)",
-      "Multi-table up to 4 tables",
-      "Everything in Silver",
-    ],
-  },
-  {
-    id: "platinum", name: "Platinum", monthlyPrice: 7999, annualPrice: 76799,
-    kycLevel: "enhanced",        // + NFC + biometric + DB
-    depositLimitDaily: 2500000,  // $25,000/day in cents
-    withdrawLimitWeekly: 5000000, // $50,000/week in cents
-    maxBigBlind: 0,              // 0 = unlimited for platinum
-    tournamentBuyInMax: 0,       // unlimited
-    rakebackPercent: 30,
-    dailyBonus: 10000,
-    clubCreateLimit: -1,         // -1 = unlimited
-    clubMemberLimit: -1,         // -1 = unlimited
-    multiTableLimit: 8,
-    benefits: [
-      "Unlimited stakes",
-      "NFC + biometric + database KYC",
-      "$25,000/day deposit, $50,000/week withdraw",
-      "30% rakeback",
-      "Daily bonus: 10,000 chips",
-      "Unlimited tournament buy-ins",
-      "Unlimited clubs & members",
-      "Multi-table up to 8 tables",
-      "Priority table seating",
-      "Everything in Gold",
-    ],
-  },
-];
-
-// Helper to get tier definition by id
-function getTierDef(tierId: string) {
-  return TIER_DEFINITIONS.find(t => t.id === tierId) || TIER_DEFINITIONS[0];
-}
-
-function tierRank(tier: string): number {
-  const idx = TIER_ORDER.indexOf(tier as Tier);
-  return idx >= 0 ? idx : 0;
 }
 
 function requireTier(minTier: string) {
@@ -528,9 +391,6 @@ export async function registerRoutes(app: Express, sessionMiddleware: RequestHan
     requireTier,
     logAdminAction: logAdminActionLegacy,
     sendKycEmail,
-    TIER_DEFINITIONS,
-    TIER_ORDER,
-    tierRank,
     socialLinks,
   });
 

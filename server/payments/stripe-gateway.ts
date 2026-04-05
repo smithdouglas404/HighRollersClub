@@ -110,8 +110,6 @@ export class StripeGateway implements IPaymentGateway {
     } else {
       // Default: redirect back to wallet page with success indicator
       const baseUrl = process.env.WEBHOOK_BASE_URL
-        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
-        || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
         || (process.env.NODE_ENV === "production" ? (() => { throw new Error("FATAL: WEBHOOK_BASE_URL required for Stripe redirects in production"); })() : "http://localhost:5000");
       params["success_url"] = `${baseUrl}/wallet?deposit=success`;
       params["cancel_url"] = `${baseUrl}/wallet?deposit=cancelled`;
@@ -121,8 +119,6 @@ export class StripeGateway implements IPaymentGateway {
       params["cancel_url"] = req.cancelUrl;
     } else if (!params["cancel_url"]) {
       const baseUrl = process.env.WEBHOOK_BASE_URL
-        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
-        || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
         || (process.env.NODE_ENV === "production" ? (() => { throw new Error("FATAL: WEBHOOK_BASE_URL required for Stripe redirects in production"); })() : "http://localhost:5000");
       params["cancel_url"] = `${baseUrl}/wallet?deposit=cancelled`;
     }
@@ -307,9 +303,10 @@ export class StripeGateway implements IPaymentGateway {
       throw new Error("Invalid Stripe webhook signature");
     }
 
-    // Check timestamp tolerance (5 minutes)
+    // Check timestamp tolerance (configurable, default 5 minutes)
+    const tolerance = parseInt(process.env.STRIPE_WEBHOOK_TOLERANCE_SECONDS || "300");
     const timestampAge = Math.abs(Date.now() / 1000 - parseInt(timestamp));
-    if (timestampAge > 300) {
+    if (timestampAge > tolerance) {
       throw new Error("Stripe webhook timestamp too old");
     }
   }

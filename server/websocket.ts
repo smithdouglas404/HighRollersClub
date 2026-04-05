@@ -13,6 +13,7 @@ import { fastFoldManager } from "./game/fast-fold-manager";
 import { generateSessionKey, clearSessionKey, encryptCards, hasSessionKey, getSessionKeyHex } from "./game/card-encryption";
 import { obfuscateCards, getEncryptedSpriteMapping, clearSpriteMapping, getOrCreateSpriteMapping } from "./game/card-obfuscation";
 import { getPubSub } from "./infra/ws-pubsub";
+import { getTierDef } from "./tier-config";
 
 // Rate limiting for table password attempts
 const passwordAttempts = new Map<string, number>();
@@ -92,13 +93,8 @@ export interface WsClient {
   ip?: string;
 }
 
-// Multi-table limits per tier
-const TIER_TABLE_LIMITS: Record<string, number> = {
-  free: 1, bronze: 1, silver: 4, gold: 4, platinum: 8,
-};
-
 function getMaxTables(tier: string): number {
-  return TIER_TABLE_LIMITS[tier] || 1;
+  return getTierDef(tier).multiTableLimit;
 }
 
 // Message types: Client → Server

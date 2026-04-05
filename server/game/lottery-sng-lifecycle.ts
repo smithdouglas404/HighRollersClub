@@ -1,6 +1,9 @@
 import { randomInt } from "crypto";
 import { SNGLifecycle, type EliminationInfo } from "./format-lifecycle";
 import { HYPER_TURBO_SCHEDULE, type BlindLevel, type PayoutEntry } from "./blind-presets";
+import { hasDatabase, getDb } from "../db";
+import { platformSettings } from "@shared/schema";
+import { sql } from "drizzle-orm";
 
 // Multiplier distribution (weighted random):
 // 2x   - 75% chance (common)
@@ -11,7 +14,9 @@ import { HYPER_TURBO_SCHEDULE, type BlindLevel, type PayoutEntry } from "./blind
 // 100x - 0.4% chance
 // 1000x - 0.1% chance (jackpot!)
 
-export const MULTIPLIER_TABLE = [
+export type MultiplierEntry = { multiplier: number; weight: number };
+
+export const DEFAULT_MULTIPLIER_TABLE: MultiplierEntry[] = [
   { multiplier: 2, weight: 7500 },
   { multiplier: 3, weight: 1200 },
   { multiplier: 5, weight: 800 },
@@ -19,12 +24,42 @@ export const MULTIPLIER_TABLE = [
   { multiplier: 25, weight: 150 },
   { multiplier: 100, weight: 40 },
   { multiplier: 1000, weight: 10 },
-] as const;
+];
 
-const TOTAL_WEIGHT = MULTIPLIER_TABLE.reduce((sum, entry) => sum + entry.weight, 0);
+/** @deprecated Use getMultiplierTable() for database-configurable values */
+export const MULTIPLIER_TABLE = DEFAULT_MULTIPLIER_TABLE;
 
 // Available buy-in tiers for Lottery SNG
-export const LOTTERY_BUY_IN_TIERS = [100, 250, 500, 1000, 2500, 5000] as const;
+export const DEFAULT_BUYIN_TIERS: number[] = [100, 250, 500, 1000, 2500, 5000];
+
+/** @deprecated Use getBuyInTiers() for database-configurable values */
+export const LOTTERY_BUY_IN_TIERS = DEFAULT_BUYIN_TIERS;
+
+/**
+ * Load multiplier table from database, falling back to hardcoded defaults.
+ */
+export async function getMultiplierTable(): Promise<MultiplierEntry[]> {
+  try {
+    if (!hasDatabase()) return DEFAULT_MULTIPLIER_TABLE;
+    const db = getDb();
+    const [row] = await db.select().from(platformSettings).where(sql`key = 'lottery_multiplier_table'`).limit(1);
+    if (row?.value && Array.isArray(row.value)) return row.value as MultiplierEntry[];
+  } catch {}
+  return DEFAULT_MULTIPLIER_TABLE;
+}
+
+/**
+ * Load buy-in tiers from database, falling back to hardcoded defaults.
+ */
+export async function getBuyInTiers(): Promise<number[]> {
+  try {
+    if (!hasDatabase()) return DEFAULT_BUYIN_TIERS;
+    const db = getDb();
+    const [row] = await db.select().from(platformSettings).where(sql`key = 'lottery_buyin_tiers'`).limit(1);
+    if (row?.value && Array.isArray(row.value)) return row.value as number[];
+  } catch {}
+  return DEFAULT_BUYIN_TIERS;
+}
 
 // Winner-takes-all payout structure
 const WINNER_TAKES_ALL: PayoutEntry[] = [{ place: 1, percentage: 100 }];
@@ -48,18 +83,22 @@ export class LotterySNGLifecycle extends SNGLifecycle {
 
   /**
    * Spin the multiplier using cryptographically secure randomness.
+   * Loads multiplier table from database if available, falls back to defaults.
    * Returns the selected multiplier.
    */
-  spinMultiplier(): number {
+  async spinMultiplier(): Promise<number> {
     if (this.spinComplete) return this.multiplier;
 
     this.isSpinning = true;
 
+    const table = await getMultiplierTable();
+    const totalWeight = table.reduce((sum, entry) => sum + entry.weight, 0);
+
     // Use crypto.randomInt for fair selection
-    const roll = randomInt(0, TOTAL_WEIGHT);
+    const roll = randomInt(0, totalWeight);
 
     let cumulative = 0;
-    for (const entry of MULTIPLIER_TABLE) {
+    for (const entry of table) {
       cumulative += entry.weight;
       if (roll < cumulative) {
         this.multiplier = entry.multiplier;
@@ -81,9 +120,9 @@ export class LotterySNGLifecycle extends SNGLifecycle {
     return this.status === "registering" && this.registeredPlayers.size >= 3;
   }
 
-  override start(): void {
+  override async start(): Promise<void> {
     if (!this.spinComplete) {
-      this.spinMultiplier();
+      await this.spinMultiplier();
     }
     this.status = "playing";
   }

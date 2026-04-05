@@ -196,14 +196,15 @@ export function registerAuthRoutes(app: Express) {
         password: await hashPassword(randomUUID()), // random password
         displayName: guestName,
         role: "guest",
-        chipBalance: 10000,
+        chipBalance: parseInt(process.env.INITIAL_CHIP_BALANCE || "10000"),
         avatarId: randomAvatar,
         memberId,
       });
 
       // Create wallets and seed main wallet with starting chips
+      const initialChips = parseInt(process.env.INITIAL_CHIP_BALANCE || "10000");
       const wallets = await storage.ensureWallets(user.id);
-      await storage.atomicAddToWallet(user.id, "main", 10000);
+      await storage.atomicAddToWallet(user.id, "main", initialChips);
 
       const safeUser = sanitizeUser(user);
       req.login(safeUser, (err) => {
@@ -267,13 +268,14 @@ export function registerAuthRoutes(app: Express) {
         password: hashedPassword,
         displayName: displayName || username,
         role: "member",
-        chipBalance: 10000,
+        chipBalance: parseInt(process.env.INITIAL_CHIP_BALANCE || "10000"),
         memberId: regMemberId,
       });
 
       // Create wallets and seed main wallet with starting chips
+      const initialChips = parseInt(process.env.INITIAL_CHIP_BALANCE || "10000");
       await storage.ensureWallets(user.id);
-      await storage.atomicAddToWallet(user.id, "main", 10000);
+      await storage.atomicAddToWallet(user.id, "main", initialChips);
 
       // Send email verification if email provided and SMTP configured
       const email = req.body.email;
@@ -298,8 +300,6 @@ export function registerAuthRoutes(app: Express) {
           } catch (emailErr: any) {
             console.error("Verification email error:", emailErr.message);
           }
-        } else if (process.env.NODE_ENV !== "production") {
-          console.log(`[DEV] Email verification token for ${username}: ${token}`);
         }
       }
 
@@ -485,7 +485,7 @@ export function registerAuthRoutes(app: Express) {
         password: await hashPassword(randomUUID()), // placeholder password
         displayName: displayName || decoded.name || finalUsername,
         role: "member",
-        chipBalance: 10000,
+        chipBalance: parseInt(process.env.INITIAL_CHIP_BALANCE || "10000"),
         memberId,
         firebaseUid: decoded.uid,
         email: email || decoded.email || null,
@@ -494,8 +494,9 @@ export function registerAuthRoutes(app: Express) {
       });
 
       // Create wallets and seed main wallet
+      const initialChips = parseInt(process.env.INITIAL_CHIP_BALANCE || "10000");
       await storage.ensureWallets(user.id);
-      await storage.atomicAddToWallet(user.id, "main", 10000);
+      await storage.atomicAddToWallet(user.id, "main", initialChips);
 
       const safeUser = sanitizeUser(user);
       req.login(safeUser, (err) => {
@@ -737,10 +738,6 @@ export function registerAuthRoutes(app: Express) {
         }
         res.json({ sent: true });
       } else {
-        // Dev mode: log code to console
-        if (process.env.NODE_ENV !== "production") {
-          console.log(`[DEV] Recovery code for ${user.username}: ${code}`);
-        }
         res.json({ sent: true, dev: true });
       }
     } catch (err) {

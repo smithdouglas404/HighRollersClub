@@ -188,3 +188,20 @@ export function getBlindPreset(name: string): BlindLevel[] {
     default: return STANDARD_SNG_SCHEDULE;
   }
 }
+
+/**
+ * Load blind schedule from database if available, falling back to hardcoded defaults.
+ */
+export async function getBlindSchedule(preset: string): Promise<BlindLevel[]> {
+  try {
+    const { hasDatabase, getDb } = await import("../db");
+    if (hasDatabase()) {
+      const { platformSettings } = await import("@shared/schema");
+      const { sql } = await import("drizzle-orm");
+      const db = getDb();
+      const [row] = await db.select().from(platformSettings).where(sql`key = ${'blind_schedule_' + preset}`).limit(1);
+      if (row?.value && Array.isArray(row.value)) return row.value as BlindLevel[];
+    }
+  } catch {}
+  return getBlindPreset(preset);
+}

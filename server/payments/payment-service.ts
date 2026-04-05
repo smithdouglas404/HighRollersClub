@@ -97,7 +97,8 @@ export class PaymentService {
     }
 
     // Validate allocation sums
-    const chipAmount = amountCents; // 1 cent = 1 chip (configurable)
+    const chipsPerCent = parseInt(process.env.CHIPS_PER_USD_CENT || "1");
+    const chipAmount = amountCents * chipsPerCent;
     const allocSum = allocation.reduce((s, a) => s + a.amount, 0);
     if (allocSum !== chipAmount) {
       throw new Error(`Allocation sum (${allocSum}) does not match chip amount (${chipAmount})`);
@@ -461,8 +462,6 @@ let paymentServiceInstance: PaymentService | null = null;
 export function getPaymentService(): PaymentService {
   if (!paymentServiceInstance) {
     const baseUrl = process.env.WEBHOOK_BASE_URL
-      || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : null)
-      || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
       || (process.env.NODE_ENV === "production" ? (() => { throw new Error("FATAL: WEBHOOK_BASE_URL must be set in production for payment webhooks"); })() : "http://localhost:5000");
     paymentServiceInstance = new PaymentService(baseUrl);
 
@@ -479,7 +478,7 @@ export function getPaymentService(): PaymentService {
     if (process.env.DIRECT_WALLET_ENABLED === "true") {
       const { DirectWalletGateway } = require("./direct-wallet-gateway");
       paymentServiceInstance.registerGateway(new DirectWalletGateway({
-        apiKey: "direct",
+        apiKey: process.env.DIRECT_WALLET_API_KEY || "direct-gateway",
         btcXpub: process.env.BTC_XPUB,
         ethAddress: process.env.ETH_HOT_WALLET,
         solAddress: process.env.SOL_HOT_WALLET,

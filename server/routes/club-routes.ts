@@ -3,15 +3,7 @@ import { storage } from "../storage";
 import { insertClubSchema } from "@shared/schema";
 import { sql as defaultSql } from "drizzle-orm";
 import { hasDatabase as defaultHasDatabase, getDb as defaultGetDb } from "../db";
-
-// ─── Tier System Constants (needed for requireTier middleware) ──────────
-const TIER_ORDER = ["free", "bronze", "silver", "gold", "platinum"] as const;
-type Tier = typeof TIER_ORDER[number];
-
-function tierRank(tier: string): number {
-  const idx = TIER_ORDER.indexOf(tier as Tier);
-  return idx >= 0 ? idx : 0;
-}
+import { tierRank, getTierDef } from "../tier-config";
 
 function requireTier(minTier: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -362,14 +354,6 @@ export async function registerClubRoutes(
     }
   });
 
-  // ─── Tier club creation limits ─────────────────────────────────────────
-  const TIER_CLUB_CREATE_LIMIT: Record<string, number> = {
-    free: 0, bronze: 1, silver: 3, gold: 5, platinum: -1, // -1 = unlimited
-  };
-  const TIER_CLUB_MEMBER_LIMIT: Record<string, number> = {
-    free: 0, bronze: 25, silver: 100, gold: 500, platinum: -1,
-  };
-
   app.post("/api/clubs", requireAuth, requireTier("bronze"), async (req, res, next) => {
     try {
       const parsed = insertClubSchema.safeParse(req.body);
@@ -381,7 +365,7 @@ export async function registerClubRoutes(
       const clubUser = await storage.getUser(req.user!.id);
       if (!clubUser) return res.status(401).json({ message: "User not found" });
       const tier = clubUser.tier || "free";
-      const createLimit = TIER_CLUB_CREATE_LIMIT[tier] ?? 0;
+      const createLimit = getTierDef(tier).clubCreateLimit;
       if (createLimit === 0) {
         return res.status(403).json({ message: "Your subscription tier cannot create clubs. Upgrade to Bronze or higher." });
       }
@@ -522,6 +506,19 @@ export async function registerClubRoutes(
       const inv = await storage.updateClubInvitation(req.params.invId, { status });
       if (!inv) return res.status(404).json({ message: "Invitation not found" });
       if (status === "accepted") {
+        // Enforce club member limit based on owner's tier
+        const club = await storage.getClub(req.params.id);
+        if (club) {
+          const owner = await storage.getUser(club.ownerId);
+          const ownerTier = owner?.tier || "free";
+          const tierDef = getTierDef(ownerTier);
+          const members = await storage.getClubMembers(req.params.id);
+          if (tierDef.clubMemberLimit !== -1 && members.length >= tierDef.clubMemberLimit) {
+            // Revert the invitation status
+            await storage.updateClubInvitation(req.params.invId, { status: "pending" });
+            return res.status(403).json({ message: `Club has reached its member limit (${tierDef.clubMemberLimit}). The club owner needs to upgrade their tier.` });
+          }
+        }
         await storage.addClubMember(req.params.id, inv.userId);
       }
       res.json(inv);
@@ -615,6 +612,13 @@ export async function registerClubRoutes(
       const members = await storage.getClubMembers(club.id);
       if (members.some(m => m.userId === req.user!.id)) {
         return res.status(409).json({ message: "Already a member" });
+      }
+      // Enforce club member limit based on owner's tier
+      const owner = await storage.getUser(club.ownerId);
+      const ownerTier = owner?.tier || "free";
+      const tierDef = getTierDef(ownerTier);
+      if (tierDef.clubMemberLimit !== -1 && members.length >= tierDef.clubMemberLimit) {
+        return res.status(403).json({ message: `Club has reached its member limit (${tierDef.clubMemberLimit}). The club owner needs to upgrade their tier.` });
       }
       await storage.addClubMember(club.id, req.user!.id);
       res.json({ message: "Joined club" });

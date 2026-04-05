@@ -3,15 +3,7 @@ import { storage } from "../storage";
 import { createTournamentSchema, createAllianceSchema, updateAllianceSchema, createLeagueSeasonSchema, updateLeagueSeasonSchema, leagueStandingsSchema } from "@shared/schema";
 import { getBlindPreset } from "../game/blind-presets";
 import { MTTManager, activeMTTs } from "../game/mtt-manager";
-
-// ─── Tier System Constants (needed for tierRank) ──────────────────────
-const TIER_ORDER = ["free", "bronze", "silver", "gold", "platinum"] as const;
-type Tier = typeof TIER_ORDER[number];
-
-function tierRank(tier: string): number {
-  const idx = TIER_ORDER.indexOf(tier as Tier);
-  return idx >= 0 ? idx : 0;
-}
+import { tierRank, getTierDef } from "../tier-config";
 
 export async function registerTournamentRoutes(
   app: Express,
@@ -108,11 +100,6 @@ export async function registerTournamentRoutes(
     }
   });
 
-  // ─── Tier tournament buy-in limits (cents; 0 = special: free=freerolls-only, gold/plat=unlimited) ───
-  const TIER_TOURNAMENT_BUYIN_MAX: Record<string, number> = {
-    free: 0, bronze: 2500, silver: 20000, gold: 0, platinum: 0,
-  };
-
   app.post("/api/tournaments/:id/register", requireAuth, async (req, res, next) => {
     try {
       const tourney = await storage.getTournament(req.params.id);
@@ -126,7 +113,7 @@ export async function registerTournamentRoutes(
 
       // ─── Tier-based tournament buy-in limit enforcement ───────────────
       const tier = user.tier || "free";
-      const maxBuyIn = TIER_TOURNAMENT_BUYIN_MAX[tier] ?? 0;
+      const maxBuyIn = getTierDef(tier).tournamentBuyInMax;
       if (tier === "free" && tourney.buyIn > 0) {
         return res.status(403).json({ message: "Free tier can only join freeroll tournaments (buy-in = 0). Upgrade to Bronze or higher." });
       }

@@ -13,10 +13,12 @@ async function main() {
 
   // Deploy PokerVRFConsumer (requires Chainlink VRF coordinator address)
   // Polygon Mainnet VRF Coordinator v2.5
-  const VRF_COORDINATOR = process.env.VRF_COORDINATOR || "0xec0Ed46f36576541C75739E915ADbCb3DE24bD77";
-  const SUBSCRIPTION_ID = process.env.VRF_SUBSCRIPTION_ID || "0";
-  // Polygon Mainnet 200 gwei key hash
-  const KEY_HASH = process.env.VRF_KEY_HASH || "0x719ed7d7664abc3001c18aac8130a2265e1e70b7e036ae20f3ca8b92b3154d86";
+  const VRF_COORDINATOR = process.env.VRF_COORDINATOR;
+  if (!VRF_COORDINATOR) throw new Error("VRF_COORDINATOR required");
+  const SUBSCRIPTION_ID = process.env.VRF_SUBSCRIPTION_ID;
+  if (!SUBSCRIPTION_ID) throw new Error("VRF_SUBSCRIPTION_ID required");
+  const KEY_HASH = process.env.VRF_KEY_HASH;
+  if (!KEY_HASH) throw new Error("VRF_KEY_HASH required");
   const CALLBACK_GAS_LIMIT = parseInt(process.env.VRF_CALLBACK_GAS_LIMIT || "100000");
 
   const PokerVRFConsumer = await ethers.getContractFactory("PokerVRFConsumer");

@@ -8,6 +8,7 @@ import { getClients, sendToUser } from "../websocket";
 import { blockchainConfig } from "../blockchain/config";
 import { hasDatabase, getDb } from "../db";
 import { tableManager } from "../game/table-manager";
+import { TIER_DEFINITIONS, TIER_ORDER, tierRank } from "../tier-config";
 
 export async function registerPlatformRoutes(
   app: Express,
@@ -17,13 +18,10 @@ export async function registerPlatformRoutes(
     requireTier: (minTier: string) => RequestHandler;
     logAdminAction: (adminId: string, action: string, targetType: string | null, targetId: string | null, details: Record<string, any> | null, ipAddress?: string) => Promise<void>;
     sendKycEmail: (to: string, subject: string, html: string) => Promise<void>;
-    TIER_DEFINITIONS: any[];
-    TIER_ORDER: readonly string[];
-    tierRank: (tier: string) => number;
     socialLinks: { twitter: string; discord: string; telegram: string };
   },
 ) {
-  const { requireTier, logAdminAction, sendKycEmail, TIER_DEFINITIONS, TIER_ORDER, tierRank, socialLinks } = ctx;
+  const { requireTier, logAdminAction, sendKycEmail, socialLinks } = ctx;
 
   // ─── Tier System Routes ──────────────────────────────────────────────────
 

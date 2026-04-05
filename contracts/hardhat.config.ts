@@ -1,8 +1,12 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 
-const POLYGON_RPC_URL = process.env.POLYGON_RPC_URL || "https://polygon-mainnet.g.alchemy.com/v2/oYq5cymBhdX5N-HCNydIx";
-const DEPLOYER_KEY = process.env.POLYGON_WALLET_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001";
+const POLYGON_RPC_URL = process.env.POLYGON_RPC_URL;
+if (!POLYGON_RPC_URL) throw new Error("POLYGON_RPC_URL required");
+const AMOY_RPC_URL = process.env.AMOY_RPC_URL;
+if (!AMOY_RPC_URL) throw new Error("AMOY_RPC_URL required");
+const DEPLOYER_KEY = process.env.POLYGON_WALLET_KEY;
+if (!DEPLOYER_KEY) throw new Error("POLYGON_WALLET_KEY required");
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -17,7 +21,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     amoy: {
-      url: "https://polygon-amoy.g.alchemy.com/v2/oYq5cymBhdX5N-HCNydIx",
+      url: AMOY_RPC_URL,
       accounts: [DEPLOYER_KEY],
       chainId: 80002,
     },

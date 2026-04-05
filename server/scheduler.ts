@@ -2,6 +2,8 @@ import { storage } from "./storage";
 import { MTTManager, activeMTTs } from "./game/mtt-manager";
 import { log } from "./vite";
 import { getBlindPreset } from "./game/blind-presets";
+import { hasDatabase, getDb } from "./db";
+import { eq } from "drizzle-orm";
 
 // ─── Tournament Schedule Definitions ─────────────────────────────────────────
 
@@ -27,6 +29,31 @@ let lastScheduledDate: string | null = null;
 
 // Allow admin modifications at runtime
 let currentSchedule: ScheduledTournament[] = [...DEFAULT_SCHEDULE];
+let scheduleLoadedFromDb = false;
+
+/**
+ * Try to load tournament schedule from platform_settings table.
+ * Falls back to hardcoded DEFAULT_SCHEDULE if DB entry doesn't exist.
+ */
+async function loadScheduleFromDb(): Promise<void> {
+  if (scheduleLoadedFromDb) return;
+  try {
+    if (!hasDatabase()) return;
+    const db = getDb();
+    const { platformSettings } = await import("@shared/schema");
+    const rows = await db.select().from(platformSettings).where(eq(platformSettings.key, "tournament_schedule"));
+    if (rows.length > 0 && rows[0].value) {
+      const parsed = rows[0].value as ScheduledTournament[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        currentSchedule = parsed;
+        log(`[scheduler] Loaded tournament schedule from database (${parsed.length} entries).`);
+      }
+    }
+  } catch (err) {
+    log(`[scheduler] Could not load schedule from DB, using defaults: ${err}`);
+  }
+  scheduleLoadedFromDb = true;
+}
 
 // ─── Core Scheduling Logic ───────────────────────────────────────────────────
 
@@ -39,6 +66,9 @@ function todayDateString(): string {
  * Idempotent: skips if tournaments for today were already created.
  */
 async function ensureTodaysTournaments(): Promise<void> {
+  // Load schedule from DB if available (only on first call)
+  await loadScheduleFromDb();
+
   // Ensure system user exists before creating tournaments (FK constraint on created_by_id)
   await storage.ensureSystemUser();
 
@@ -210,5 +240,6 @@ export function getTournamentSchedule(): ScheduledTournament[] {
 export function setTournamentSchedule(schedule: ScheduledTournament[]): void {
   currentSchedule = [...schedule];
   lastScheduledDate = null; // Force re-evaluation on next check
+  scheduleLoadedFromDb = true; // Prevent DB from overwriting admin changes
   log(`[scheduler] Tournament schedule updated (${schedule.length} entries).`);
 }

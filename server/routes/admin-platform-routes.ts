@@ -12,6 +12,7 @@ import { getTournamentSchedule, setTournamentSchedule, type ScheduledTournament 
 import { blockchainConfig } from "../blockchain/config";
 import { hasDatabase, getDb } from "../db";
 import type { RouteContext } from "./types";
+import { getTierDef } from "../tier-config";
 
 // ─── Music Upload Setup ──────────────────────────────────────────────────
 const MUSIC_UPLOAD_DIR = path.join(process.cwd(), "uploads", "music");
@@ -228,15 +229,12 @@ export async function registerAdminPlatformRoutes(
       const rakeByPlayer = await storage.getRakeByPlayer(lookbackDays);
       const payouts: { userId: string; amount: number }[] = [];
 
-      // Tier-based rakeback percentages (override admin-set flat rate)
-      const TIER_RAKEBACK: Record<string, number> = { free: 0, bronze: 0, silver: 10, gold: 20, platinum: 30 };
-
       for (const entry of rakeByPlayer) {
         const user = await storage.getUser(entry.userId);
         if (!user) continue;
 
         // Use tier-based rakeback if higher than admin-set rate
-        const tierPercent = TIER_RAKEBACK[user.tier] || 0;
+        const tierPercent = getTierDef(user.tier).rakebackPercent;
         const effectivePercent = Math.max(percent, tierPercent);
         const rakebackAmount = Math.floor(entry.totalRake * effectivePercent / 100);
         if (rakebackAmount <= 0) continue;
@@ -1045,6 +1043,99 @@ export async function registerAdminPlatformRoutes(
       await storage.updateUser(req.params.userId, { role: "frozen" as any });
 
       res.json({ ok: true, message: `Account ${targetUser.username} has been frozen` });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Lottery Config (multiplier table + buy-in tiers) ────────────────────
+
+  app.put("/api/admin/lottery-config", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(503).json({ message: "Database not available" });
+
+      const { multiplierTable, buyInTiers } = req.body;
+      const db = getDb();
+      const { platformSettings: ps } = await import("@shared/schema");
+      const adminId = (req as any).user?.id ?? "unknown";
+
+      if (multiplierTable !== undefined) {
+        // Validate structure: array of { multiplier: number, weight: number }
+        if (!Array.isArray(multiplierTable) || multiplierTable.length === 0) {
+          return res.status(400).json({ message: "multiplierTable must be a non-empty array" });
+        }
+        for (const entry of multiplierTable) {
+          if (typeof entry.multiplier !== "number" || typeof entry.weight !== "number" ||
+              entry.multiplier <= 0 || entry.weight <= 0) {
+            return res.status(400).json({ message: "Each entry must have positive multiplier and weight" });
+          }
+        }
+
+        await db.insert(ps).values({ key: "lottery_multiplier_table", value: multiplierTable, updatedBy: adminId })
+          .onConflictDoUpdate({ target: ps.key, set: { value: multiplierTable, updatedBy: adminId, updatedAt: new Date() } });
+
+        await logAdminAction(adminId, "update_lottery_multiplier_table", "platform_settings", "lottery_multiplier_table", { entryCount: multiplierTable.length });
+      }
+
+      if (buyInTiers !== undefined) {
+        // Validate structure: array of positive numbers
+        if (!Array.isArray(buyInTiers) || buyInTiers.length === 0) {
+          return res.status(400).json({ message: "buyInTiers must be a non-empty array" });
+        }
+        for (const tier of buyInTiers) {
+          if (typeof tier !== "number" || tier <= 0) {
+            return res.status(400).json({ message: "Each buy-in tier must be a positive number" });
+          }
+        }
+
+        await db.insert(ps).values({ key: "lottery_buyin_tiers", value: buyInTiers, updatedBy: adminId })
+          .onConflictDoUpdate({ target: ps.key, set: { value: buyInTiers, updatedBy: adminId, updatedAt: new Date() } });
+
+        await logAdminAction(adminId, "update_lottery_buyin_tiers", "platform_settings", "lottery_buyin_tiers", { tiers: buyInTiers });
+      }
+
+      res.json({ ok: true, message: "Lottery config updated" });
+    } catch (err) { next(err); }
+  });
+
+  // ─── Blind Schedule Presets ──────────────────────────────────────────────
+
+  app.put("/api/admin/blind-schedules/:preset", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+      if (!hasDatabase()) return res.status(503).json({ message: "Database not available" });
+
+      const { preset } = req.params;
+      const validPresets = ["standard", "turbo", "hyper_turbo", "mtt"];
+      if (!validPresets.includes(preset)) {
+        return res.status(400).json({ message: `Invalid preset. Must be one of: ${validPresets.join(", ")}` });
+      }
+
+      const { levels } = req.body;
+      if (!Array.isArray(levels) || levels.length === 0) {
+        return res.status(400).json({ message: "levels must be a non-empty array of blind levels" });
+      }
+
+      // Validate each blind level
+      for (const lvl of levels) {
+        if (typeof lvl.level !== "number" || typeof lvl.sb !== "number" ||
+            typeof lvl.bb !== "number" || typeof lvl.ante !== "number" ||
+            typeof lvl.durationSeconds !== "number") {
+          return res.status(400).json({ message: "Each level must have: level, sb, bb, ante, durationSeconds (all numbers)" });
+        }
+        if (lvl.sb < 0 || lvl.bb <= 0 || lvl.ante < 0 || lvl.durationSeconds <= 0) {
+          return res.status(400).json({ message: "Blind values must be non-negative, bb and durationSeconds must be positive" });
+        }
+      }
+
+      const db = getDb();
+      const { platformSettings: ps } = await import("@shared/schema");
+      const adminId = (req as any).user?.id ?? "unknown";
+      const key = `blind_schedule_${preset}`;
+
+      await db.insert(ps).values({ key, value: levels, updatedBy: adminId })
+        .onConflictDoUpdate({ target: ps.key, set: { value: levels, updatedBy: adminId, updatedAt: new Date() } });
+
+      await logAdminAction(adminId, "update_blind_schedule", "platform_settings", key, { preset, levelCount: levels.length });
+
+      res.json({ ok: true, message: `Blind schedule '${preset}' updated with ${levels.length} levels` });
     } catch (err) { next(err); }
   });
 }

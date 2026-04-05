@@ -161,6 +161,12 @@ export function useMultiplayerGame(tableId: string, userId: string) {
   const [notifications, setNotifications] = useState<TableNotification[]>([]);
   const notifIdRef = useRef(0);
 
+  // Fast-fold reassignment
+  const [fastFoldReassign, setFastFoldReassign] = useState<string | null>(null);
+
+  // Lottery SNG spin animation
+  const [lotterySpin, setLotterySpin] = useState<{ multiplier: number; prizePool: number } | null>(null);
+
   const joinedRef = useRef(false);
   const lastBuyInRef = useRef<number>(0);
   const localSeedRef = useRef<string | null>(null);
@@ -461,6 +467,79 @@ export function useMultiplayerGame(tableId: string, userId: string) {
       })
     );
 
+    // Fast-fold reassignment — server moves player to new table
+    unsubs.push(
+      wsClient.on("fast_fold_reassign", (msg: any) => {
+        if (msg.newTableId) setFastFoldReassign(msg.newTableId);
+      })
+    );
+
+    // Lottery SNG spin animation
+    unsubs.push(
+      wsClient.on("lottery_spin", (msg: any) => {
+        setLotterySpin({ multiplier: msg.multiplier, prizePool: msg.prizePool });
+      })
+    );
+    unsubs.push(
+      wsClient.on("lottery_result", (msg: any) => {
+        setLotterySpin({ multiplier: msg.multiplier, prizePool: msg.prizePool });
+        // Clear after animation time
+        setTimeout(() => setLotterySpin(null), 5000);
+      })
+    );
+
+    // Player moved (fast-fold / MTT table balancing)
+    unsubs.push(
+      wsClient.on("player_moved", (msg: any) => {
+        if (msg.toTableId) setFastFoldReassign(msg.toTableId);
+      })
+    );
+
+    // Fast-fold pool info
+    unsubs.push(
+      wsClient.on("fast_fold_pool_info", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
+        // Store pool info in format info
+        setFormatInfo(prev => ({ ...prev, poolPlayerCount: msg.playerCount, poolTablesActive: msg.tablesActive }));
+      })
+    );
+
+    // Tournament status updates
+    unsubs.push(
+      wsClient.on("tournament_status", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
+        setFormatInfo(prev => ({ ...prev, tournamentStatus: msg.status, prizePool: msg.prizePool }));
+      })
+    );
+
+    // Shuffle commitment/reveal — store for provably fair display
+    unsubs.push(
+      wsClient.on("shuffle_commitment", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
+        setCommitmentHash(msg.commitmentHash);
+      })
+    );
+    unsubs.push(
+      wsClient.on("shuffle_reveal", (msg: any) => {
+        if (msg.tableId && msg.tableId !== tableIdRef.current) return;
+        setShuffleProof(msg.proof);
+      })
+    );
+
+    // Seeds collected confirmation
+    unsubs.push(
+      wsClient.on("seeds_collected", (_msg: any) => {
+        setPlayerSeedStatus("revealed"); // seeds collected = all revealed
+      })
+    );
+
+    // Commentary status confirmation
+    unsubs.push(
+      wsClient.on("commentary_status", (_msg: any) => {
+        // Confirmation only — no state change needed
+      })
+    );
+
     unsubs.push(
       wsClient.on("error", (msg: any) => {
         setError(msg.message);
@@ -678,5 +757,8 @@ export function useMultiplayerGame(tableId: string, userId: string) {
     sitIn,
     postBlinds,
     waitForBB,
+    // Fast-fold + Lottery
+    fastFoldReassign,
+    lotterySpin,
   };
 }

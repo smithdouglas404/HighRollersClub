@@ -18,10 +18,17 @@ const createDeck = (): CardType[] => {
 
 const shuffleDeck = (deck: CardType[]): CardType[] => {
   const newDeck = [...deck];
-  const randomValues = new Uint32Array(newDeck.length);
-  crypto.getRandomValues(randomValues);
+  // Fisher-Yates with rejection sampling to eliminate modulo bias
   for (let i = newDeck.length - 1; i > 0; i--) {
-    const j = randomValues[i] % (i + 1);
+    const range = i + 1;
+    const max = Math.floor(0x100000000 / range) * range;
+    let rand: number;
+    do {
+      const buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      rand = buf[0];
+    } while (rand >= max);
+    const j = rand % range;
     [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
   }
   return newDeck;

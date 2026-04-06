@@ -637,9 +637,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .portrait-card {
-  /* Scale with both container size (cqmin) AND perspective depth (--seat-scale) */
-  --base-w: clamp(48px, 9cqmin, 82px);
-  --base-h: clamp(66px, 12.5cqmin, 114px);
+  /* Scale with both container size (cqmin) AND perspective depth (--seat-scale)
+     Stitch-reference: 150px wide × 140px avatar height — large portrait cards */
+  --base-w: clamp(72px, 14cqmin, 150px);
+  --base-h: clamp(90px, 17cqmin, 160px);
   width: calc(var(--base-w) * var(--seat-scale, 1));
   height: calc(var(--base-h) * var(--seat-scale, 1));
 }
@@ -653,8 +654,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .nameplate-responsive {
-  min-width: calc(clamp(60px, 17.5cqmin, 150px) * var(--seat-scale, 1));
-  max-width: calc(clamp(100px, 29.4cqmin, 252px) * var(--seat-scale, 1));
+  min-width: calc(clamp(72px, 14cqmin, 150px) * var(--seat-scale, 1));
+  max-width: calc(clamp(120px, 20cqmin, 252px) * var(--seat-scale, 1));
 }
 
 @media (prefers-reduced-motion: reduce) {

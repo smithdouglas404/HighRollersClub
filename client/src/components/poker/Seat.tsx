@@ -704,15 +704,21 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
         </AnimatePresence>
 
         {/* ── Portrait-style player card ── */}
-        <div ref={avatarRef} className="relative z-10">
+        <div
+          ref={avatarRef}
+          className={cn("relative z-10", isTurn && "ring-2 ring-[#00f3ff] rounded-xl")}
+          style={isTurn ? {
+            boxShadow: "0 0 30px rgba(0,243,255,0.5), 0 0 60px rgba(0,243,255,0.2)",
+          } : undefined}
+        >
           {showVideo && <VideoThumbnail userId={player.id} isLocal={isHero} size={Math.round(48 * perspectiveScale)} />}
           {avatarTier && avatarTier !== "common" && (
             <AvatarStatusRing
               tier={avatarTier}
               winStreak={winStreak}
               vpipPercent={hudStats ? Math.round((hudStats.vpipCount / Math.max(1, hudStats.handsPlayed)) * 100) : undefined}
-              size={Math.round(130 * perspectiveScale)}
-              isActive={isTurn}
+              size={Math.round(160 * perspectiveScale)}
+              isActive={false}
             />
           )}
 
@@ -720,18 +726,15 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <div
               className="relative rounded-t-xl overflow-visible portrait-card"
               style={{
-                borderTop: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderLeft: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
-                borderRight: `2.5px solid ${hexToRgba(glowColor, isTurn ? 1.0 : 0.5)}`,
+                borderTop: `2.5px solid ${hexToRgba(glowColor, 0.5)}`,
+                borderLeft: `2.5px solid ${hexToRgba(glowColor, 0.5)}`,
+                borderRight: `2.5px solid ${hexToRgba(glowColor, 0.5)}`,
                 borderBottom: "none",
                 borderRadius: "12px 12px 0 0",
-                boxShadow: isTurn
-                  ? `0 0 30px ${hexToRgba(glowColor, 0.8)}, 0 0 60px ${hexToRgba(glowColor, 0.4)}, 0 0 90px ${hexToRgba(glowColor, 0.15)}, inset 0 0 20px ${hexToRgba(glowColor, 0.25)}`
-                  : isWinner
+                boxShadow: isWinner
                   ? `0 0 25px rgba(212,175,55,0.5), 0 0 50px rgba(212,175,55,0.2)`
                   : `0 0 12px ${hexToRgba(glowColor, 0.4)}, 0 4px 20px rgba(0,0,0,0.6)`,
                 transition: "all 0.3s ease",
-                animation: isTurn ? "seatTurnPulse 2s ease-in-out infinite" : undefined,
               }}
             >
               <div
@@ -746,7 +749,8 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 <img
                   src={fullBodyImage || player.avatar}
                   alt={player.name}
-                  className="absolute inset-0 w-full h-full object-cover z-[1] rounded-t-xl"
+                  loading="eager"
+                  className="absolute inset-0 w-full h-full object-cover object-top z-[1] rounded-t-xl"
                   style={{
                     objectPosition: "center 15%",
                     opacity: isFolded ? 0.35 : 1,
@@ -768,19 +772,19 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                 </div>
               )}
 
-              <div className="absolute bottom-0 left-0 right-0 h-[60%] z-[2] pointer-events-none"
-                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)" }} />
+              <div className="absolute bottom-0 left-0 right-0 h-[70%] z-[2] pointer-events-none"
+                style={{ background: "linear-gradient(180deg, transparent 30%, rgba(10,10,12,0.8) 100%)" }} />
             </div>
 
             <div
               className="relative z-[3] rounded-b-lg overflow-hidden"
               style={{
-                background: "rgba(8,8,12,0.92)",
-                backdropFilter: "blur(8px)",
+                background: "rgba(15,15,20,0.92)",
+                backdropFilter: "blur(12px)",
                 borderLeft: `2.5px solid ${hexToRgba(glowColor, 0.3)}`,
                 borderRight: `2.5px solid ${hexToRgba(glowColor, 0.3)}`,
                 borderBottom: `2.5px solid ${hexToRgba(glowColor, 0.3)}`,
-                padding: "3px 6px 2px",
+                padding: "4px 8px 3px",
               }}
             >
               <div className="absolute bottom-0 left-0 right-0 h-[3px] z-20"
@@ -789,13 +793,18 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
                   boxShadow: "0 0 8px rgba(212,175,55,0.5)",
                 }} />
               <p className="font-bold text-white/90 truncate leading-tight text-center"
-                style={{ fontSize: "0.6875em", maxWidth: `calc(90px * var(--seat-scale, 1))`, textShadow: `0 0 6px ${hexToRgba(glowColor, 0.4)}` }}>
+                style={{ fontSize: "0.75em", maxWidth: `calc(140px * var(--seat-scale, 1))`, textShadow: `0 0 6px ${hexToRgba(glowColor, 0.4)}` }}>
                 {player.name}
               </p>
-              <div className="flex items-center justify-center gap-0.5">
-                <span className="font-mono font-bold text-[#ffd700] leading-tight" style={{ fontSize: "0.6875em" }}>
+              <div className="flex items-center justify-center gap-1">
+                <span className="font-mono font-bold text-[#ffd700] leading-tight" style={{ fontSize: "0.75em" }}>
                   {formatChips(animatedChips)}
                 </span>
+                {chipsAnimating && chipsDelta !== 0 && (
+                  <span className={cn("font-mono font-bold leading-tight", chipsDelta > 0 ? "text-green-400" : "text-red-400")} style={{ fontSize: "0.625em" }}>
+                    {chipsDelta > 0 ? "+" : ""}{formatChips(chipsDelta)}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -859,7 +868,7 @@ export function Seat({ player, position, isHero = false, isWinner = false, seatI
             <TimerRing
               percent={timer.percent}
               secondsLeft={timer.secondsLeft}
-              size={Math.round(140 * perspectiveScale)}
+              size={Math.round(170 * perspectiveScale)}
               strokeWidth={Math.max(2, Math.round(4 * perspectiveScale))}
               inTimeBank={timer.inTimeBank}
               timeBankRemaining={timer.timeBankRemaining}

@@ -1,9 +1,104 @@
+CREATE TABLE "account_actions" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" varchar NOT NULL,
+	"action" text NOT NULL,
+	"severity" text DEFAULT 'info' NOT NULL,
+	"message" text NOT NULL,
+	"details" jsonb,
+	"automated" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "achievements" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"key" text NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"category" text NOT NULL,
+	"requirement_type" text NOT NULL,
+	"requirement_value" integer NOT NULL,
+	"hrp_reward" integer NOT NULL,
+	"chip_reward" integer DEFAULT 0 NOT NULL,
+	"badge_image_url" text,
+	"rarity" text,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "achievements_key_unique" UNIQUE("key")
+);
+--> statement-breakpoint
+CREATE TABLE "admin_audit_logs" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"admin_id" varchar NOT NULL,
+	"action" text NOT NULL,
+	"target_type" text,
+	"target_id" varchar,
+	"details" jsonb,
+	"ip_address" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "announcements" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"title" text NOT NULL,
+	"message" text NOT NULL,
+	"target_audience" text DEFAULT 'all' NOT NULL,
+	"delivery_style" text DEFAULT 'notification' NOT NULL,
+	"club_id" varchar,
+	"active" boolean DEFAULT true NOT NULL,
+	"expires_at" timestamp,
+	"created_by" varchar NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "api_keys" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" varchar NOT NULL,
 	"key_hash" text NOT NULL,
 	"name" text NOT NULL,
 	"last_used" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "battle_pass_rewards" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"battle_pass_id" varchar NOT NULL,
+	"level" integer NOT NULL,
+	"track" text NOT NULL,
+	"reward_type" text NOT NULL,
+	"reward_value" integer NOT NULL,
+	"reward_item_id" varchar,
+	"description" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "battle_passes" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" text NOT NULL,
+	"season_number" integer NOT NULL,
+	"starts_at" timestamp NOT NULL,
+	"ends_at" timestamp NOT NULL,
+	"premium_price_chips" integer DEFAULT 10000 NOT NULL,
+	"premium_price_usd" integer DEFAULT 999 NOT NULL,
+	"max_level" integer DEFAULT 50 NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "bot_action_queue" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"type" text NOT NULL,
+	"category" text NOT NULL,
+	"severity" text NOT NULL,
+	"title" text NOT NULL,
+	"description" text NOT NULL,
+	"target_user_id" varchar,
+	"target_type" text,
+	"target_id" varchar,
+	"action_taken" text,
+	"status" text DEFAULT 'pending' NOT NULL,
+	"reviewed_by" varchar,
+	"reviewed_at" timestamp,
+	"details" jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -76,6 +171,14 @@ CREATE TABLE "club_members" (
 	"joined_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "club_messages" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"club_id" varchar NOT NULL,
+	"user_id" varchar NOT NULL,
+	"message" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "club_wars" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"club1_id" varchar NOT NULL,
@@ -111,6 +214,10 @@ CREATE TABLE "clubs" (
 	"anti_collusion" boolean DEFAULT false NOT NULL,
 	"theme_color" text DEFAULT 'gold' NOT NULL,
 	"elo_rating" integer DEFAULT 1200 NOT NULL,
+	"allowed_countries" jsonb,
+	"allowed_states" jsonb,
+	"block_vpn" boolean DEFAULT false NOT NULL,
+	"kyc_required" text DEFAULT 'none' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -125,6 +232,27 @@ CREATE TABLE "collusion_alerts" (
 	"status" text DEFAULT 'pending' NOT NULL,
 	"reviewed_by" varchar,
 	"reviewed_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "daily_login_rewards" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"day_number" integer NOT NULL,
+	"chip_reward" integer NOT NULL,
+	"hrp_reward" integer NOT NULL,
+	"item_reward_type" text,
+	"item_reward_rarity" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "device_fingerprints" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" varchar NOT NULL,
+	"fingerprint" text NOT NULL,
+	"user_agent" text,
+	"screen_res" text,
+	"ip_address" text,
+	"last_seen" timestamp DEFAULT now() NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -185,12 +313,44 @@ CREATE TABLE "hand_players" (
 	"final_action" text
 );
 --> statement-breakpoint
+CREATE TABLE "hrp_transactions" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" varchar NOT NULL,
+	"amount" integer NOT NULL,
+	"source" text NOT NULL,
+	"description" text,
+	"balance_after" integer NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "ip_rules" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"ip" text NOT NULL,
+	"type" text NOT NULL,
+	"reason" text,
+	"created_by" varchar,
+	"expires_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "league_seasons" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"start_date" timestamp NOT NULL,
 	"end_date" timestamp NOT NULL,
 	"standings" jsonb,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "loyalty_logs" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" varchar NOT NULL,
+	"amount" integer NOT NULL,
+	"reason" text NOT NULL,
+	"multiplier_x100" integer DEFAULT 100 NOT NULL,
+	"base_amount" integer NOT NULL,
+	"new_total" integer NOT NULL,
+	"new_level" integer NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -215,6 +375,18 @@ CREATE TABLE "missions" (
 	"reward" integer NOT NULL,
 	"period_type" text DEFAULT 'daily' NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "music_tracks" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"title" text NOT NULL,
+	"artist" text,
+	"filename" text NOT NULL,
+	"original_name" text,
+	"duration" integer,
+	"uploaded_by" varchar NOT NULL,
+	"is_admin" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -255,6 +427,13 @@ CREATE TABLE "payments" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "platform_settings" (
+	"key" text PRIMARY KEY NOT NULL,
+	"value" jsonb NOT NULL,
+	"updated_by" varchar,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "player_notes" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"author_user_id" varchar NOT NULL,
@@ -288,6 +467,19 @@ CREATE TABLE "player_stats" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "referrals" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"referrer_id" varchar NOT NULL,
+	"referred_id" varchar NOT NULL,
+	"milestone" text NOT NULL,
+	"referrer_hrp_reward" integer NOT NULL,
+	"referrer_chip_reward" integer NOT NULL,
+	"referred_hrp_reward" integer NOT NULL,
+	"referred_chip_reward" integer NOT NULL,
+	"completed_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "shop_items" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
@@ -298,6 +490,24 @@ CREATE TABLE "shop_items" (
 	"currency" text DEFAULT 'chips' NOT NULL,
 	"image_url" text,
 	"is_active" boolean DEFAULT true NOT NULL,
+	"earnable_at_level" integer,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "sponsorship_payouts" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"transaction_id" text NOT NULL,
+	"club_id" varchar,
+	"recipient_user_id" varchar,
+	"recipient_wallet" text NOT NULL,
+	"amount" integer NOT NULL,
+	"currency" text DEFAULT 'USDT' NOT NULL,
+	"status" text DEFAULT 'pending' NOT NULL,
+	"scheduled_date" timestamp,
+	"processed_at" timestamp,
+	"tx_hash" text,
+	"notes" text,
+	"created_by" varchar NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -313,6 +523,18 @@ CREATE TABLE "stakes" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "support_tickets" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" varchar NOT NULL,
+	"subject" text NOT NULL,
+	"status" text DEFAULT 'open' NOT NULL,
+	"priority" text DEFAULT 'medium' NOT NULL,
+	"category" text DEFAULT 'other' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"resolved_at" timestamp
+);
+--> statement-breakpoint
 CREATE TABLE "supported_currencies" (
 	"id" varchar PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
@@ -325,6 +547,25 @@ CREATE TABLE "supported_currencies" (
 	"sort_order" integer DEFAULT 0 NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "table_ledger_entries" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"table_id" varchar NOT NULL,
+	"club_id" varchar,
+	"session_date" timestamp NOT NULL,
+	"entries" jsonb NOT NULL,
+	"settlements" jsonb,
+	"total_rake" integer DEFAULT 0 NOT NULL,
+	"total_pot" integer DEFAULT 0 NOT NULL,
+	"player_count" integer DEFAULT 0 NOT NULL,
+	"hands_played" integer DEFAULT 0 NOT NULL,
+	"settled_by" varchar,
+	"settled_at" timestamp,
+	"notes" text,
+	"settlement_hash" text,
+	"settlement_tx_hash" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "table_players" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"table_id" varchar NOT NULL,
@@ -334,6 +575,20 @@ CREATE TABLE "table_players" (
 	"is_connected" boolean DEFAULT true NOT NULL,
 	"is_sitting_out" boolean DEFAULT false NOT NULL,
 	"joined_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "table_sessions" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"table_id" varchar NOT NULL,
+	"user_id" varchar NOT NULL,
+	"display_name" text NOT NULL,
+	"buy_in_total" integer DEFAULT 0 NOT NULL,
+	"cash_out_total" integer DEFAULT 0 NOT NULL,
+	"net_result" integer DEFAULT 0 NOT NULL,
+	"hands_played" integer DEFAULT 0 NOT NULL,
+	"started_at" timestamp DEFAULT now() NOT NULL,
+	"ended_at" timestamp,
+	"settled" boolean DEFAULT false NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "tables" (
@@ -386,8 +641,21 @@ CREATE TABLE "tables" (
 	"scheduled_start_time" timestamp,
 	"scheduled_end_time" timestamp,
 	"recurring_schedule" jsonb,
+	"allowed_countries" jsonb,
+	"allowed_states" jsonb,
+	"block_vpn" boolean DEFAULT false NOT NULL,
+	"kyc_required" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "tables_invite_code_unique" UNIQUE("invite_code")
+);
+--> statement-breakpoint
+CREATE TABLE "ticket_messages" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"ticket_id" varchar NOT NULL,
+	"user_id" varchar NOT NULL,
+	"message" text NOT NULL,
+	"is_staff" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "tournament_registrations" (
@@ -438,6 +706,26 @@ CREATE TABLE "transactions" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "user_achievements" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" varchar NOT NULL,
+	"achievement_id" varchar NOT NULL,
+	"progress" integer DEFAULT 0 NOT NULL,
+	"unlocked_at" timestamp,
+	"claimed_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE "user_battle_passes" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" varchar NOT NULL,
+	"battle_pass_id" varchar NOT NULL,
+	"current_level" integer DEFAULT 0 NOT NULL,
+	"hrp_earned_this_season" integer DEFAULT 0 NOT NULL,
+	"is_premium" boolean DEFAULT false NOT NULL,
+	"premium_purchased_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "user_inventory" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" varchar NOT NULL,
@@ -472,12 +760,43 @@ CREATE TABLE "users" (
 	"two_factor_enabled" boolean DEFAULT false,
 	"email" text,
 	"wallet_address" text,
+	"email_verified" boolean DEFAULT false NOT NULL,
+	"email_verification_token" text,
+	"firebase_uid" text,
 	"connected_wallets" jsonb,
 	"recovery_codes" jsonb,
 	"premium_until" timestamp,
 	"last_daily_claim" timestamp,
+	"tier" text DEFAULT 'free' NOT NULL,
+	"tier_expires_at" timestamp,
+	"kyc_level" text DEFAULT 'none' NOT NULL,
+	"kyc_status" text DEFAULT 'none' NOT NULL,
+	"kyc_data" jsonb,
+	"kyc_verified_at" timestamp,
+	"kyc_rejection_reason" text,
+	"member_id" text,
+	"kyc_blockchain_tx_hash" text,
+	"self_excluded_until" timestamp,
+	"deposit_limit_daily" integer DEFAULT 0 NOT NULL,
+	"deposit_limit_weekly" integer DEFAULT 0 NOT NULL,
+	"deposit_limit_monthly" integer DEFAULT 0 NOT NULL,
+	"session_time_limit_minutes" integer DEFAULT 0 NOT NULL,
+	"loss_limit_daily" integer DEFAULT 0 NOT NULL,
+	"cool_off_until" timestamp,
+	"loyalty_points" integer DEFAULT 0 NOT NULL,
+	"loyalty_level" integer DEFAULT 1 NOT NULL,
+	"loyalty_multiplier" numeric(3, 1) DEFAULT '1.0' NOT NULL,
+	"daily_login_streak" integer DEFAULT 0 NOT NULL,
+	"last_login_reward_at" timestamp,
+	"referred_by" varchar,
+	"referral_code" varchar,
+	"loyalty_streak_days" integer DEFAULT 0 NOT NULL,
+	"loyalty_last_play_date" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "users_username_unique" UNIQUE("username")
+	CONSTRAINT "users_username_unique" UNIQUE("username"),
+	CONSTRAINT "users_firebase_uid_unique" UNIQUE("firebase_uid"),
+	CONSTRAINT "users_member_id_unique" UNIQUE("member_id"),
+	CONSTRAINT "users_referral_code_unique" UNIQUE("referral_code")
 );
 --> statement-breakpoint
 CREATE TABLE "wallets" (
@@ -512,7 +831,10 @@ CREATE TABLE "withdrawal_requests" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "account_actions" ADD CONSTRAINT "account_actions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "battle_pass_rewards" ADD CONSTRAINT "battle_pass_rewards_battle_pass_id_battle_passes_id_fk" FOREIGN KEY ("battle_pass_id") REFERENCES "public"."battle_passes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "battle_pass_rewards" ADD CONSTRAINT "battle_pass_rewards_reward_item_id_shop_items_id_fk" FOREIGN KEY ("reward_item_id") REFERENCES "public"."shop_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_table_id_tables_id_fk" FOREIGN KEY ("table_id") REFERENCES "public"."tables"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "club_announcements" ADD CONSTRAINT "club_announcements_club_id_clubs_id_fk" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -523,35 +845,56 @@ ALTER TABLE "club_invitations" ADD CONSTRAINT "club_invitations_club_id_clubs_id
 ALTER TABLE "club_invitations" ADD CONSTRAINT "club_invitations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "club_members" ADD CONSTRAINT "club_members_club_id_clubs_id_fk" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "club_members" ADD CONSTRAINT "club_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "club_messages" ADD CONSTRAINT "club_messages_club_id_clubs_id_fk" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "club_messages" ADD CONSTRAINT "club_messages_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "club_wars" ADD CONSTRAINT "club_wars_club1_id_clubs_id_fk" FOREIGN KEY ("club1_id") REFERENCES "public"."clubs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "club_wars" ADD CONSTRAINT "club_wars_club2_id_clubs_id_fk" FOREIGN KEY ("club2_id") REFERENCES "public"."clubs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "clubs" ADD CONSTRAINT "clubs_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "device_fingerprints" ADD CONSTRAINT "device_fingerprints_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "game_hands" ADD CONSTRAINT "game_hands_table_id_tables_id_fk" FOREIGN KEY ("table_id") REFERENCES "public"."tables"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "hand_actions" ADD CONSTRAINT "hand_actions_hand_id_game_hands_id_fk" FOREIGN KEY ("hand_id") REFERENCES "public"."game_hands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "hand_actions" ADD CONSTRAINT "hand_actions_player_id_users_id_fk" FOREIGN KEY ("player_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "hand_analyses" ADD CONSTRAINT "hand_analyses_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "hand_players" ADD CONSTRAINT "hand_players_hand_id_game_hands_id_fk" FOREIGN KEY ("hand_id") REFERENCES "public"."game_hands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "hand_players" ADD CONSTRAINT "hand_players_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "hrp_transactions" ADD CONSTRAINT "hrp_transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loyalty_logs" ADD CONSTRAINT "loyalty_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "marketplace_listings" ADD CONSTRAINT "marketplace_listings_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "marketplace_listings" ADD CONSTRAINT "marketplace_listings_item_id_shop_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."shop_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "marketplace_listings" ADD CONSTRAINT "marketplace_listings_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "music_tracks" ADD CONSTRAINT "music_tracks_uploaded_by_users_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "player_notes" ADD CONSTRAINT "player_notes_author_user_id_users_id_fk" FOREIGN KEY ("author_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "player_notes" ADD CONSTRAINT "player_notes_target_user_id_users_id_fk" FOREIGN KEY ("target_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "player_stats" ADD CONSTRAINT "player_stats_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "referrals" ADD CONSTRAINT "referrals_referrer_id_users_id_fk" FOREIGN KEY ("referrer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "referrals" ADD CONSTRAINT "referrals_referred_id_users_id_fk" FOREIGN KEY ("referred_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sponsorship_payouts" ADD CONSTRAINT "sponsorship_payouts_club_id_clubs_id_fk" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sponsorship_payouts" ADD CONSTRAINT "sponsorship_payouts_recipient_user_id_users_id_fk" FOREIGN KEY ("recipient_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stakes" ADD CONSTRAINT "stakes_backer_id_users_id_fk" FOREIGN KEY ("backer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stakes" ADD CONSTRAINT "stakes_player_id_users_id_fk" FOREIGN KEY ("player_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stakes" ADD CONSTRAINT "stakes_tournament_id_tournaments_id_fk" FOREIGN KEY ("tournament_id") REFERENCES "public"."tournaments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "table_ledger_entries" ADD CONSTRAINT "table_ledger_entries_table_id_tables_id_fk" FOREIGN KEY ("table_id") REFERENCES "public"."tables"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "table_ledger_entries" ADD CONSTRAINT "table_ledger_entries_club_id_clubs_id_fk" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "table_players" ADD CONSTRAINT "table_players_table_id_tables_id_fk" FOREIGN KEY ("table_id") REFERENCES "public"."tables"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "table_players" ADD CONSTRAINT "table_players_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "table_sessions" ADD CONSTRAINT "table_sessions_table_id_tables_id_fk" FOREIGN KEY ("table_id") REFERENCES "public"."tables"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "table_sessions" ADD CONSTRAINT "table_sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tables" ADD CONSTRAINT "tables_club_id_clubs_id_fk" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tables" ADD CONSTRAINT "tables_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ticket_messages" ADD CONSTRAINT "ticket_messages_ticket_id_support_tickets_id_fk" FOREIGN KEY ("ticket_id") REFERENCES "public"."support_tickets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ticket_messages" ADD CONSTRAINT "ticket_messages_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tournament_registrations" ADD CONSTRAINT "tournament_registrations_tournament_id_tournaments_id_fk" FOREIGN KEY ("tournament_id") REFERENCES "public"."tournaments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tournament_registrations" ADD CONSTRAINT "tournament_registrations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tournaments" ADD CONSTRAINT "tournaments_club_id_clubs_id_fk" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tournaments" ADD CONSTRAINT "tournaments_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_achievements" ADD CONSTRAINT "user_achievements_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_achievements" ADD CONSTRAINT "user_achievements_achievement_id_achievements_id_fk" FOREIGN KEY ("achievement_id") REFERENCES "public"."achievements"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_battle_passes" ADD CONSTRAINT "user_battle_passes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_battle_passes" ADD CONSTRAINT "user_battle_passes_battle_pass_id_battle_passes_id_fk" FOREIGN KEY ("battle_pass_id") REFERENCES "public"."battle_passes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_inventory" ADD CONSTRAINT "user_inventory_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_inventory" ADD CONSTRAINT "user_inventory_item_id_shop_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."shop_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_missions" ADD CONSTRAINT "user_missions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -561,8 +904,16 @@ ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_user_id_users_id_fk" FOREIGN K
 ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_item_id_shop_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."shop_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "withdrawal_requests" ADD CONSTRAINT "withdrawal_requests_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "withdrawal_requests" ADD CONSTRAINT "withdrawal_requests_payment_id_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."payments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "idx_account_actions_user" ON "account_actions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_account_actions_created" ON "account_actions" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "idx_audit_admin" ON "admin_audit_logs" USING btree ("admin_id");--> statement-breakpoint
+CREATE INDEX "idx_audit_action" ON "admin_audit_logs" USING btree ("action");--> statement-breakpoint
+CREATE INDEX "idx_audit_created" ON "admin_audit_logs" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "api_keys_user_idx" ON "api_keys" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "api_keys_hash_idx" ON "api_keys" USING btree ("key_hash");--> statement-breakpoint
+CREATE INDEX "idx_bot_queue_status" ON "bot_action_queue" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "idx_bot_queue_type" ON "bot_action_queue" USING btree ("type");--> statement-breakpoint
+CREATE INDEX "idx_bot_queue_created" ON "bot_action_queue" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "chat_messages_table_idx" ON "chat_messages" USING btree ("table_id");--> statement-breakpoint
 CREATE INDEX "club_announcements_club_idx" ON "club_announcements" USING btree ("club_id");--> statement-breakpoint
 CREATE INDEX "club_challenges_club_idx" ON "club_challenges" USING btree ("club_id");--> statement-breakpoint
@@ -570,16 +921,27 @@ CREATE INDEX "club_events_club_idx" ON "club_events" USING btree ("club_id");-->
 CREATE INDEX "club_invitations_club_idx" ON "club_invitations" USING btree ("club_id");--> statement-breakpoint
 CREATE INDEX "club_members_club_idx" ON "club_members" USING btree ("club_id");--> statement-breakpoint
 CREATE INDEX "club_members_user_idx" ON "club_members" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_club_messages_club" ON "club_messages" USING btree ("club_id");--> statement-breakpoint
+CREATE INDEX "idx_club_messages_created" ON "club_messages" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "collusion_alerts_status_idx" ON "collusion_alerts" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "collusion_alerts_table_idx" ON "collusion_alerts" USING btree ("table_id");--> statement-breakpoint
+CREATE INDEX "idx_device_fp_user" ON "device_fingerprints" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_device_fp_hash" ON "device_fingerprints" USING btree ("fingerprint");--> statement-breakpoint
 CREATE INDEX "game_hands_table_idx" ON "game_hands" USING btree ("table_id");--> statement-breakpoint
 CREATE INDEX "hand_actions_hand_idx" ON "hand_actions" USING btree ("hand_id");--> statement-breakpoint
 CREATE INDEX "hand_actions_player_idx" ON "hand_actions" USING btree ("player_id");--> statement-breakpoint
 CREATE INDEX "hand_analyses_user_idx" ON "hand_analyses" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "hand_players_hand_idx" ON "hand_players" USING btree ("hand_id");--> statement-breakpoint
 CREATE INDEX "hand_players_user_idx" ON "hand_players" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "hrp_transactions_user_idx" ON "hrp_transactions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_ip_rules_ip" ON "ip_rules" USING btree ("ip");--> statement-breakpoint
+CREATE INDEX "idx_ip_rules_type" ON "ip_rules" USING btree ("type");--> statement-breakpoint
+CREATE INDEX "idx_loyalty_logs_user" ON "loyalty_logs" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_loyalty_logs_created" ON "loyalty_logs" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "marketplace_listings_status_idx" ON "marketplace_listings" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "marketplace_listings_seller_idx" ON "marketplace_listings" USING btree ("seller_id");--> statement-breakpoint
+CREATE INDEX "idx_music_uploaded_by" ON "music_tracks" USING btree ("uploaded_by");--> statement-breakpoint
+CREATE INDEX "idx_music_is_admin" ON "music_tracks" USING btree ("is_admin");--> statement-breakpoint
 CREATE INDEX "notifications_user_idx" ON "notifications" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "notifications_user_read_idx" ON "notifications" USING btree ("user_id","read");--> statement-breakpoint
 CREATE INDEX "payments_user_idx" ON "payments" USING btree ("user_id");--> statement-breakpoint
@@ -588,16 +950,35 @@ CREATE INDEX "payments_gateway_idx" ON "payments" USING btree ("gateway_provider
 CREATE UNIQUE INDEX "player_notes_unique" ON "player_notes" USING btree ("author_user_id","target_user_id");--> statement-breakpoint
 CREATE INDEX "player_notes_author_idx" ON "player_notes" USING btree ("author_user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "player_stats_user_idx" ON "player_stats" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "referrals_referrer_idx" ON "referrals" USING btree ("referrer_id");--> statement-breakpoint
+CREATE INDEX "referrals_referred_idx" ON "referrals" USING btree ("referred_id");--> statement-breakpoint
+CREATE INDEX "idx_sponsorship_club" ON "sponsorship_payouts" USING btree ("club_id");--> statement-breakpoint
+CREATE INDEX "idx_sponsorship_status" ON "sponsorship_payouts" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "stakes_backer_idx" ON "stakes" USING btree ("backer_id");--> statement-breakpoint
 CREATE INDEX "stakes_player_idx" ON "stakes" USING btree ("player_id");--> statement-breakpoint
+CREATE INDEX "support_tickets_user_idx" ON "support_tickets" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "support_tickets_status_idx" ON "support_tickets" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "idx_ledger_table" ON "table_ledger_entries" USING btree ("table_id");--> statement-breakpoint
+CREATE INDEX "idx_ledger_club" ON "table_ledger_entries" USING btree ("club_id");--> statement-breakpoint
+CREATE INDEX "idx_ledger_date" ON "table_ledger_entries" USING btree ("session_date");--> statement-breakpoint
 CREATE INDEX "table_players_table_idx" ON "table_players" USING btree ("table_id");--> statement-breakpoint
+CREATE INDEX "idx_table_sessions_table" ON "table_sessions" USING btree ("table_id");--> statement-breakpoint
+CREATE INDEX "idx_table_sessions_user" ON "table_sessions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_table_sessions_date" ON "table_sessions" USING btree ("started_at");--> statement-breakpoint
 CREATE INDEX "tables_club_idx" ON "tables" USING btree ("club_id");--> statement-breakpoint
+CREATE INDEX "ticket_messages_ticket_idx" ON "ticket_messages" USING btree ("ticket_id");--> statement-breakpoint
 CREATE INDEX "tournament_reg_tournament_idx" ON "tournament_registrations" USING btree ("tournament_id");--> statement-breakpoint
 CREATE INDEX "tournament_reg_user_idx" ON "tournament_registrations" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "tournament_reg_unique" ON "tournament_registrations" USING btree ("tournament_id","user_id");--> statement-breakpoint
 CREATE INDEX "tournaments_club_idx" ON "tournaments" USING btree ("club_id");--> statement-breakpoint
 CREATE INDEX "transactions_user_idx" ON "transactions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "transactions_wallet_type_idx" ON "transactions" USING btree ("user_id","wallet_type");--> statement-breakpoint
+CREATE INDEX "user_achievements_user_idx" ON "user_achievements" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "user_achievements_achievement_idx" ON "user_achievements" USING btree ("achievement_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "user_achievements_unique" ON "user_achievements" USING btree ("user_id","achievement_id");--> statement-breakpoint
+CREATE INDEX "user_battle_passes_user_idx" ON "user_battle_passes" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "user_battle_passes_bp_idx" ON "user_battle_passes" USING btree ("battle_pass_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "user_battle_passes_unique" ON "user_battle_passes" USING btree ("user_id","battle_pass_id");--> statement-breakpoint
 CREATE INDEX "user_inventory_user_idx" ON "user_inventory" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "user_missions_user_idx" ON "user_missions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "user_missions_mission_idx" ON "user_missions" USING btree ("mission_id");--> statement-breakpoint

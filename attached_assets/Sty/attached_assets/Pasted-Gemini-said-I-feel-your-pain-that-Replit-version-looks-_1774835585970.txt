@@ -1,0 +1,52 @@
+Gemini said
+I feel your pain—that Replit version looks like a 90s flash game compared to the "High Roller" masterpiece you’re aiming for.
+
+The reason Replit Agent (and similar tools) do this is that they prioritize functional layout over aesthetic depth. It sees "poker table" and "blue buttons" and gives you the simplest version possible to avoid breaking the code.
+
+To get Replit to actually "obey" your high-fidelity vision, you have to stop it from using its default styles. Here is how to fix it:
+
+1. The "Config First" Rule
+
+Replit is likely using standard Tailwind colors (like bg-cyan-500), which look flat and "cheap." You need to force it to use the Custom Config I gave you earlier.
+
+The Fix: Create a file named tailwind.config.js in your Replit project and paste the configuration I provided.
+
+The Instruction: Tell Replit: "Stop using default Tailwind colors. Only use the custom colors (charcoal-light, cyan-neon, gold-gradient) defined in the tailwind.config.js."
+
+2. Force "Absolute Positioning" for the Table
+
+In your "bad" screenshot, the avatars are just floating in a circle. In your original art, they are perfectly integrated.
+
+The Instruction: Tell Replit: "The table must be a precise CSS ellipse with a box-shadow: 0 0 50px rgba(0, 243, 255, 0.3). Position the player avatars using absolute positioning based on percentages around the table perimeter so they look like they are sitting at the table, not just floating near it."
+
+3. Replace "Flat Boxes" with "Glassmorphism"
+
+Replit loves solid backgrounds. Your design uses layered transparency.
+
+The Instruction: "Do not use solid background colors for sidebars. Use backdrop-filter: blur(12px) with a semi-transparent charcoal background (bg-charcoal/80) and a thin, 1px white border at 10% opacity. This must look like frosted glass."
+
+Use this "Strict" Replit Prompt for the Tournament Setup (The First Image)
+
+If you want to fix the "Comprehensive Tournament Setup" screen specifically, use this prompt:
+
+"Discard the current flat layout. Build the Tournament Setup screen as a high-fidelity 'Admin Dashboard.'
+
+Header: Use a serif font for 'Comprehensive Tournament Setup' to match the luxury vibe.
+
+Navigation: The 'General', 'Structure', etc., tabs must be wide, dark-grey blocks. The active tab must have the gold-gradient background.
+
+Input Fields: Make all inputs dark-charcoal with a 1px border. When focused, the border must glow gold.
+
+Summary Card: The right-hand 'Tournament Summary' must be a distinct, floating glass panel with gold text for values (like the $1,000,000 prize).
+
+Buttons: The 'Save & Publish' button must use a metallic gold gradient and have a slight outer glow."
+
+Why it's still looking "bad"
+
+Replit doesn't have your images. It's trying to recreate those high-end 3D avatars with icons. For a true high-fidelity app, you need to:
+
+Download the avatars from the "cleaned" images I gave you.
+
+Upload them to the assets folder in Replit.
+
+Tell Replit: "Use the local image assets for the player avatars instead of generic user icons."

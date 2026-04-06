@@ -1,0 +1,30 @@
+packages:
+  "framer-motion": "For highly polished page transitions, dealing card animations, and chip stack movements"
+  "clsx": "Utility for conditionally joining class names"
+  "tailwind-merge": "Utility for merging tailwind classes without style conflicts"
+  "react-hook-form": "For complex club and table setup forms"
+  "@hookform/resolvers": "Zod validation resolver for forms"
+
+images:
+  - path: "artifacts/poker/public/images/hero-bg.png"
+    description: "Deep obsidian digital sanctuary, atmospheric cyberpunk server room, floating luminous frosted glass data planes, subtle cyan and neon green light leaks, highly cinematic 3D"
+    aspect_ratio: "16:9"
+  - path: "artifacts/poker/public/images/neon-chips.png"
+    description: "High quality 3D poker chips stacked on a dark reflective glass surface, glowing cyan and neon green edges, dramatic lighting, cyberpunk aesthetic"
+    aspect_ratio: "1:1"
+  - path: "artifacts/poker/public/images/hologram-cards.png"
+    description: "3D holographic playing cards floating in mid-air against a pitch black background, luminous edges, high contrast, high stakes casino tech"
+    aspect_ratio: "1:1"
+  - path: "artifacts/poker/public/images/avatar-1.png"
+    description: "Futuristic cyberpunk portrait of a high roller poker player, mysterious, wearing high-tech glasses, neon rim lighting, deep black background"
+    aspect_ratio: "1:1"
+  - path: "artifacts/poker/public/images/avatar-2.png"
+    description: "Futuristic cyberpunk portrait of a robotic dealer, metallic face plate, glowing cyan eyes, sleek and luxurious, obsidian background"
+    aspect_ratio: "1:1"
+  - path: "artifacts/poker/public/images/club-cover.png"
+    description: "A brilliant cyan neon sign in a dark luxurious underground vault, reading high stakes, reflections on frosted glass, highly detailed"
+    aspect_ratio: "16:9"
+
+notes:
+  - The API client is pre-generated in @workspace/api-client-react.
+  - Using long-polling for real-time game state updates via React Query invalidation.

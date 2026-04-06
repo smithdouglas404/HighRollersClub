@@ -12,8 +12,8 @@ import { PageTransition } from "./shared/PageTransition";
 import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
   BarChart3, LogOut, Search, Wallet, Medal, Star,
-  Shield, ChevronDown, Check, Menu, X, Coins, Crown, Shirt,
-  Store, Handshake, FileSearch, Link as LinkChain, Star
+  Shield, ChevronDown, ChevronRight, Check, Menu, X, Coins, Crown, Shirt,
+  Store, Handshake, FileSearch, Link as LinkChain, MoreHorizontal
 } from "lucide-react";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
@@ -25,30 +25,36 @@ interface NavItem {
   match?: string[];
 }
 
-const BASE_NAV_ITEMS: NavItem[] = [
+const PRIMARY_NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/lobby" },
-  { icon: Users, label: "Members", href: "/members", match: ["/members"] },
   { icon: Trophy, label: "Games & Tables", href: "/lobby", match: ["/lobby", "/game", "/table"] },
   { icon: Medal, label: "Tournaments", href: "/tournaments", match: ["/tournaments"] },
+  { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
   { icon: ShoppingBag, label: "Shop", href: "/shop", match: ["/shop"] },
   { icon: Star, label: "Loyalty", href: "/loyalty", match: ["/loyalty"] },
-  { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
+  { icon: Users, label: "Profile", href: "/profile", match: ["/profile"] },
+];
+
+const SECONDARY_NAV_ITEMS: NavItem[] = [
+  { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse", "/clubs/create"] },
+  { icon: Swords, label: "Club Wars", href: "/club-wars", match: ["/club-wars"] },
+  { icon: Swords, label: "Leagues & Alliances", href: "/leagues" },
+  { icon: Trophy, label: "Club Rankings", href: "/club-rankings", match: ["/club-rankings"] },
+  { icon: Handshake, label: "Staking", href: "/stakes", match: ["/stakes"] },
+  { icon: Store, label: "Marketplace", href: "/marketplace", match: ["/marketplace"] },
   { icon: FileSearch, label: "Explorer", href: "/explorer", match: ["/explorer"] },
   { icon: LinkChain, label: "Blockchain", href: "/blockchain", match: ["/blockchain"] },
-  { icon: Crown, label: "Premium Table", href: "/premium-table", match: ["/premium-table"] },
-  { icon: BarChart3, label: "Multi-Table", href: "/multi-table", match: ["/multi-table"] },
-  { icon: Search, label: "Browse Clubs", href: "/clubs/browse", match: ["/clubs/browse", "/clubs/create"] },
-  { icon: Swords, label: "League & Alliances", href: "/leagues" },
-  { icon: Swords, label: "Club Wars", href: "/club-wars", match: ["/club-wars"] },
-  { icon: Store, label: "Marketplace", href: "/marketplace", match: ["/marketplace"] },
-  { icon: Handshake, label: "Staking", href: "/stakes", match: ["/stakes"] },
-  { icon: Trophy, label: "Club Rankings", href: "/club-rankings", match: ["/club-rankings"] },
-  { icon: BarChart3, label: "Analytics", href: "/analytics" },
   { icon: Shirt, label: "Wardrobe", href: "/wardrobe", match: ["/wardrobe"] },
   { icon: Shirt, label: "Avatar Studio", href: "/avatar-customizer", match: ["/avatar-customizer"] },
-  { icon: Crown, label: "Premium", href: "/premium", match: ["/premium"] },
   { icon: Shield, label: "Tiers", href: "/tiers", match: ["/tiers"] },
+  { icon: Crown, label: "Premium", href: "/premium", match: ["/premium"] },
+  { icon: Crown, label: "Premium Table", href: "/premium-table", match: ["/premium-table"] },
+  { icon: BarChart3, label: "Multi-Table", href: "/multi-table", match: ["/multi-table"] },
+  { icon: BarChart3, label: "Analytics", href: "/analytics" },
+  { icon: Users, label: "Members", href: "/members", match: ["/members"] },
 ];
+
+const BASE_NAV_ITEMS: NavItem[] = [...PRIMARY_NAV_ITEMS, ...SECONDARY_NAV_ITEMS];
 
 const ADMIN_NAV_ITEM: NavItem = { icon: Shield, label: "Admin", href: "/admin", match: ["/admin"] };
 
@@ -159,7 +165,17 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
   const { balance, balances } = useWallet();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Auto-open "More" when a secondary nav item is active
+  const isSecondaryActive = SECONDARY_NAV_ITEMS.some(
+    (item) => location === item.href || item.match?.some((m) => location.startsWith(m))
+  ) || (user?.role === "admin" && (location === ADMIN_NAV_ITEM.href || ADMIN_NAV_ITEM.match?.some((m) => location.startsWith(m))));
+  const [moreOpen, setMoreOpen] = useState(isSecondaryActive);
 
+  const primaryItems = PRIMARY_NAV_ITEMS;
+  const secondaryItems = user?.role === "admin"
+    ? [...SECONDARY_NAV_ITEMS, ADMIN_NAV_ITEM]
+    : SECONDARY_NAV_ITEMS;
+  // Keep full list for active-state detection on secondary items
   const navItems = user?.role === "admin"
     ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM]
     : BASE_NAV_ITEMS;
@@ -206,7 +222,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
 
       {/* Nav Items */}
       <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
+        {primaryItems.map((item) => {
           const isActive =
             location === item.href ||
             item.match?.some((m) => location.startsWith(m));
@@ -242,6 +258,65 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
             </Link>
           );
         })}
+
+        {/* More section divider */}
+        <button
+          onClick={() => setMoreOpen(!moreOpen)}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all cursor-pointer"
+        >
+          <MoreHorizontal className="w-4 h-4 shrink-0" />
+          <span className="tracking-wide">More</span>
+          <ChevronRight className={`ml-auto w-3 h-3 transition-transform duration-200 ${moreOpen ? "rotate-90" : ""}`} />
+        </button>
+
+        <AnimatePresence initial={false}>
+          {moreOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-0.5"
+            >
+              {secondaryItems.map((item) => {
+                const isActive =
+                  location === item.href ||
+                  item.match?.some((m) => location.startsWith(m));
+                const Icon = item.icon;
+                return (
+                  <Link key={item.label} href={item.href}>
+                    <motion.div
+                      whileHover={{ x: 2 }}
+                      className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer group touch-target ${
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                      }`}
+                    >
+                      {isActive && (
+                        <motion.div
+                          layoutId="sidebar-active"
+                          className="absolute inset-0 rounded-lg bg-primary/10 border border-primary/20"
+                          style={{ boxShadow: "0 0 15px rgba(129,236,255,0.15), inset 0 0 10px rgba(129,236,255,0.08)" }}
+                          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                        />
+                      )}
+                      <Icon
+                        className={`relative z-10 w-4 h-4 shrink-0 ${
+                          isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                        }`}
+                      />
+                      <span className="relative z-10 tracking-wide">{item.label}</span>
+                      {isActive && (
+                        <div className="relative z-10 ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
+                      )}
+                    </motion.div>
+                  </Link>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* Bottom: Chip Balance + User info */}

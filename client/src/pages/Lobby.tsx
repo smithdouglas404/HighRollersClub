@@ -99,7 +99,7 @@ function TableCard({ table, onClick, featured, currentUserId, onDelete }: { tabl
       data-testid={`card-table-${table.id}`}
       className={cn(
         "group cursor-pointer rounded-md p-5 transition-all duration-300 relative overflow-hidden card-hover",
-        "hover:shadow-[0_0_25px_rgba(212,175,55,0.12)]",
+        "hover:shadow-[0_0_25px_rgba(212,175,55,0.12)] hover:scale-[1.02]",
         isPlaying && "border-l-2 border-l-secondary",
         isFull && "opacity-60"
       )}
@@ -1315,7 +1315,7 @@ export default function Lobby() {
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5",
                   isActive
-                    ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_12px_rgba(129,236,255,0.15)]"
+                    ? "bg-primary/15 text-primary border-b-2 border border-primary/30 shadow-[0_0_12px_rgba(212,175,55,0.2)]"
                     : "bg-surface-high/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
                 )}
               >
@@ -1459,8 +1459,19 @@ export default function Lobby() {
         {/* Table grid */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-44 bg-surface-high/40 backdrop-blur-xl rounded-md animate-pulse" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-xl bg-black/30 backdrop-blur-xl border border-white/10 p-5 animate-pulse">
+                <div className="flex justify-between mb-3">
+                  <div className="h-4 w-16 rounded-full bg-white/[0.06]" />
+                  <div className="h-4 w-10 rounded-full bg-white/[0.06]" />
+                </div>
+                <div className="h-6 w-40 rounded bg-white/[0.06] mb-3" />
+                <div className="h-4 w-28 rounded bg-white/[0.04] mb-4" />
+                <div className="flex justify-between">
+                  <div className="h-4 w-20 rounded bg-white/[0.04]" />
+                  <div className="h-4 w-20 rounded bg-white/[0.04]" />
+                </div>
+              </div>
             ))}
           </div>
         ) : filteredTables.length === 0 ? (

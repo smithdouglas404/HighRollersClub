@@ -16,13 +16,49 @@ logServiceMode();
 
 // Auto-push database schema if DATABASE_URL is set
 if (hasDatabase()) {
+  // Run raw SQL to ensure all required columns/tables exist
+  // This is more reliable than drizzle-kit push which hangs on interactive prompts
   try {
     log("Syncing database schema...");
-    execSync("npx drizzle-kit push --force", { timeout: 30000, stdio: "pipe" });
+    const pool = getPool();
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_level text NOT NULL DEFAULT 'none';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_points integer NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_level integer NOT NULL DEFAULT 1;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_streak_days integer NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_last_play_date text;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_multiplier integer NOT NULL DEFAULT 100;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_login_streak integer NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_reward_at timestamp;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by varchar;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code varchar;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS tier_plan text;
+      ALTER TABLE shop_items ADD COLUMN IF NOT EXISTS earnable_at_level integer;
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS loyalty_logs (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id varchar NOT NULL REFERENCES users(id),
+        amount integer NOT NULL,
+        reason text NOT NULL,
+        multiplier_x100 integer NOT NULL DEFAULT 100,
+        base_amount integer NOT NULL,
+        new_total integer NOT NULL,
+        new_level integer NOT NULL,
+        created_at timestamp NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS club_messages (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        club_id varchar NOT NULL REFERENCES clubs(id),
+        user_id varchar NOT NULL REFERENCES users(id),
+        message text NOT NULL,
+        created_at timestamp NOT NULL DEFAULT now()
+      );
+    `);
     log("Database schema synced.");
   } catch (err: any) {
-    console.error("[db] Schema push failed:", err.stderr?.toString() || err.message);
-    log("WARNING: Database schema push failed — some features may not work.");
+    console.error("[db] Schema sync failed:", err.message);
+    log("WARNING: Database schema sync failed — some features may not work.");
   }
 
   // Ensure the session table exists before the app starts accepting requests.

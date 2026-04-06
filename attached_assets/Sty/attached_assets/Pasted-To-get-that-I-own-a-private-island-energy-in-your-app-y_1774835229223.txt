@@ -1,0 +1,62 @@
+To get that "I own a private island" energy in your app, you need specific color hexes and shadow values. Standard Tailwind colors are too flat; you need custom extensions for the neon radiance and metallic shimmer.
+
+Copy this into your tailwind.config.js file:
+
+JavaScript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        // The "High Rollers" Palette
+        charcoal: {
+          DEFAULT: '#0a0a0c',
+          light: '#161b22',
+        },
+        cyan: {
+          neon: '#00f3ff',
+          glow: 'rgba(0, 243, 255, 0.5)',
+        },
+        gold: {
+          DEFAULT: '#d4af37', // Classic metallic gold
+          bright: '#f3e2ad',
+          dark: '#9a7b2c',
+        },
+        crimson: {
+          neon: '#ff003c',
+        }
+      },
+      boxShadow: {
+        // The "Vibe" Glows
+        'cyan-glow': '0 0 15px 2px rgba(0, 243, 255, 0.6), 0 0 5px 1px rgba(0, 243, 255, 0.3)',
+        'gold-glow': '0 0 20px 2px rgba(212, 175, 55, 0.4), inset 0 0 10px rgba(243, 226, 173, 0.2)',
+        'red-glow': '0 0 15px 2px rgba(255, 0, 60, 0.5)',
+      },
+      backgroundImage: {
+        // Metallic Gradients
+        'gold-gradient': 'linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)',
+        'glass-panel': 'linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%)',
+      }
+    },
+  },
+  plugins: [],
+}
+How to use these in your "Vibe" code:
+
+When your AI tool asks for styling, or if you're editing the code yourself, use these specific class combinations to match the screenshots:
+
+For the Cyan Poker Table Border:
+class="border-2 border-cyan-neon shadow-cyan-glow rounded-full"
+
+For the "Approve" / "Blockchain" Buttons:
+class="bg-gold-gradient text-charcoal font-bold py-2 px-6 rounded-md shadow-gold-glow uppercase transition-transform hover:scale-105"
+
+For the Glass UI Panels:
+class="bg-charcoal-light/80 backdrop-blur-md border border-white/10 rounded-xl bg-glass-panel"
+
+For the "All-In" Player Glow:
+class="ring-4 ring-crimson-neon shadow-red-glow"
+
+Why this works:
+
+Vibe coding products often default to "safe" colors. By forcing these specific shadows and linear gradients, you're telling the AI to stop building a "generic website" and start building a "high-end gaming engine."

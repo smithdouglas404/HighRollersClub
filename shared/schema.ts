@@ -1299,12 +1299,18 @@ export const hrpTransactions = pgTable("hrp_transactions", {
 export type HrpTransaction = typeof hrpTransactions.$inferSelect;
 // ─── Loyalty Log (HRP earning history) ────────────────────────────────────────
 export const loyaltyLogs = pgTable("loyalty_logs", {
-  amount: integer("amount").notNull(), // HRP earned (after multiplier)
-  reason: text("reason").notNull(), // handPlayed, potWon, tournamentHand, dailyMission, weeklyMission, grinderBonus, streakBonus, etc.
-  multiplier: integer("multiplier_x100").notNull().default(100), // stored as x100 (e.g., 150 = 1.5x)
-  baseAmount: integer("base_amount").notNull(), // HRP before multiplier
-  newTotal: integer("new_total").notNull(), // total HRP after this award
-  newLevel: integer("new_level").notNull(), // loyalty level after this award
-  index("idx_loyalty_logs_user").on(table.userId),
-  index("idx_loyalty_logs_created").on(table.createdAt),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  amount: integer("amount").notNull(),
+  reason: text("reason").notNull(),
+  multiplier: integer("multiplier_x100").notNull().default(100),
+  baseAmount: integer("base_amount").notNull(),
+  newTotal: integer("new_total").notNull(),
+  newLevel: integer("new_level").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("idx_loyalty_logs_user").on(t.userId),
+  index("idx_loyalty_logs_created").on(t.createdAt),
+]);
+
 export type LoyaltyLog = typeof loyaltyLogs.$inferSelect;

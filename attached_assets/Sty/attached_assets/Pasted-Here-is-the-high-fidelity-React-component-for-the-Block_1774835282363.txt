@@ -1,0 +1,89 @@
+Here is the high-fidelity React component for the Blockchain Verification Card.
+
+This code uses the Tailwind configuration we just set up, plus Framer Motion for that "high-end" smooth animation when the card loads or when you hover over the button.
+
+The React Component (BlockchainCard.jsx)
+
+JavaScript
+import React from 'react';
+import { motion } from 'framer-motion';
+import { CheckCircle, ExternalLink } from 'lucide-react';
+
+const BlockchainCard = () => {
+  const blockchainHash = "0x6c7c7f3e...d9a2c4b1";
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="w-80 bg-charcoal-light/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden"
+    >
+      {/* Subtle Background Glow */}
+      <div className="absolute -top-10 -right-10 w-32 h-32 bg-cyan-neon/10 rounded-full blur-3xl" />
+
+      {/* Header */}
+      <div className="mb-4">
+        <h3 className="text-[10px] tracking-[0.2em] font-black text-cyan-neon uppercase opacity-80">
+          Blockchain Verification
+        </h3>
+      </div>
+
+      {/* Hash Info */}
+      <div className="bg-black/40 rounded-lg p-3 border border-white/5 mb-6">
+        <p className="text-[11px] text-gray-500 font-mono mb-1 uppercase tracking-tighter">
+          Transaction Hash:
+        </p>
+        <p className="text-sm text-white font-mono truncate tracking-tight">
+          {blockchainHash}
+        </p>
+      </div>
+
+      {/* Status Center */}
+      <div className="flex flex-col items-center justify-center py-4 mb-6">
+        <motion.div
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          className="relative"
+        >
+          <CheckCircle className="w-16 h-16 text-cyan-neon shadow-cyan-glow mb-2" strokeWidth={1.5} />
+        </motion.div>
+        
+        <h2 className="text-3xl font-black italic text-white tracking-tighter drop-shadow-sm uppercase">
+          Verified
+        </h2>
+        <div className="h-1 w-12 bg-cyan-neon shadow-cyan-glow mt-1 rounded-full" />
+      </div>
+
+      {/* Action Button */}
+      <motion.button
+        whileHover={{ scale: 1.03, brightness: 1.2 }}
+        whileTap={{ scale: 0.98 }}
+        className="w-full bg-gold-gradient py-3 rounded-xl flex items-center justify-center gap-3 shadow-gold-glow group"
+      >
+        <span className="text-charcoal font-black text-xs uppercase tracking-widest">
+          View on Blockchain
+        </span>
+        <ExternalLink className="w-4 h-4 text-charcoal group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+      </motion.button>
+
+      {/* Timestamp footer */}
+      <div className="mt-4 text-center">
+        <p className="text-[9px] text-gray-600 font-medium uppercase tracking-widest">
+          Timestamp: 2024-10-26 19:30 UTC
+        </p>
+      </div>
+    </motion.div>
+  );
+};
+
+export default BlockchainCard;
+Why this code "hits the vibe":
+
+Typography: I used tracking-widest and font-black for the headers. In luxury UI, headers are usually tiny but very spaced out, or massive and bold.
+
+The "Verified" Animation: The CheckCircle has a subtle "pulse" animation using Framer Motion. This makes the UI feel alive, like a high-end gaming terminal.
+
+Glassmorphism: The bg-charcoal-light/80 combined with backdrop-blur-xl gives that "frosted glass" look where you can see the table colors glowing faintly behind the card.
+
+The Button: It uses the gold-gradient we defined. Notice the group-hover effect on the icon—it slides up and out when you hover, which is a classic premium UI interaction.

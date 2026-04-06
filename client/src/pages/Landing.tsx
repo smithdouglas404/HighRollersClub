@@ -251,8 +251,9 @@ export default function Landing() {
                 >
                   <motion.button
                     onClick={() => { setPlayLoading("lobby"); navigate("/lobby"); }}
-                    animate={{ boxShadow: ["0 0 20px rgba(212,175,55,0.2)", "0 0 40px rgba(212,175,55,0.4)", "0 0 20px rgba(212,175,55,0.2)"] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0, boxShadow: ["0 0 20px rgba(212,175,55,0.2)", "0 0 40px rgba(212,175,55,0.4)", "0 0 20px rgba(212,175,55,0.2)"] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
                     className="group relative overflow-hidden rounded-xl px-8 py-4 font-bold text-base uppercase tracking-wider gradient-primary text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
                     data-testid="button-play-now"
                     disabled={playLoading === "lobby"}
@@ -265,7 +266,10 @@ export default function Landing() {
                     </div>
                   </motion.button>
 
-                  <button
+                  <motion.button
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.75 }}
                     onClick={() => { setPlayLoading("practice"); navigate("/game"); }}
                     className="glass rounded-xl px-6 py-3.5 text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all border border-white/5"
                     data-testid="button-play-offline"
@@ -275,7 +279,7 @@ export default function Landing() {
                       {playLoading === "practice" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4 text-amber-500/70" />}
                       {playLoading === "practice" ? "Loading..." : "Practice Mode"}
                     </div>
-                  </button>
+                  </motion.button>
                 </motion.div>
 
                 <motion.div

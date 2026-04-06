@@ -1,0 +1,74 @@
+The Fix: The "True Ellipse" Table Component
+
+Tell Replit to replace its current table div with this specific CSS. This creates the "long" perspective table from your original image.
+
+JavaScript
+// The "High Rollers" Table Container
+<div className="relative w-[90%] max-w-5xl aspect-[2/1] mx-auto mt-20">
+  {/* The Table Surface */}
+  <div className="absolute inset-0 bg-gradient-to-b from-emerald-900 to-emerald-950 rounded-[100%] border-[6px] border-cyan-neon/30 shadow-[0_0_100px_rgba(0,243,255,0.2)]">
+    {/* Inner Felt Glow */}
+    <div className="absolute inset-4 rounded-[100%] border border-white/5 bg-black/20 shadow-inner" />
+  </div>
+  
+  {/* The Outer Rail (The Glow) */}
+  <div className="absolute -inset-1 rounded-[100%] border-2 border-cyan-neon shadow-cyan-glow opacity-50 pointer-events-none" />
+</div>
+The "Tournament Summary" Sidebar
+
+As promised, here is the code for the right-hand panel from your first image. This is the "Financials" anchor that Replit likely turned into a boring grey box.
+
+JavaScript
+import React from 'react';
+import { Lock } from 'lucide-react';
+
+const TournamentSummary = () => {
+  const stats = [
+    { label: "Est. Prize Pool", value: "$1,000,000+", isGold: true },
+    { label: "Total Buy-in", value: "$10,500" },
+    { label: "Starting Chips", value: "100,000" },
+    { label: "Blind Levels", value: "15 mins" },
+  ];
+
+  return (
+    <div className="w-72 bg-charcoal/60 backdrop-blur-md border border-white/10 rounded-xl p-5 shadow-2xl">
+      <h3 className="text-gold-bright font-serif text-lg mb-4 tracking-tight">
+        Tournament Summary
+      </h3>
+      
+      <div className="space-y-3">
+        {stats.map((stat, index) => (
+          <div key={index} className="flex justify-between items-end border-b border-white/5 pb-1">
+            <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">
+              {stat.label}
+            </span>
+            <span className={`text-sm font-mono ${stat.isGold ? 'text-gold shadow-gold-glow' : 'text-white'}`}>
+              {stat.value}
+            </span>
+          </div>
+        ))}
+        
+        <div className="flex justify-between items-center pt-2">
+          <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">
+            Status:
+          </span>
+          <div className="flex items-center gap-2 bg-gold/10 px-2 py-1 rounded border border-gold/20">
+            <span className="text-[10px] font-black text-gold uppercase tracking-tighter">Draft</span>
+            <Lock className="w-3 h-3 text-gold" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TournamentSummary;
+How to get the "Vibe" back in Replit:
+
+The Aspect Ratio: Notice I used aspect-[2/1]. That is what kills the circle. It forces the width to be double the height.
+
+The Borders: I used rounded-[100%]. On a non-square container, this creates a perfect ellipse.
+
+The Perspective: Tell Replit: "Position the top players at top: -10% and the bottom players at bottom: -10% of the table container so they look like they are sitting 'behind' and 'in front' of the felt."
+
+Would you like me to generate the "Game Mode Selection" cards next? Those use a different 3-column layout that requires a very specific hover-state gl

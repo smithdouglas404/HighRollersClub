@@ -1,0 +1,71 @@
+The reason Replit is failing you is that it doesn't understand "luxury." It sees an input box and gives you a standard HTML rectangle. To get that High Rollers Club feel, you have to define the "light" hitting the edges.
+
+Here is the exact code for the Gold-Glow Input Component. If you paste this into Replit and tell the Agent to use it for all form fields, the "vibe" will shift instantly.
+
+1. The "Luxury Gold" CSS
+
+Add these to your global CSS file (often index.css or globals.css) to handle the complex gradients that Tailwind's utility classes sometimes struggle to stack:
+
+CSS
+@layer components {
+  .input-gold-border {
+    @apply bg-charcoal-light border border-white/10 text-white transition-all duration-300;
+    background-clip: padding-box;
+    position: relative;
+  }
+
+  /* The subtle gold glow on focus */
+  .input-gold-border:focus {
+    @apply outline-none border-gold-dark/50;
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.2), inset 0 0 4px rgba(212, 175, 55, 0.1);
+  }
+
+  /* The metallic label style */
+  .label-luxury {
+    @apply text-[10px] uppercase tracking-[0.15em] font-bold text-gray-500 mb-1 block;
+  }
+}
+2. The React Input Component
+
+Use this component to replace Replit's basic <input /> tags.
+
+JavaScript
+import React from 'react';
+
+const LuxuryInput = ({ label, placeholder, type = "text", value, onChange }) => {
+  return (
+    <div className="flex flex-col mb-4 group">
+      <label className="label-luxury group-focus-within:text-gold-bright transition-colors">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="input-gold-border w-full py-3 px-4 rounded-lg text-sm placeholder:text-gray-600"
+        />
+        {/* The "Inner Shine" effect - a 1px line that appears on hover */}
+        <div className="absolute inset-0 rounded-lg border border-gold/0 group-hover:border-gold/20 pointer-events-none transition-all duration-500" />
+      </div>
+    </div>
+  );
+};
+
+export default LuxuryInput;
+Why this fixes the "Bad Replit Output":
+
+Layering: Replit creates flat layers. This code uses background-clip and inset box-shadows to create depth. In your original images, nothing is actually flat; everything has a tiny bit of "internal light."
+
+Typography: The label-luxury class uses high letter-spacing. This is a psychological trigger for "Premium" design (think Rolex or high-end fashion brands).
+
+Interactive Glow: The group-focus-within trick makes the label change color when the user clicks the box. This small detail is what makes an app feel "bespoke" rather than "templated."
+
+Pro-Tip for Replit/Cursor:
+
+If you want the AI to stay high-fidelity, don't ask it to build the whole screen at once. 1.  Give it the tailwind.config.js I wrote.
+2.  Give it this LuxuryInput component.
+3.  Then say: "Now build the 'General' tournament setup tab using only these components."
+
+Would you like me to build the "Tournament Summary" sidebar next? That’s the piece that uses the most complex gold-on-dark layering.

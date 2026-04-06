@@ -71,6 +71,12 @@ export async function autoMigrate(): Promise<void> {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS taunt_voice TEXT DEFAULT 'default'`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token TEXT`,
 
+    // Users table — KYC + tier columns
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_level TEXT NOT NULL DEFAULT 'none'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS tier_plan TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_streak_days INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_last_play_date TEXT`,
+
     // Users table — loyalty program columns
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_points INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_level INTEGER NOT NULL DEFAULT 1`,
@@ -78,7 +84,7 @@ export async function autoMigrate(): Promise<void> {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_login_streak INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_reward_at TIMESTAMP`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR UNIQUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR`,
 
     // Clubs table — geofence columns
     `ALTER TABLE clubs ADD COLUMN IF NOT EXISTS allowed_countries JSONB`,

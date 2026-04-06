@@ -253,7 +253,12 @@
       "Bash(git merge:*)",
       "Bash(git fetch:*)",
       "WebFetch(domain:docs.didit.me)",
-      "WebFetch(domain:didit.me)"
+      "WebFetch(domain:didit.me)",
+      "Read(//home/runner/workspace/**)",
+      "Read(//home/runner/workspace/=== /api/auth/**)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git ls-tree:*)"
     ]
   }
 }

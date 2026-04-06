@@ -203,7 +203,7 @@ async function seedShopItems() {
   ];
 
   for (const item of items) {
-    await storage.createShopItem({ ...item, isActive: true });
+    await storage.createShopItem({ ...item, isActive: true, earnableAtLevel: (item as any).earnableAtLevel ?? null });
   }
   console.log(`[seed] Created ${items.length} shop items`);
 }
@@ -233,7 +233,7 @@ async function seedTauntShopItems() {
   ];
 
   for (const taunt of taunts) {
-    await storage.createShopItem({ ...taunt, isActive: true });
+    await storage.createShopItem({ ...taunt, isActive: true, earnableAtLevel: null });
   }
   console.log(`[seed] Created ${taunts.length} premium taunt shop items`);
 }

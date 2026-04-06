@@ -545,7 +545,7 @@ export default function Profile() {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15 + i * 0.05 }}
-                        className={`relative text-center p-5 rounded-xl border overflow-hidden group hover:scale-[1.02] transition-transform`}
+                        className={`relative text-center p-5 rounded-xl border overflow-hidden group hover:scale-[1.05] transition-all duration-300`}
                         style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
                         data-testid={`stat-card-${card.key}`}
                       >
@@ -668,7 +668,7 @@ export default function Profile() {
                         animation: "shimmer 3s ease-in-out infinite",
                       } : {}}
                     >
-                      <img src={badge.img} alt={badge.name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      <img src={badge.img} alt={badge.name} className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       <div className="absolute inset-0 flex items-center justify-center" style={{ display: 'none' }} ref={(el) => { if (el) { const img = el.previousElementSibling as HTMLImageElement; if (img) img.addEventListener('error', () => { el.style.display = 'flex'; }); } }}>
                         <Trophy className="w-6 h-6 text-gray-500" />
                       </div>

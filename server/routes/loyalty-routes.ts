@@ -98,11 +98,11 @@ export async function registerLoyaltyRoutes(
           chipReward: ach.chipReward,
           badgeImageUrl: ach.badgeImageUrl,
           rarity: ach.rarity,
-          progress: userRecord?.progress ?? 0,
-          unlocked: !!userRecord?.unlockedAt,
-          unlockedAt: userRecord?.unlockedAt ?? null,
-          claimed: !!userRecord?.claimedAt,
-          claimedAt: userRecord?.claimedAt ?? null,
+          progress: (userRecord as any)?.progress ?? 0,
+          unlocked: !!(userRecord as any)?.unlockedAt,
+          unlockedAt: (userRecord as any)?.unlockedAt ?? null,
+          claimed: !!(userRecord as any)?.claimedAt,
+          claimedAt: (userRecord as any)?.claimedAt ?? null,
         };
       });
 

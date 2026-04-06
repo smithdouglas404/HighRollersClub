@@ -33,7 +33,7 @@ import {
 } from "@shared/schema";
 import { getLoyaltyLevel } from "./loyalty-config";
 import { eq, and, desc, sql, inArray, gte, or } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 import { hasDatabase, getDb } from "./db";
 
 /** Return the Date cutoff for a leaderboard period filter */
@@ -399,6 +399,11 @@ export class MemStorage implements IStorage {
       loyaltyLevel: data.loyaltyLevel ?? 1,
       loyaltyStreakDays: data.loyaltyStreakDays ?? 0,
       loyaltyLastPlayDate: data.loyaltyLastPlayDate ?? null,
+      loyaltyMultiplier: (data as any).loyaltyMultiplier ?? 100,
+      dailyLoginStreak: (data as any).dailyLoginStreak ?? 0,
+      lastLoginRewardAt: (data as any).lastLoginRewardAt ?? null,
+      referredBy: (data as any).referredBy ?? null,
+      referralCode: (data as any).referralCode ?? null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -1477,7 +1482,7 @@ export class DatabaseStorage implements IStorage {
       await this.db.insert(users).values({
         id: "system",
         username: "system",
-        password: require("crypto").randomBytes(64).toString("hex"),
+        password: randomBytes(64).toString("hex"),
         displayName: "System",
         role: "admin",
         chipBalance: 0,

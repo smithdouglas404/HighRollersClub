@@ -196,7 +196,7 @@ export default function Landing() {
               </span>
             </Link>
             <button
-              onClick={() => { setPlayLoading("nav"); navigate("/lobby"); }}
+              onClick={() => { setPlayLoading("nav"); navigate("/profile"); }}
               className="rounded-lg px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 bg-primary/10 border border-primary/30 text-primary"
               data-testid="button-launch"
               disabled={playLoading === "nav"}
@@ -250,7 +250,7 @@ export default function Landing() {
                   className="flex flex-wrap items-center gap-4 pt-2"
                 >
                   <motion.button
-                    onClick={() => { setPlayLoading("lobby"); navigate("/lobby"); }}
+                    onClick={() => { setPlayLoading("lobby"); navigate("/profile"); }}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0, boxShadow: ["0 0 20px rgba(212,175,55,0.2)", "0 0 40px rgba(212,175,55,0.4)", "0 0 20px rgba(212,175,55,0.2)"] }}
                     transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}

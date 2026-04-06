@@ -11,7 +11,7 @@ import { MemberAvatar } from "./shared/MemberAvatar";
 import { PageTransition } from "./shared/PageTransition";
 import {
   LayoutDashboard, Users, Trophy, ShoppingBag, Swords,
-  BarChart3, LogOut, Search, Wallet, Medal, Star,
+  BarChart3, LogOut, Search, Wallet, Medal, Star, Award,
   Shield, ChevronDown, ChevronRight, Check, Menu, X, Coins, Crown, Shirt,
   Store, Handshake, FileSearch, Link as LinkChain, MoreHorizontal
 } from "lucide-react";
@@ -26,13 +26,14 @@ interface NavItem {
 }
 
 const PRIMARY_NAV_ITEMS: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/lobby" },
+  { icon: LayoutDashboard, label: "My Dashboard", href: "/profile", match: ["/profile"] },
   { icon: Trophy, label: "Games & Tables", href: "/lobby", match: ["/lobby", "/game", "/table"] },
   { icon: Medal, label: "Tournaments", href: "/tournaments", match: ["/tournaments"] },
+  { icon: BarChart3, label: "Analytics", href: "/analytics", match: ["/analytics"] },
+  { icon: Award, label: "Leaderboard", href: "/leaderboard", match: ["/leaderboard"] },
   { icon: Wallet, label: "Wallet", href: "/wallet", match: ["/wallet"] },
   { icon: ShoppingBag, label: "Shop", href: "/shop", match: ["/shop"] },
   { icon: Star, label: "Loyalty", href: "/loyalty", match: ["/loyalty"] },
-  { icon: Users, label: "Profile", href: "/profile", match: ["/profile"] },
 ];
 
 const SECONDARY_NAV_ITEMS: NavItem[] = [

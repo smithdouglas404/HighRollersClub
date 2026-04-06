@@ -236,6 +236,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const handleClubSkip = () => {
     localStorage.setItem("onboarding-complete", "true");
     setShowOnboarding(false);
+    navigate("/profile");
   };
 
   // ─── Render ──────────────────────────────────────────────────────────────

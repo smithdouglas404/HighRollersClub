@@ -222,7 +222,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
       initial={compactMode ? { y: 0, opacity: 1 } : { y: 60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={compactMode ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 25 }}
-      className="relative z-50"
+      className="relative z-[60]"
       data-testid="poker-controls"
     >
       {/* Timer bar */}
@@ -242,7 +242,7 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
       )}
 
       {/* Gradient fade from table */}
-      <div className="h-3 bg-gradient-to-t from-[rgba(15,15,20,0.4)] to-transparent pointer-events-none" />
+      <div className="h-5 bg-gradient-to-t from-[rgba(15,15,20,0.95)] to-transparent pointer-events-none" />
 
       {/* Main controls container — glass-morphic */}
       <div

@@ -118,7 +118,7 @@ export default function Leaderboard() {
               <button
                 key={tab.key}
                 onClick={() => setMetric(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all ${
                   isActive
                     ? "bg-amber-500/20 text-amber-300 border border-amber-500/25 shadow-[0_0_10px_rgba(212,175,55,0.15)]"
                     : "text-gray-500 hover:text-gray-300 border border-transparent"
@@ -138,7 +138,7 @@ export default function Leaderboard() {
             <button
               key={p.key}
               onClick={() => setPeriod(p.key)}
-              className={`px-3 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                 period === p.key
                   ? "bg-white/10 text-white border border-white/15"
                   : "text-gray-600 hover:text-gray-400 border border-transparent"
@@ -271,7 +271,7 @@ export default function Leaderboard() {
                       </motion.span>
 
                       {/* Secondary stat label */}
-                      <span className="text-[0.5625rem] text-gray-500 mt-0.5 uppercase tracking-wider font-semibold">
+                      <span className="text-xs text-gray-500 mt-0.5 uppercase tracking-wider font-semibold">
                         {getStatLabel(metric)}
                       </span>
                     </div>
@@ -299,14 +299,14 @@ export default function Leaderboard() {
 
           {/* Table header */}
           <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-3 border-b border-white/5">
-            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Rank</span>
-            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500"></span>
-            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Trend</span>
-            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Player</span>
-            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">
+            <span className="col-span-1 text-xs font-bold uppercase tracking-wider text-gray-500">Rank</span>
+            <span className="col-span-1 text-xs font-bold uppercase tracking-wider text-gray-500"></span>
+            <span className="col-span-1 text-xs font-bold uppercase tracking-wider text-gray-500">Trend</span>
+            <span className="col-span-3 text-xs font-bold uppercase tracking-wider text-gray-500">Player</span>
+            <span className="col-span-3 text-xs font-bold uppercase tracking-wider text-gray-500">
               {metric === "chips" ? "Chips" : metric === "wins" ? "Total Wins" : "Win Rate"}
             </span>
-            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 text-right">Username</span>
+            <span className="col-span-3 text-xs font-bold uppercase tracking-wider text-gray-500 text-right">Username</span>
           </div>
 
           {loading ? (
@@ -315,12 +315,12 @@ export default function Leaderboard() {
             </div>
           ) : fetchError ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <p className="text-[0.6875rem] text-red-400">{fetchError}</p>
+              <p className="text-sm text-red-400">{fetchError}</p>
             </div>
           ) : entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
               <Trophy className="w-8 h-8 text-gray-700 mb-2" />
-              <p className="text-[0.6875rem] text-gray-600">No leaderboard data yet</p>
+              <p className="text-sm text-gray-600">No leaderboard data yet</p>
             </div>
           ) : (
             entries.map((entry, i) => {
@@ -416,7 +416,7 @@ export default function Leaderboard() {
 
                   {/* Username */}
                   <div className="col-span-3 text-right">
-                    <span className="text-[0.625rem] text-gray-600">@{entry.username}</span>
+                    <span className="text-sm text-gray-600">@{entry.username}</span>
                   </div>
                 </motion.div>
               );

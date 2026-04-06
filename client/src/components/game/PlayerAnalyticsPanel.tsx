@@ -93,7 +93,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
           background: "linear-gradient(180deg, rgba(20,31,40,0.88) 0%, rgba(16,24,36,0.92) 100%)",
           border: "1px solid rgba(212,175,55,0.1)",
           boxShadow: "0 4px 30px rgba(0,0,0,0.4), 0 0 15px rgba(212,175,55,0.04)",
-          minWidth: 210,
+          minWidth: 260,
         }}
       >
         {/* Header */}
@@ -111,7 +111,7 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
             >
               <Activity className="w-3.5 h-3.5 text-purple-400" />
             </div>
-            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
               Player Analytics
             </span>
           </div>
@@ -151,17 +151,17 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-1.5">
                           <Icon className="w-3 h-3 text-gray-600" />
-                          <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-bold">
+                          <span className="text-xs text-gray-500 uppercase tracking-wider font-bold">
                             {stat.label}
                           </span>
                         </div>
-                        <span className={`text-xs font-mono font-black ${stat.color}`}>
+                        <span className={`text-sm font-mono font-black ${stat.color}`}>
                           {stat.value}
                         </span>
                       </div>
                       {/* Progress bar */}
                       <div
-                        className="h-1.5 rounded-full overflow-hidden"
+                        className="h-2.5 rounded-full overflow-hidden"
                         style={{
                           background: "rgba(255,255,255,0.04)",
                         }}
@@ -191,11 +191,11 @@ export function PlayerAnalyticsPanel({ stats }: PlayerAnalyticsPanelProps) {
                 >
                   <div className="flex items-center gap-1.5">
                     <Hash className="w-3 h-3 text-gray-600" />
-                    <span className="text-[0.5625rem] text-gray-600 uppercase tracking-wider font-bold">
+                    <span className="text-xs text-gray-600 uppercase tracking-wider font-bold">
                       Hands Played
                     </span>
                   </div>
-                  <span className="text-xs font-mono font-bold text-white">
+                  <span className="text-sm font-mono font-bold text-white">
                     {stats.handsPlayed}
                   </span>
                 </div>

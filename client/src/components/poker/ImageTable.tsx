@@ -157,9 +157,9 @@ export function ImageTable({
       <div className="absolute z-[1]" style={{
         left: "50%", top: "50%",
         transform: "translate(-50%, -50%)",
-        width: "92%",
+        width: "97%",
         aspectRatio: "1408 / 768",
-        maxHeight: "88%",
+        maxHeight: "92%",
       }}>
         <img
           src="/images/poker-table-felt.webp"
@@ -176,9 +176,9 @@ export function ImageTable({
       <div className="absolute pointer-events-none" style={{
         left: "50%", top: "50%",
         transform: "translate(-50%, -50%)",
-        width: "92%",
+        width: "97%",
         aspectRatio: "1408 / 768",
-        maxHeight: "88%",
+        maxHeight: "92%",
         zIndex: 10,
       }}>
 

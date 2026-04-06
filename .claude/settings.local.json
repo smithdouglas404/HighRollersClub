@@ -258,7 +258,8 @@
       "Read(//home/runner/workspace/=== /api/auth/**)",
       "Bash(git pull:*)",
       "Bash(git stash:*)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(GEMINI_API_KEY=\"AIzaSyDFn-OuFkNffzPRZVlTBYHPluluj65MCNE\" node:*)"
     ]
   }
 }

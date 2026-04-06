@@ -5,30 +5,30 @@
 // Seat positions as % of the table-image overlay div (1408x768 aspect).
 // Seats sit on/just outside the rail edge of the poker table image.
 export const TABLE_SEATS = [
-  { x: 50.0, y: 91.0, scale: 1.0  },  // 0: Hero (6 o'clock) — full size
-  { x: 17.0, y: 80.0, scale: 0.95 },  // 1: bottom-left (7 o'clock)
-  { x: 3.5,  y: 50.0, scale: 0.92 },  // 2: left (9 o'clock)
-  { x: 13.0, y: 18.0, scale: 0.88 },  // 3: top-left (11 o'clock)
-  { x: 33.0, y: 4.0,  scale: 0.86 },  // 4: top-left-center
-  { x: 50.0, y: 0.0,  scale: 0.85 },  // 5: top-center (12 o'clock) — smallest
-  { x: 67.0, y: 4.0,  scale: 0.86 },  // 6: top-right-center
-  { x: 87.0, y: 18.0, scale: 0.88 },  // 7: top-right (1 o'clock)
-  { x: 96.5, y: 50.0, scale: 0.92 },  // 8: right (3 o'clock)
-  { x: 83.0, y: 80.0, scale: 0.95 },  // 9: bottom-right (5 o'clock)
+  { x: 50.0, y: 93.0, scale: 1.0  },  // 0: Hero (6 o'clock) — full size
+  { x: 14.0, y: 82.0, scale: 0.93 },  // 1: bottom-left (7 o'clock)
+  { x: 0.0,  y: 50.0, scale: 0.90 },  // 2: left (9 o'clock)
+  { x: 10.0, y: 16.0, scale: 0.86 },  // 3: top-left (11 o'clock)
+  { x: 30.0, y: 2.0,  scale: 0.84 },  // 4: top-left-center
+  { x: 50.0, y: -2.0, scale: 0.83 },  // 5: top-center (12 o'clock) — smallest
+  { x: 70.0, y: 2.0,  scale: 0.84 },  // 6: top-right-center
+  { x: 90.0, y: 16.0, scale: 0.86 },  // 7: top-right (1 o'clock)
+  { x: 100.0,y: 50.0, scale: 0.90 },  // 8: right (3 o'clock)
+  { x: 86.0, y: 82.0, scale: 0.93 },  // 9: bottom-right (5 o'clock)
 ];
 
 // Dealer button sits between the seat and the felt center
 export const DEALER_POSITIONS = [
-  { x: 50.0, y: 80 },
-  { x: 25,   y: 72 },
-  { x: 14,   y: 50 },
-  { x: 22,   y: 28 },
-  { x: 38,   y: 15 },
-  { x: 50,   y: 12 },
-  { x: 62,   y: 15 },
-  { x: 78,   y: 28 },
-  { x: 86,   y: 50 },
-  { x: 75,   y: 72 },
+  { x: 50.0, y: 82 },
+  { x: 23,   y: 74 },
+  { x: 12,   y: 50 },
+  { x: 20,   y: 26 },
+  { x: 36,   y: 13 },
+  { x: 50,   y: 10 },
+  { x: 64,   y: 13 },
+  { x: 80,   y: 26 },
+  { x: 88,   y: 50 },
+  { x: 77,   y: 74 },
 ];
 
 export type QualityLevel = "low" | "medium" | "high";

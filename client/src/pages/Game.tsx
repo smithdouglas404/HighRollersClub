@@ -1530,10 +1530,10 @@ function GameTable({
 
           {/* Player Analytics section — V/P/A + style badge */}
           <div className="border-b border-white/5">
-            <div className="px-3 py-2 border-b border-white/5">
-              <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Player Analytics</span>
+            <div className="px-3 py-2.5 border-b border-white/5">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Player Analytics</span>
             </div>
-            <div className="px-3 py-2 space-y-2.5">
+            <div className="px-3 py-2.5 space-y-3">
               {players.filter(p => p.id !== heroId && p.isActive).slice(0, 4).map((p) => {
                 const stats = opponentStats.get(p.id);
                 const hands = stats?.handsPlayed || 0;
@@ -1544,17 +1544,17 @@ function GameTable({
                   : stats && stats.aggressiveActions > 0 ? 99 : 0;
                 const style = stats ? classifyPlayerStyle(stats) : null;
                 return (
-                  <div key={p.id} className="space-y-1">
-                    <div className="flex items-center gap-2 text-[0.625rem]">
-                      <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-700 shrink-0">
+                  <div key={p.id} className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-700 shrink-0">
                         {p.avatar ? <img src={p.avatar} alt="" className="w-full h-full object-cover" /> : (
-                          <div className="w-full h-full flex items-center justify-center text-[0.5rem] text-gray-400">{p.name[0]}</div>
+                          <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">{p.name[0]}</div>
                         )}
                       </div>
-                      <span className="text-gray-300 truncate flex-1">{p.name}</span>
+                      <span className="text-gray-200 truncate flex-1 font-medium">{p.name}</span>
                       {style && (
                         <span
-                          className="px-1.5 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider"
+                          className="px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider"
                           style={{ color: style.color, background: `${style.color}15`, border: `1px solid ${style.color}30` }}
                           title={style.tooltip}
                         >
@@ -1562,19 +1562,21 @@ function GameTable({
                         </span>
                       )}
                     </div>
-                    {hands > 0 && (
-                      <div className="flex items-center gap-2 text-[0.5625rem] pl-7">
-                        <span className="text-gray-500" title="VPIP: Voluntarily Put $ In Pot">V:<span className="text-gray-300 font-mono font-bold ml-0.5">{vpip}%</span></span>
-                        <span className="text-gray-500" title="PFR: Pre-Flop Raise %">P:<span className="text-gray-300 font-mono font-bold ml-0.5">{pfr}%</span></span>
-                        <span className="text-gray-500" title="AF: Aggression Factor (raise/call ratio)">A:<span className="text-gray-300 font-mono font-bold ml-0.5">{af > 10 ? "99+" : af.toFixed(1)}</span></span>
-                        <span className="text-gray-600 font-mono">({hands})</span>
+                    {hands > 0 ? (
+                      <div className="flex items-center gap-3 text-xs pl-8">
+                        <span className="text-gray-400" title="VPIP: Voluntarily Put $ In Pot">V:<span className="text-gray-200 font-mono font-bold ml-0.5">{vpip}%</span></span>
+                        <span className="text-gray-400" title="PFR: Pre-Flop Raise %">P:<span className="text-gray-200 font-mono font-bold ml-0.5">{pfr}%</span></span>
+                        <span className="text-gray-400" title="AF: Aggression Factor (raise/call ratio)">A:<span className="text-gray-200 font-mono font-bold ml-0.5">{af > 10 ? "99+" : af.toFixed(1)}</span></span>
+                        <span className="text-gray-500 font-mono">({hands})</span>
                       </div>
+                    ) : (
+                      <div className="text-xs text-gray-600 pl-8 italic">Gathering data...</div>
                     )}
                   </div>
                 );
               })}
               {players.filter(p => p.id !== heroId && p.isActive).length === 0 && (
-                <div className="text-gray-600 italic text-[0.5625rem]">No opponents</div>
+                <div className="text-gray-500 italic text-xs">No opponents at table</div>
               )}
             </div>
           </div>

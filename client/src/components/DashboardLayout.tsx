@@ -234,7 +234,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
                 className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer group touch-target ${
                   isActive
                     ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/10 hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
                 }`}
               >
                 {isActive && (
@@ -262,7 +262,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
         {/* More section divider */}
         <button
           onClick={() => setMoreOpen(!moreOpen)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all cursor-pointer"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-all cursor-pointer"
         >
           <MoreHorizontal className="w-4 h-4 shrink-0" />
           <span className="tracking-wide">More</span>
@@ -290,7 +290,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
                       className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer group touch-target ${
                         isActive
                           ? "text-primary"
-                          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                          : "text-muted-foreground hover:text-foreground hover:bg-white/10 hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
                       }`}
                     >
                       {isActive && (

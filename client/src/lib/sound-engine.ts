@@ -180,7 +180,9 @@ class SoundEngine {
   }
 
   playChipClinkAt(seatX: number, seatScale: number) {
-    this.playSoundAt('chip-bet', seatX, seatScale);
+    const d = this.createSpatialDest(seatX, seatScale);
+    if (!d) return;
+    this.synthChipClink(d, 0.5 + seatScale * 0.3);
   }
 
   playFoldAt(seatX: number, seatScale: number) {
@@ -205,12 +207,80 @@ class SoundEngine {
   stopAdaptiveMusic() {}
   setMusicState(_state: "idle" | "in_hand" | "all_in" | "showdown", _opts?: { potSize?: number; blindLevel?: number }) {}
 
+  // --- Synthesized chip sound (realistic clay chip clinking) ---
+
+  private synthChipClink(dest: AudioNode, volume: number = 0.6) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    // Layer 1: Initial impact — bright metallic click
+    const osc1 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(3200 + Math.random() * 800, now);
+    osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.04);
+    gain1.gain.setValueAtTime(volume * 0.7, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    osc1.connect(gain1).connect(dest);
+    osc1.start(now);
+    osc1.stop(now + 0.07);
+
+    // Layer 2: Body resonance — lower thunk of clay/ceramic
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(800 + Math.random() * 200, now);
+    osc2.frequency.exponentialRampToValueAtTime(300, now + 0.08);
+    gain2.gain.setValueAtTime(volume * 0.5, now + 0.005);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc2.connect(gain2).connect(dest);
+    osc2.start(now);
+    osc2.stop(now + 0.12);
+
+    // Layer 3: Noise burst for texture (the "gritty" chip surface)
+    const bufferSize = this.ctx.sampleRate * 0.05;
+    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.4;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(volume * 0.35, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    // Bandpass filter to shape noise like ceramic
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 4000;
+    filter.Q.value = 2;
+    noise.connect(filter).connect(noiseGain).connect(dest);
+    noise.start(now);
+    noise.stop(now + 0.06);
+  }
+
+  private synthChipStack(dest: AudioNode, count: number = 3) {
+    // Multiple chip clinks in rapid succession (like stacking/sliding chips)
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => this.synthChipClink(dest, 0.4 + Math.random() * 0.2), i * 35 + Math.random() * 15);
+    }
+  }
+
   // --- Direct (non-spatial) sound effects ---
 
   playCardDeal() { this.playSound('card-deal'); }
   playCardFlip() { this.playSound('card-flip'); }
-  playChipClink() { this.playSound('chip-bet'); }
-  playChipSlide() { this.playSound('chip-slide'); }
+  playChipClink() {
+    const d = this.dest;
+    if (!d) return;
+    // Use synthesized chip if no file loaded, or always use synth for richer sound
+    this.synthChipClink(d, 0.6);
+  }
+  playChipSlide() {
+    const d = this.dest;
+    if (!d) return;
+    this.synthChipStack(d, 4 + Math.floor(Math.random() * 3));
+  }
   playFold() { this.playSound('fold'); }
   playCheck() { this.playSound('check'); }
   playCall() { this.playSound('call'); }

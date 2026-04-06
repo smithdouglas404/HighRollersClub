@@ -33,7 +33,7 @@ import {
 } from "@shared/schema";
 import { getLoyaltyLevel } from "./loyalty-config";
 import { eq, and, desc, sql, inArray, gte, or } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 import { hasDatabase, getDb } from "./db";
 
 /** Return the Date cutoff for a leaderboard period filter */
@@ -1482,7 +1482,7 @@ export class DatabaseStorage implements IStorage {
       await this.db.insert(users).values({
         id: "system",
         username: "system",
-        password: require("crypto").randomBytes(64).toString("hex"),
+        password: randomBytes(64).toString("hex"),
         displayName: "System",
         role: "admin",
         chipBalance: 0,

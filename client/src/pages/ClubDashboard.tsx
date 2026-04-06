@@ -396,11 +396,11 @@ export default function ClubDashboard() {
   ];
 
   const statsCards = [
-    { label: "Total Members", value: club?.memberCount ?? members.length, icon: Users, color: "text-[#c9a84c]" },
-    { label: "Active Tables", value: enhancedStats.activeTables, icon: Layers, color: "text-[#c9a84c]" },
-    { label: "24h Volume", value: enhancedStats.volume24h, icon: DollarSign, color: "text-[#c9a84c]", prefix: "" },
-    { label: "Avg Pot Size", value: enhancedStats.avgPotSize, icon: Zap, color: "text-[#c9a84c]" },
-    { label: "Total Rake", value: enhancedStats.totalRakeCollected, icon: TrendingUp, color: "text-[#c9a84c]" },
+    { label: "Total Members", value: club?.memberCount ?? members.length, icon: Users, color: "text-amber-500" },
+    { label: "Active Tables", value: enhancedStats.activeTables, icon: Layers, color: "text-amber-500" },
+    { label: "24h Volume", value: enhancedStats.volume24h, icon: DollarSign, color: "text-amber-500", prefix: "" },
+    { label: "Avg Pot Size", value: enhancedStats.avgPotSize, icon: Zap, color: "text-amber-500" },
+    { label: "Total Rake", value: enhancedStats.totalRakeCollected, icon: TrendingUp, color: "text-amber-500" },
   ];
 
   return (
@@ -669,7 +669,7 @@ export default function ClubDashboard() {
                     style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(16px)", border: "1px solid rgba(212,175,55,0.12)" }}
                   >
                     <div className="p-3 border-b border-white/[0.04]">
-                      <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#c9a84c]/60">Navigation</span>
+                      <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-500/60">Navigation</span>
                     </div>
                     <nav className="p-1.5 space-y-0.5">
                       {sidebarNavItems.map((item) => {
@@ -739,7 +739,7 @@ export default function ClubDashboard() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.05 }}
                       data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}
-                      className="stats-card rounded-md p-4 hover:border-[#c9a84c]/40 hover:shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-all duration-200 relative overflow-hidden"
+                      className="stats-card rounded-md p-4 hover:border-amber-500/40 hover:shadow-[0_0_15px_rgba(212,175,55,0.1)] hover:scale-[1.02] transition-all duration-200 relative overflow-hidden"
                       style={{
                         background: "rgba(15,15,20,0.7)",
                         backdropFilter: "blur(16px)",
@@ -866,13 +866,13 @@ export default function ClubDashboard() {
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
-                                      <Users className="w-3.5 h-3.5 text-[#c9a84c]" />
+                                      <Users className="w-3.5 h-3.5 text-amber-500" />
                                       <span className="font-bold text-white">{table.playerCount ?? 0}</span>
                                       <span>/ {table.maxPlayers ?? 6}</span>
                                     </div>
                                     <span className="text-[10px] text-gray-500">{table.smallBlind}/{table.bigBlind}</span>
                                   </div>
-                                  <span className="text-[10px] font-bold text-[#c9a84c] group-hover:underline uppercase tracking-wider">
+                                  <span className="text-[10px] font-bold text-amber-500 group-hover:underline uppercase tracking-wider">
                                     Watch <Eye className="w-3 h-3 inline" />
                                   </span>
                                 </div>
@@ -1297,14 +1297,14 @@ export default function ClubDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                       <div className="flex items-center gap-2 mb-1">
-                        <Users className="w-4 h-4 text-[#c9a84c]" />
+                        <Users className="w-4 h-4 text-amber-500" />
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Count</span>
                       </div>
                       <p className="text-2xl font-bold text-white">{club.memberCount ?? members.length}</p>
                     </div>
                     <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                       <div className="flex items-center gap-2 mb-1">
-                        <Coins className="w-4 h-4 text-[#c9a84c]" />
+                        <Coins className="w-4 h-4 text-amber-500" />
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Chips</span>
                       </div>
                       <p className="text-2xl font-bold text-white">{totalChips.toLocaleString()}</p>
@@ -1314,7 +1314,7 @@ export default function ClubDashboard() {
                   {/* Chart */}
                   <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-[#c9a84c]" />
+                      <Activity className="w-4 h-4 text-amber-500" />
                       Daily Active Players (30 Days)
                     </h3>
                     {chartLoading ? (
@@ -1346,7 +1346,7 @@ export default function ClubDashboard() {
                 <div className="rounded-md overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <div className="px-5 py-3 border-b border-white/[0.05] flex items-center justify-between">
                       <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
-                        <UserCog className="w-4 h-4 text-[#c9a84c]" /> Member Registry
+                        <UserCog className="w-4 h-4 text-amber-500" /> Member Registry
                       </h3>
                       <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{members.length} total</span>
                     </div>
@@ -1418,7 +1418,7 @@ export default function ClubDashboard() {
                             <span className="text-xs text-gray-400">{joinDate}</span>
 
                             {/* Total Contribution */}
-                            <span className="text-sm font-display font-bold text-[#c9a84c]">
+                            <span className="text-sm font-display font-bold text-amber-500">
                               {totalContribution.toLocaleString()}
                             </span>
 
@@ -1437,7 +1437,7 @@ export default function ClubDashboard() {
                               <div className="flex gap-1 justify-end">
                                 <button
                                   data-testid={`btn-edit-${member.userId}`}
-                                  className="p-1.5 rounded-md bg-white/5 hover:bg-[#c9a84c]/15 text-gray-400 hover:text-[#c9a84c] transition-colors"
+                                  className="p-1.5 rounded-md bg-white/5 hover:bg-[#c9a84c]/15 text-gray-400 hover:text-amber-500 transition-colors"
                                   title="Edit member"
                                 >
                                   <Pencil className="w-3 h-3" />
@@ -1513,21 +1513,21 @@ export default function ClubDashboard() {
                 {/* Welcome Card Preview */}
                 {isAdminOrOwner && (
                   <div className="mt-6 space-y-6">
-                    <div className="rounded-xl border-2 border-white/10 p-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0d0b08 0%, #1a1510 50%, #0d0b08 100%)" }}>
-                      <div className="absolute inset-0 border border-white/10 rounded-xl pointer-events-none" />
+                    <div className="rounded-xl border-2 border-amber-500/30 p-6 relative overflow-hidden bg-gradient-to-br from-[#0d0b08] via-[#1a1510] to-[#0d0b08]">
+                      <div className="absolute inset-0 border border-amber-500/10 rounded-xl pointer-events-none" />
                       <div className="text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c9a84c]/20 to-[#c9a84c]/5 border border-[#c9a84c]/20 flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/20 flex items-center justify-center mx-auto mb-4">
                           {clubLogo ? (
                             <img src={clubLogo.url} alt={clubLogo.label} className="w-10 h-10 rounded-lg object-cover" />
                           ) : (
-                            <Shield className="w-8 h-8 text-[#c9a84c]/60" />
+                            <Shield className="w-8 h-8 text-amber-500/60" />
                           )}
                         </div>
-                        <p className="text-[10px] text-[#c9a84c]/50 uppercase tracking-[0.2em] mb-1">You have been invited to</p>
-                        <h3 className="text-xl font-display font-bold text-[#c9a84c]">Welcome to {club?.name || "Club"}</h3>
+                        <p className="text-[10px] text-amber-500/50 uppercase tracking-[0.2em] mb-1">You have been invited to</p>
+                        <h3 className="text-xl font-display font-bold text-amber-500">Welcome to {club?.name || "Club"}</h3>
                         <p className="text-xs text-gray-400 mt-2 max-w-xs mx-auto">{club?.description || "Join us for exclusive poker games and tournaments"}</p>
-                        <div className="mt-4 inline-block px-4 py-1.5 rounded-full bg-[#c9a84c]/10 border border-[#c9a84c]/20">
-                          <span className="text-[10px] text-[#c9a84c] font-bold uppercase tracking-wider">Welcome Card Preview</span>
+                        <div className="mt-4 inline-block px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                          <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Welcome Card Preview</span>
                         </div>
                       </div>
                     </div>
@@ -1535,7 +1535,7 @@ export default function ClubDashboard() {
                     {/* Initial Game Credit */}
                     <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}>
                       <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                        <Coins className="w-4 h-4 text-[#c9a84c]" />
+                        <Coins className="w-4 h-4 text-amber-500" />
                         Initial Game Credit
                       </h3>
                       <p className="text-[10px] text-gray-400 mb-3">Chips given to new members when they join your club</p>
@@ -1544,7 +1544,7 @@ export default function ClubDashboard() {
                           type="number"
                           value={initialGameCredit}
                           onChange={(e) => setInitialGameCredit(Math.max(0, parseInt(e.target.value) || 0))}
-                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#c9a84c]/40"
+                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"
                           min={0}
                           step={100}
                         />
@@ -1555,7 +1555,7 @@ export default function ClubDashboard() {
                     {/* Invite by Email */}
                     <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}>
                       <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-[#c9a84c]" />
+                        <Mail className="w-4 h-4 text-amber-500" />
                         Invite New Member
                       </h3>
                       <div className="flex flex-col sm:flex-row gap-2">
@@ -1564,12 +1564,12 @@ export default function ClubDashboard() {
                           value={inviteEmail}
                           onChange={(e) => setInviteEmail(e.target.value)}
                           placeholder="Enter email address"
-                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#c9a84c]/40"
+                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"
                         />
                         <select
                           value={inviteRole}
                           onChange={(e) => setInviteRole(e.target.value as "member" | "admin")}
-                          className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#c9a84c]/40"
+                          className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"
                         >
                           <option value="member">Member</option>
                           <option value="admin">Admin</option>
@@ -1592,7 +1592,7 @@ export default function ClubDashboard() {
                       <div className="rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}>
                         <div className="px-4 py-3 border-b border-white/[0.06]">
                           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-[#c9a84c]" />
+                            <Clock className="w-4 h-4 text-amber-500" />
                             Pending Invitations ({sentInvites.length})
                           </h3>
                         </div>
@@ -1685,7 +1685,7 @@ export default function ClubDashboard() {
                     <div className="rounded-md p-4 relative overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}>
                       <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #d4af37, transparent)" }} />
                       <div className="flex items-center gap-2 mb-1">
-                        <DollarSign className="w-4 h-4 text-[#c9a84c]" />
+                        <DollarSign className="w-4 h-4 text-amber-500" />
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Rake</span>
                       </div>
                       <p className="text-2xl font-bold text-white">
@@ -1694,14 +1694,14 @@ export default function ClubDashboard() {
                     </div>
                     <div className="rounded-md p-4 relative overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                       <div className="flex items-center gap-2 mb-1">
-                        <Users className="w-4 h-4 text-[#c9a84c]" />
+                        <Users className="w-4 h-4 text-amber-500" />
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Count</span>
                       </div>
                       <p className="text-2xl font-bold text-white">{club.memberCount ?? members.length}</p>
                     </div>
                     <div className="rounded-md p-4 relative overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                       <div className="flex items-center gap-2 mb-1">
-                        <Coins className="w-4 h-4 text-[#c9a84c]" />
+                        <Coins className="w-4 h-4 text-amber-500" />
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Chips</span>
                       </div>
                       <p className="text-2xl font-bold text-white">{totalChips.toLocaleString()}</p>
@@ -1712,7 +1712,7 @@ export default function ClubDashboard() {
                   <div className="rounded-md overflow-hidden" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <div className="px-5 py-3 border-b border-white/[0.05] flex items-center justify-between">
                       <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-[#c9a84c]" /> Rake by Table
+                        <BarChart3 className="w-4 h-4 text-amber-500" /> Rake by Table
                       </h3>
                     </div>
                     {rakeReportLoading ? (
@@ -1741,7 +1741,7 @@ export default function ClubDashboard() {
                             className="grid grid-cols-[1fr_100px_100px] gap-4 px-4 py-3 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors items-center"
                           >
                             <span className="text-sm font-bold text-white truncate">{row.tableName}</span>
-                            <span className="text-sm font-display font-bold text-[#c9a84c]">{row.rake.toLocaleString()}</span>
+                            <span className="text-sm font-display font-bold text-amber-500">{row.rake.toLocaleString()}</span>
                             <span className="text-sm text-muted-foreground">{row.hands.toLocaleString()}</span>
                           </motion.div>
                         ))}
@@ -1752,7 +1752,7 @@ export default function ClubDashboard() {
                   {/* Chart */}
                   <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-[#c9a84c]" />
+                      <Activity className="w-4 h-4 text-amber-500" />
                       Daily Active Players (30 Days)
                     </h3>
                     {chartLoading ? (

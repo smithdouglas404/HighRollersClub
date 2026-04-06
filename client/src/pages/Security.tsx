@@ -141,8 +141,30 @@ function PasswordManagement() {
                     {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {newPassword.length > 0 && newPassword.length < 6 && (
-                  <p className="text-[0.5625rem] text-red-400 mt-1">Password must be at least 6 characters</p>
+                {newPassword.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex gap-1 mb-1">
+                      {[1, 2, 3, 4].map((level) => {
+                        const strength =
+                          (newPassword.length >= 6 ? 1 : 0) +
+                          (/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? 1 : 0) +
+                          (/\d/.test(newPassword) ? 1 : 0) +
+                          (/[^A-Za-z0-9]/.test(newPassword) ? 1 : 0);
+                        const colors = ["bg-red-500", "bg-orange-500", "bg-amber-500", "bg-green-500"];
+                        return (
+                          <div
+                            key={level}
+                            className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                              level <= strength ? colors[strength - 1] : "bg-white/[0.06]"
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    {newPassword.length < 6 && (
+                      <p className="text-[0.5625rem] text-red-400">Password must be at least 6 characters</p>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -900,7 +922,7 @@ export default function Security() {
 
   return (
     <DashboardLayout title="Security">
-      <div className="pb-8 max-w-3xl mx-auto">
+      <div className="pb-8 px-4 md:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

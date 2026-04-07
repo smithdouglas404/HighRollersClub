@@ -187,8 +187,8 @@ function ContactForm() {
   };
 
   const inputClasses =
-    "w-full rounded-lg px-4 py-3 text-sm bg-white/[0.04] border border-white/[0.08] text-white placeholder-gray-500 " +
-    "focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-colors";
+    "w-full rounded-lg px-4 py-3 text-sm bg-white/[0.04] gold-border text-white placeholder-gray-500 " +
+    "focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/20 transition-colors";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -380,8 +380,8 @@ export default function Support() {
   };
 
   const inputClasses =
-    "w-full rounded-lg px-4 py-3 text-sm bg-white/[0.04] border border-white/[0.08] text-white placeholder-gray-500 " +
-    "focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-colors";
+    "w-full rounded-lg px-4 py-3 text-sm bg-white/[0.04] gold-border text-white placeholder-gray-500 " +
+    "focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/20 transition-colors";
 
   const statusColor = (status: string) => {
     switch (status) {
@@ -572,7 +572,7 @@ export default function Support() {
               </div>
             ) : (
               /* Ticket List */
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              <div className="vault-card overflow-hidden">
                 {ticketsLoading ? (
                   <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
                 ) : tickets.length === 0 ? (
@@ -613,10 +613,10 @@ export default function Support() {
         {/* FAQ Section */}
         <div className="mb-12">
           <div className="flex items-center gap-2 mb-5">
-            <MessageSquare className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-bold text-white">Frequently Asked Questions</h2>
+            <MessageSquare className="w-5 h-5 text-[#d4af37]" />
+            <h2 className="text-lg font-bold gold-text">Frequently Asked Questions</h2>
           </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 md:p-6">
+          <div className="vault-card p-5 md:p-6">
             {FAQ_ITEMS.map((item, i) => (
               <FAQItem key={i} question={item.question} answer={item.answer} />
             ))}
@@ -626,10 +626,10 @@ export default function Support() {
         {/* Contact Section */}
         <div>
           <div className="flex items-center gap-2 mb-5">
-            <Mail className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-bold text-white">Contact Us</h2>
+            <Mail className="w-5 h-5 text-[#d4af37]" />
+            <h2 className="text-lg font-bold gold-text">Contact Us</h2>
           </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 md:p-6">
+          <div className="vault-card p-5 md:p-6">
             <ContactForm />
           </div>
         </div>

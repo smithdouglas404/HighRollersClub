@@ -218,10 +218,11 @@ export default function Tiers() {
             return (
               <div
                 key={tierId}
-                className={`relative rounded-xl border p-5 flex flex-col bg-gradient-to-b ${colors.bg} ${colors.border} ${colors.glow} ${isCurrent ? "ring-2 ring-primary/50" : ""}`}
+                className={`relative rounded-xl border p-5 flex flex-col bg-gradient-to-b ${colors.bg} ${colors.border} ${colors.glow} ${isCurrent ? "ring-2 shadow-[0_0_20px_rgba(212,175,55,0.3)]" : ""}`}
+                style={isCurrent ? { ringColor: "#d4af37", boxShadow: "0 0 20px rgba(212,175,55,0.3), inset 0 0 0 2px rgba(212,175,55,0.4)" } : undefined}
               >
                 {isCurrent && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-primary text-black text-[0.625rem] font-bold uppercase tracking-wider">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full gold-btn text-[0.625rem] font-bold uppercase tracking-wider">
                     Current
                   </div>
                 )}
@@ -230,7 +231,7 @@ export default function Tiers() {
                   <h3 className={`text-lg font-display font-bold uppercase tracking-wider ${colors.text}`}>
                     {tierId}
                   </h3>
-                  <p className="text-2xl font-black text-white mt-1">
+                  <p className="text-2xl font-black mt-1 gold-text">
                     {price === 0 ? "Free" : `$${(price / 100).toFixed(2)}`}
                   </p>
                   {price > 0 && (
@@ -270,7 +271,7 @@ export default function Tiers() {
                 <div className="flex-1 space-y-1.5 mb-4">
                   {benefits.map((benefit, i) => (
                     <div key={i} className="flex items-start gap-2 text-[0.6875rem] text-gray-300">
-                      <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${colors.text}`} />
+                      <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#d4af37" }} />
                       <span>{benefit}</span>
                     </div>
                   ))}
@@ -281,10 +282,10 @@ export default function Tiers() {
                   disabled={isCurrent || isLower || tierId === "free" || upgrading === tierId}
                   className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                     isCurrent
-                      ? "bg-primary/20 text-primary cursor-default"
+                      ? "gold-btn opacity-70 cursor-default"
                       : isLower || tierId === "free"
                         ? "bg-gray-700/50 text-gray-500 cursor-not-allowed"
-                        : "bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 hover:border-primary/50"
+                        : "gold-btn hover:shadow-[0_0_20px_rgba(212,175,55,0.3)]"
                   }`}
                 >
                   {upgrading === tierId ? (

@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useHandReplayState } from "@/hooks/useHandReplayState";
 import { ReplayMiniTable } from "@/components/poker/ReplayMiniTable";
 import { ReplayTimeline } from "@/components/poker/ReplayTimeline";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   ArrowLeft, ShieldCheck, Shield, Download, Copy, Check,
   ChevronDown, ChevronUp, Clock, Coins, Trophy, User, Users, FileText,
@@ -474,8 +475,9 @@ export default function HandReplay({ handId }: { handId: string }) {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass rounded-xl p-5 border border-white/5"
+                className=""
               >
+              <GoldCard padding="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-lg font-bold font-display text-white gold-text">
@@ -585,6 +587,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                     </div>
                   </div>
                 )}
+              </GoldCard>
               </motion.div>
 
               {/* Visual Replay Mode */}
@@ -607,12 +610,7 @@ export default function HandReplay({ handId }: { handId: string }) {
               )}
 
               {/* Text Mode: Action Log by Street */}
-              {viewMode === "text" && <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="glass rounded-xl border border-white/5 overflow-hidden"
-              >
+              {viewMode === "text" && <GoldCard padding="p-0" className="overflow-hidden">
                 <div className="px-4 py-3 border-b border-white/5">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
                     Action Log
@@ -634,7 +632,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                     No action data available for this hand
                   </div>
                 )}
-              </motion.div>}
+              </GoldCard>}
 
               {/* Showdown Results */}
               {viewMode === "text" && showdownResults && showdownResults.length > 0 && (
@@ -642,10 +640,11 @@ export default function HandReplay({ handId }: { handId: string }) {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="glass rounded-xl border border-white/5 overflow-hidden"
+                  className=""
                 >
+                <GoldCard padding="p-0" className="overflow-hidden">
                   <div className="px-4 py-3 border-b border-white/5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
+                    <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "#d4af37" }}>
                       Showdown
                     </h3>
                   </div>
@@ -695,16 +694,12 @@ export default function HandReplay({ handId }: { handId: string }) {
                       );
                     })}
                   </div>
+                </GoldCard>
                 </motion.div>
               )}
 
               {/* Verify Fairness Button + Collapsible Panel */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="glass rounded-xl border border-white/5 overflow-hidden"
-              >
+              <GoldCard padding="p-0" className="overflow-hidden">
                 <button
                   onClick={handleVerify}
                   disabled={verifyLoading}
@@ -792,18 +787,13 @@ export default function HandReplay({ handId }: { handId: string }) {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </GoldCard>
             </div>
 
             {/* Right panel - Players + Provably Fair */}
             <div className="space-y-4">
               {/* Players */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="glass rounded-xl p-4 border border-white/5"
-              >
+              <GoldCard padding="p-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-primary mb-3">
                   Players
                 </h3>

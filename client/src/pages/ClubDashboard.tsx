@@ -22,6 +22,7 @@ import { ClubTournaments } from "@/components/club/ClubTournaments";
 import { ClubChatSidebar } from "@/components/shared/ClubChatSidebar";
 import { ClubLeaderboard } from "@/components/club/ClubLeaderboard";
 import { cn } from "@/lib/utils";
+import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { NeonButton } from "@/components/ui/neon";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 

@@ -559,6 +559,6 @@ export default function AccountRecovery() {
           <span className="text-primary/70">support@highrollers.club</span>
         </motion.p>
       </div>
-    </div>
+    </VaultBackground>
   );
 }

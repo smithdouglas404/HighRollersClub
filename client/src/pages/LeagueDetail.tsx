@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, NumberTicker, SectionHeader } from "@/components/premium/PremiumComponents";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -270,13 +271,13 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
+                    <GoldButton
                       onClick={handleSaveDetails}
                       disabled={actionLoading}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black"
+                      className="flex items-center gap-1.5 text-[0.625rem]"
                     >
                       {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Save
-                    </button>
+                    </GoldButton>
                     <button
                       onClick={() => setEditing(false)}
                       className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
@@ -312,13 +313,13 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                       </span>
                     )}
                     {isActive && (
-                      <button
+                      <GoldButton
                         onClick={handleCompleteSeason}
                         disabled={actionLoading}
-                        className="flex items-center gap-1 px-3 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors"
+                        className="flex items-center gap-1 px-3 py-1 text-[0.5625rem]"
                       >
                         <Flag className="w-3 h-3" /> Complete
-                      </button>
+                      </GoldButton>
                     )}
                   </div>
                 </div>
@@ -343,13 +344,13 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                   </button>
                 ) : (
                   <div className="flex gap-2">
-                    <button
+                    <GoldButton
                       onClick={handleSaveStandings}
                       disabled={actionLoading}
-                      className="flex items-center gap-1 px-3 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider bg-primary text-black"
+                      className="flex items-center gap-1 px-3 py-1 text-[0.5625rem]"
                     >
                       {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
-                    </button>
+                    </GoldButton>
                     <button
                       onClick={() => { setEditingStandings(false); setStandingsData(season.standings || []); }}
                       className="px-3 py-1 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
@@ -440,7 +441,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                 <>
                   {sortedStandings.length > 0 ? (
                     <div className="px-5 py-3">
-                      <div className="flex items-center gap-4 px-3 py-2 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 border-b border-white/[0.04]">
+                      <div className="flex items-center gap-4 px-3 py-2 text-[0.5625rem] font-bold uppercase tracking-wider text-[#d4af37]/70 border-b border-[#d4af37]/15" style={{ background: "rgba(212,175,55,0.06)" }}>
                         <span className="w-8 text-center">#</span>
                         <span className="flex-1">Club</span>
                         <span className="w-14 text-center">Points</span>
@@ -480,7 +481,7 @@ export default function LeagueDetail({ seasonId }: { seasonId: string }) {
                                 {entry.clubName || club?.name || entry.clubId.slice(0, 8)}
                               </span>
                             </div>
-                            <span className="w-14 text-center text-xs font-bold text-primary">{entry.points}</span>
+                            <span className="w-14 text-center text-xs font-bold text-[#d4af37]"><NumberTicker value={entry.points} /></span>
                             <span className="w-10 text-center text-xs font-medium text-green-400">{entry.wins}</span>
                             <span className="w-10 text-center text-xs font-medium text-destructive">{entry.losses}</span>
                           </div>

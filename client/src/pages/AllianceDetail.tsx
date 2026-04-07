@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard } from "@/components/premium/PremiumComponents";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
@@ -211,14 +212,10 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
         ) : (
           <div className="space-y-6">
             {/* Header */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
-            >
+            <GoldCard glow padding="p-6">
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-primary/20 border border-primary/20 flex items-center justify-center shrink-0">
-                  <Swords className="w-7 h-7 text-primary" />
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-[#d4af37]/20 border border-[#d4af37]/20 flex items-center justify-center shrink-0">
+                  <Swords className="w-7 h-7 text-[#d4af37]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   {editing ? (
@@ -275,7 +272,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                   {alliance.clubs.length >= 2 ? "Active" : "Forming"}
                 </span>
               </div>
-            </motion.div>
+            </GoldCard>
 
             {/* Member Clubs */}
             <motion.div

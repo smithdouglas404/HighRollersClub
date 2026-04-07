@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { Shield, DollarSign, AlertTriangle, Server, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Lock, Unlock, RefreshCw, Settings, Save, ShieldAlert, Loader2, MessageSquare, Ticket, Users, Search, Edit3, Ban, UserCheck, Building2, Table2, FileText, X, Trash2, Key, Music, Upload, Megaphone, LogOut } from "lucide-react";
 
 interface AdminStats {
@@ -692,7 +693,7 @@ export default function AdminDashboard() {
   return (
     <DashboardLayout>
       <div className="px-4 md:px-8 pb-8 space-y-6">
-        <h1 className="text-2xl font-bold text-white font-display">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold font-display" style={{ background: "linear-gradient(180deg, #f0d060 0%, #d4af37 50%, #9a7b2c 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Admin Dashboard</h1>
 
         {/* Tabs */}
         <div className="flex gap-2 flex-wrap">
@@ -702,9 +703,10 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab(t.key)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
                 activeTab === t.key
-                  ? "bg-primary/20 text-primary border border-primary/30"
+                  ? "border"
                   : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
               }`}
+              style={activeTab === t.key ? { background: "rgba(212,175,55,0.1)", color: "#d4af37", borderColor: "rgba(212,175,55,0.3)" } : undefined}
             >
               {t.icon} {t.label}
             </button>
@@ -732,44 +734,30 @@ export default function AdminDashboard() {
             {/* Stats cards from /api/admin/stats */}
             {stats && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: "Total Users", value: stats.totalUsers, colorClass: "text-primary" },
-                  { label: "Active Tables", value: stats.activeTables, colorClass: "text-green-400" },
-                  { label: "Total Deposits", value: `$${(stats.totalDeposits / 100).toFixed(2)}`, colorClass: "text-primary" },
-                  { label: "Withdrawals", value: `$${(stats.totalWithdrawals / 100).toFixed(2)}`, colorClass: "text-red-400" },
-                ].map((stat, i) => (
-                  <div key={i} className="glass rounded-xl p-4 text-center">
-                    <div className="text-xs text-gray-500 uppercase mb-1">{stat.label}</div>
-                    <div className={`text-xl font-bold font-mono ${stat.colorClass}`}>{stat.value}</div>
-                  </div>
-                ))}
+                <StatCard label="Total Users" value={stats.totalUsers} icon={Users} />
+                <StatCard label="Active Tables" value={stats.activeTables} icon={Table2} />
+                <StatCard label="Total Deposits" value={`$${(stats.totalDeposits / 100).toFixed(2)}`} icon={DollarSign} />
+                <StatCard label="Withdrawals" value={`$${(stats.totalWithdrawals / 100).toFixed(2)}`} icon={DollarSign} />
               </div>
             )}
 
             {/* Revenue summary from /api/admin/revenue-summary */}
             {revenueSummary && (
               <div>
-                <h3 className="text-sm font-bold text-white mb-3">Revenue Summary</h3>
+                <SectionHeader icon={DollarSign} title="Revenue Summary" />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[
-                    { label: "Gross Rake", value: (revenueSummary.grossRake / 100).toFixed(2), colorClass: "text-primary" },
-                    { label: "Rakeback Paid", value: (revenueSummary.rakebackPaid / 100).toFixed(2), colorClass: "text-amber-400" },
-                    { label: "Net Revenue", value: (revenueSummary.netRevenue / 100).toFixed(2), colorClass: "text-green-400" },
-                    { label: "Total Buyins", value: (revenueSummary.totalBuyins / 100).toFixed(2), colorClass: "text-blue-400" },
-                  ].map((stat, i) => (
-                    <div key={i} className="glass rounded-xl p-4 text-center">
-                      <div className="text-xs text-gray-500 uppercase mb-1">{stat.label}</div>
-                      <div className={`text-xl font-bold font-mono ${stat.colorClass}`}>${stat.value}</div>
-                    </div>
-                  ))}
+                  <StatCard label="Gross Rake" value={`$${(revenueSummary.grossRake / 100).toFixed(2)}`} icon={DollarSign} />
+                  <StatCard label="Rakeback Paid" value={`$${(revenueSummary.rakebackPaid / 100).toFixed(2)}`} icon={DollarSign} />
+                  <StatCard label="Net Revenue" value={`$${(revenueSummary.netRevenue / 100).toFixed(2)}`} icon={DollarSign} trendUp />
+                  <StatCard label="Total Buyins" value={`$${(revenueSummary.totalBuyins / 100).toFixed(2)}`} icon={DollarSign} />
                 </div>
               </div>
             )}
 
             {/* Revenue Trend Chart */}
             {revenueTrend.length > 0 && (
-              <div className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-4">
-                <h3 className="text-sm font-bold text-white mb-3">Daily Revenue Trend (30 Days)</h3>
+              <GoldCard hover={false} padding="p-4">
+                <SectionHeader icon={Eye} title="Daily Revenue Trend (30 Days)" />
                 <ResponsiveContainer width="100%" height={250}>
                   <AreaChart data={revenueTrend}>
                     <defs>
@@ -791,14 +779,14 @@ export default function AdminDashboard() {
                     <Legend wrapperStyle={{ fontSize: 10, color: "#9ca3af" }} />
                   </AreaChart>
                 </ResponsiveContainer>
-              </div>
+              </GoldCard>
             )}
 
             {/* Revenue Sources Pie Chart */}
             {revenueSources.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-4">
-                  <h3 className="text-sm font-bold text-white mb-3">Revenue by Source</h3>
+                <GoldCard hover={false} padding="p-4">
+                  <SectionHeader icon={Eye} title="Revenue by Source" />
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie data={revenueSources} dataKey="total" nameKey="type" cx="50%" cy="50%" outerRadius={70} strokeWidth={0} label={({ type, percent }: any) => `${type} ${(percent * 100).toFixed(0)}%`}>
@@ -809,10 +797,10 @@ export default function AdminDashboard() {
                       <Tooltip contentStyle={{ background: "rgba(10,14,22,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
+                </GoldCard>
                 {trialBalance && (
-                  <div className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-4">
-                    <h3 className="text-sm font-bold text-white mb-3">Financial Health</h3>
+                  <GoldCard hover={false} padding="p-4">
+                    <SectionHeader icon={Shield} title="Financial Health" />
                     <div className="space-y-3">
                       <div className="flex justify-between text-xs"><span className="text-gray-400">Money In</span><span className="text-green-400 font-bold">${((trialBalance.moneyIn || 0) / 100).toFixed(2)}</span></div>
                       <div className="flex justify-between text-xs"><span className="text-gray-400">Player Balances</span><span className="text-cyan-400 font-bold">${((trialBalance.playerBalanceSum || 0) / 100).toFixed(2)}</span></div>
@@ -823,7 +811,7 @@ export default function AdminDashboard() {
                         <span className="font-bold">${((trialBalance.discrepancy || 0) / 100).toFixed(2)} {(trialBalance.discrepancy || 0) === 0 ? "✓" : "⚠"}</span>
                       </div>
                     </div>
-                  </div>
+                  </GoldCard>
                 )}
               </div>
             )}
@@ -831,7 +819,7 @@ export default function AdminDashboard() {
             {/* Rake report table from /api/admin/rake-report */}
             {rakeReport.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-white mb-3">Daily Rake Report (Last 30 Days)</h3>
+                <SectionHeader icon={FileText} title="Daily Rake Report (Last 30 Days)" />
                 <div className="glass rounded-xl overflow-hidden">
                   <table className="w-full text-xs">
                     <thead>
@@ -860,7 +848,7 @@ export default function AdminDashboard() {
             {/* Trial Balance from /api/admin/trial-balance */}
             {trialBalance && (
               <div>
-                <h3 className="text-sm font-bold text-white mb-3">Trial Balance (Audit)</h3>
+                <SectionHeader icon={Shield} title="Trial Balance (Audit)" />
                 <div className={`glass rounded-xl p-5 border ${trialBalance.healthy ? "border-green-500/20" : "border-red-500/30 bg-red-500/5"}`}>
                   <div className="flex items-center gap-2 mb-4">
                     <div className={`w-2.5 h-2.5 rounded-full ${trialBalance.healthy ? "bg-green-500" : "bg-red-500 animate-pulse"}`} />
@@ -966,12 +954,12 @@ export default function AdminDashboard() {
                   {w.txHash && <div className="text-[10px] text-purple-400 font-mono">Tx: {w.txHash.slice(0, 16)}...</div>}
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <GoldButton
                     onClick={() => handleWithdrawalAction(w.id, "approve")}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 text-xs font-bold hover:bg-green-500/30 transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs"
                   >
                     <CheckCircle className="w-3 h-3" /> Approve
-                  </button>
+                  </GoldButton>
                   <button
                     onClick={() => handleWithdrawalAction(w.id, "reject")}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"

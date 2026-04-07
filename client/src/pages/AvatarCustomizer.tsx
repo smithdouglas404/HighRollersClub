@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Wand2, Lock, ToggleLeft, ToggleRight, Sparkles,
   Check, Download, Eye, Zap, Shield, Sun, Layers,
@@ -115,7 +116,7 @@ export default function AvatarCustomizer() {
             className="space-y-5"
           >
             {/* Prompt Textarea */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
+            <GoldCard padding="p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
@@ -130,12 +131,13 @@ export default function AvatarCustomizer() {
                 onChange={(e) => setPrompt(e.target.value.slice(0, MAX_PROMPT_LENGTH))}
                 placeholder="A battle-scarred space marine in obsidian power armor with glowing amber runes..."
                 rows={4}
-                className="w-full bg-black/40 border border-white/[0.08] rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 transition-all"
+                className="w-full bg-black/40 border border-white/[0.08] rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/20 transition-all"
+                style={{ caretColor: "#d4af37" }}
               />
-            </div>
+            </GoldCard>
 
             {/* Prompt Assistance */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
+            <GoldCard padding="p-5">
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-3 flex items-center gap-2">
                 <Zap className="w-4 h-4 text-amber-400" />
                 Prompt Assistance
@@ -151,10 +153,10 @@ export default function AvatarCustomizer() {
                   </button>
                 ))}
               </div>
-            </div>
+            </GoldCard>
 
             {/* Settings */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
+            <GoldCard padding="p-5">
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
                 <Eye className="w-4 h-4 text-amber-400" />
                 Render Settings
@@ -226,32 +228,22 @@ export default function AvatarCustomizer() {
                   </button>
                 </div>
               </div>
-            </div>
+            </GoldCard>
 
             {/* Render CTA */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <GoldButton
               onClick={handleRender}
               disabled={!prompt.trim() || renderState === "rendering"}
-              className={`w-full py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                !prompt.trim() || renderState === "rendering"
-                  ? "bg-gray-700/30 text-gray-500 border border-white/[0.06] cursor-not-allowed"
-                  : "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black border border-amber-400/40 shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.45)]"
-              }`}
+              fullWidth
+              className="flex items-center justify-center gap-2"
             >
               <Wand2 className="w-4 h-4" />
               Render with Nano Banana
-            </motion.button>
+            </GoldButton>
           </motion.div>
 
           {/* ── Right Panel: Preview ── */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.15 }}
-            className="rounded-xl p-6 bg-gray-900/50 backdrop-blur-xl border border-white/10 flex flex-col"
-          >
+          <GoldCard className="flex flex-col" glow>
             <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-5 flex items-center gap-2 text-center justify-center">
               <Eye className="w-4 h-4 text-amber-400" />
               High-Fidelity Render Preview
@@ -406,19 +398,14 @@ export default function AvatarCustomizer() {
                     Your custom avatar has been generated successfully
                   </p>
 
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleSaveAvatar}
-                    className="px-8 py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black border border-amber-400/40 shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.45)] transition-all flex items-center gap-2"
-                  >
+                  <GoldButton onClick={handleSaveAvatar} className="flex items-center gap-2">
                     <Download className="w-4 h-4" />
                     Apply & Save Avatar
-                  </motion.button>
+                  </GoldButton>
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
+          </GoldCard>
         </div>
       </div>
     </DashboardLayout>

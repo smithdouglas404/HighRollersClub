@@ -557,7 +557,11 @@ export default function AvatarWardrobe() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="rounded-xl overflow-hidden vault-card"
+            className="rounded-xl overflow-hidden"
+            style={{
+              background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)",
+              border: "1px solid rgba(212,175,55,0.2)",
+            }}
           >
             {/* Filter bar */}
             <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between flex-wrap gap-3">

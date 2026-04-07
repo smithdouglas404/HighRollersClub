@@ -1057,6 +1057,16 @@ function GameTable({
             <span className={`text-[10px] font-bold ${use3D ? "text-cyan-400" : "text-gray-500"}`}>{use3D ? "3D" : "2D"}</span>
           </button>
 
+          {/* Flutter poker table */}
+          <a
+            href="/flutter-poker/"
+            target="_blank"
+            className="p-1.5 rounded transition-colors hover:bg-green-500/15"
+            title="Open Flutter Poker Table"
+          >
+            <span className="text-[10px] font-bold text-green-400">FLUTTER</span>
+          </a>
+
           {/* Theme picker */}
           <div className="relative">
             <button

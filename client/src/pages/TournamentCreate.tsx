@@ -1015,11 +1015,7 @@ export default function TournamentCreate() {
             whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full py-3 rounded-xl text-sm font-bold uppercase tracking-wider text-black flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
-            style={{
-              background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)",
-              boxShadow: "0 0 20px 2px rgba(212,175,55,0.4)",
-            }}
+            className="w-full py-3 rounded-xl text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-all gold-btn shadow-[0_0_20px_2px_rgba(212,175,55,0.4)]"
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1098,20 +1094,11 @@ export default function TournamentCreate() {
                     onClick={() => goToTab(tab.key)}
                     className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all flex-1 justify-center ${
                       isActive
-                        ? "bg-yellow-500/15 border-yellow-500/25 text-yellow-300"
+                        ? "text-[#d4af37] border border-[#d4af37]/40 bg-[#d4af37]/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]"
                         : isCompleted
-                          ? "text-amber-400 hover:text-amber-400"
-                          : "text-gray-500 hover:text-gray-300"
+                          ? "text-[#d4af37]/70 hover:text-[#d4af37] border border-transparent"
+                          : "text-gray-500 hover:text-gray-300 border border-transparent"
                     }`}
-                    style={
-                      isActive
-                        ? {
-                            background: "rgba(234,179,8,0.15)",
-                            border: "1px solid rgba(234,179,8,0.25)",
-                            boxShadow: "0 0 12px rgba(234,179,8,0.08)",
-                          }
-                        : { border: "1px solid transparent" }
-                    }
                   >
                     <span
                       className={`w-4 h-4 rounded-full flex items-center justify-center text-[0.5rem] font-black shrink-0 ${

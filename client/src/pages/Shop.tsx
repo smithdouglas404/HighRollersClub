@@ -807,18 +807,18 @@ export default function Shop() {
             <p className="text-xs text-gray-400 mt-1">Premium avatars, table themes, emotes and more</p>
           </div>
         </div>
-        {/* Tabs */}
-        <div className="flex items-center gap-1 mb-6 bg-white/[0.02] rounded-lg p-1 w-fit border border-white/5">
+        {/* Tabs — scrollable horizontal on mobile, gold active indicator */}
+        <div className="flex items-center gap-1 mb-6 overflow-x-auto scrollbar-hide rounded-lg p-1 w-full md:w-fit gold-border" style={{ background: "var(--vault-surface, rgba(15,15,20,0.7))" }}>
           {TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+              className={`relative px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                 activeTab === tab
-                  ? "border border-transparent"
+                  ? "gold-text border border-transparent"
                   : "text-gray-500 hover:text-gray-300 border border-transparent"
               }`}
-              style={activeTab === tab ? { background: "rgba(212,175,55,0.15)", color: "#d4af37", borderColor: "rgba(212,175,55,0.25)" } : undefined}
+              style={activeTab === tab ? { background: "rgba(212,175,55,0.15)", borderColor: "rgba(212,175,55,0.25)" } : undefined}
             >
               {tab === "Inventory" && <Package className="w-3.5 h-3.5" />}
               {tab === "Wishlist" && <Heart className={`w-3.5 h-3.5 ${activeTab === "Wishlist" ? "fill-pink-400 text-pink-400" : ""}`} />}
@@ -832,6 +832,10 @@ export default function Shop() {
                 <span className="ml-1 text-[0.5625rem] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
                   {inventory.length}
                 </span>
+              )}
+              {/* Gold active indicator bar */}
+              {activeTab === tab && (
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #d4af37, #f3e2ad, #d4af37)" }} />
               )}
             </button>
           ))}

@@ -613,8 +613,8 @@ export default function Analytics() {
   ];
 
   const advancedStats = [
-    { label: "VPIP", value: `${vpipPct}%`, desc: "Voluntarily Put $ In Pot", trend: vpipPct > 30 ? "high" : vpipPct > 15 ? "normal" : "low" },
-    { label: "PFR", value: `${pfrPct}%`, desc: "Pre-Flop Raise %", trend: pfrPct > 25 ? "high" : pfrPct > 10 ? "normal" : "low" },
+    { label: "VPIP", value: vpipPct, valueSuffix: "%", desc: "Voluntarily Put $ In Pot", trend: vpipPct > 30 ? "high" : vpipPct > 15 ? "normal" : "low" },
+    { label: "PFR", value: pfrPct, valueSuffix: "%", desc: "Pre-Flop Raise %", trend: pfrPct > 25 ? "high" : pfrPct > 10 ? "normal" : "low" },
     { label: "Best Streak", value: stats?.bestWinStreak ?? 0, desc: "Consecutive wins", trend: "normal" },
     { label: "Current Streak", value: stats?.currentWinStreak ?? 0, desc: "Active win streak", trend: (stats?.currentWinStreak ?? 0) > 0 ? "high" : "normal" },
     { label: "Showdowns", value: stats?.showdownCount ?? 0, desc: "Hands to showdown", trend: "normal" },
@@ -654,15 +654,9 @@ export default function Analytics() {
         ) : (
           <div className="space-y-6">
             {/* Session Report (Premium) */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.01 }}
-              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
-            >
+            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#c9a84c]/80" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Session Report</h3>
+                <SectionHeader icon={FileText} title="Session Report" className="mb-0" />
                 <span className="ml-auto text-[0.5625rem] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">PREMIUM</span>
               </div>
               <div className="px-5 py-4">
@@ -973,7 +967,7 @@ export default function Analytics() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </GoldCard>
 
             {/* Top Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -988,17 +982,9 @@ export default function Analytics() {
             </div>
 
             {/* Winnings Over Time Chart */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
-            >
+            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-[#c9a84c]/80" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Winnings Over Time</h3>
-                </div>
+                <SectionHeader icon={TrendingUp} title="Winnings Over Time" className="mb-0" />
                 <div className="flex items-center gap-1">
                   {["7 Days", "30 Days", "3 Months", "All Time"].map((label) => {
                     const key = label === "All Time" ? "all" : label.toLowerCase().replace(/\s/g, "");
@@ -1008,9 +994,10 @@ export default function Analytics() {
                         onClick={() => setChartPeriod(key)}
                         className={`px-2.5 py-1 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider transition-all ${
                           chartPeriod === key
-                            ? "bg-[#c9a84c]/15 text-[#c9a84c] border border-[#c9a84c]/30"
+                            ? "border"
                             : "text-gray-500 border border-transparent hover:text-gray-400"
                         }`}
+                        style={chartPeriod === key ? { background: "rgba(212,175,55,0.1)", color: "#d4af37", borderColor: "rgba(212,175,55,0.3)" } : undefined}
                       >
                         {label}
                       </button>
@@ -1041,18 +1028,12 @@ export default function Analytics() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </GoldCard>
 
             {/* Performance by Game Type */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.17 }}
-              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
-            >
-              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Performance by Game Type</h3>
+            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10">
+                <SectionHeader icon={PieChart} title="Performance by Game Type" className="mb-0" />
               </div>
               <div className="p-5 space-y-5">
                 {breakdownLoading ? (
@@ -1161,18 +1142,12 @@ export default function Analytics() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </GoldCard>
 
             {/* Advanced Stats Grid */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
-            >
-              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-[#c9a84c]/80" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Detailed Statistics</h3>
+            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10">
+                <SectionHeader icon={BarChart3} title="Detailed Statistics" className="mb-0" />
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-white/[0.03]">
                 {advancedStats.map((stat, i) => (
@@ -1190,7 +1165,9 @@ export default function Analytics() {
                       {getTrendIcon(stat.trend)}
                     </div>
                     <div className="text-xl font-bold tracking-tight" style={{ color: "#d4af37" }}>
-                      {stat.value}
+                      {typeof stat.value === "number" ? (
+                        <NumberTicker value={stat.value} suffix={(stat as any).valueSuffix || ""} />
+                      ) : stat.value}
                     </div>
                     <div className="text-[0.5625rem] text-gray-500 mt-0.5">
                       {stat.desc}
@@ -1198,18 +1175,12 @@ export default function Analytics() {
                   </motion.div>
                 ))}
               </div>
-            </motion.div>
+            </GoldCard>
 
             {/* Play Style Assessment */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
-            >
-              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                <Brain className="w-4 h-4 text-[#c9a84c]/80" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Play Style Assessment</h3>
+            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-[#c9a84c]/10">
+                <SectionHeader icon={Brain} title="Play Style Assessment" className="mb-0" />
               </div>
               <div className="p-5">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1261,7 +1232,7 @@ export default function Analytics() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </GoldCard>
 
             {/* ── Club Analytics ── */}
             {analyticsLoading ? (
@@ -1278,15 +1249,9 @@ export default function Analytics() {
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Player Retention Stats */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.45 }}
-                    className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
-                  >
-                    <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                      <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Player Retention</h3>
+                  <GoldCard hover={false} padding="p-0" className="overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-[#c9a84c]/10">
+                      <SectionHeader icon={PieChart} title="Player Retention" className="mb-0" />
                     </div>
                     {retention ? (
                       <div className="grid grid-cols-2 gap-px bg-white/[0.03]">
@@ -1308,18 +1273,12 @@ export default function Analytics() {
                         <p className="text-xs text-gray-500">No retention data available</p>
                       </div>
                     )}
-                  </motion.div>
+                  </GoldCard>
 
                   {/* Table Volume */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
-                  >
-                    <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-[#c9a84c]/80" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Table Volume</h3>
+                  <GoldCard hover={false} padding="p-0" className="overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-[#c9a84c]/10">
+                      <SectionHeader icon={Activity} title="Table Volume" className="mb-0" />
                     </div>
                     <div className="p-5">
                       <div className="grid grid-cols-3 gap-4 mb-4">

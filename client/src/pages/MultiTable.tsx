@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
+import { GoldButton } from "@/components/premium/PremiumComponents";
 import {
   Maximize2,
   Minimize2,
@@ -295,12 +296,12 @@ export default function MultiTable({ maxTables: maxTablesProp }: { maxTables?: n
           >
             <ArrowLeft size={16} /> Back to Lobby
           </button>
-          <button
+          <GoldButton
             onClick={() => setShowPicker(true)}
-            className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-500"
+            className="flex items-center gap-2 text-sm"
           >
             <Plus size={16} /> Add Table
-          </button>
+          </GoldButton>
         </div>
         {showPicker && (
           <AddTablePicker onAdd={addTable} onClose={() => setShowPicker(false)} existingIds={existingIds} />
@@ -330,7 +331,7 @@ export default function MultiTable({ maxTables: maxTablesProp }: { maxTables?: n
               onClick={() => toggleMaximize(t.id)}
               className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition ${
                 maximizedId === t.id
-                  ? "bg-amber-600/20 text-amber-400 ring-1 ring-amber-500/40"
+                  ? "bg-[#d4af37]/15 text-[#d4af37] ring-1 ring-[#d4af37]/40 shadow-[0_0_10px_rgba(212,175,55,0.2)]"
                   : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
               }`}
             >
@@ -350,7 +351,7 @@ export default function MultiTable({ maxTables: maxTablesProp }: { maxTables?: n
                 onClick={() => setLayout(lo.mode)}
                 className={`rounded p-1.5 transition ${
                   layout === lo.mode
-                    ? "bg-amber-600/20 text-amber-400"
+                    ? "bg-[#d4af37]/15 text-[#d4af37] ring-1 ring-[#d4af37]/30"
                     : "text-zinc-500 hover:bg-zinc-800 hover:text-white"
                 }`}
                 title={lo.label}
@@ -362,12 +363,12 @@ export default function MultiTable({ maxTables: maxTablesProp }: { maxTables?: n
 
         {/* Add table */}
         {tables.length < maxTables && (
-          <button
+          <GoldButton
             onClick={() => setShowPicker(true)}
-            className="ml-1 flex items-center gap-1 rounded-md bg-amber-600/20 px-2.5 py-1.5 text-xs font-medium text-amber-400 hover:bg-amber-600/30"
+            className="ml-1 flex items-center gap-1 px-2.5 py-1.5 text-xs"
           >
             <Plus size={14} /> Add
-          </button>
+          </GoldButton>
         )}
       </div>
 

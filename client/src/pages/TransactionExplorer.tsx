@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Search, Filter, ChevronDown, ChevronRight, ExternalLink, Copy, Check,
   ArrowDownCircle, ArrowUpCircle, RefreshCw, Loader2, Shield, Link as LinkIcon,
@@ -426,7 +427,7 @@ export default function TransactionExplorer() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-all ${
-                tab === t.key ? "bg-primary/15 text-primary border border-primary/20" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                tab === t.key ? "bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/20" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
               }`}
             >
               <t.icon className="w-3.5 h-3.5" />

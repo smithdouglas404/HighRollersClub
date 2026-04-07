@@ -123,18 +123,18 @@ export default function Stakes() {
                         </span>
                       </div>
                       <div className="mt-2 flex gap-6 text-[0.625rem] text-gray-400">
-                        <span>Stake: {s.stakePercent}%</span>
-                        <span>Buy-in Share: {s.buyInShare.toLocaleString()} chips</span>
-                        {s.payout != null && <span>Payout: {s.payout.toLocaleString()} chips</span>}
+                        <span>Stake: <span className="text-[#d4af37] font-bold">{s.stakePercent}%</span></span>
+                        <span>Buy-in Share: <span className="text-[#d4af37] font-bold">{s.buyInShare.toLocaleString()}</span> chips</span>
+                        {s.payout != null && <span>Payout: <span className="text-[#d4af37] font-bold">{s.payout.toLocaleString()}</span> chips</span>}
                       </div>
                       <div className="mt-3 flex gap-2">
                         {(s.status === "accepted" || s.status === "active") && s.tournamentStatus === "complete" && (
-                          <button
+                          <GoldButton
                             onClick={() => { setShowSettleModal(s.id); setSettleAmount(""); }}
-                            className="flex items-center gap-1 px-3 py-1 rounded-lg bg-green-500/20 text-green-400 text-[0.625rem] hover:bg-green-500/30"
+                            className="flex items-center gap-1 px-3 py-1 text-[0.625rem]"
                           >
                             <DollarSign className="w-3 h-3" /> Settle
-                          </button>
+                          </GoldButton>
                         )}
                         {(s.status === "pending" || s.status === "accepted") && (
                           <button
@@ -145,7 +145,7 @@ export default function Stakes() {
                           </button>
                         )}
                       </div>
-                    </div>
+                    </GoldCard>
                   ))}
                 </div>
               )}
@@ -171,19 +171,19 @@ export default function Stakes() {
                         </span>
                       </div>
                       <div className="mt-2 flex gap-6 text-[0.625rem] text-gray-400">
-                        <span>Stake: {s.stakePercent}%</span>
-                        <span>Buy-in Share: {s.buyInShare.toLocaleString()} chips</span>
-                        {s.payout != null && <span>Payout: {s.payout.toLocaleString()} chips</span>}
+                        <span>Stake: <span className="text-[#d4af37] font-bold">{s.stakePercent}%</span></span>
+                        <span>Buy-in Share: <span className="text-[#d4af37] font-bold">{s.buyInShare.toLocaleString()}</span> chips</span>
+                        {s.payout != null && <span>Payout: <span className="text-[#d4af37] font-bold">{s.payout.toLocaleString()}</span> chips</span>}
                       </div>
                       <div className="mt-3 flex gap-2">
                         {s.status === "pending" && (
                           <>
-                            <button
+                            <GoldButton
                               onClick={() => handleAction(s.id, "accept")}
-                              className="flex items-center gap-1 px-3 py-1 rounded-lg bg-green-500/20 text-green-400 text-[0.625rem] hover:bg-green-500/30"
+                              className="flex items-center gap-1 px-3 py-1 text-[0.625rem]"
                             >
                               <Check className="w-3 h-3" /> Accept
-                            </button>
+                            </GoldButton>
                             <button
                               onClick={() => handleAction(s.id, "cancel")}
                               className="flex items-center gap-1 px-3 py-1 rounded-lg bg-red-500/20 text-red-400 text-[0.625rem] hover:bg-red-500/30"
@@ -201,7 +201,7 @@ export default function Stakes() {
                           </button>
                         )}
                       </div>
-                    </div>
+                    </GoldCard>
                   ))}
                 </div>
               )}
@@ -236,13 +236,14 @@ export default function Stakes() {
                 placeholder="Enter total payout amount"
               />
             </div>
-            <button
+            <GoldButton
               onClick={() => handleSettle(showSettleModal)}
               disabled={!settleAmount || parseInt(settleAmount) < 0}
-              className="w-full py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              fullWidth
+              className="text-sm"
             >
               Confirm Settlement
-            </button>
+            </GoldButton>
           </div>
         </div>
       )}
@@ -384,14 +385,15 @@ function OfferStakeModal({ onClose, onCreated }: { onClose: () => void; onCreate
           <p className="text-xs text-red-400">{error}</p>
         )}
 
-        <button
+        <GoldButton
           onClick={handleSubmit}
           disabled={!selectedTournament || !playerUsername.trim() || submitting}
-          className="w-full py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          fullWidth
+          className="flex items-center justify-center gap-2 text-sm"
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Handshake className="w-4 h-4" />}
           Confirm Offer
-        </button>
+        </GoldButton>
       </div>
     </div>
   );

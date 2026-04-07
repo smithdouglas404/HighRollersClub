@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Shield, Megaphone, Send, AlertTriangle, Info, Bell,
   Users, Radio, Clock, ChevronDown, Layers, Monitor, MessageSquare
@@ -238,12 +239,10 @@ export default function AnnouncementManager() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="vault-card p-6 space-y-5"
+          className="space-y-5"
         >
-          <h2 className="text-sm font-bold gold-text uppercase tracking-wider flex items-center gap-2">
-            <Megaphone className="w-4 h-4 text-[#d4af37]" />
-            Create Announcement
-          </h2>
+        <GoldCard>
+          <SectionHeader icon={Megaphone} title="Create Announcement" />
 
           {/* Title */}
           <div>
@@ -377,10 +376,10 @@ export default function AnnouncementManager() {
           )}
 
           {/* Broadcast Button */}
-          <button
+          <GoldButton
             onClick={handleBroadcast}
             disabled={sending || !title.trim() || !message.trim()}
-            className="gold-btn flex items-center gap-2 px-6 py-3 text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+            className="flex items-center gap-2"
           >
             {sending ? (
               <div className="spinner spinner-sm" />
@@ -388,7 +387,8 @@ export default function AnnouncementManager() {
               <Send className="w-4 h-4" />
             )}
             {sending ? "Broadcasting..." : "Broadcast Now"}
-          </button>
+          </GoldButton>
+        </GoldCard>
         </motion.div>
 
         {/* Recent Announcements */}
@@ -398,10 +398,7 @@ export default function AnnouncementManager() {
           transition={{ delay: 0.2 }}
           className="space-y-3"
         >
-          <h2 className="text-sm font-bold gold-text uppercase tracking-wider flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[#d4af37]" />
-            Recent Announcements
-          </h2>
+          <SectionHeader icon={Clock} title="Recent Announcements" />
 
           {fetchLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -433,8 +430,9 @@ export default function AnnouncementManager() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  className="vault-card p-4"
+                  className=""
                 >
+                <GoldCard padding="p-4">
                   <div className="flex items-start gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${conf.bg}`}>
                       <Icon className={`w-3.5 h-3.5 ${conf.color}`} />
@@ -462,6 +460,7 @@ export default function AnnouncementManager() {
                       </div>
                     </div>
                   </div>
+                </GoldCard>
                 </motion.div>
               );
             })

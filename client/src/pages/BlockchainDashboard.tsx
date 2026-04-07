@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Shield, ShieldCheck, Link as LinkIcon, ExternalLink, Copy, Check,
   Search, RefreshCw, Loader2, Lock, Unlock, Fingerprint, Gamepad2,
@@ -44,7 +45,7 @@ function TxLink({ hash, label }: { hash: string; label?: string }) {
 
 function StatCard({ icon: Icon, label, value, color, sub }: { icon: any; label: string; value: string | number; color: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-surface-high/30 p-4">
+    <GoldCard padding="p-4" glow>
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${color}`}>
           <Icon className="w-5 h-5" />
@@ -55,7 +56,7 @@ function StatCard({ icon: Icon, label, value, color, sub }: { icon: any; label: 
           {sub && <div className="text-[10px] text-gray-600">{sub}</div>}
         </div>
       </div>
-    </div>
+    </GoldCard>
   );
 }
 
@@ -259,7 +260,7 @@ export default function BlockchainDashboard() {
           ]).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-all ${
-                tab === t.key ? "bg-purple-500/15 text-purple-400 border border-purple-500/20" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                tab === t.key ? "bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/20" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
               }`}>
               <t.icon className="w-3.5 h-3.5" />
               {t.label}
@@ -390,10 +391,10 @@ export default function BlockchainDashboard() {
                               <div className="rounded-lg bg-black/20 border border-white/5 p-3 space-y-2">
                                 <div className="flex items-center justify-between">
                                   <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">On-Chain Verification</h4>
-                                  <button onClick={() => verifyHand(h.tableId, h.handNumber)} disabled={verifying}
-                                    className="px-2 py-1 rounded bg-purple-500/10 text-purple-400 text-[10px] font-bold border border-purple-500/20 hover:bg-purple-500/20 disabled:opacity-50">
+                                  <GoldButton onClick={() => verifyHand(h.tableId, h.handNumber)} disabled={verifying}
+                                    className="!px-2 !py-1 text-[10px]">
                                     {verifying ? <Loader2 className="w-3 h-3 animate-spin" /> : "Verify On-Chain"}
-                                  </button>
+                                  </GoldButton>
                                 </div>
                                 {verifyResult ? (
                                   verifyResult.onChain && !verifyResult.onChain.error ? (
@@ -574,10 +575,10 @@ export default function BlockchainDashboard() {
                             <div className="rounded-lg bg-black/20 border border-purple-500/10 p-3 space-y-2">
                               <div className="flex items-center justify-between">
                                 <h4 className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Blockchain Proof</h4>
-                                <button onClick={() => verifySettlement(s.id)} disabled={verifyingSettlement === s.id}
-                                  className="px-2 py-1 rounded bg-purple-500/10 text-purple-400 text-[10px] font-bold border border-purple-500/20 hover:bg-purple-500/20 disabled:opacity-50">
+                                <GoldButton onClick={() => verifySettlement(s.id)} disabled={verifyingSettlement === s.id}
+                                  className="!px-2 !py-1 text-[10px]">
                                   {verifyingSettlement === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Verify Integrity"}
-                                </button>
+                                </GoldButton>
                               </div>
 
                               <div className="space-y-1.5 text-xs">

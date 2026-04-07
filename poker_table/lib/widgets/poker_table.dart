@@ -4,15 +4,45 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/game_bloc.dart';
 import '../models/card_model.dart';
 import '../theme/poker_theme.dart';
-import 'player_seat.dart';
 import 'card_widget.dart';
 import 'betting_slider.dart';
 import 'chip_flight.dart';
 import 'community_cards.dart';
-import 'dealer_service.dart';
 import 'pot_display.dart';
 import 'effects/winner_particles.dart';
-import 'effects/flame_vfx.dart';
+
+/// Avatar images — the 10 characters sitting at the table
+const _avatarAssets = [
+  'assets/avatars/avatar_neon_viper.webp',
+  'assets/avatars/avatar_chrome_siren.webp',
+  'assets/avatars/avatar_gold_phantom.webp',
+  'assets/avatars/avatar_shadow_king.webp',
+  'assets/avatars/avatar_red_wolf.webp',
+  'assets/avatars/avatar_ice_queen.webp',
+  'assets/avatars/avatar_tech_monk.webp',
+  'assets/avatars/avatar_cyber_punk.webp',
+  'assets/avatars/avatar_steel_ghost.webp',
+  'assets/avatars/avatar_neon_fox.webp',
+];
+
+const _playerNames = [
+  'NeonViper', 'ChromeSiren', 'GoldPhantom', 'ShadowKing', 'RedWolf',
+  'IceQueen', 'TechMonk', 'CyberPunk', 'SteelGhost', 'NeonFox',
+];
+
+/// Seat ring colors per player
+const _seatGlowColors = [
+  Color(0xFFD4AF37), // gold (hero)
+  Color(0xFFB44DFF), // purple
+  Color(0xFFFFD700), // bright gold
+  Color(0xFFD4AF37), // gold
+  Color(0xFFFF3366), // red
+  Color(0xFF67E8F9), // cyan
+  Color(0xFFD4AF37), // gold
+  Color(0xFFFF69B4), // pink
+  Color(0xFF8ECAE6), // blue
+  Color(0xFFFF8C00), // orange
+];
 
 /// Gemini's "Center-Out" coordinate system with ALL effects wired in:
 /// - PokerCard 3D flip on community cards
@@ -250,83 +280,223 @@ class _PokerTableState extends State<PokerTable> with TickerProviderStateMixin {
                               child: WinnerParticles(),
                             ),
 
-                          // All-In fire VFX — Flame engine
-                          // if (isAllIn) AllInFireOverlay(width: 80, height: 40),
-
-                          // Player avatar with BLoC turn glow
+                          // ── Full portrait avatar sitting at the table ──
+                          // Stitch-poker style: avatar image fills a tall card,
+                          // gradient overlay at bottom, cards overlap, name bar below
                           Container(
+                            width: 120,
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isWinner
+                                    ? PokerTheme.goldBright
+                                    : isActive
+                                        ? _seatGlowColors[index % _seatGlowColors.length]
+                                        : _seatGlowColors[index % _seatGlowColors.length].withValues(alpha: 0.4),
+                                width: isWinner ? 3 : isActive ? 2.5 : 2,
+                              ),
                               boxShadow: isActive
-                                  ? [const BoxShadow(color: Colors.yellow, blurRadius: 15, spreadRadius: 2)]
+                                  ? [BoxShadow(color: _seatGlowColors[index % _seatGlowColors.length].withValues(alpha: 0.7), blurRadius: 20, spreadRadius: 3)]
                                   : isWinner
-                                      ? [BoxShadow(color: PokerTheme.goldBright.withValues(alpha: 0.8), blurRadius: 20, spreadRadius: 4)]
-                                      : [],
+                                      ? [BoxShadow(color: PokerTheme.goldBright.withValues(alpha: 0.8), blurRadius: 25, spreadRadius: 5)]
+                                      : [BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 12)],
                             ),
-                            child: CircleAvatar(
-                              radius: 25,
-                              backgroundColor: isWinner ? PokerTheme.gold : Colors.grey,
-                              child: const Icon(Icons.person, color: Colors.white),
-                            ),
-                          ),
-
-                          // Fold badge
-                          if (isFolded)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withValues(alpha: 0.6),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text('FOLD', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                            ),
-
-                          // Winner hand label
-                          if (isWinner)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: PokerTheme.gold.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: PokerTheme.gold),
-                              ),
-                              child: const Text('WINNER!', style: TextStyle(color: PokerTheme.goldBright, fontSize: 9, fontWeight: FontWeight.w900)),
-                            ),
-
-                          // Player hole cards — PokerCard with 3D flip
-                          if (hasCards && !isFolded)
-                            Row(
+                            child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                for (var ci = 0; ci < _playerCards[index].length; ci++)
-                                  Padding(
-                                    padding: EdgeInsets.only(left: ci == 0 ? 0 : 2),
-                                    child: Transform.scale(
-                                      scale: 0.7,
-                                      child: PokerCard(
-                                        rank: index == 0 || isWinner || _winnerSeat != null
-                                            ? _playerCards[index][ci].rankLabel
-                                            : '',
-                                        suit: index == 0 || isWinner || _winnerSeat != null
-                                            ? _playerCards[index][ci].suitSymbol
-                                            : '',
-                                      ),
+                                // Avatar portrait — the character sitting at the table
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                                  child: SizedBox(
+                                    width: 120,
+                                    height: 110,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        // Avatar image
+                                        ColorFiltered(
+                                          colorFilter: isFolded
+                                              ? const ColorFilter.matrix(<double>[
+                                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                                  0, 0, 0, 1, 0,
+                                                ])
+                                              : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+                                          child: Image.asset(
+                                            _avatarAssets[index % _avatarAssets.length],
+                                            fit: BoxFit.cover,
+                                            alignment: const Alignment(0, -0.6),
+                                            errorBuilder: (_, __, ___) => Container(
+                                              color: Colors.grey.shade800,
+                                              child: Center(
+                                                child: Text(
+                                                  _playerNames[index][0],
+                                                  style: const TextStyle(color: Colors.white54, fontSize: 32, fontWeight: FontWeight.w900),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Gradient overlay — cinematic bottom fade
+                                        Positioned(
+                                          bottom: 0, left: 0, right: 0, height: 60,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Colors.transparent,
+                                                  Colors.black.withValues(alpha: 0.7),
+                                                  Colors.black.withValues(alpha: 0.95),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Top glow edge
+                                        Positioned(
+                                          top: 0, left: 0, right: 0, height: 3,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Colors.transparent,
+                                                  _seatGlowColors[index % _seatGlowColors.length],
+                                                  Colors.transparent,
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        // FOLD badge overlay
+                                        if (isFolded)
+                                          Center(
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.withValues(alpha: 0.7),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Text('FOLD', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                                            ),
+                                          ),
+
+                                        // WINNER badge overlay
+                                        if (isWinner)
+                                          Positioned(
+                                            bottom: 8, left: 0, right: 0,
+                                            child: Center(
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: PokerTheme.gold.withValues(alpha: 0.3),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  border: Border.all(color: PokerTheme.goldBright),
+                                                ),
+                                                child: const Text('WINNER', style: TextStyle(color: PokerTheme.goldBright, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                                              ),
+                                            ),
+                                          ),
+
+                                        // Face-down hole cards overlapping bottom of portrait
+                                        if (hasCards && !isFolded && index != 0 && _winnerSeat == null)
+                                          Positioned(
+                                            bottom: -6, left: 0, right: 0,
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Transform.rotate(
+                                                  angle: -0.15,
+                                                  child: Container(
+                                                    width: 28, height: 40,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blue.shade900,
+                                                      borderRadius: BorderRadius.circular(3),
+                                                      border: Border.all(color: Colors.white, width: 1.5),
+                                                    ),
+                                                    child: const Center(child: Icon(Icons.star, color: Colors.white24, size: 12)),
+                                                  ),
+                                                ),
+                                                Transform.rotate(
+                                                  angle: 0.15,
+                                                  child: Container(
+                                                    width: 28, height: 40,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blue.shade900,
+                                                      borderRadius: BorderRadius.circular(3),
+                                                      border: Border.all(color: Colors.white, width: 1.5),
+                                                    ),
+                                                    child: const Center(child: Icon(Icons.star, color: Colors.white24, size: 12)),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                        // Hero face-up cards OR showdown revealed cards
+                                        if (hasCards && !isFolded && (index == 0 || _winnerSeat != null))
+                                          Positioned(
+                                            bottom: -6, left: 0, right: 0,
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                for (var ci = 0; ci < _playerCards[index].length; ci++)
+                                                  Transform.rotate(
+                                                    angle: ci == 0 ? -0.15 : 0.15,
+                                                    child: Transform.scale(
+                                                      scale: 0.55,
+                                                      child: PokerCard(
+                                                        rank: _playerCards[index][ci].rankLabel,
+                                                        suit: _playerCards[index][ci].suitSymbol,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
-                              ],
-                            ),
+                                ),
 
-                          // Name + stack
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.black87,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              "Player $index\n\$${(1000 - (_pot ~/ 10)).clamp(0, 9999)}",
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                                // Name + chip count bar
+                                Container(
+                                  width: 120,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xF00A0A0C),
+                                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        _playerNames[index % _playerNames.length],
+                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        '\$${(15000 + index * 2000 - (_pot ~/ 10)).clamp(0, 99999)}',
+                                        style: const TextStyle(color: PokerTheme.goldBright, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                                      ),
+                                      // Bottom gold accent
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 2),
+                                        height: 2,
+                                        decoration: const BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [Colors.transparent, PokerTheme.gold, PokerTheme.goldBright, PokerTheme.gold, Colors.transparent],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

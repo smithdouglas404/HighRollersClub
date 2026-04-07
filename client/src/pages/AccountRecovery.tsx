@@ -6,6 +6,7 @@ import {
   ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Info
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { GoldButton, SpotlightCard, VaultBackground } from "@/components/premium/PremiumComponents";
 
 /* -- Recovery Method Card ------------------------------------------------- */
 
@@ -31,18 +32,19 @@ function RecoveryCard({
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 + index * 0.1 }}
-      className={`vault-card p-6 ${accentBorder}`}
     >
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${accentColor}`}>
-          <Icon className="w-5 h-5" />
+      <SpotlightCard className={`p-6 ${accentBorder}`}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}>
+            <Icon className="w-5 h-5" style={{ color: "#d4af37" }} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white">{title}</h3>
+            <p className="text-[0.625rem] text-gray-500">{description}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-sm font-bold text-white">{title}</h3>
-          <p className="text-[0.625rem] text-gray-500">{description}</p>
-        </div>
-      </div>
-      {children}
+        {children}
+      </SpotlightCard>
     </motion.div>
   );
 }
@@ -135,14 +137,13 @@ function WalletRecovery() {
               required
             />
           </div>
-          <button
-            type="submit"
+          <GoldButton
             disabled={loading || !address.trim()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/25 hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 text-[0.625rem]"
           >
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wallet className="w-3.5 h-3.5" />}
             {loading ? "Loading..." : "Get Challenge"}
-          </button>
+          </GoldButton>
         </form>
       )}
 
@@ -189,14 +190,13 @@ function WalletRecovery() {
             )}
 
             <div className="flex items-center gap-2">
-              <button
-                type="submit"
+              <GoldButton
                 disabled={loading || !signature.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/25 hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 text-[0.625rem]"
               >
                 {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wallet className="w-3.5 h-3.5" />}
                 {loading ? "Verifying..." : "Verify Signature"}
-              </button>
+              </GoldButton>
               <button
                 type="button"
                 onClick={() => { setStep(1); setResult(null); setSignature(""); }}
@@ -308,14 +308,13 @@ function EmailRecovery() {
             </div>
           )}
 
-          <button
-            type="submit"
+          <GoldButton
             disabled={loading || !username.trim()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 text-[0.625rem]"
           >
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
             {loading ? "Sending..." : "Send Code"}
-          </button>
+          </GoldButton>
         </form>
       )}
 
@@ -362,14 +361,13 @@ function EmailRecovery() {
           )}
 
           <div className="flex items-center gap-2">
-            <button
-              type="submit"
+            <GoldButton
               disabled={loading || code.length !== 6}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-2 px-5 py-2.5 text-[0.625rem]"
             >
               {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
               {loading ? "Verifying..." : "Verify Code"}
-            </button>
+            </GoldButton>
             <button
               type="button"
               onClick={() => { setStep(1); setResult(null); setCode(""); setCodeSent(false); }}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { useToast } from "@/hooks/use-toast";
 import {
   Trophy, Users, Layers, Coins, ArrowLeft, Loader2, Clock, RefreshCw, BarChart2, Crown,
@@ -186,7 +187,7 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                       Prize Pool
                     </div>
                     <div className="text-4xl font-black tabular-nums gold-text drop-shadow-[0_0_20px_rgba(212,175,55,0.3)]">
-                      ${data.prizePool.toLocaleString()}
+                      <NumberTicker value={data.prizePool} prefix="$" />
                     </div>
                   </div>
                 )}
@@ -195,60 +196,28 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
 
             {/* Stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                {
-                  icon: Users,
-                  label: "Players",
-                  value: remaining !== playerCount
-                    ? `${remaining} / ${playerCount}`
-                    : `${playerCount}`,
-                  sub: maxPlayers > 0 ? `Max ${maxPlayers}` : undefined,
-                  color: "text-primary",
-                },
-                {
-                  icon: Layers,
-                  label: "Tables",
-                  value: `${data.tables.length}`,
-                  sub: data.tables.length > 0 ? "Active" : "None",
-                  color: "text-purple-400",
-                },
-                {
-                  icon: Coins,
-                  label: "Prize Pool",
-                  value: data.prizePool != null ? data.prizePool.toLocaleString() : "--",
-                  color: "text-yellow-400",
-                },
-                {
-                  icon: Clock,
-                  label: "Status",
-                  value: statusStyle!.label,
-                  color: statusStyle!.color,
-                },
-              ].map((stat, i) => {
-                const Icon = stat.icon;
-                return (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + i * 0.05 }}
-                    className="rounded-xl p-4 vault-card"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Icon className={`w-4 h-4 ${stat.color}`} />
-                      <span className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">
-                        {stat.label}
-                      </span>
-                    </div>
-                    <div className={`text-xl font-bold tabular-nums ${stat.color}`}>
-                      {stat.value}
-                    </div>
-                    {stat.sub && (
-                      <div className="text-[0.5625rem] text-gray-600 mt-0.5">{stat.sub}</div>
-                    )}
-                  </motion.div>
-                );
-              })}
+              <StatCard
+                icon={Users}
+                label="Players"
+                value={remaining !== playerCount
+                  ? `${remaining} / ${playerCount}`
+                  : `${playerCount}`}
+              />
+              <StatCard
+                icon={Layers}
+                label="Tables"
+                value={`${data.tables.length}`}
+              />
+              <StatCard
+                icon={Coins}
+                label="Prize Pool"
+                value={data.prizePool != null ? data.prizePool : "--"}
+              />
+              <StatCard
+                icon={Clock}
+                label="Status"
+                value={statusStyle!.label}
+              />
             </div>
 
             {/* Tables list */}
@@ -314,10 +283,8 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                   className="space-y-4"
                 >
                   {/* Podium */}
-                  <div className="vault-card p-6 overflow-hidden">
-                    <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-6 text-center">
-                      Tournament Leaderboard
-                    </h3>
+                  <GoldCard glow padding="p-6" className="overflow-hidden">
+                    <SectionHeader icon={Trophy} title="Tournament Leaderboard" className="text-center mb-6" />
 
                     {/* Podium display */}
                     <div className="flex items-end justify-center gap-4 md:gap-8 mb-6">
@@ -360,7 +327,7 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                         );
                       })}
                     </div>
-                  </div>
+                  </GoldCard>
 
                   {/* Remaining standings table */}
                   {rest.length > 0 && (
@@ -371,10 +338,10 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                         </h3>
                       </div>
                       {/* Table header */}
-                      <div className="grid grid-cols-[3rem_1fr_auto] gap-4 px-5 py-2 border-b border-white/[0.04]">
-                        <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600">Rank</span>
-                        <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600">Player</span>
-                        <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600 text-right">Chips</span>
+                      <div className="grid grid-cols-[3rem_1fr_auto] gap-4 px-5 py-2 border-b border-[#d4af37]/15" style={{ background: "rgba(212,175,55,0.06)" }}>
+                        <span className="text-[0.5rem] font-bold uppercase tracking-wider text-[#d4af37]/70">Rank</span>
+                        <span className="text-[0.5rem] font-bold uppercase tracking-wider text-[#d4af37]/70">Player</span>
+                        <span className="text-[0.5rem] font-bold uppercase tracking-wider text-[#d4af37]/70 text-right">Chips</span>
                       </div>
                       <div className="divide-y divide-white/[0.04]">
                         {rest.map((entry, i) => {

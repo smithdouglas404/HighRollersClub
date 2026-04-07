@@ -10,6 +10,7 @@ import {
   Tag, Zap, Gem, Coins, Clock, Loader2, ArrowUpRight, ArrowDownRight,
   Package, Check, ShoppingCart, X, Shield, Heart
 } from "lucide-react";
+import { GoldButton, GoldCard, NumberTicker, SectionHeader, GoldDivider, SpotlightCard } from "@/components/premium/PremiumComponents";
 import chipPile from "@assets/generated_images/chip_stack_gold_pile.webp";
 
 const TABS = ["Avatars", "Table Themes", "Card Backs", "Frames", "Seat Effects", "Win Celebrations", "Entrance Animations", "Emotes", "Taunts", "Premium", "Wishlist", "Inventory"];
@@ -221,15 +222,10 @@ function PurchaseModal({
             >
               Cancel
             </button>
-            <motion.button
-              whileHover={canAfford ? { scale: 1.02 } : {}}
-              whileTap={canAfford ? { scale: 0.98 } : {}}
+            <GoldButton
               onClick={onConfirm}
               disabled={!canAfford || purchasing}
-              aria-label={`Purchase ${item.name}`}
-              className={`flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                canAfford ? "gold-btn" : "bg-gray-600 text-gray-300"
-              }`}
+              className="flex-1 !py-3 !rounded-lg !text-xs flex items-center justify-center gap-2"
             >
               {purchasing ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -237,7 +233,7 @@ function PurchaseModal({
                 <ShoppingCart className="w-3.5 h-3.5" />
               )}
               {purchasing ? "Processing..." : "Confirm Purchase"}
-            </motion.button>
+            </GoldButton>
           </div>
         </div>
       </motion.div>
@@ -429,18 +425,20 @@ function ShopItemCard({
   const earnableLevel = (item as any).earnableAtLevel;
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.03, y: -4, boxShadow: `0 0 24px ${getRarityGlow(item.rarity)}` }}
-      className="vault-card rounded-xl overflow-hidden transition-all cursor-pointer group"
-      style={{
-        boxShadow: item.rarity?.toLowerCase() === "mythic"
-          ? "0 0 16px rgba(212,175,55,0.4), 0 0 32px rgba(212,175,55,0.15)"
-          : undefined,
-      }}
-      onClick={() => { onPreview?.(item); if (!owned) onPurchase(item); }}
-      role="button"
-      aria-label={owned ? `${item.name} - owned` : `Purchase ${item.name}`}
+    <SpotlightCard
+      className="overflow-hidden transition-all cursor-pointer group"
     >
+      <motion.div
+        whileHover={{ scale: 1.03, y: -4, boxShadow: `0 0 24px ${getRarityGlow(item.rarity)}` }}
+        onClick={() => { onPreview?.(item); if (!owned) onPurchase(item); }}
+        role="button"
+        aria-label={owned ? `${item.name} - owned` : `Purchase ${item.name}`}
+        style={{
+          boxShadow: item.rarity?.toLowerCase() === "mythic"
+            ? "0 0 16px rgba(212,175,55,0.4), 0 0 32px rgba(212,175,55,0.15)"
+            : undefined,
+        }}
+      >
       <div className="aspect-square relative overflow-hidden">
         <ItemImage item={item} className="group-hover:scale-110 transition-transform duration-500" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -497,18 +495,19 @@ function ShopItemCard({
               <Check className="w-3 h-3" /> Purchased
             </span>
           ) : (
-            <span className="text-xs font-bold gold-text flex items-center gap-1">
+            <span className="text-xs font-bold flex items-center gap-1" style={{ color: "#d4af37" }}>
               <Coins className="w-3 h-3" style={{ color: "#d4af37" }} /> {item.price.toLocaleString()}
             </span>
           )}
           {!owned && (
-            <span className="text-[0.5625rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded gold-btn cursor-pointer">
+            <GoldButton className="!px-2 !py-0.5 !text-[0.5625rem] !rounded">
               Buy
-            </span>
+            </GoldButton>
           )}
         </div>
       </div>
-    </motion.div>
+      </motion.div>
+    </SpotlightCard>
   );
 }
 
@@ -828,10 +827,10 @@ export default function Shop() {
               onClick={() => setActiveTab(tab)}
               className={`relative px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                 activeTab === tab
-                  ? "gold-text border border-transparent"
+                  ? "border border-transparent"
                   : "text-gray-500 hover:text-gray-300 border border-transparent"
               }`}
-              style={activeTab === tab ? { background: "rgba(212,175,55,0.15)", borderColor: "rgba(212,175,55,0.25)" } : undefined}
+              style={activeTab === tab ? { background: "rgba(212,175,55,0.1)", color: "#d4af37", borderBottom: "2px solid #d4af37" } : undefined}
             >
               {tab === "Inventory" && <Package className="w-3.5 h-3.5" />}
               {tab === "Wishlist" && <Heart className={`w-3.5 h-3.5 ${activeTab === "Wishlist" ? "fill-pink-400 text-pink-400" : ""}`} />}
@@ -1192,7 +1191,7 @@ export default function Shop() {
                 <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Your Balance</span>
               </div>
               <div className="text-2xl font-black tabular-nums gold-text">
-                {displayBalance.toLocaleString()}
+                <NumberTicker value={displayBalance} />
               </div>
               <div className="text-[0.5625rem] text-gray-600 uppercase">chips</div>
             </motion.div>

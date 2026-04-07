@@ -103,7 +103,12 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border-b border-white/[0.06] last:border-b-0">
+    <div
+      className="border-b last:border-b-0 transition-colors"
+      style={{ borderColor: "rgba(212,175,55,0.1)" }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,175,55,0.3)"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,175,55,0.1)"; }}
+    >
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between py-4 px-1 text-left group"
@@ -260,10 +265,10 @@ function ContactForm() {
         </div>
       )}
 
-      <button
-        type="submit"
+      <GoldButton
         disabled={!canSubmit}
-        className="gold-btn flex items-center gap-2 px-6 py-3 text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        className="flex items-center gap-2 px-6 py-3 text-sm"
+        onClick={(e: any) => { if (canSubmit) handleSubmit(e); }}
       >
         {sending ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -271,7 +276,7 @@ function ContactForm() {
           <Send className="w-4 h-4" />
         )}
         {sending ? "Sending..." : "Send Message"}
-      </button>
+      </GoldButton>
     </form>
   );
 }
@@ -399,11 +404,21 @@ export default function Support() {
       <div className="px-4 md:px-8 pb-8">
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center">
-              <HelpCircle className="w-6 h-6 text-[#d4af37]" />
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}
+            >
+              <HelpCircle className="w-6 h-6" style={{ color: "#d4af37" }} />
             </div>
             <div>
-              <h1 className="text-2xl font-display font-black gold-text">Support</h1>
+              <h1
+                className="text-2xl font-display font-black"
+                style={{
+                  background: "linear-gradient(180deg, #f0d060 0%, #d4af37 50%, #9a7b2c 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >Support</h1>
               <p className="text-xs text-gray-500 mt-0.5">Get help and answers to common questions</p>
             </div>
           </div>
@@ -416,17 +431,14 @@ export default function Support() {
         {user && (
           <div className="mb-12">
             <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <Ticket className="w-5 h-5 text-[#d4af37]" />
-                <h2 className="text-lg font-bold gold-text">My Tickets</h2>
-              </div>
-              <button
+              <SectionHeader icon={Ticket} title="My Tickets" />
+              <GoldButton
                 onClick={() => { setShowNewTicket(!showNewTicket); setSelectedTicket(null); }}
-                className="gold-btn flex items-center gap-1.5 px-4 py-2 text-xs font-bold"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold"
               >
                 <Plus className="w-3.5 h-3.5" />
                 New Ticket
-              </button>
+              </GoldButton>
             </div>
 
             {/* New Ticket Form */}
@@ -438,7 +450,7 @@ export default function Support() {
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden mb-6"
                 >
-                  <form onSubmit={handleCreateTicket} className="vault-card p-5 space-y-4">
+                  <form onSubmit={handleCreateTicket} className="p-5 space-y-4" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: "0.75rem" }}>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Category</label>
@@ -492,14 +504,14 @@ export default function Support() {
                         {ticketResult.text}
                       </div>
                     )}
-                    <button
-                      type="submit"
+                    <GoldButton
                       disabled={!newSubject.trim() || !newMessage.trim() || submittingTicket}
-                      className="gold-btn flex items-center gap-2 px-6 py-3 text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 px-6 py-3 text-sm"
+                      onClick={(e: any) => { e.preventDefault(); handleCreateTicket(e); }}
                     >
                       {submittingTicket ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                       {submittingTicket ? "Submitting..." : "Submit Ticket"}
-                    </button>
+                    </GoldButton>
                   </form>
                 </motion.div>
               )}
@@ -507,7 +519,7 @@ export default function Support() {
 
             {/* Ticket Detail View */}
             {selectedTicket ? (
-              <div className="vault-card overflow-hidden">
+              <GoldCard className="overflow-hidden" padding="p-0" glow>
                 <div className="px-5 py-4 border-b border-[#d4af37]/10 flex items-center gap-3">
                   <button onClick={() => setSelectedTicket(null)} className="text-gray-400 hover:text-white transition-colors">
                     <ArrowLeft className="w-4 h-4" />
@@ -570,10 +582,10 @@ export default function Support() {
                     </button>
                   </div>
                 )}
-              </div>
+              </GoldCard>
             ) : (
               /* Ticket List */
-              <div className="vault-card overflow-hidden">
+              <GoldCard className="overflow-hidden" padding="p-0" glow>
                 {ticketsLoading ? (
                   <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
                 ) : tickets.length === 0 ? (
@@ -606,33 +618,27 @@ export default function Support() {
                     ))}
                   </div>
                 )}
-              </div>
+              </GoldCard>
             )}
           </div>
         )}
 
         {/* FAQ Section */}
         <div className="mb-12">
-          <div className="flex items-center gap-2 mb-5">
-            <MessageSquare className="w-5 h-5 text-[#d4af37]" />
-            <h2 className="text-lg font-bold gold-text">Frequently Asked Questions</h2>
-          </div>
-          <div className="vault-card p-5 md:p-6">
+          <SectionHeader icon={MessageSquare} title="Frequently Asked Questions" className="mb-5" />
+          <GoldCard padding="p-5 md:p-6" glow>
             {FAQ_ITEMS.map((item, i) => (
               <FAQItem key={i} question={item.question} answer={item.answer} />
             ))}
-          </div>
+          </GoldCard>
         </div>
 
         {/* Contact Section */}
         <div>
-          <div className="flex items-center gap-2 mb-5">
-            <Mail className="w-5 h-5 text-[#d4af37]" />
-            <h2 className="text-lg font-bold gold-text">Contact Us</h2>
-          </div>
-          <div className="vault-card p-5 md:p-6">
+          <SectionHeader icon={Mail} title="Contact Us" className="mb-5" />
+          <GoldCard padding="p-5 md:p-6" glow>
             <ContactForm />
-          </div>
+          </GoldCard>
         </div>
 
         <div className="mt-8 text-center text-xs text-gray-600">

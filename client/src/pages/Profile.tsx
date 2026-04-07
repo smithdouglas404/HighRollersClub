@@ -16,6 +16,7 @@ import {
   CalendarDays, Medal, ThumbsUp, BarChart3,
 } from "lucide-react";
 import goldChips from "@assets/generated_images/gold_chip_stack_3d.webp";
+import { GoldButton, GoldCard, NumberTicker } from "@/components/premium/PremiumComponents";
 
 interface PlayerStats {
   handsPlayed: number;
@@ -421,7 +422,7 @@ export default function Profile() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* ── Column 1: Profile & Edit ── */}
-            <div className="vault-card p-6 flex flex-col items-center text-center">
+            <GoldCard className="flex flex-col items-center text-center" glow>
               <h3 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Profile & Edit</h3>
               <div className="relative mb-4">
                 <div className="w-32 h-32 rounded-full overflow-hidden" style={{ border: "3px solid #d4af37", boxShadow: "0 0 20px rgba(212,175,55,0.3)" }}>
@@ -440,28 +441,28 @@ export default function Profile() {
               )}
               <div className="flex gap-2 mt-4">
                 <Link href="/avatar-wardrobe">
-                  <button className="gold-btn px-4 py-2 text-xs">Edit Avatar</button>
+                  <GoldButton className="px-4 py-2 text-xs">Edit Avatar</GoldButton>
                 </Link>
                 <Link href="/lobby">
-                  <button className="gold-btn px-4 py-2 text-xs">Play Now</button>
+                  <GoldButton className="px-4 py-2 text-xs">Play Now</GoldButton>
                 </Link>
               </div>
 
               {/* Quick Stats */}
               <div className="w-full mt-4 space-y-2">
-                <div className="flex justify-between text-xs"><span className="text-gray-500">Hands Played</span><span className="font-bold" style={{ color: "#d4af37" }}>{stats?.handsPlayed?.toLocaleString() || 0}</span></div>
-                <div className="flex justify-between text-xs"><span className="text-gray-500">Win Rate</span><span className="font-bold" style={{ color: "#d4af37" }}>{winRate}%</span></div>
-                <div className="flex justify-between text-xs"><span className="text-gray-500">Best Streak</span><span className="font-bold" style={{ color: "#d4af37" }}>{stats?.bestWinStreak || 0}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-500">Hands Played</span><span className="font-bold" style={{ color: "#d4af37" }}><NumberTicker value={stats?.handsPlayed || 0} /></span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-500">Win Rate</span><span className="font-bold" style={{ color: "#d4af37" }}><NumberTicker value={winRate} suffix="%" /></span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-500">Best Streak</span><span className="font-bold" style={{ color: "#d4af37" }}><NumberTicker value={stats?.bestWinStreak || 0} /></span></div>
                 <div className="flex justify-between text-xs"><span className="text-gray-500">Level</span><span className="font-bold" style={{ color: "#d4af37" }}>{playerLevel} — {playerTitle}</span></div>
               </div>
-            </div>
+            </GoldCard>
 
             {/* ── Column 2: Security & Privacy ── */}
-            <div className="vault-card p-6 flex flex-col">
+            <GoldCard className="flex flex-col" glow>
               <h3 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Security & Privacy</h3>
 
               <Link href="/security">
-                <button className="w-full gold-btn py-3 text-sm mb-4">Password Reset</button>
+                <GoldButton fullWidth className="py-3 text-sm mb-4">Password Reset</GoldButton>
               </Link>
 
               <div className="vault-card p-4 mb-4">
@@ -500,10 +501,10 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-            </div>
+            </GoldCard>
 
             {/* ── Column 3: Financials & Wallets ── */}
-            <div className="vault-card p-6 flex flex-col">
+            <GoldCard className="flex flex-col" glow>
               <h3 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Financials & Wallets</h3>
 
               <div className="vault-card p-4 mb-3 flex items-center gap-3">
@@ -537,9 +538,9 @@ export default function Profile() {
               </div>
 
               <Link href="/wallet" className="mt-auto">
-                <button className="w-full gold-btn py-3 text-sm">Add New Wallet</button>
+                <GoldButton fullWidth className="py-3 text-sm">Add New Wallet</GoldButton>
               </Link>
-            </div>
+            </GoldCard>
           </div>
         </motion.div>
 

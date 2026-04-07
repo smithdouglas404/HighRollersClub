@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useClub } from "@/lib/club-context";
+import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Trophy, Users, Flame, Loader2, Medal, Crown,
   BarChart3, TrendingUp, Swords, Target
@@ -148,9 +149,10 @@ export default function ClubRankings() {
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-200",
                   active
-                    ? "bg-primary/15 text-primary border border-primary/30"
+                    ? "border border-[#d4af37]/40 text-[#d4af37]"
                     : "bg-white/[0.03] text-muted-foreground border border-white/[0.06] hover:bg-white/[0.06] hover:text-foreground"
                 )}
+                style={active ? { background: "rgba(212,175,55,0.12)", boxShadow: "0 0 12px rgba(212,175,55,0.15)" } : undefined}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
@@ -200,9 +202,10 @@ export default function ClubRankings() {
                     key={club.clubId}
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ scale: 1.02, y: -4 }}
                     transition={{ delay: 0.1 + idx * 0.1, type: "spring", stiffness: 260, damping: 20 }}
                     className={cn(
-                      "relative rounded-xl p-5 border overflow-hidden",
+                      "relative rounded-xl p-5 border-2 overflow-hidden",
                       club.rank === 1 && "md:order-2 md:-mt-4",
                       club.rank === 2 && "md:order-1",
                       club.rank === 3 && "md:order-3",
@@ -210,8 +213,8 @@ export default function ClubRankings() {
                     )}
                     style={{
                       background: style.bg,
-                      borderColor: `${style.ring}33`,
-                      boxShadow: `0 0 30px ${style.glow}`,
+                      borderColor: style.ring,
+                      boxShadow: `0 0 ${club.rank === 1 ? "40px" : "25px"} ${style.glow}, inset 0 1px 0 ${style.ring}22`,
                     }}
                   >
                     {isMyClub && (
@@ -262,7 +265,7 @@ export default function ClubRankings() {
               style={{ background: "rgba(15,15,20,0.6)", backdropFilter: "blur(12px)" }}
             >
               {/* Table Header */}
-              <div className="grid grid-cols-[3rem_1fr_4.5rem_4.5rem_5.5rem_4.5rem_5.5rem_4.5rem] gap-2 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-white/[0.06] bg-white/[0.02]">
+              <div className="grid grid-cols-[3rem_1fr_4.5rem_4.5rem_5.5rem_4.5rem_5.5rem_4.5rem] gap-2 px-4 py-3 text-[10px] font-bold uppercase tracking-widest border-b border-[rgba(212,175,55,0.15)]" style={{ color: "#d4af37", background: "rgba(212,175,55,0.06)" }}>
                 <span>#</span>
                 <span>Club</span>
                 <span className="text-right">Members</span>

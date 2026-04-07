@@ -9,6 +9,7 @@ import {
   ChevronRight, Lock, Sparkles, Medal, Crown, Gem,
   Calendar, Users, Target, Zap, Shield, Award,
 } from "lucide-react";
+import { GoldButton, GoldCard, NumberTicker, SectionHeader, GoldDivider, SpotlightCard } from "@/components/premium/PremiumComponents";
 
 // ─── Loyalty Level Definitions (mirror server) ─────────────────────────────
 const LOYALTY_LEVELS = [
@@ -140,9 +141,9 @@ export default function Loyalty() {
               <div
                 className="w-24 h-24 rounded-2xl flex items-center justify-center"
                 style={{
-                  background: `linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05))`,
-                  border: "2px solid rgba(212,175,55,0.3)",
-                  boxShadow: `0 0 30px ${currentLevelDef.glow}`,
+                  background: `linear-gradient(135deg, rgba(212,175,55,0.25), rgba(243,226,173,0.1), rgba(212,175,55,0.15))`,
+                  border: "2px solid rgba(212,175,55,0.4)",
+                  boxShadow: `0 0 40px rgba(212,175,55,0.3), 0 0 80px rgba(212,175,55,0.1)`,
                 }}
               >
                 {(() => { const Icon = LEVEL_ICONS[currentLevel - 1] || Star; return <Icon className={`w-12 h-12 ${currentLevelDef.color}`} />; })()}
@@ -159,7 +160,7 @@ export default function Loyalty() {
               </h1>
               <div className="flex items-center justify-center md:justify-start gap-3 mt-2">
                 <span className="text-3xl font-black" style={{ color: "#d4af37" }}>
-                  {formatNum(totalHrp)}
+                  <NumberTicker value={totalHrp} className="text-3xl font-black" />
                 </span>
                 <span className="text-sm text-gray-400 font-medium">HRP</span>
                 {multiplier > 1 && (
@@ -180,7 +181,7 @@ export default function Loyalty() {
                   <div className="h-3 rounded-full bg-white/5 overflow-hidden border border-white/10">
                     <motion.div
                       className="h-full rounded-full"
-                      style={{ background: "linear-gradient(90deg, #d4af37, #f0d060)" }}
+                      style={{ background: "linear-gradient(90deg, #8a6914, #c9a227, #f3e2ad, #d4af37, #8a6914)" }}
                       initial={{ width: 0 }}
                       animate={{ width: `${progressPercent}%` }}
                       transition={{ duration: 1, ease: "easeOut" }}
@@ -241,19 +242,12 @@ export default function Loyalty() {
               const isCurrent = currentLevel === lvl.level;
               const Icon = LEVEL_ICONS[i];
               return (
-                <motion.div
+                <GoldCard
                   key={lvl.level}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className={`rounded-xl p-4 flex items-center gap-4 transition-all ${
-                    isCurrent ? "ring-2 ring-primary/40" : ""
-                  }`}
-                  style={{
-                    background: isUnlocked ? "rgba(212,175,55,0.05)" : "rgba(15,15,20,0.5)",
-                    border: `1px solid ${isCurrent ? "rgba(212,175,55,0.4)" : isUnlocked ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.05)"}`,
-                    opacity: isUnlocked ? 1 : 0.5,
-                  }}
+                  className={`flex items-center gap-4 ${isCurrent ? "" : ""}`}
+                  glow={isCurrent}
+                  hover={isUnlocked}
+                  padding="p-4"
                 >
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
@@ -283,7 +277,7 @@ export default function Loyalty() {
                     </p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
-                </motion.div>
+                </GoldCard>
               );
             })}
           </motion.div>
@@ -316,15 +310,9 @@ export default function Loyalty() {
                 const isUnlocked = !!ach.unlockedAt;
                 const isClaimed = !!ach.claimedAt;
                 return (
-                  <motion.div
+                  <SpotlightCard
                     key={ach.id || ach.key}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="rounded-xl p-4"
-                    style={{
-                      background: isClaimed ? "rgba(52,211,153,0.05)" : isUnlocked ? "rgba(212,175,55,0.08)" : "rgba(15,15,20,0.5)",
-                      border: `1px solid ${isClaimed ? "rgba(52,211,153,0.2)" : isUnlocked ? "rgba(212,175,55,0.3)" : "rgba(255,255,255,0.08)"}`,
-                    }}
+                    className="p-4"
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
@@ -359,17 +347,17 @@ export default function Loyalty() {
 
                         {/* Claim Button */}
                         {isUnlocked && !isClaimed && (
-                          <button
+                          <GoldButton
                             onClick={() => claimAchievementMutation.mutate(ach.id)}
                             disabled={claimAchievementMutation.isPending}
-                            className="mt-2 px-3 py-1 rounded-lg text-xs font-bold bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-all"
+                            className="mt-2 !px-3 !py-1 !text-xs"
                           >
                             {claimAchievementMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Claim Reward"}
-                          </button>
+                          </GoldButton>
                         )}
                       </div>
                     </div>
-                  </motion.div>
+                  </SpotlightCard>
                 );
               })}
               {filteredAchievements.length === 0 && (

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageBackground } from "@/components/shared/PageBackground";
+import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { Trophy, Clock, Users, Flame, Plus, Gamepad2, Timer, DollarSign, TrendingUp } from "lucide-react";
 
 interface Tournament {
@@ -164,14 +165,10 @@ export default function Tournaments() {
             </div>
 
             <Link href="/tournaments/new">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] uppercase tracking-wider shrink-0 gold-btn shadow-[0_0_20px_rgba(212,175,55,0.3)]"
-              >
+              <GoldButton className="flex items-center gap-2 text-[0.625rem] shrink-0">
                 <Plus className="w-3.5 h-3.5" />
                 Create Tournament
-              </motion.button>
+              </GoldButton>
             </Link>
           </div>
         </motion.div>
@@ -183,29 +180,26 @@ export default function Tournaments() {
           transition={{ delay: 0.1 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
         >
-          {[
-            { icon: Trophy, label: "Active Tournaments", value: String(tournaments.filter(t => t.status === "registration" || t.status === "running" || t.status === "in_progress").length), color: "text-[#d4af37]" },
-            { icon: DollarSign, label: "Total Prize Pools", value: `$${tournaments.reduce((sum, t) => sum + calculatePrizePool(t), 0).toLocaleString()}`, color: "text-[#d4af37]" },
-            { icon: Users, label: "Registered Players", value: String(tournaments.reduce((sum, t) => sum + (t.registeredPlayers ?? 0), 0)), color: "text-[#d4af37]" },
-            { icon: TrendingUp, label: "Projected Revenue", value: `$${Math.round(tournaments.reduce((sum, t) => sum + calculatePrizePool(t) * 0.05, 0)).toLocaleString()}`, color: "text-[#d4af37]" },
-          ].map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 + i * 0.05 }}
-                className="vault-card p-4"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon className={`w-4 h-4 ${stat.color}`} />
-                  <span className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">{stat.label}</span>
-                </div>
-                <div className={`text-xl font-black tabular-nums gold-text`}>{stat.value}</div>
-              </motion.div>
-            );
-          })}
+          <StatCard
+            icon={Trophy}
+            label="Active Tournaments"
+            value={String(tournaments.filter(t => t.status === "registration" || t.status === "running" || t.status === "in_progress").length)}
+          />
+          <StatCard
+            icon={DollarSign}
+            label="Total Prize Pools"
+            value={tournaments.reduce((sum, t) => sum + calculatePrizePool(t), 0)}
+          />
+          <StatCard
+            icon={Users}
+            label="Registered Players"
+            value={String(tournaments.reduce((sum, t) => sum + (t.registeredPlayers ?? 0), 0))}
+          />
+          <StatCard
+            icon={TrendingUp}
+            label="Projected Revenue"
+            value={Math.round(tournaments.reduce((sum, t) => sum + calculatePrizePool(t) * 0.05, 0))}
+          />
         </motion.div>
 
         {/* ── Status Filter Tabs ─────────────────────────────────── */}
@@ -314,13 +308,13 @@ export default function Tournaments() {
               const registered = tournament.registeredPlayers ?? 0;
 
               return (
-                <motion.div
+                <GoldCard
                   key={tournament.id}
-                  variants={cardVariants}
-                  whileHover={{ scale: 1.005, y: -2 }}
-                  className="rounded-xl overflow-hidden transition-all cursor-pointer vault-card gold-border-hover"
-                  onClick={() => navigate(`/tournaments/${tournament.id}`)}
+                  className="overflow-hidden cursor-pointer"
+                  glow={isRegOpen}
+                  padding="p-0"
                 >
+                <div onClick={() => navigate(`/tournaments/${tournament.id}`)}>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5">
                     {/* Left section: Badges + Name + Time */}
                     <div className="flex-1 min-w-0">
@@ -389,7 +383,7 @@ export default function Tournaments() {
                       <div
                         className="text-2xl sm:text-3xl font-black tabular-nums gold-text"
                       >
-                        {prizePool.toLocaleString()}
+                        <NumberTicker value={prizePool} />
                       </div>
                       <div className="text-[0.5625rem] text-gray-600 mt-0.5">
                         Buy-in: {tournament.buyInAmount.toLocaleString()} chips
@@ -457,7 +451,8 @@ export default function Tournaments() {
                   <div
                     className="h-px w-full bg-gradient-to-r from-transparent via-yellow-500/15 to-transparent"
                   />
-                </motion.div>
+                </div>
+                </GoldCard>
               );
             })}
           </motion.div>

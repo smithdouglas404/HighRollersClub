@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageBackground } from "@/components/shared/PageBackground";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -914,7 +915,7 @@ export default function TournamentCreate() {
     const gameLabel = GAME_TYPES.find((g) => g.key === gameType)?.label ?? gameType;
 
     return (
-      <div className="vault-card overflow-hidden" style={{ boxShadow: "0 0 30px rgba(212,175,55,0.08)" }}>
+      <GoldCard glow padding="p-0" className="overflow-hidden">
         {/* Header */}
         <div
           className="px-5 py-4"
@@ -923,12 +924,7 @@ export default function TournamentCreate() {
             borderImage: "linear-gradient(90deg, rgba(212,175,55,0.5) 0%, rgba(243,226,173,0.3) 50%, rgba(212,175,55,0.5) 100%) 1",
           }}
         >
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <h3 className="text-xs font-bold uppercase tracking-[0.15em] gold-text">
-              Tournament Summary
-            </h3>
-          </div>
+          <SectionHeader icon={Trophy} title="Tournament Summary" />
         </div>
 
         {/* Body */}
@@ -1009,13 +1005,11 @@ export default function TournamentCreate() {
 
         {/* Actions */}
         <div className="px-5 pb-5 space-y-2">
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <GoldButton
+            fullWidth
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full py-3 rounded-xl text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-all gold-btn shadow-[0_0_20px_2px_rgba(212,175,55,0.4)]"
+            className="flex items-center justify-center gap-2 text-sm"
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1023,7 +1017,7 @@ export default function TournamentCreate() {
               <Sparkles className="w-4 h-4" />
             )}
             {submitting ? "Publishing..." : "Save & Publish"}
-          </motion.button>
+          </GoldButton>
           <motion.button
             type="button"
             whileHover={{ scale: 1.02 }}
@@ -1038,7 +1032,7 @@ export default function TournamentCreate() {
             Cancel
           </motion.button>
         </div>
-      </div>
+      </GoldCard>
     );
   }
 
@@ -1195,13 +1189,10 @@ export default function TournamentCreate() {
                     <ChevronRight className="w-3.5 h-3.5" />
                   </motion.button>
                 ) : (
-                  <motion.button
-                    type="button"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <GoldButton
                     onClick={handleSubmit}
                     disabled={submitting}
-                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-[0.625rem] uppercase tracking-wider disabled:opacity-50 transition-all gold-btn shadow-[0_0_15px_rgba(212,175,55,0.3)]"
+                    className="flex items-center gap-1.5 text-[0.625rem]"
                   >
                     {submitting ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1209,7 +1200,7 @@ export default function TournamentCreate() {
                       <Sparkles className="w-3.5 h-3.5" />
                     )}
                     Publish
-                  </motion.button>
+                  </GoldButton>
                 )}
               </div>
             </motion.div>

@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
 import { useToast } from "@/hooks/use-toast";
+import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Settings, Save, Trash2, Shield, Globe, Lock,
   Users, Crown, Loader2, AlertTriangle, CheckCircle, X,

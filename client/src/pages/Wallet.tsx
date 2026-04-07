@@ -9,6 +9,7 @@ import { useWallet, type Transaction, type WalletType, type WalletBalances } fro
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Coins, Gift, ArrowDownRight, ArrowUpRight, Loader2,
   Clock, Filter, TrendingUp, Sparkles, RefreshCw, Download,
@@ -1748,12 +1749,10 @@ export default function Wallet() {
                   </div>
                 </div>
               ) : (
-                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handleClaimDaily} disabled={claiming}
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm uppercase tracking-wider text-black transition-all disabled:opacity-50 btn-gold"
-                  style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}>
+                <GoldButton onClick={handleClaimDaily} disabled={claiming} className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm">
                   {claiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
                   Claim Daily Bonus
-                </motion.button>
+                </GoldButton>
               )}
               <div className="flex items-center gap-1.5 text-[0.625rem] text-gray-600">
                 <Sparkles className="w-3 h-3 text-primary/60" />
@@ -1775,12 +1774,12 @@ export default function Wallet() {
               { name: "WalletConnect", icon: "🔗", color: "text-cyan-400", bg: "rgba(34,211,238,0.08)", border: "rgba(34,211,238,0.15)" },
               { name: "Phantom", icon: "👻", color: "text-purple-400", bg: "rgba(168,85,247,0.08)", border: "rgba(168,85,247,0.15)" },
             ].map((w) => (
-              <div key={w.name} className="vault-card p-4 flex flex-col items-center text-center hover:scale-[1.02] transition-transform cursor-pointer">
+              <GoldCard key={w.name} padding="p-4" glow className="flex flex-col items-center text-center cursor-pointer">
                 <span className="text-2xl mb-2">{w.icon}</span>
                 <p className={`text-sm font-bold ${w.color}`}>{w.name}</p>
                 <p className="text-[0.625rem] text-gray-600 mt-0.5">Not Connected</p>
-                <button className="gold-btn px-3 py-1 text-[0.625rem] mt-2">Connect</button>
-              </div>
+                <GoldButton className="px-3 py-1 text-[0.625rem] mt-2">Connect</GoldButton>
+              </GoldCard>
             ))}
           </div>
           <p className="text-[0.5625rem] text-gray-600 mt-2 flex items-center gap-1">
@@ -1824,11 +1823,10 @@ export default function Wallet() {
                   <p className="text-sm font-bold text-white mb-1">Play Chips Only</p>
                   <p className="text-xs text-gray-400 mb-3">Free tier does not support real money deposits or withdrawals.</p>
                   <Link href="/tiers">
-                    <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black transition-all"
-                      style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}>
+                    <GoldButton className="inline-flex items-center gap-2 px-5 py-2.5 text-xs">
                       <Crown className="w-3.5 h-3.5" />
                       Upgrade to Bronze for Real Money
-                    </button>
+                    </GoldButton>
                   </Link>
                 </div>
               ) : (
@@ -1891,16 +1889,7 @@ export default function Wallet() {
               const Icon = w.icon;
               const amt = balances[w.key] ?? 0;
               return (
-                <motion.div key={w.key}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  transition={{ delay: 0.1 + i * 0.05 }}
-                  className="rounded-xl p-4 relative overflow-hidden group cursor-pointer transition-shadow duration-300 card-hover hover:shadow-[0_0_15px_rgba(212,175,55,0.15)] border border-white/10"
-                  style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px rgba(${w.rgb}, 0.15)`; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-                >
+                <GoldCard key={w.key} padding="p-4" glow className="relative overflow-hidden group cursor-pointer">
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${w.bg}`}>
                       <Icon className={`w-3.5 h-3.5 ${w.color}`} />
@@ -1925,7 +1914,7 @@ export default function Wallet() {
                       </button>
                     </div>
                   )}
-                </motion.div>
+                </GoldCard>
               );
             })}
           </div>

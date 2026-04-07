@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
+import { GoldButton, GoldCard, NumberTicker, SectionHeader, GoldDivider, SpotlightCard } from "@/components/premium/PremiumComponents";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 
@@ -395,9 +396,10 @@ export default function Marketplace() {
                   onClick={() => setTab(t)}
                   className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     tab === t
-                      ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
+                      ? "border border-transparent"
                       : "text-gray-400 hover:text-white border border-transparent"
                   }`}
+                  style={tab === t ? { background: "rgba(212,175,55,0.1)", color: "#d4af37", borderBottom: "2px solid #d4af37" } : undefined}
                 >
                   {t === "browse" ? "Browse" : "My Listings"}
                 </button>
@@ -405,12 +407,12 @@ export default function Marketplace() {
             </div>
 
             {canSell && (
-              <button
+              <GoldButton
                 onClick={() => setListModal(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-xs font-medium hover:bg-yellow-500/20 transition-colors"
+                className="flex items-center gap-1.5 !px-4 !py-2 !text-xs"
               >
                 <Plus className="w-3 h-3" /> List Item
-              </button>
+              </GoldButton>
             )}
           </div>
         </div>
@@ -507,12 +509,10 @@ export default function Marketplace() {
               const isOwn = listing.sellerId === user?.id;
 
               return (
-                <motion.div
+                <GoldCard
                   key={listing.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.04, duration: 0.3 }}
-                  className="group rounded-xl bg-[#0f0f1a] border border-white/[0.06] overflow-hidden hover:border-yellow-500/20 transition-all duration-300"
+                  className="group overflow-hidden"
+                  padding="p-0"
                 >
                   {/* Image area */}
                   <div className={`aspect-square bg-gradient-to-br ${gradient} opacity-80 flex items-center justify-center relative`}>
@@ -564,15 +564,16 @@ export default function Marketplace() {
                         <Lock className="w-3 h-3" /> Silver+ Required
                       </button>
                     ) : (
-                      <button
+                      <GoldButton
                         onClick={() => { setConfirmBuy(listing); setPaymentMethod("gold"); setBuyProcessing(false); }}
-                        className="w-full py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-[0.625rem] font-bold hover:bg-yellow-500/20 transition-colors"
+                        fullWidth
+                        className="!py-1.5 !text-[0.625rem]"
                       >
                         Buy Now
-                      </button>
+                      </GoldButton>
                     )}
                   </div>
-                </motion.div>
+                </GoldCard>
               );
             })}
           </motion.div>
@@ -665,10 +666,11 @@ export default function Marketplace() {
                 )}
 
                 {/* Confirm button */}
-                <button
+                <GoldButton
                   onClick={() => handleBuy(confirmBuy)}
                   disabled={buyProcessing}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-600 to-amber-500 text-black text-xs font-bold hover:from-yellow-500 hover:to-amber-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/20"
+                  fullWidth
+                  className="!py-3 !rounded-xl !text-xs flex items-center justify-center gap-2"
                 >
                   {buyProcessing ? (
                     <>
@@ -678,7 +680,7 @@ export default function Marketplace() {
                   ) : (
                     "CONFIRM PURCHASE"
                   )}
-                </button>
+                </GoldButton>
               </motion.div>
             </motion.div>
           )}
@@ -814,7 +816,7 @@ export default function Marketplace() {
                           <span className="text-gray-400">
                             Platform Fee ({feePercent}%{user?.tier === "platinum" ? " — Platinum rate" : ""})
                           </span>
-                          <span className="text-red-400">
+                          <span style={{ color: "#d4af37" }}>
                             -{Math.max(1, Math.floor(parseInt(listPrice) * (feePercent / 100))).toLocaleString()}
                           </span>
                         </div>
@@ -830,13 +832,14 @@ export default function Marketplace() {
                     {listError && (
                       <p className="text-xs text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{listError}</p>
                     )}
-                    <button
+                    <GoldButton
                       onClick={handleList}
                       disabled={!listItemId || !listPrice || parseInt(listPrice) < 1}
-                      className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-600 to-amber-500 text-black text-xs font-bold hover:from-yellow-500 hover:to-amber-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-yellow-500/20"
+                      fullWidth
+                      className="!py-3 !rounded-xl !text-xs"
                     >
                       List for Sale
-                    </button>
+                    </GoldButton>
                   </>
                 )}
               </motion.div>

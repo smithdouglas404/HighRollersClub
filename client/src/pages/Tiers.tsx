@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
 import { Crown, Shield, Star, Zap, Gem, Check, Loader2, Lock, DollarSign, ArrowUp, ArrowDown } from "lucide-react";
+import { GoldButton, GoldCard, NumberTicker, SectionHeader, GoldDivider, SpotlightCard } from "@/components/premium/PremiumComponents";
 
 interface TierDefinition {
   id: string;
@@ -172,20 +173,22 @@ export default function Tiers() {
             <button
               onClick={() => setBillingCycle("monthly")}
               className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
-                billingCycle === "monthly"
-                  ? "gold-btn"
-                  : "text-gray-400 hover:text-gray-300"
+                billingCycle !== "monthly"
+                  ? "text-gray-400 hover:text-gray-300"
+                  : ""
               }`}
+              style={billingCycle === "monthly" ? { background: "rgba(212,175,55,0.1)", color: "#d4af37", border: "1px solid rgba(212,175,55,0.3)" } : undefined}
             >
               Monthly
             </button>
             <button
               onClick={() => setBillingCycle("annual")}
               className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
-                billingCycle === "annual"
-                  ? "gold-btn"
-                  : "text-gray-400 hover:text-gray-300"
+                billingCycle !== "annual"
+                  ? "text-gray-400 hover:text-gray-300"
+                  : ""
               }`}
+              style={billingCycle === "annual" ? { background: "rgba(212,175,55,0.1)", color: "#d4af37", border: "1px solid rgba(212,175,55,0.3)" } : undefined}
             >
               Annual <span className="text-green-400 text-[0.6rem] ml-1">Save ~20%</span>
             </button>
@@ -218,8 +221,8 @@ export default function Tiers() {
             return (
               <div
                 key={tierId}
-                className={`relative rounded-xl border p-5 flex flex-col bg-gradient-to-b ${colors.bg} ${colors.border} ${colors.glow} ${isCurrent ? "ring-2 shadow-[0_0_20px_rgba(212,175,55,0.3)]" : ""}`}
-                style={isCurrent ? { ringColor: "#d4af37", boxShadow: "0 0 20px rgba(212,175,55,0.3), inset 0 0 0 2px rgba(212,175,55,0.4)" } : undefined}
+                className={`relative rounded-xl border p-5 flex flex-col bg-gradient-to-b ${colors.bg} ${colors.border} ${colors.glow}`}
+                style={isCurrent ? { boxShadow: "0 0 25px rgba(212,175,55,0.3), inset 0 0 0 2px rgba(212,175,55,0.5)", border: "2px solid #d4af37" } : undefined}
               >
                 {isCurrent && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full gold-btn text-[0.625rem] font-bold uppercase tracking-wider">
@@ -231,7 +234,7 @@ export default function Tiers() {
                   <h3 className={`text-lg font-display font-bold uppercase tracking-wider ${colors.text}`}>
                     {tierId}
                   </h3>
-                  <p className="text-2xl font-black mt-1 gold-text">
+                  <p className="text-2xl font-black mt-1" style={{ color: "#d4af37" }}>
                     {price === 0 ? "Free" : `$${(price / 100).toFixed(2)}`}
                   </p>
                   {price > 0 && (
@@ -277,27 +280,32 @@ export default function Tiers() {
                   ))}
                 </div>
 
-                <button
-                  onClick={() => handleUpgrade(tierId)}
-                  disabled={isCurrent || isLower || tierId === "free" || upgrading === tierId}
-                  className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                    isCurrent
-                      ? "gold-btn opacity-70 cursor-default"
-                      : isLower || tierId === "free"
-                        ? "bg-gray-700/50 text-gray-500 cursor-not-allowed"
-                        : "gold-btn hover:shadow-[0_0_20px_rgba(212,175,55,0.3)]"
-                  }`}
-                >
-                  {upgrading === tierId ? (
-                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                  ) : isCurrent ? (
-                    "Current Plan"
-                  ) : isLower || tierId === "free" ? (
-                    "---"
-                  ) : (
-                    "Upgrade"
-                  )}
-                </button>
+                {(isCurrent || isLower || tierId === "free") ? (
+                  <button
+                    disabled
+                    className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                      isCurrent
+                        ? "opacity-70 cursor-default"
+                        : "bg-gray-700/50 text-gray-500 cursor-not-allowed"
+                    }`}
+                    style={isCurrent ? { background: "rgba(212,175,55,0.15)", color: "#d4af37" } : undefined}
+                  >
+                    {isCurrent ? "Current Plan" : "---"}
+                  </button>
+                ) : (
+                  <GoldButton
+                    onClick={() => handleUpgrade(tierId)}
+                    disabled={upgrading === tierId}
+                    fullWidth
+                    className="!py-2.5 !text-xs"
+                  >
+                    {upgrading === tierId ? (
+                      <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                    ) : (
+                      "Upgrade"
+                    )}
+                  </GoldButton>
+                )}
               </div>
             );
           })}

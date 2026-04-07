@@ -134,7 +134,7 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-white font-sans relative overflow-hidden" data-testid="landing-page">
+    <div className="min-h-screen text-white font-sans relative overflow-hidden" style={{ background: "#0d0b08" }} data-testid="landing-page">
 
       <div className="absolute inset-0 z-0">
         {/* Static cyberpunk casino background */}
@@ -257,22 +257,18 @@ export default function Landing() {
                   transition={{ duration: 0.6, delay: 0.5 }}
                   className="flex flex-wrap items-center gap-4 pt-2"
                 >
-                  <motion.button
+                  <GoldButton
                     onClick={() => { setPlayLoading("lobby"); navigate("/profile"); }}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0, boxShadow: ["0 0 20px rgba(212,175,55,0.2)", "0 0 40px rgba(212,175,55,0.4)", "0 0 20px rgba(212,175,55,0.2)"] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-                    className="group relative overflow-hidden rounded-xl px-8 py-4 font-bold text-base uppercase tracking-wider gradient-primary text-black transition-all hover:scale-[1.03] active:scale-[0.98]"
-                    data-testid="button-play-now"
                     disabled={playLoading === "lobby"}
+                    className="rounded-xl px-8 py-4 text-base"
+                    data-testid="button-play-now"
                   >
-                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/15 transition-all duration-300" />
-                    <div className="relative flex items-center gap-2">
+                    <span className="flex items-center gap-2">
                       {playLoading === "lobby" ? <Loader2 className="w-5 h-5 animate-spin" /> : <Gamepad2 className="w-5 h-5" />}
                       {playLoading === "lobby" ? "Loading..." : "Play Now"}
-                      {playLoading !== "lobby" && <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
-                    </div>
-                  </motion.button>
+                      {playLoading !== "lobby" && <ChevronRight className="w-5 h-5" />}
+                    </span>
+                  </GoldButton>
 
                   <motion.button
                     initial={{ opacity: 0, y: 15 }}
@@ -297,20 +293,20 @@ export default function Landing() {
                   className="flex gap-8 mt-8"
                 >
                   <div className="text-center">
-                    <div className="text-2xl font-black text-primary">
-                      {globalStats ? formatCompact(globalStats.totalPlayers) : statsError ? "\u2014" : <span className="inline-block w-12 h-7 rounded bg-white/10 animate-pulse" />}
+                    <div className="text-2xl font-black" style={{ color: "#d4af37" }}>
+                      {globalStats ? <NumberTicker value={globalStats.totalPlayers} className="text-2xl font-black" /> : statsError ? "\u2014" : <span className="inline-block w-12 h-7 rounded bg-white/10 animate-pulse" />}
                     </div>
                     <div className="text-[0.625rem] text-gray-500 uppercase">Players</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-black text-white">
-                      {globalStats ? formatCompact(globalStats.totalHandsDealt) : statsError ? "\u2014" : <span className="inline-block w-12 h-7 rounded bg-white/10 animate-pulse" />}
+                      {globalStats ? <NumberTicker value={globalStats.totalHandsDealt} className="text-2xl font-black" /> : statsError ? "\u2014" : <span className="inline-block w-12 h-7 rounded bg-white/10 animate-pulse" />}
                     </div>
                     <div className="text-[0.625rem] text-gray-500 uppercase">Hands Dealt</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-black text-green-400">
-                      {globalStats ? `$${formatCompact(globalStats.totalChipsWon)}` : statsError ? "\u2014" : <span className="inline-block w-12 h-7 rounded bg-white/10 animate-pulse" />}
+                      {globalStats ? <NumberTicker value={globalStats.totalChipsWon} prefix="$" className="text-2xl font-black" /> : statsError ? "\u2014" : <span className="inline-block w-12 h-7 rounded bg-white/10 animate-pulse" />}
                     </div>
                     <div className="text-[0.625rem] text-gray-500 uppercase">Won</div>
                   </div>
@@ -377,7 +373,14 @@ export default function Landing() {
         >
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-display font-black text-white mb-3">Why High Rollers Club?</h2>
+              <h2
+                className="text-2xl md:text-3xl font-display font-black mb-3"
+                style={{
+                  background: "linear-gradient(180deg, #f0d060 0%, #d4af37 50%, #9a7b2c 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >Why High Rollers Club?</h2>
               <p className="text-sm text-gray-500 max-w-md mx-auto">Not just another poker app. Built for serious players who demand transparency and community.</p>
             </div>
 
@@ -387,8 +390,22 @@ export default function Landing() {
                   key={i}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -6 }}
                   transition={{ delay: 0.8 + i * 0.08 }}
-                  className="group rounded-xl p-6 transition-all duration-300 hover:translate-y-[-2px] bg-white/[0.03] border border-white/[0.06] hover:border-white/10"
+                  className="group rounded-xl p-6 transition-all duration-300"
+                  style={{
+                    background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)",
+                    border: "1px solid rgba(212,175,55,0.15)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,175,55,0.4)";
+                    (e.currentTarget as HTMLElement).style.boxShadow = "0 0 25px rgba(212,175,55,0.15), inset 0 1px 0 rgba(212,175,55,0.1)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,175,55,0.15)";
+                    (e.currentTarget as HTMLElement).style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.05)";
+                  }}
                 >
                   <div
                     className="w-11 h-11 rounded-lg flex items-center justify-center mb-4"
@@ -414,15 +431,12 @@ export default function Landing() {
                 <p className="text-sm text-gray-400">Join the table in seconds. No download required.</p>
               </div>
               <Link href="/lobby">
-                <button
-                  className="rounded-xl px-8 py-3.5 font-bold text-sm uppercase tracking-wider gradient-primary text-black shrink-0"
-                  data-testid="button-cta-bottom"
-                >
-                  <div className="flex items-center gap-2">
+                <GoldButton className="shrink-0" data-testid="button-cta-bottom">
+                  <span className="flex items-center gap-2">
                     <Play className="w-4 h-4 fill-current" />
                     Enter the Lobby
-                  </div>
-                </button>
+                  </span>
+                </GoldButton>
               </Link>
             </div>
           </div>

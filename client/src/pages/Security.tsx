@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Shield, Lock, Key, Smartphone, Wallet,
   Eye, EyeOff, Check, X, ChevronLeft,
@@ -55,24 +56,16 @@ function PasswordManagement() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="vault-card p-6"
-    >
+    <GoldCard glow className="">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider gold-text flex items-center gap-2">
-          <Lock className="w-4 h-4 text-primary/70" />
-          Password
-        </h3>
+        <SectionHeader icon={Lock} title="Password" />
         {!showForm && (
-          <button
+          <GoldButton
             onClick={() => { setShowForm(true); setFeedback(null); }}
-            className="px-3 py-1.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all"
+            className="px-3 py-1.5 text-[0.625rem]"
           >
             Change Password
-          </button>
+          </GoldButton>
         )}
       </div>
 
@@ -177,14 +170,13 @@ function PasswordManagement() {
 
               {/* Actions */}
               <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="submit"
+                <GoldButton
                   disabled={!canSubmit}
-                  className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                  className="px-4 py-2 text-[0.625rem] flex items-center gap-2"
                 >
                   {saving && <Loader2 className="w-3 h-3 animate-spin" />}
                   Save Password
-                </button>
+                </GoldButton>
                 <button
                   type="button"
                   onClick={() => { setShowForm(false); setFeedback(null); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }}
@@ -197,7 +189,7 @@ function PasswordManagement() {
           </motion.form>
         )}
       </AnimatePresence>
-    </motion.div>
+    </GoldCard>
   );
 }
 
@@ -353,16 +345,8 @@ function TwoFactorAuth() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.15 }}
-      className="vault-card p-6"
-    >
-      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-        <Smartphone className="w-4 h-4 text-purple-500/70" />
-        Two-Factor Authentication
-      </h3>
+    <GoldCard glow className="">
+      <SectionHeader icon={Smartphone} title="Two-Factor Authentication" />
 
       <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.03] border border-white/5">
         <div className="flex items-center gap-3">
@@ -481,14 +465,14 @@ function TwoFactorAuth() {
                   ))}
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <button
+                  <GoldButton
                     onClick={handleVerify}
                     disabled={!canVerify}
-                    className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                    className="px-4 py-2 text-[0.625rem] flex items-center gap-2"
                   >
                     {verifyLoading && <Loader2 className="w-3 h-3 animate-spin" />}
                     Verify & Enable
-                  </button>
+                  </GoldButton>
                   <button
                     onClick={() => { setShowSetup(false); setSecret(null); setFeedback(null); setCodeDigits(["", "", "", "", "", ""]); }}
                     disabled={verifyLoading}
@@ -502,7 +486,7 @@ function TwoFactorAuth() {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </GoldCard>
   );
 }
 
@@ -573,16 +557,8 @@ function ConnectedWallets() {
   const isLinked = !!user?.walletAddress;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 }}
-      className="vault-card p-6"
-    >
-      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-        <Wallet className="w-4 h-4 text-primary/70" />
-        Connected Wallet
-      </h3>
+    <GoldCard glow className="">
+      <SectionHeader icon={Wallet} title="Connected Wallet" />
 
       {isLinked && (
         <div className="flex items-center gap-3 p-3.5 rounded-lg bg-green-500/5 border border-green-500/15 mb-4">
@@ -626,16 +602,16 @@ function ConnectedWallets() {
           </div>
         )}
 
-        <button
+        <GoldButton
           onClick={handleSave}
           disabled={saving || !walletAddress.trim()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/25 hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="flex items-center gap-2 px-4 py-2 text-[0.625rem]"
         >
           {saving && <Loader2 className="w-3 h-3 animate-spin" />}
           {isLinked ? "Update Wallet" : "Link Wallet"}
-        </button>
+        </GoldButton>
       </div>
-    </motion.div>
+    </GoldCard>
   );
 }
 
@@ -699,16 +675,8 @@ function LinkedSocialAccounts() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.25 }}
-      className="vault-card p-6"
-    >
-      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-        <Link2 className="w-4 h-4 text-green-500/70" />
-        Linked Social Accounts
-      </h3>
+    <GoldCard glow className="">
+      <SectionHeader icon={Link2} title="Linked Social Accounts" />
 
       <div className="space-y-3">
         {SOCIAL_PROVIDERS.map((provider) => {
@@ -755,7 +723,7 @@ function LinkedSocialAccounts() {
           );
         })}
       </div>
-    </motion.div>
+    </GoldCard>
   );
 }
 
@@ -810,16 +778,8 @@ function ApiKeysSection() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.25 }}
-      className="rounded-xl p-5 bg-surface-high/30 backdrop-blur-xl border border-white/[0.06]"
-    >
-      <div className="flex items-center gap-2 mb-4">
-        <Key className="w-4 h-4 text-primary" />
-        <h3 className="text-sm font-display font-bold text-white">API Keys</h3>
-      </div>
+    <GoldCard glow className="">
+      <SectionHeader icon={Key} title="API Keys" />
       <p className="text-xs text-muted-foreground mb-4">
         Generate API keys to access player statistics programmatically.
         See <a href="/api-docs" className="text-primary hover:underline">API Documentation</a> for usage.
@@ -834,13 +794,13 @@ function ApiKeysSection() {
           maxLength={50}
           className="flex-1 px-3 py-2 rounded-lg text-xs bg-surface-highest/50 border border-white/[0.06] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/30"
         />
-        <button
+        <GoldButton
           onClick={handleGenerate}
           disabled={!newKeyName.trim() || loading}
-          className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-black bg-primary hover:bg-primary/90 transition-all disabled:opacity-40"
+          className="px-4 py-2 text-xs"
         >
           Generate
-        </button>
+        </GoldButton>
       </div>
 
       {/* Show generated key once */}
@@ -886,7 +846,7 @@ function ApiKeysSection() {
           ))}
         </div>
       )}
-    </motion.div>
+    </GoldCard>
   );
 }
 

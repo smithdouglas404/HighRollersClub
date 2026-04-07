@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, NumberTicker, SectionHeader } from "@/components/premium/PremiumComponents";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
 import { useToast } from "@/hooks/use-toast";
@@ -284,7 +285,7 @@ export default function Members() {
           <div />
           <div className="text-center">
             <span className="text-sm font-bold text-gray-400 uppercase tracking-wider">Total Club Bankroll: </span>
-            <span className="text-sm font-black gold-text">${totalBankroll.toLocaleString()}</span>
+            <span className="text-sm font-black gold-text"><NumberTicker value={totalBankroll} prefix="$" /></span>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -415,53 +416,41 @@ export default function Members() {
                       <div className="col-span-3 flex items-center justify-end gap-2">
                         {canManage && (
                           <>
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
+                            <GoldButton
                               onClick={() => setOpenMenuId(openMenuId === member.userId ? null : member.userId)}
-                              className="px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider gold-btn cursor-pointer"
-                              data-testid={`button-menu-${member.userId}`}
+                              className="px-3 py-1.5 text-[0.625rem]"
                             >
                               Edit
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              data-testid={`button-kick-${member.userId}`}
+                            </GoldButton>
+                            <GoldButton
                               onClick={() => { handleKick(member.userId, member.displayName); }}
                               disabled={actionLoading === `kick-${member.userId}`}
-                              className="px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider gold-btn cursor-pointer disabled:opacity-50"
+                              className="px-3 py-1.5 text-[0.625rem]"
                             >
                               {actionLoading === `kick-${member.userId}` ? (
                                 <Loader2 className="w-3 h-3 animate-spin" />
                               ) : "Kick"}
-                            </motion.button>
+                            </GoldButton>
                             {member.role !== "admin" ? (
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                data-testid={`button-promote-${member.userId}`}
+                              <GoldButton
                                 onClick={() => { handleRoleChange(member.userId, "admin"); }}
                                 disabled={actionLoading === `role-${member.userId}`}
-                                className="px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider gold-btn cursor-pointer disabled:opacity-50"
+                                className="px-3 py-1.5 text-[0.625rem]"
                               >
                                 {actionLoading === `role-${member.userId}` ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : "Promote"}
-                              </motion.button>
+                              </GoldButton>
                             ) : (
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                data-testid={`button-demote-${member.userId}`}
+                              <GoldButton
                                 onClick={() => { handleRoleChange(member.userId, "member"); }}
                                 disabled={actionLoading === `role-${member.userId}`}
-                                className="px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider gold-btn cursor-pointer disabled:opacity-50"
+                                className="px-3 py-1.5 text-[0.625rem]"
                               >
                                 {actionLoading === `role-${member.userId}` ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : "Demote"}
-                              </motion.button>
+                              </GoldButton>
                             )}
                           </>
                         )}
@@ -525,16 +514,15 @@ export default function Members() {
             <div className="space-y-4">
 
               {/* Quick Stats card */}
-              <div className="vault-card overflow-hidden">
+              <GoldCard glow padding="p-0" className="overflow-hidden">
                 <div
-                  className="px-4 py-3 flex items-center gap-2"
+                  className="px-4 py-3"
                   style={{
                     background: "rgba(212,175,55,0.08)",
                     borderBottom: "1px solid rgba(212,175,55,0.15)",
                   }}
                 >
-                  <Trophy className="w-4 h-4 text-[#d4af37]" />
-                  <h3 className="text-xs font-black uppercase tracking-wider gold-text">Quick Stats</h3>
+                  <SectionHeader icon={Trophy} title="Quick Stats" className="mb-0" />
                 </div>
 
                 <div className="p-4 space-y-4">
@@ -566,7 +554,7 @@ export default function Members() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </GoldCard>
 
               {/* Invite Player (admin only) */}
               {isAdminOrOwner && (

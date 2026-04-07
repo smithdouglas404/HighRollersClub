@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
 import { Shield, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Link as LinkIcon, Upload, Camera, Fingerprint, ShieldCheck, ExternalLink, ArrowRight, Lock, ArrowDown, ArrowUp } from "lucide-react";
+import { GoldButton, GoldCard } from "@/components/premium/PremiumComponents";
 
 interface KycStatus {
   kycStatus: string;
@@ -294,8 +295,20 @@ export default function KYC() {
     <DashboardLayout title="KYC Verification">
       <div className="p-6 max-w-3xl mx-auto space-y-6">
         <div className="text-center mb-6">
-          <Shield className="w-12 h-12 mx-auto mb-3 text-primary" />
-          <h1 className="text-2xl font-display font-black text-white">KYC Verification</h1>
+          <div
+            className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center"
+            style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}
+          >
+            <Shield className="w-7 h-7" style={{ color: "#d4af37" }} />
+          </div>
+          <h1
+            className="text-2xl font-display font-black"
+            style={{
+              background: "linear-gradient(180deg, #f0d060 0%, #d4af37 50%, #9a7b2c 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >KYC Verification</h1>
           <p className="text-gray-400 text-sm mt-1">Progressive identity verification unlocks higher limits</p>
         </div>
 
@@ -311,7 +324,7 @@ export default function KYC() {
         )}
 
         {/* Current KYC Level */}
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+        <GoldCard padding="p-5" glow>
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-primary" />
@@ -337,10 +350,10 @@ export default function KYC() {
               <p className="text-white font-bold">{KYC_LEVELS[currentLevelIdx].withdrawWeek}</p>
             </div>
           </div>
-        </div>
+        </GoldCard>
 
         {/* KYC Level Progression */}
-        <div className="rounded-xl border border-white/10 bg-surface-high/50 p-5">
+        <GoldCard padding="p-5">
           <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-4">Verification Levels</h3>
           <div className="space-y-3">
             {KYC_LEVELS.map((level, idx) => {
@@ -403,7 +416,7 @@ export default function KYC() {
               );
             })}
           </div>
-        </div>
+        </GoldCard>
 
         {/* Verified */}
         {status?.kycStatus === "verified" && (
@@ -450,9 +463,9 @@ export default function KYC() {
 
         {/* Pending */}
         {status?.kycStatus === "pending" && (
-          <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-6 text-center">
-            <Clock className="w-12 h-12 mx-auto mb-3 text-yellow-400 animate-pulse" />
-            <h2 className="text-xl font-bold text-yellow-400 mb-2">Application Pending</h2>
+          <div className="rounded-xl p-6 text-center" style={{ border: "1px solid rgba(212,175,55,0.3)", background: "rgba(212,175,55,0.05)" }}>
+            <Clock className="w-12 h-12 mx-auto mb-3 animate-pulse" style={{ color: "#d4af37" }} />
+            <h2 className="text-xl font-bold mb-2" style={{ color: "#d4af37" }}>Application Pending</h2>
             <p className="text-gray-400 text-sm mb-4">Your KYC application is being reviewed.</p>
             {status.kycData && (
               <div className="text-left rounded-lg bg-black/20 p-4 text-xs space-y-1">
@@ -463,14 +476,14 @@ export default function KYC() {
                 <p className="text-gray-400">Submitted: <span className="text-white">{new Date(status.kycData.submittedAt).toLocaleString()}</span></p>
               </div>
             )}
-            <button
+            <GoldButton
               onClick={checkDiditStatus}
               disabled={pollingStatus}
-              className="mt-4 px-6 py-2.5 rounded-lg bg-yellow-500/20 text-yellow-300 font-bold text-sm border border-yellow-500/30 hover:bg-yellow-500/30 transition-all disabled:opacity-50 inline-flex items-center gap-2"
+              className="mt-4 px-6 py-2.5 text-sm inline-flex items-center gap-2"
             >
               {pollingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
               Check Verification Status
-            </button>
+            </GoldButton>
           </div>
         )}
 
@@ -607,10 +620,10 @@ export default function KYC() {
         {nextLevel && status?.kycStatus === "verified" && (
           <div className="text-center">
             <Link href="/tiers">
-              <button className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm font-bold hover:bg-primary/20 transition-all">
+              <GoldButton className="inline-flex items-center gap-2 px-6 py-2.5 text-sm">
                 Upgrade to {nextLevel.tier} for {nextLevel.label} Verification
                 <ArrowRight className="w-4 h-4" />
-              </button>
+              </GoldButton>
             </Link>
           </div>
         )}
@@ -638,8 +651,8 @@ function KycForm({
   submitting: boolean;
 }) {
   return (
-    <form onSubmit={onSubmit} className="rounded-xl border border-white/10 bg-surface-high/50 p-6 space-y-4">
-      <h3 className="text-lg font-bold text-white mb-2">Submit KYC Application</h3>
+    <form onSubmit={onSubmit} className="rounded-xl p-6 space-y-4" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }}>
+      <h3 className="text-lg font-bold" style={{ background: "linear-gradient(180deg, #f0d060 0%, #d4af37 50%, #9a7b2c 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Submit KYC Application</h3>
 
       <div>
         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Full Legal Name</label>
@@ -697,7 +710,7 @@ function KycForm({
           Government ID Photo
         </label>
         <p className="text-xs text-gray-500 mb-2">Upload a clear photo of the front of your ID document (JPG, PNG, PDF -- max 10MB)</p>
-        <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-white/20 hover:border-primary/40 rounded-xl bg-black/30 cursor-pointer transition-all">
+        <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed rounded-xl bg-black/30 cursor-pointer transition-all" style={{ borderColor: "rgba(212,175,55,0.3)" }} onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,175,55,0.6)"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,175,55,0.3)"; }}>
           <input
             type="file"
             accept=".jpg,.jpeg,.png,.pdf"
@@ -718,7 +731,7 @@ function KycForm({
           Selfie Photo
         </label>
         <p className="text-xs text-gray-500 mb-2">Upload a clear selfie holding your ID next to your face</p>
-        <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-white/20 hover:border-primary/40 rounded-xl bg-black/30 cursor-pointer transition-all">
+        <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed rounded-xl bg-black/30 cursor-pointer transition-all" style={{ borderColor: "rgba(212,175,55,0.3)" }} onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,175,55,0.6)"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,175,55,0.3)"; }}>
           <input
             type="file"
             accept=".jpg,.jpeg,.png"
@@ -733,13 +746,13 @@ function KycForm({
         </label>
       </div>
 
-      <button
-        type="submit"
+      <GoldButton
+        fullWidth
         disabled={submitting || !fullName || !dateOfBirth || !country || !idType || !idDocument || !selfie}
-        className="w-full py-3 rounded-lg bg-primary/20 text-primary font-bold text-sm border border-primary/30 hover:bg-primary/30 transition-all disabled:opacity-50"
+        className="py-3 text-sm"
       >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Submit Application"}
-      </button>
+      </GoldButton>
 
       <p className="text-xs text-gray-500 text-center">
         Your documents are securely stored and only accessible by authorized administrators.

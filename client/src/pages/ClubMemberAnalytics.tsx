@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
+import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Users, TrendingUp, BarChart3, PieChart as PieChartIcon,
   Activity, Clock, Gamepad2, DollarSign,
@@ -321,84 +322,47 @@ export default function ClubMemberAnalytics() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-2xl md:text-3xl font-bold gold-text">Club Member Analytics Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Club Member Analytics Dashboard
-          </p>
+          <SectionHeader icon={BarChart3} title="Club Member Analytics Dashboard" subtitle="Track member engagement and activity trends" />
         </motion.div>
 
         {/* ── Top Row: 4 Stat Cards ──────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: "Active Members", value: fmt(topStats.totalMembers), change: "+5 this week", up: true },
-            { label: "Table Volume", value: fmt(topStats.totalGames), change: "+12% vs last week", up: true },
-            { label: "New Members", value: fmt(topStats.activeToday), change: "This month", up: true },
-            { label: "Avg Session Time", value: topStats.avgSession, change: "+3m vs last month", up: true },
-          ].map((card, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="vault-card p-5"
-            >
-              <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">{card.label}</p>
-              <p className="text-2xl font-black text-white">{card.value}</p>
-              <p className="text-xs text-green-400 mt-1">&#8593; {card.change}</p>
-            </motion.div>
-          ))}
+          <StatCard label="Active Members" value={topStats.totalMembers} trend="+5 this week" trendUp icon={Users} />
+          <StatCard label="Table Volume" value={topStats.totalGames} trend="+12% vs last week" trendUp icon={Gamepad2} />
+          <StatCard label="New Members" value={topStats.activeToday} trend="This month" trendUp icon={UserPlus} />
+          <StatCard label="Avg Session Time" value={topStats.avgSession} trend="+3m vs last month" trendUp icon={Clock} />
         </div>
 
         {/* ── Charts Row ─────────────────────────────────────────── */}
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Active Members Trend */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="vault-card p-5"
-          >
-            <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Active Members</h2>
+          <GoldCard glow>
+            <SectionHeader icon={Activity} title="Active Members" />
             <ActiveMembersChart data={trends} />
-          </motion.div>
+          </GoldCard>
 
           {/* Table Volume */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="vault-card p-5"
-          >
-            <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Total Table Volume</h2>
+          <GoldCard glow>
+            <SectionHeader icon={BarChart3} title="Total Table Volume" />
             <VolumeBarChart data={volume} />
-          </motion.div>
+          </GoldCard>
 
           {/* Retention Donut */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="vault-card p-5 flex flex-col items-center justify-center"
-          >
-            <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4 self-start">New vs Returning Players</h2>
+          <GoldCard glow className="flex flex-col items-center justify-center">
+            <SectionHeader icon={UserCheck} title="New vs Returning Players" className="self-start" />
             <RetentionDonut data={retention} />
-          </motion.div>
+          </GoldCard>
         </div>
 
         {/* ── Member Activity Table ──────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="vault-card overflow-hidden"
-        >
+        <GoldCard hover={false} padding="p-0" className="overflow-hidden">
           <div className="px-5 py-4 border-b border-white/5">
-            <h2 className="text-sm font-bold uppercase tracking-wider gold-text">Member Activity</h2>
+            <SectionHeader icon={Users} title="Member Activity" />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-white/40 text-xs uppercase tracking-wider border-b border-white/5">
+                <tr className="text-xs uppercase tracking-wider border-b border-[rgba(212,175,55,0.15)]" style={{ background: "rgba(212,175,55,0.06)", color: "#d4af37" }}>
                   <th className="text-left px-4 py-3">Username</th>
                   <th className="text-left px-4 py-3">Last Active</th>
                   <th className="text-left px-4 py-3">Hands</th>
@@ -412,7 +376,7 @@ export default function ClubMemberAnalytics() {
                   const isRecent = diff < 86400000; // within 24hr
 
                   return (
-                    <tr key={m.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                    <tr key={m.id} className="border-b border-white/5 hover:bg-[rgba(212,175,55,0.04)] transition-colors">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#d4af37] to-amber-700 flex items-center justify-center text-xs font-bold text-gray-900 flex-shrink-0">
@@ -444,7 +408,7 @@ export default function ClubMemberAnalytics() {
               </tbody>
             </table>
           </div>
-        </motion.div>
+        </GoldCard>
       </div>
     </DashboardLayout>
   );

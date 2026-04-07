@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { AVATAR_OPTIONS, type AvatarOption } from "@/components/poker/AvatarSelect";
 import { useAuth } from "@/lib/auth-context";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   User, Crown, Check, Save, ShoppingBag,
   Sparkles, Lock, ChevronRight, Shield, Sword,
@@ -278,24 +279,19 @@ export default function AvatarWardrobe() {
                   Shop
                 </button>
               </Link>
-              <button
-                onClick={handleSave}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider gold-btn hover:opacity-90 transition-all"
-              >
+              <GoldButton onClick={handleSave} className="flex items-center gap-2 text-[0.625rem]">
                 {saved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
                 {saved ? "Saved!" : "Save"}
-              </button>
+              </GoldButton>
             </div>
           </motion.div>
 
           {/* Top section: Full-body preview center + Owned items right */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Full-body avatar preview (center panel) */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-              className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 vault-card relative overflow-hidden"
+            <GoldCard
+              className="lg:col-span-1 flex flex-col items-center justify-center relative overflow-hidden"
+              glow
             >
               {/* Ambient glow */}
               <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-purple-500/5 pointer-events-none" />
@@ -344,15 +340,10 @@ export default function AvatarWardrobe() {
                   );
                 })}
               </div>
-            </motion.div>
+            </GoldCard>
 
             {/* Selected avatar detail / comparison */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="lg:col-span-2 rounded-xl p-6 vault-card"
-            >
+            <GoldCard className="lg:col-span-2">
               <AnimatePresence mode="wait">
                 {selected ? (
                   <motion.div
@@ -390,12 +381,9 @@ export default function AvatarWardrobe() {
                         <p className="text-[0.6875rem] text-gray-400 mb-4">Full-body 3D render available -- shown in-game as your portrait card.</p>
                       )}
                       {selectedId !== equippedId ? (
-                        <button
-                          onClick={handleEquip}
-                          className="px-6 py-2.5 rounded-lg text-[0.6875rem] font-bold uppercase tracking-wider gold-btn hover:opacity-90 transition-all"
-                        >
+                        <GoldButton onClick={handleEquip} className="text-[0.6875rem]">
                           Equip This Avatar
-                        </button>
+                        </GoldButton>
                       ) : (
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[0.6875rem] font-bold text-green-400 bg-green-500/10 border border-green-500/20">
                           <Check className="w-3.5 h-3.5" /> Currently Equipped
@@ -416,21 +404,14 @@ export default function AvatarWardrobe() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </motion.div>
+            </GoldCard>
           </div>
 
           {/* Middle section: Owned Items + Stats + Recently Equipped */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Owned Items Grid */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.18 }}
-              className="lg:col-span-1 rounded-xl p-5 vault-card"
-            >
-              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
-                <Package className="w-4 h-4" style={{ color: "#d4af37" }} />
-                Owned Items
+            <GoldCard className="lg:col-span-1" padding="p-5">
+              <SectionHeader icon={Package} title="Owned Items" subtitle={`${OWNED_ITEMS.length} items`} className="mb-4" />
                 <span className="text-[0.5625rem] text-gray-500 ml-auto">({OWNED_ITEMS.length})</span>
               </h3>
               <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageBackground } from "@/components/shared/PageBackground";
 import { useClub } from "@/lib/club-context";
+import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   DollarSign, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Coins, Trophy, Loader2, Calendar, FileText, AlertTriangle,
@@ -318,106 +319,57 @@ export default function ClubRevenueReports() {
         ) : (
           <div className="space-y-6">
             {/* ── Top Row: 4 Gold Stat Cards ────────────────────────── */}
+            <SectionHeader icon={DollarSign} title="Revenue Overview" subtitle={`${club?.name ?? "Club"} — ${periodLabels[period]}`} />
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Total Revenue */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0 }}
-                className="vault-card p-5"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Total Revenue</p>
-                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">30-day Trend</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-2xl font-black text-white">${report ? report.totalRake.toLocaleString() : "---"}</p>
-                  <div className="flex items-center gap-1">
-                    {trendUp ? (
-                      <ArrowUpRight className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4 text-red-400" />
-                    )}
-                    <span className={`text-sm font-bold ${trendUp ? "text-green-400" : "text-red-400"}`}>
-                      {trendUp ? "+" : ""}{trendPct.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs text-green-400 mt-1">&#8593; 12% from last month</p>
-              </motion.div>
-
-              {/* Net Profit */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-                className="vault-card p-5"
-              >
-                <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Net Profit</p>
-                <p className="text-2xl font-black text-white">${report ? report.netRake.toLocaleString() : "---"}</p>
-              </motion.div>
-
-              {/* Rake Collected */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="vault-card p-5"
-              >
-                <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Rake Collected</p>
-                <p className="text-2xl font-black text-white">${report ? report.totalRake.toLocaleString() : "---"}</p>
-              </motion.div>
-
-              {/* Tournament Fees */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="vault-card p-5"
-              >
-                <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Tournament Fees</p>
-                <p className="text-2xl font-black text-white">${report ? report.platformFees.toLocaleString() : "---"}</p>
-              </motion.div>
+              <StatCard
+                label="Total Revenue"
+                value={report ? report.totalRake : 0}
+                trend={`${trendUp ? "+" : ""}${trendPct.toFixed(1)}% this month`}
+                trendUp={trendUp}
+                icon={DollarSign}
+              />
+              <StatCard
+                label="Net Profit"
+                value={report ? report.netRake : 0}
+                icon={TrendingUp}
+              />
+              <StatCard
+                label="Rake Collected"
+                value={report ? report.totalRake : 0}
+                icon={Coins}
+              />
+              <StatCard
+                label="Tournament Fees"
+                value={report ? report.platformFees : 0}
+                icon={Trophy}
+              />
             </div>
+
+            <GoldDivider />
 
             {/* ── Middle Row: Charts + Sidebar ──────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Left: Line Chart */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="lg:col-span-4 vault-card p-5"
-              >
-                <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Daily Revenue Trends</h2>
+              <GoldCard glow className="lg:col-span-4">
+                <SectionHeader icon={BarChart3} title="Daily Revenue Trends" />
                 <div className="h-56">
                   <RevenueLineChart data={chartData.data} labels={chartData.labels} />
                 </div>
-              </motion.div>
+              </GoldCard>
 
               {/* Center: Donut Chart */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
-                className="lg:col-span-4 vault-card p-5"
-              >
-                <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Revenue Sources</h2>
+              <GoldCard glow className="lg:col-span-4">
+                <SectionHeader icon={PieChart} title="Revenue Sources" />
                 <div className="flex items-center justify-center py-4">
                   <RevenueDonut cashGame={cashGameRake} tournament={tournamentRake} />
                 </div>
-              </motion.div>
+              </GoldCard>
 
               {/* Right Sidebar: Tournament Alerts + Chat */}
               <div className="lg:col-span-4 space-y-4">
                 {/* Tournament Alerts */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="vault-card p-4"
-                >
-                  <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-3">Tournament Alerts</h2>
+                <GoldCard>
+                  <SectionHeader icon={Bell} title="Tournament Alerts" />
                   <div className="space-y-2">
                     {alerts.map((alert, i) => (
                       <div
@@ -429,16 +381,11 @@ export default function ClubRevenueReports() {
                       </div>
                     ))}
                   </div>
-                </motion.div>
+                </GoldCard>
 
                 {/* Global Club Chat */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35 }}
-                  className="vault-card p-4"
-                >
-                  <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-3">Global Club Chat</h2>
+                <GoldCard>
+                  <SectionHeader icon={Clock} title="Global Club Chat" />
                   <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
                     {chatMessages.map((msg, i) => (
                       <div key={i} className={`text-xs ${msg.isSystem ? "text-[#d4af37]/70 italic" : "text-gray-400"}`}>
@@ -455,32 +402,27 @@ export default function ClubRevenueReports() {
                       placeholder="Type a message..."
                       className="flex-1 bg-black/30 border border-white/10 rounded px-3 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#d4af37]/40"
                     />
-                    <button
-                      className="px-3 py-1.5 text-xs font-medium rounded border border-[#d4af37]/30 text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
-                    >
+                    <GoldButton className="!px-3 !py-1.5 text-xs">
                       Send
-                    </button>
+                    </GoldButton>
                   </div>
-                </motion.div>
+                </GoldCard>
               </div>
             </div>
 
+            <GoldDivider />
+
             {/* ── Bottom: Detailed Transaction Log ──────────────────── */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-              className="vault-card overflow-hidden"
-            >
-              <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5">
-                <h2 className="text-sm font-bold uppercase tracking-wider gold-text">Detailed Transaction Log</h2>
+            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-4 border-b border-[rgba(212,175,55,0.15)]">
+                <SectionHeader icon={FileText} title="Detailed Transaction Log" />
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-white/40 text-xs uppercase tracking-wider border-b border-white/5">
+                    <tr className="text-xs uppercase tracking-wider border-b border-[rgba(212,175,55,0.15)]" style={{ background: "rgba(212,175,55,0.06)", color: "#d4af37" }}>
                       <th
-                        className="text-left px-4 py-3 cursor-pointer hover:text-white/60 transition-colors select-none"
+                        className="text-left px-4 py-3 cursor-pointer hover:text-[#f0d060] transition-colors select-none"
                         onClick={() => setSortDir(d => d === "desc" ? "asc" : "desc")}
                       >
                         Date {sortDir === "desc" ? "\u25BC" : "\u25B2"}
@@ -516,7 +458,7 @@ export default function ClubRevenueReports() {
                   </tbody>
                 </table>
               </div>
-            </motion.div>
+            </GoldCard>
           </div>
         )}
       </div>

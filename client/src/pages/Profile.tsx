@@ -409,7 +409,7 @@ export default function Profile() {
   return (
     <DashboardLayout title="Profile">
       <PageBackground image="/images/generated/profile-bg.png" />
-      <div className="relative z-10 pb-8 max-w-5xl mx-auto">
+      <div className="relative z-10 pb-8 px-4 md:px-8">
         {/* ── Hero Banner ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -417,10 +417,10 @@ export default function Profile() {
           className="relative overflow-hidden rounded-2xl mx-4 md:mx-8 mb-6"
           style={{ minHeight: 200 }}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-surface-high to-background" />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.08] via-transparent to-purple-500/8" />
-          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(13,11,8,0.95) 0%, rgba(30,25,15,0.85) 50%, rgba(13,11,8,0.95) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(212,175,55,0.06) 0%, transparent 50%, rgba(212,175,55,0.03) 100%)" }} />
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#d4af37]/40 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#d4af37]/20 to-transparent" />
 
           <img
             src={goldChips}

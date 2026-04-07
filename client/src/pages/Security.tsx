@@ -900,30 +900,30 @@ export default function Security() {
 
   return (
     <DashboardLayout title="Security">
-      <div className="pb-8 max-w-3xl mx-auto">
+      <div className="pb-8 px-4 md:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="px-4 md:px-8 mb-6"
+          className="mb-6"
         >
           <button
             onClick={() => navigate("/profile")}
-            className="flex items-center gap-1.5 text-[0.625rem] font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
+            className="flex items-center gap-1.5 text-[0.625rem] font-medium text-gray-500 hover:text-white transition-colors mb-4"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             Back to Profile
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-purple-500/15 border border-primary/20 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}>
+              <Shield className="w-6 h-6" style={{ color: "#d4af37" }} />
             </div>
             <div>
-              <h2 className="text-lg font-display font-bold text-white tracking-tight">
+              <h2 className="text-lg font-black uppercase tracking-wider gold-text">
                 Security Settings
               </h2>
-              <p className="text-[0.625rem] text-muted-foreground">
+              <p className="text-[0.625rem] text-gray-500">
                 Manage your account security, authentication methods, and connected services.
               </p>
             </div>
@@ -931,7 +931,7 @@ export default function Security() {
         </motion.div>
 
         {/* Sections */}
-        <div className="px-4 md:px-8 space-y-4">
+        <div className="space-y-4">
           <PasswordManagement />
           <TwoFactorAuth />
           <ConnectedWallets />

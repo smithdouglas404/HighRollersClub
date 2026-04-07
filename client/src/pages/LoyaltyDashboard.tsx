@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, SectionHeader, NumberTicker, SpotlightCard } from "@/components/premium/PremiumComponents";
 import { useAuth } from "@/lib/auth-context";
 import {
   Crown, Star, Shield, Zap, Trophy, Gift, ChevronRight,

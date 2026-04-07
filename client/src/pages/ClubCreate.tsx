@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { GoldButton, GoldCard, SectionHeader } from "@/components/premium/PremiumComponents";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";

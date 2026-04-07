@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { GoldButton, GoldCard, SectionHeader } from "@/components/premium/PremiumComponents";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";

@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   AlertCircle,
 } from "lucide-react";
+import { GoldButton } from "@/components/premium/PremiumComponents";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

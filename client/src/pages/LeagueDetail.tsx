@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, SectionHeader, NumberTicker } from "@/components/premium/PremiumComponents";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import {

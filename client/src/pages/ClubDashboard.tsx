@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, StatCard, SectionHeader, GoldDivider, NumberTicker } from "@/components/premium/PremiumComponents";
 import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";

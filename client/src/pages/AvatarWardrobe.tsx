@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, SectionHeader } from "@/components/premium/PremiumComponents";
 import { AVATAR_OPTIONS, type AvatarOption } from "@/components/poker/AvatarSelect";
 import { useAuth } from "@/lib/auth-context";
 import {

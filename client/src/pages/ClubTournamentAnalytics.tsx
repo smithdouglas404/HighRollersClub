@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { GoldButton, GoldCard, SectionHeader } from "@/components/premium/PremiumComponents";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";

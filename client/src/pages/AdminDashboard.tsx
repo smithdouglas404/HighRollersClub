@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, StatCard, SectionHeader, NumberTicker } from "@/components/premium/PremiumComponents";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldCard, StatCard, SectionHeader, NumberTicker } from "@/components/premium/PremiumComponents";
 import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
 import { useWallet } from "@/lib/wallet-context";

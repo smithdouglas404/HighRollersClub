@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, SectionHeader } from "@/components/premium/PremiumComponents";
 import { Handshake, Loader2, ArrowRight, Check, XCircle, Plus, X, DollarSign } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 

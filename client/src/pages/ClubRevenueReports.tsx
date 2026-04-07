@@ -36,14 +36,6 @@ interface RakeReport {
 
 type Period = "day" | "week" | "month";
 
-/* ── Glass panel style helper ──────────────────────────────────────────────── */
-
-const glassPanel: React.CSSProperties = {
-  background: "rgba(15,15,20,0.7)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
-};
-
 /* ── SVG Line Chart ────────────────────────────────────────────────────────── */
 
 function RevenueLineChart({ data, labels }: { data: number[]; labels: string[] }) {
@@ -214,6 +206,7 @@ export default function ClubRevenueReports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [chatMessage, setChatMessage] = useState("");
 
   useEffect(() => {
     if (!club?.id) return;
@@ -242,7 +235,6 @@ export default function ClubRevenueReports() {
   // Derive chart data from byTable (simulate daily aggregation)
   const chartData = useMemo(() => {
     if (!report || report.byTable.length === 0) return { data: [], labels: [] };
-    // Use byTable entries as individual data points for the line chart
     const sorted = [...report.byTable].sort((a, b) => a.tableName.localeCompare(b.tableName));
     return {
       data: sorted.map(t => t.totalRake),
@@ -259,7 +251,7 @@ export default function ClubRevenueReports() {
     if (!report) return [];
     const rows = report.byTable.map((t, i) => ({
       id: t.tableId,
-      date: new Date(Date.now() - i * 86400000).toLocaleDateString(),
+      date: new Date(Date.now() - i * 86400000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       source: t.tableName,
       amount: t.totalRake,
       status: "Cleared" as const,
@@ -268,53 +260,24 @@ export default function ClubRevenueReports() {
   }, [report, sortDir]);
 
   // 30-day trend (compare with simulated previous period)
-  const trendPct = report ? 12.4 : 0; // Placeholder trend
+  const trendPct = report ? 12.4 : 0;
   const trendUp = trendPct >= 0;
 
-  // Tournament alerts
+  // Tournament alerts (matching screenshot)
   const alerts = [
-    { label: "High Stakes Showdown", time: "Today 8:00 PM", type: "upcoming" },
-    { label: "Weekly Freeroll", time: "Tomorrow 6:00 PM", type: "upcoming" },
-    { label: "VIP Invitational", time: "Apr 8, 9:00 PM", type: "scheduled" },
+    { label: "Final Table Reached", detail: "Bizzo joined 2 mins ago", type: "alert" },
+    { label: "Final Table Reached", detail: "Acdena joined 1 min ago", type: "alert" },
+    { label: "Tournament Chat", detail: "I've joined 2 mins ago", type: "chat" },
+    { label: "Tournament Chat", detail: "New message received", type: "chat" },
+  ];
+
+  // Chat messages
+  const chatMessages = [
+    { user: "AceKing", text: "Hello! Wayyy you redo to welcome more.", time: "2m ago" },
+    { user: "System", text: 'Tournament "Stake Freeroll" joined.', time: "1m ago", isSystem: true },
   ];
 
   const periodLabels: Record<Period, string> = { day: "Today", week: "This Week", month: "This Month" };
-
-  const statCards = [
-    {
-      label: "Total Revenue",
-      value: report ? `${report.totalRake.toLocaleString()}` : "---",
-      icon: DollarSign,
-      gradient: "from-[#d4af37]/20 to-[#c9a84c]/10",
-    },
-    {
-      label: "30-Day Trend",
-      value: `${trendUp ? "+" : ""}${trendPct.toFixed(1)}%`,
-      icon: trendUp ? TrendingUp : TrendingDown,
-      gradient: trendUp ? "from-green-500/20 to-emerald-500/10" : "from-red-500/20 to-rose-500/10",
-      extra: trendUp
-        ? <ArrowUpRight className="w-4 h-4 text-green-400" />
-        : <ArrowDownRight className="w-4 h-4 text-red-400" />,
-    },
-    {
-      label: "Net Profit",
-      value: report ? `${report.netRake.toLocaleString()}` : "---",
-      icon: BarChart3,
-      gradient: "from-[#d4af37]/20 to-amber-500/10",
-    },
-    {
-      label: "Rake Collected",
-      value: report ? `${report.totalRake.toLocaleString()}` : "---",
-      icon: Coins,
-      gradient: "from-purple-500/20 to-violet-500/10",
-    },
-    {
-      label: "Tournament Fees",
-      value: report ? `${report.platformFees.toLocaleString()}` : "---",
-      icon: Trophy,
-      gradient: "from-blue-500/20 to-cyan-500/10",
-    },
-  ];
 
   return (
     <DashboardLayout title="Revenue Reports">
@@ -354,162 +317,206 @@ export default function ClubRevenueReports() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* ── Stat Cards ──────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {statCards.map((card, i) => (
-                <motion.div
-                  key={card.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className={`rounded-xl border border-white/10 p-4 bg-gradient-to-br ${card.gradient}`}
-                  style={glassPanel}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <card.icon className="w-5 h-5 text-[#d4af37]/70" />
-                    {"extra" in card && card.extra}
+            {/* ── Top Row: 4 Gold Stat Cards ────────────────────────── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Revenue */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0 }}
+                className="vault-card p-5"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Total Revenue</p>
+                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">30-day Trend</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-2xl font-black text-white">${report ? report.totalRake.toLocaleString() : "---"}</p>
+                  <div className="flex items-center gap-1">
+                    {trendUp ? (
+                      <ArrowUpRight className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <ArrowDownRight className="w-4 h-4 text-red-400" />
+                    )}
+                    <span className={`text-sm font-bold ${trendUp ? "text-green-400" : "text-red-400"}`}>
+                      {trendUp ? "+" : ""}{trendPct.toFixed(1)}%
+                    </span>
                   </div>
-                  <p className="text-xl sm:text-2xl font-bold text-white">{card.value}</p>
-                  <p className="text-xs text-white/40 mt-1">{card.label}</p>
-                </motion.div>
-              ))}
-            </div>
+                </div>
+                <p className="text-xs text-green-400 mt-1">&#8593; 12% from last month</p>
+              </motion.div>
 
-            {/* ── Charts Row ──────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Line Chart */}
+              {/* Net Profit */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 }}
+                className="vault-card p-5"
+              >
+                <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Net Profit</p>
+                <p className="text-2xl font-black text-white">${report ? report.netRake.toLocaleString() : "---"}</p>
+              </motion.div>
+
+              {/* Rake Collected */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="vault-card p-5"
+              >
+                <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Rake Collected</p>
+                <p className="text-2xl font-black text-white">${report ? report.totalRake.toLocaleString() : "---"}</p>
+              </motion.div>
+
+              {/* Tournament Fees */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="lg:col-span-2 rounded-xl border border-white/10 p-5"
-                style={glassPanel}
+                className="vault-card p-5"
               >
-                <div className="flex items-center gap-2 mb-4">
-                  <Calendar className="w-4 h-4 text-[#d4af37]" />
-                  <h2 className="text-sm font-semibold text-white/80">Daily Revenue Trends</h2>
-                </div>
+                <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Tournament Fees</p>
+                <p className="text-2xl font-black text-white">${report ? report.platformFees.toLocaleString() : "---"}</p>
+              </motion.div>
+            </div>
+
+            {/* ── Middle Row: Charts + Sidebar ──────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left: Line Chart */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="lg:col-span-4 vault-card p-5"
+              >
+                <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Daily Revenue Trends</h2>
                 <div className="h-56">
                   <RevenueLineChart data={chartData.data} labels={chartData.labels} />
                 </div>
               </motion.div>
 
-              {/* Donut Chart */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="rounded-xl border border-white/10 p-5"
-                style={glassPanel}
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <PieChart className="w-4 h-4 text-[#d4af37]" />
-                  <h2 className="text-sm font-semibold text-white/80">Revenue Sources</h2>
-                </div>
-                <div className="flex items-center justify-center py-4">
-                  <RevenueDonut cashGame={cashGameRake} tournament={tournamentRake} />
-                </div>
-              </motion.div>
-            </div>
-
-            {/* ── Transaction Log + Tournament Alerts ─────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Transaction Log */}
+              {/* Center: Donut Chart */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
-                className="lg:col-span-2 rounded-xl border border-white/10 overflow-hidden"
-                style={glassPanel}
+                className="lg:col-span-4 vault-card p-5"
               >
-                <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5">
-                  <FileText className="w-4 h-4 text-[#d4af37]" />
-                  <h2 className="text-sm font-semibold text-white/80">Detailed Transaction Log</h2>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-white/40 text-xs uppercase tracking-wider border-b border-white/5">
-                        <th
-                          className="text-left px-5 py-3 cursor-pointer hover:text-white/60 transition-colors select-none"
-                          onClick={() => setSortDir(d => d === "desc" ? "asc" : "desc")}
-                        >
-                          Date {sortDir === "desc" ? "\u25BC" : "\u25B2"}
-                        </th>
-                        <th className="text-left px-5 py-3">Source</th>
-                        <th className="text-right px-5 py-3">Amount</th>
-                        <th className="text-center px-5 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactionLog.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="text-center py-8 text-white/30">
-                            No transactions found
-                          </td>
-                        </tr>
-                      ) : (
-                        transactionLog.map((tx) => (
-                          <tr key={tx.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                            <td className="px-5 py-3 text-white/60 font-mono text-xs">{tx.date}</td>
-                            <td className="px-5 py-3 text-white/80">{tx.source}</td>
-                            <td className="px-5 py-3 text-right text-[#d4af37] font-semibold">
-                              {tx.amount.toLocaleString()}
-                            </td>
-                            <td className="px-5 py-3 text-center">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
-                                <CheckCircle2 className="w-3 h-3" />
-                                {tx.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Revenue Sources</h2>
+                <div className="flex items-center justify-center py-4">
+                  <RevenueDonut cashGame={cashGameRake} tournament={tournamentRake} />
                 </div>
               </motion.div>
 
-              {/* Tournament Alerts Sidebar */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="rounded-xl border border-white/10 p-5"
-                style={glassPanel}
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <Bell className="w-4 h-4 text-[#d4af37]" />
-                  <h2 className="text-sm font-semibold text-white/80">Tournament Alerts</h2>
-                </div>
-                <div className="space-y-3">
-                  {alerts.map((alert, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-3 p-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+              {/* Right Sidebar: Tournament Alerts + Chat */}
+              <div className="lg:col-span-4 space-y-4">
+                {/* Tournament Alerts */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="vault-card p-4"
+                >
+                  <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-3">Tournament Alerts</h2>
+                  <div className="space-y-2">
+                    {alerts.map((alert, i) => (
+                      <div
+                        key={i}
+                        className="px-3 py-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+                      >
+                        <p className="text-xs font-semibold" style={{ color: "#d4af37" }}>{alert.label}</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">{alert.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                {/* Global Club Chat */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}
+                  className="vault-card p-4"
+                >
+                  <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-3">Global Club Chat</h2>
+                  <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
+                    {chatMessages.map((msg, i) => (
+                      <div key={i} className={`text-xs ${msg.isSystem ? "text-[#d4af37]/70 italic" : "text-gray-400"}`}>
+                        <span className="font-semibold text-white/70">{msg.user}: </span>
+                        {msg.text}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      className="flex-1 bg-black/30 border border-white/10 rounded px-3 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#d4af37]/40"
+                    />
+                    <button
+                      className="px-3 py-1.5 text-xs font-medium rounded border border-[#d4af37]/30 text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
                     >
-                      <div className="mt-0.5">
-                        <Trophy className="w-4 h-4 text-[#d4af37]/70" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white/80 font-medium truncate">{alert.label}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Clock className="w-3 h-3 text-white/30" />
-                          <span className="text-xs text-white/40">{alert.time}</span>
-                        </div>
-                      </div>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                        alert.type === "upcoming"
-                          ? "bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/20"
-                          : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                      }`}>
-                        {alert.type === "upcoming" ? "Soon" : "Scheduled"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
+                      Send
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
             </div>
+
+            {/* ── Bottom: Detailed Transaction Log ──────────────────── */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="vault-card overflow-hidden"
+            >
+              <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5">
+                <h2 className="text-sm font-bold uppercase tracking-wider gold-text">Detailed Transaction Log</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-white/40 text-xs uppercase tracking-wider border-b border-white/5">
+                      <th
+                        className="text-left px-4 py-3 cursor-pointer hover:text-white/60 transition-colors select-none"
+                        onClick={() => setSortDir(d => d === "desc" ? "asc" : "desc")}
+                      >
+                        Date {sortDir === "desc" ? "\u25BC" : "\u25B2"}
+                      </th>
+                      <th className="text-left px-4 py-3">Source</th>
+                      <th className="text-left px-4 py-3">Amount</th>
+                      <th className="text-left px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactionLog.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="text-center py-8 text-white/30">
+                          No transactions found
+                        </td>
+                      </tr>
+                    ) : (
+                      transactionLog.map((tx) => (
+                        <tr key={tx.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                          <td className="py-3 px-4 text-sm text-gray-400">{tx.date}</td>
+                          <td className="py-3 px-4 text-sm text-white">{tx.source}</td>
+                          <td className="py-3 px-4 text-sm font-bold" style={{ color: "#d4af37" }}>
+                            ${tx.amount.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-xs px-2 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/20">
+                              {tx.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
           </div>
         )}
       </div>

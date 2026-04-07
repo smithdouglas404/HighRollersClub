@@ -925,15 +925,7 @@ export default function TournamentCreate() {
         >
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-amber-400" />
-            <h3
-              className="text-xs font-bold uppercase tracking-[0.15em]"
-              style={{
-                background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 50%, #f3e2ad 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
+            <h3 className="text-xs font-bold uppercase tracking-[0.15em] gold-text">
               Tournament Summary
             </h3>
           </div>
@@ -971,15 +963,7 @@ export default function TournamentCreate() {
                 <Coins className="w-3 h-3 text-amber-400" />
                 Est. Prize Pool
               </span>
-              <span
-                className="text-sm font-bold"
-                style={{
-                  background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
+              <span className="text-sm font-bold gold-text">
                 {estPrizePool.toLocaleString()}
               </span>
             </div>

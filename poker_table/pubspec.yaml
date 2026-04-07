@@ -39,6 +39,7 @@ dependencies:
   audioplayers: ^6.6.0
   rive: ^0.14.5
   equatable: ^2.0.8
+  flame: ^1.36.0
 
 dev_dependencies:
   flutter_test:

@@ -14,7 +14,7 @@ import {
   AlertCircle, Filter, Bell, CalendarDays,
   TrendingUp, TrendingDown, Trophy, Wifi,
   MoreVertical, ShieldPlus, ShieldMinus,
-  Swords
+  Swords, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 interface H2HData {
@@ -59,7 +59,6 @@ function H2HPanel({ data, loading }: { data: H2HData | null; loading: boolean })
           <p className="text-[0.625rem] text-gray-500">No shared hands yet.</p>
         ) : (
           <div className="space-y-2">
-            {/* Win/loss bar */}
             <div>
               <div className="flex justify-between text-[0.5625rem] font-bold mb-1">
                 <span className="text-green-400">{data.userWins}W</span>
@@ -67,21 +66,12 @@ function H2HPanel({ data, loading }: { data: H2HData | null; loading: boolean })
                 <span className="text-red-400">{data.opponentWins}W</span>
               </div>
               <div className="flex h-2 rounded-full overflow-hidden bg-white/5">
-                <div
-                  className="bg-green-500 transition-all"
-                  style={{ width: `${userPct}%` }}
-                />
-                <div
-                  className="bg-red-500 transition-all"
-                  style={{ width: `${oppPct}%` }}
-                />
+                <div className="bg-green-500 transition-all" style={{ width: `${userPct}%` }} />
+                <div className="bg-red-500 transition-all" style={{ width: `${oppPct}%` }} />
               </div>
             </div>
-
             <div className="flex items-center gap-4 text-[0.625rem]">
-              <span className="text-gray-500">
-                {data.handsPlayedTogether} hands together
-              </span>
+              <span className="text-gray-500">{data.handsPlayedTogether} hands together</span>
               <span className={`font-bold ${data.userNetChips >= 0 ? "text-green-400" : "text-red-400"}`}>
                 {data.userNetChips >= 0 ? "+" : ""}{data.userNetChips.toLocaleString()} chips
               </span>
@@ -95,20 +85,6 @@ function H2HPanel({ data, loading }: { data: H2HData | null; loading: boolean })
         )}
       </div>
     </motion.div>
-  );
-}
-
-function RoleLabel({ role }: { role: string }) {
-  const colorMap: Record<string, string> = {
-    owner: "text-primary",
-    admin: "text-primary",
-    member: "text-gray-400",
-  };
-  const color = colorMap[role] || colorMap.member;
-  return (
-    <span className={`text-[0.6875rem] font-bold capitalize ${color}`}>
-      {role}:
-    </span>
   );
 }
 
@@ -133,29 +109,7 @@ function formatEventTime(dateStr: string): string {
   });
 }
 
-const PODIUM_STYLES: Record<number, { bg: string; border: string; glow: string; iconColor: string; label: string }> = {
-  0: {
-    bg: "linear-gradient(135deg, rgba(255,215,0,0.12) 0%, rgba(255,180,0,0.06) 100%)",
-    border: "1px solid rgba(255,215,0,0.3)",
-    glow: "0 0 20px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,215,0,0.15)",
-    iconColor: "text-yellow-400",
-    label: "1st",
-  },
-  1: {
-    bg: "linear-gradient(135deg, rgba(192,192,192,0.10) 0%, rgba(160,160,180,0.05) 100%)",
-    border: "1px solid rgba(192,192,192,0.25)",
-    glow: "0 0 16px rgba(192,192,192,0.1), inset 0 1px 0 rgba(192,192,192,0.12)",
-    iconColor: "text-gray-300",
-    label: "2nd",
-  },
-  2: {
-    bg: "linear-gradient(135deg, rgba(205,127,50,0.10) 0%, rgba(180,100,30,0.05) 100%)",
-    border: "1px solid rgba(205,127,50,0.25)",
-    glow: "0 0 16px rgba(205,127,50,0.1), inset 0 1px 0 rgba(205,127,50,0.12)",
-    iconColor: "text-amber-500",
-    label: "3rd",
-  },
-};
+const ITEMS_PER_PAGE = 8;
 
 export default function Members() {
   const { user } = useAuth();
@@ -192,6 +146,7 @@ export default function Members() {
   const [h2hOpenId, setH2hOpenId] = useState<string | null>(null);
   const [h2hData, setH2hData] = useState<Record<string, H2HData>>({});
   const [h2hLoading, setH2hLoading] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const toggleH2H = useCallback(async (memberId: string) => {
     if (h2hOpenId === memberId) {
@@ -217,9 +172,8 @@ export default function Members() {
     return members.filter(m => onlineUserIds.has(m.userId)).length;
   }, [members, onlineUserIds]);
 
-  const top3ByChips = useMemo(() => {
-    const sorted = [...members].sort((a, b) => b.chipBalance - a.chipBalance);
-    return new Map(sorted.slice(0, 3).map((m, i) => [m.userId, i]));
+  const totalBankroll = useMemo(() => {
+    return members.reduce((sum, m) => sum + m.chipBalance, 0);
   }, [members]);
 
   const handleInvite = async () => {
@@ -314,11 +268,39 @@ export default function Members() {
     return filtered;
   }, [members, searchQuery, roleFilter, statusFilter, onlineUserIds]);
 
+  const totalPages = Math.max(1, Math.ceil(sortedMembers.length / ITEMS_PER_PAGE));
+  const paginatedMembers = sortedMembers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   const pendingCount = pendingInvitations.length;
 
   return (
     <DashboardLayout title="Members">
       <div className="px-4 md:px-8 pb-8">
+
+        {/* Top Header Bar */}
+        <div
+          className="vault-card px-6 py-3 mb-6 flex items-center justify-between flex-wrap gap-3"
+        >
+          <div />
+          <div className="text-center">
+            <span className="text-sm font-bold text-gray-400 uppercase tracking-wider">Total Club Bankroll: </span>
+            <span className="text-sm font-black gold-text">${totalBankroll.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-400">Online Members:</span>
+              <span className="text-sm font-black text-white">{onlineCount}/{members.length}</span>
+            </div>
+            {myRole && (
+              <span
+                className="px-3 py-1 rounded-full text-[0.625rem] font-black uppercase tracking-wider gold-btn"
+              >
+                {myRole === "owner" ? "Club Owner" : myRole === "admin" ? "Admin" : "Member"}
+              </span>
+            )}
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -334,90 +316,29 @@ export default function Members() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center gap-3 mb-1 flex-wrap">
-                <h2 className="text-sm font-black uppercase tracking-[0.15em] text-white font-display">Members</h2>
-                <span data-testid="badge-member-count" className="px-2.5 py-0.5 rounded-full text-[0.625rem] font-bold bg-primary/15 text-primary border border-primary/20">
-                  {members.length}
-                </span>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full border bg-secondary/10 border-secondary/25"
+            {/* Main table area - 3 columns wide */}
+            <div className="lg:col-span-3 space-y-4">
+              <h2 className="text-lg font-black uppercase tracking-[0.1em] gold-text border-b border-[rgba(212,175,55,0.2)] pb-2">
+                Member Management
+              </h2>
+
+              {/* Table */}
+              <div className="vault-card overflow-hidden">
+                {/* Table Header */}
+                <div
+                  className="hidden md:grid grid-cols-12 gap-2 px-6 py-3"
+                  style={{ borderBottom: "1px solid rgba(212,175,55,0.15)" }}
                 >
-                  <Wifi className="w-3 h-3 text-green-400" />
-                  <span data-testid="badge-online-count" className="text-[0.625rem] font-bold text-green-400">{onlineCount} Online Now</span>
-                </motion.div>
-              </div>
+                  <span className="col-span-1 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-[#d4af37]">Avatar</span>
+                  <span className="col-span-3 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-[#d4af37]">Member Name</span>
+                  <span className="col-span-2 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-[#d4af37]">Join Date</span>
+                  <span className="col-span-3 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-[#d4af37]">Total Contribution</span>
+                  <span className="col-span-3 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-[#d4af37] text-right">Action</span>
+                </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-                  <input
-                    data-testid="input-search-members"
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search members..."
-                    aria-label="Search members"
-                    className="w-full bg-white/5 border border-white/10 rounded-full pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/15 transition-all"
-                  />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {(["all", "owner", "admin", "member"] as const).map(role => (
-                    <motion.button
-                      key={role}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      data-testid={`filter-role-${role}`}
-                      onClick={() => setRoleFilter(role)}
-                      className={`px-3 py-1.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider transition-all border ${
-                        roleFilter === role
-                          ? "bg-primary/20 border-primary/30 text-primary shadow-[0_0_10px_hsl(var(--primary)/0.15)]"
-                          : "border-white/8 text-gray-500 hover:text-gray-300 hover:border-white/15 hover:bg-white/[0.03]"
-                      }`}
-                    >
-                      {role === "all" ? "All Roles" : role}
-                    </motion.button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {(["all", "online", "offline"] as const).map(status => (
-                    <motion.button
-                      key={status}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      data-testid={`filter-status-${status}`}
-                      onClick={() => setStatusFilter(status)}
-                      className={`px-3 py-1.5 rounded-full text-[0.5625rem] font-bold uppercase tracking-wider transition-all border ${
-                        statusFilter === status
-                          ? status === "online"
-                            ? "bg-green-500/20 border-green-500/30 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.15)]"
-                            : "bg-primary/20 border-primary/30 text-primary shadow-[0_0_10px_hsl(var(--primary)/0.15)]"
-                          : "border-white/8 text-gray-500 hover:text-gray-300 hover:border-white/15 hover:bg-white/[0.03]"
-                      }`}
-                    >
-                      {status === "all" ? "All" : status}
-                    </motion.button>
-                  ))}
-                </div>
-                <span className="text-[0.5625rem] text-gray-600 ml-auto">
-                  {sortedMembers.length}/{members.length} shown
-                </span>
-              </div>
-
-              <div
-                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
-              >
-                <div className="hidden md:grid grid-cols-12 gap-2 px-6 py-3.5 border-b border-primary/10">
-                  <span className="col-span-5 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Name / Role</span>
-                  <span className="col-span-2 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Status</span>
-                  <span className="col-span-3 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">Stats</span>
-                  <span className="col-span-2 text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400 text-right">Actions</span>
-                </div>
-                {/* Mobile-only card header */}
+                {/* Mobile header */}
                 <div className="md:hidden px-4 py-2.5 border-b border-primary/10">
                   <span className="text-[0.625rem] font-bold uppercase tracking-[0.15em] text-gray-400">{sortedMembers.length} Members</span>
                 </div>
@@ -428,195 +349,128 @@ export default function Members() {
                       <Users className="w-7 h-7 text-primary/40" />
                     </div>
                     <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">No Members Found</h3>
-                    <p className="text-xs text-muted-foreground/60 max-w-xs">No members match your current filters. Try adjusting your search or filter criteria.</p>
+                    <p className="text-xs text-muted-foreground/60 max-w-xs">No members match your current filters.</p>
                   </div>
                 )}
 
-                {sortedMembers.map((member, i) => {
+                {paginatedMembers.map((member, i) => {
                   const isMe = member.userId === user?.id;
                   const canManage = isAdminOrOwner && !isMe && member.role !== "owner";
                   const ms = memberStatsMap[member.userId];
-                  const hands = ms?.handsPlayed ?? 0;
-                  const wins = ms?.potsWon ?? 0;
-                  const winRate = hands > 0 ? Math.round((wins / hands) * 100) : 0;
                   const isOnline = onlineUserIds.has(member.userId);
-                  const podiumRank = top3ByChips.get(member.userId);
-                  const podiumStyle = podiumRank !== undefined ? PODIUM_STYLES[podiumRank] : null;
-                  const trendUp = winRate >= 50;
+                  const joinDate = member.joinedAt
+                    ? new Date(member.joinedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    : "N/A";
 
                   return (
                     <motion.div
                       key={member.userId}
                       data-testid={`row-member-${member.userId}`}
-                      initial={{ opacity: 0, x: -20 }}
+                      initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.04 }}
-                      className={`md:grid md:grid-cols-12 gap-3 items-start md:items-center px-4 md:px-6 py-4 md:py-6 border-b border-white/[0.04] hover:bg-primary/[0.06] transition-all duration-200 group ${
-                        podiumStyle ? "relative" : ""
-                      } md:flex-none flex flex-col rounded-xl md:rounded-none m-2 md:m-0 bg-white/[0.02] md:bg-transparent border md:border-0 md:border-b border-white/[0.06]`}
-                      style={podiumStyle ? {
-                        background: podiumStyle.bg,
-                        borderBottom: podiumStyle.border,
-                        boxShadow: podiumStyle.glow,
-                      } : undefined}
+                      transition={{ delay: i * 0.03 }}
+                      className="md:grid md:grid-cols-12 gap-2 items-center px-4 md:px-6 py-3 border-b border-white/[0.04] hover:bg-[rgba(212,175,55,0.04)] transition-all duration-200 flex flex-col md:flex-row"
                     >
-                      <div className="col-span-5 flex items-center gap-4">
+                      {/* Avatar */}
+                      <div className="col-span-1 flex items-center justify-center">
                         <div className="relative shrink-0">
-                          {podiumStyle && (
-                            <div className="absolute -top-3 -left-1 z-10">
-                              <Crown className={`w-5 h-5 ${podiumStyle.iconColor} drop-shadow-lg`} />
-                            </div>
-                          )}
                           <MemberAvatar
                             avatarId={member.avatarId}
                             displayName={member.displayName}
-                            size="xl"
+                            size="lg"
                           />
                           <span
-                            className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background ${
+                            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
                               isOnline
-                                ? "bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.7)]"
+                                ? "bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.7)]"
                                 : "bg-gray-600"
                             }`}
                           />
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <RoleLabel role={member.role} />
-                            {podiumStyle && (
-                              <span className={`text-[0.5rem] font-black uppercase ${podiumStyle.iconColor} bg-white/5 px-1.5 py-0.5 rounded`}>
-                                {PODIUM_STYLES[podiumRank!].label}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-base font-bold text-white truncate">
-                              {member.displayName}
-                            </span>
-                            {isMe && (
-                              <span className="text-[0.5rem] text-primary font-bold uppercase bg-primary/10 px-1.5 py-0.5 rounded">You</span>
-                            )}
-                          </div>
-                        </div>
                       </div>
 
-                      <div className="col-span-2 flex items-center gap-2">
-                        <span
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            isOnline ? "bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]" : "bg-gray-600"
-                          }`}
-                        />
-                        <span className={`text-sm font-medium ${isOnline ? "text-green-400" : "text-gray-500"}`}>
-                          {isOnline ? "Online" : "Offline"}
+                      {/* Member Name */}
+                      <div className="col-span-3 min-w-0">
+                        <span className="text-sm font-bold text-white truncate block">
+                          {member.displayName}
+                        </span>
+                        {isMe && (
+                          <span className="text-[0.5rem] text-primary font-bold uppercase bg-primary/10 px-1.5 py-0.5 rounded">You</span>
+                        )}
+                      </div>
+
+                      {/* Join Date */}
+                      <div className="col-span-2">
+                        <span className="text-xs text-gray-400">{joinDate}</span>
+                      </div>
+
+                      {/* Total Contribution (chip balance) */}
+                      <div className="col-span-3">
+                        <span data-testid={`text-chips-${member.userId}`} className="text-sm font-bold text-white">
+                          ${member.chipBalance.toLocaleString()}
                         </span>
                       </div>
 
-                      <div className="col-span-3">
-                        <div className="flex items-center gap-1.5">
-                          <span data-testid={`text-chips-${member.userId}`} className="text-lg font-bold text-white">
-                            {member.chipBalance >= 1000
-                              ? `${(member.chipBalance / 1000).toFixed(1)}k`
-                              : member.chipBalance.toLocaleString()}
-                          </span>
-                          <span className="text-xs text-gray-500 font-medium">$</span>
-                          {hands > 0 && (
-                            <span className={`flex items-center gap-0.5 text-[0.5625rem] font-bold ${trendUp ? "text-green-400" : "text-red-400"}`}>
-                              {trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[0.625rem] text-gray-500 mt-0.5">
-                          {hands} hands | {winRate}% WR
-                        </div>
-                      </div>
-
-                      <div className="col-span-2 flex items-center justify-end gap-1.5">
+                      {/* Action buttons */}
+                      <div className="col-span-3 flex items-center justify-end gap-2">
                         {canManage && (
-                          <div className="relative">
+                          <>
                             <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              data-testid={`button-menu-${member.userId}`}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => setOpenMenuId(openMenuId === member.userId ? null : member.userId)}
-                              className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all"
-                              title="Member actions"
+                              className="px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider gold-btn cursor-pointer"
+                              data-testid={`button-menu-${member.userId}`}
                             >
-                              <MoreVertical className="w-4 h-4 text-gray-400" />
+                              Edit
                             </motion.button>
-                            <AnimatePresence>
-                              {openMenuId === member.userId && (
-                                <>
-                                  {/* Backdrop to close menu */}
-                                  <div
-                                    className="fixed inset-0 z-10"
-                                    onClick={() => setOpenMenuId(null)}
-                                  />
-                                  <motion.div
-                                    initial={{ opacity: 0, y: -5, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: -5, scale: 0.95 }}
-                                    className="absolute right-0 top-full mt-1.5 z-20 glass rounded-xl border border-white/10 overflow-hidden min-w-[160px] shadow-lg shadow-black/30"
-                                  >
-                                    {member.role !== "admin" && (
-                                      <button
-                                        data-testid={`button-promote-${member.userId}`}
-                                        onClick={() => { handleRoleChange(member.userId, "admin"); setOpenMenuId(null); }}
-                                        disabled={actionLoading === `role-${member.userId}`}
-                                        className="w-full px-4 py-2.5 text-left text-[0.6875rem] font-semibold text-primary hover:bg-primary/10 transition-colors flex items-center gap-2.5 disabled:opacity-50"
-                                      >
-                                        {actionLoading === `role-${member.userId}` ? (
-                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        ) : (
-                                          <ShieldPlus className="w-3.5 h-3.5" />
-                                        )}
-                                        Promote to Admin
-                                      </button>
-                                    )}
-                                    {member.role === "admin" && (
-                                      <button
-                                        data-testid={`button-demote-${member.userId}`}
-                                        onClick={() => { handleRoleChange(member.userId, "member"); setOpenMenuId(null); }}
-                                        disabled={actionLoading === `role-${member.userId}`}
-                                        className="w-full px-4 py-2.5 text-left text-[0.6875rem] font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-2.5 disabled:opacity-50"
-                                      >
-                                        {actionLoading === `role-${member.userId}` ? (
-                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        ) : (
-                                          <ShieldMinus className="w-3.5 h-3.5" />
-                                        )}
-                                        Demote to Member
-                                      </button>
-                                    )}
-                                    <div className="h-px bg-white/[0.06] mx-2" />
-                                    <button
-                                      data-testid={`button-kick-${member.userId}`}
-                                      onClick={() => { handleKick(member.userId, member.displayName); setOpenMenuId(null); }}
-                                      disabled={actionLoading === `kick-${member.userId}`}
-                                      className="w-full px-4 py-2.5 text-left text-[0.6875rem] font-semibold text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2.5 disabled:opacity-50"
-                                    >
-                                      {actionLoading === `kick-${member.userId}` ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
-                                      ) : (
-                                        <UserX className="w-3.5 h-3.5" />
-                                      )}
-                                      Kick from Club
-                                    </button>
-                                  </motion.div>
-                                </>
-                              )}
-                            </AnimatePresence>
-                          </div>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              data-testid={`button-kick-${member.userId}`}
+                              onClick={() => { handleKick(member.userId, member.displayName); }}
+                              disabled={actionLoading === `kick-${member.userId}`}
+                              className="px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider gold-btn cursor-pointer disabled:opacity-50"
+                            >
+                              {actionLoading === `kick-${member.userId}` ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : "Kick"}
+                            </motion.button>
+                            {member.role !== "admin" ? (
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                data-testid={`button-promote-${member.userId}`}
+                                onClick={() => { handleRoleChange(member.userId, "admin"); }}
+                                disabled={actionLoading === `role-${member.userId}`}
+                                className="px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider gold-btn cursor-pointer disabled:opacity-50"
+                              >
+                                {actionLoading === `role-${member.userId}` ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : "Promote"}
+                              </motion.button>
+                            ) : (
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                data-testid={`button-demote-${member.userId}`}
+                                onClick={() => { handleRoleChange(member.userId, "member"); }}
+                                disabled={actionLoading === `role-${member.userId}`}
+                                className="px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider gold-btn cursor-pointer disabled:opacity-50"
+                              >
+                                {actionLoading === `role-${member.userId}` ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : "Demote"}
+                              </motion.button>
+                            )}
+                          </>
                         )}
                         {!canManage && !isMe && (
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => toggleH2H(member.userId)}
-                            className={`px-2.5 py-1.5 rounded-lg text-[0.5625rem] font-bold uppercase tracking-wider transition-all border ${
-                              h2hOpenId === member.userId
-                                ? "bg-primary/20 border-primary/30 text-primary"
-                                : "bg-white/5 border-white/10 text-gray-400 hover:text-primary hover:border-primary/20"
-                            }`}
+                            className="px-3 py-1.5 rounded-md text-[0.625rem] font-bold uppercase tracking-wider gold-btn cursor-pointer"
                             title="Head-to-Head"
                           >
                             <span className="flex items-center gap-1">
@@ -643,57 +497,165 @@ export default function Members() {
                     </motion.div>
                   );
                 })}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 py-4" style={{ borderTop: "1px solid rgba(212,175,55,0.1)" }}>
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(page => (
+                      <motion.button
+                        key={page}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === page
+                            ? "gold-btn text-black"
+                            : "bg-white/5 text-gray-400 border border-white/10 hover:border-[#d4af37]/30"
+                        }`}
+                      >
+                        {page}
+                      </motion.button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* Right sidebar - Quick Stats */}
             <div className="space-y-4">
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
-              >
+              {/* Quick Stats card */}
+              <div className="vault-card overflow-hidden">
                 <div
-                  className="px-4 py-3.5 flex items-center justify-between bg-primary/10 border-b border-primary/15"
+                  className="px-4 py-3 flex items-center gap-2"
+                  style={{
+                    background: "rgba(212,175,55,0.08)",
+                    borderBottom: "1px solid rgba(212,175,55,0.15)",
+                  }}
                 >
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                    <span className="w-1 h-4 rounded-full bg-gradient-to-b from-primary to-purple-500" />
-                    Club & Alliance News
-                  </h3>
-                  <div className="relative">
-                    <Bell className="w-4 h-4 text-primary" />
-                    {announcements.length > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[0.5rem] font-bold flex items-center justify-center animate-pulse">
-                        {announcements.length}
-                      </span>
-                    )}
+                  <Trophy className="w-4 h-4 text-[#d4af37]" />
+                  <h3 className="text-xs font-black uppercase tracking-wider gold-text">Quick Stats</h3>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {/* Most Active Table */}
+                  <div>
+                    <div className="text-[0.625rem] font-bold uppercase tracking-wider text-[#d4af37] mb-1">
+                      Most Active Table
+                    </div>
+                    <div className="text-xs font-bold text-white">
+                      High Stakes Poker - Table 1
+                    </div>
+                    <div className="text-[0.625rem] text-gray-500">
+                      ($500/$1k BB)
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/[0.06]" />
+
+                  {/* Top Performing Tournament */}
+                  <div>
+                    <div className="text-[0.625rem] font-bold uppercase tracking-wider text-[#d4af37] mb-1">
+                      Top Performing Tournament
+                    </div>
+                    <div className="text-xs font-bold text-white">
+                      Gold Cup Championship
+                    </div>
+                    <div className="text-[0.625rem] text-gray-500">
+                      (Prize Pool: $1M)
+                    </div>
                   </div>
                 </div>
-                <div className="divide-y divide-white/[0.03] max-h-48 overflow-y-auto">
-                  {announcements.length === 0 ? (
-                    <div className="py-6 text-center">
-                      <Bell className="w-5 h-5 text-gray-700 mx-auto mb-2" />
-                      <p className="text-[0.625rem] text-gray-600">No news yet</p>
-                    </div>
-                  ) : (
-                    announcements.slice(0, 5).map(a => (
-                      <div key={a.id} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                        <div className="text-[0.625rem] font-bold text-primary mb-0.5">{a.title}</div>
-                        <p className="text-[0.6875rem] text-gray-400 line-clamp-2">{a.content}</p>
-                        <span className="text-[0.5625rem] text-gray-600 mt-1 block">{formatTimeAgo(a.createdAt)}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </motion.div>
+              </div>
 
+              {/* Invite Player (admin only) */}
+              {isAdminOrOwner && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="vault-card overflow-hidden"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Invite member"
+                >
+                  <div
+                    className="px-4 py-3"
+                    style={{
+                      background: "rgba(212,175,55,0.08)",
+                      borderBottom: "1px solid rgba(212,175,55,0.15)",
+                    }}
+                  >
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                      <UserPlus className="w-4 h-4 text-primary" />
+                      Invite Player
+                    </h3>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
+                        <input
+                          data-testid="input-invite-username"
+                          type="text"
+                          value={inviteUsername}
+                          onChange={(e) => {
+                            setInviteUsername(e.target.value);
+                            setInviteMsg(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleInvite();
+                          }}
+                          placeholder="Enter username..."
+                          className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary/30 focus:ring-2 focus:ring-primary/15 transition-all"
+                        />
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        data-testid="button-send-invite"
+                        onClick={handleInvite}
+                        disabled={inviteLoading || !inviteUsername.trim()}
+                        className="px-4 py-2.5 rounded-lg font-bold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed gold-btn cursor-pointer flex items-center gap-2"
+                      >
+                        {inviteLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Send className="w-3.5 h-3.5" />
+                        )}
+                        Invite
+                      </motion.button>
+                    </div>
+                    <AnimatePresence>
+                      {inviteMsg && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className={`mt-2 flex items-center gap-1.5 text-[0.625rem] font-medium ${
+                            inviteMsg.type === "success" ? "text-green-400" : "text-red-400"
+                          }`}
+                        >
+                          {inviteMsg.type === "success" ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <AlertCircle className="w-3 h-3" />
+                          )}
+                          {inviteMsg.text}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Pending Requests (admin only) */}
               {isAdminOrOwner && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.35 }}
-                  className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+                  className="vault-card overflow-hidden"
                 >
                   <button
                     data-testid="button-toggle-pending"
@@ -701,7 +663,7 @@ export default function Members() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors"
                   >
                     <h3 className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2">
-                      Pending Join Requests
+                      Pending Requests
                       {pendingCount > 0 && (
                         <span className="bg-primary/20 text-primary text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full border border-primary/30">
                           {pendingCount}
@@ -755,12 +717,12 @@ export default function Members() {
                                     data-testid={`button-approve-${inv.id}`}
                                     onClick={() => handleInvitationAction(inv.id, "accepted")}
                                     disabled={actionLoading === inv.id}
-                                    className="px-4 py-1.5 rounded-lg bg-green-500/80 hover:bg-green-500 text-white transition-colors disabled:opacity-50 text-[0.625rem] font-bold uppercase tracking-wider"
+                                    className="px-3 py-1.5 rounded-lg gold-btn text-[0.625rem] font-bold uppercase tracking-wider disabled:opacity-50 cursor-pointer"
                                     title="Approve"
                                   >
                                     {actionLoading === inv.id ? (
                                       <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : "APPROVE"}
+                                    ) : "OK"}
                                   </motion.button>
                                   <motion.button
                                     whileHover={{ scale: 1.05 }}
@@ -768,10 +730,10 @@ export default function Members() {
                                     data-testid={`button-decline-${inv.id}`}
                                     onClick={() => handleInvitationAction(inv.id, "declined")}
                                     disabled={actionLoading === inv.id}
-                                    className="px-4 py-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-colors disabled:opacity-50 text-[0.625rem] font-bold uppercase tracking-wider"
+                                    className="px-3 py-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-colors disabled:opacity-50 text-[0.625rem] font-bold uppercase tracking-wider cursor-pointer"
                                     title="Decline"
                                   >
-                                    DECLINE
+                                    No
                                   </motion.button>
                                 </div>
                               </motion.div>
@@ -783,149 +745,9 @@ export default function Members() {
                   </AnimatePresence>
                 </motion.div>
               )}
-
-              {isAdminOrOwner && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label="Invite member"
-                >
-                  <div
-                    className="px-4 py-3.5 bg-primary/10 border-b border-primary/15"
-                  >
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                      <UserPlus className="w-4 h-4 text-primary" />
-                      Invite Player
-                    </h3>
-                    <p className="text-[0.5625rem] text-gray-500 mt-0.5">Send an invite to grow your club</p>
-                  </div>
-                  <div className="p-4">
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
-                        <input
-                          data-testid="input-invite-username"
-                          type="text"
-                          value={inviteUsername}
-                          onChange={(e) => {
-                            setInviteUsername(e.target.value);
-                            setInviteMsg(null);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleInvite();
-                          }}
-                          placeholder="Enter username..."
-                          className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary/30 focus:ring-2 focus:ring-primary/15 transition-all"
-                        />
-                      </div>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        data-testid="button-send-invite"
-                        onClick={handleInvite}
-                        disabled={inviteLoading || !inviteUsername.trim()}
-                        className={`px-5 py-2.5 rounded-lg font-bold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 ${inviteUsername.trim() ? "bg-primary text-black" : "bg-primary/15 text-primary"}`}
-                      >
-                        {inviteLoading ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Send className="w-3.5 h-3.5" />
-                        )}
-                        Invite
-                      </motion.button>
-                    </div>
-                    {inviteUsername.length >= 2 && (
-                      <p className="text-[0.5625rem] text-gray-600 mt-1">Press Enter to send invite to this username</p>
-                    )}
-                    <AnimatePresence>
-                      {inviteMsg && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className={`mt-2 flex items-center gap-1.5 text-[0.625rem] font-medium ${
-                            inviteMsg.type === "success" ? "text-green-400" : "text-red-400"
-                          }`}
-                        >
-                          {inviteMsg.type === "success" ? (
-                            <Check className="w-3 h-3" />
-                          ) : (
-                            <AlertCircle className="w-3 h-3" />
-                          )}
-                          {inviteMsg.text}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              )}
             </div>
           </div>
         )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
-          >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-primary/80 mb-4 flex items-center gap-2">
-              <span className="w-0.5 h-3.5 bg-primary/60 rounded-full" />
-              Daily Missions
-            </h3>
-            <MissionsGrid missions={missions} onClaim={claimMission} />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
-          >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-primary/80 mb-4 flex items-center gap-2">
-              <span className="w-0.5 h-3.5 bg-primary/60 rounded-full" />
-              <CalendarDays className="w-3.5 h-3.5 text-primary" />
-              Upcoming Private Games
-            </h3>
-            {events.length === 0 ? (
-              <div className="text-center py-4">
-                <CalendarDays className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                <p className="text-[0.6875rem] text-gray-600">No upcoming games scheduled</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {events.slice(0, 4).map(ev => (
-                  <div key={ev.id} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold text-white truncate">{ev.name}</div>
-                      <div className="text-[0.625rem] text-gray-500 mt-0.5">
-                        {formatEventTime(ev.startTime)} | {ev.eventType}
-                      </div>
-                    </div>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      data-testid={`button-remind-${ev.id}`}
-                      onClick={() => handleRemindMe(ev.id, ev.name)}
-                      className={`px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all shrink-0 ml-3 ${
-                        localStorage.getItem(`remind_${ev.id}`)
-                          ? "bg-green-500/20 text-green-400 border border-green-500/20"
-                          : "bg-green-500 text-white hover:bg-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-                      }`}
-                    >
-                      {localStorage.getItem(`remind_${ev.id}`) ? "REMINDED" : "REMIND ME"}
-                    </motion.button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        </div>
       </div>
     </DashboardLayout>
   );

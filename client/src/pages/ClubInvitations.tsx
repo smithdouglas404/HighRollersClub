@@ -96,13 +96,26 @@ export default function ClubInvitations() {
   const statusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "text-primary";
+        return "text-[#d4af37]";
       case "accepted":
         return "text-green-400";
       case "declined":
         return "text-red-400";
       default:
         return "text-gray-400";
+    }
+  };
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30";
+      case "accepted":
+        return "bg-green-500/15 text-green-400 border border-green-500/30";
+      case "declined":
+        return "bg-red-500/15 text-red-400 border border-red-500/30";
+      default:
+        return "bg-gray-500/15 text-gray-400 border border-gray-500/30";
     }
   };
 
@@ -134,7 +147,7 @@ export default function ClubInvitations() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+              className="vault-card overflow-hidden"
             >
               <div
                 className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
@@ -143,7 +156,7 @@ export default function ClubInvitations() {
                   <UserPlus className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-primary tracking-wider uppercase">
+                  <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
                     Invite Player
                   </h3>
                   <p className="text-[0.5625rem] text-gray-500">Send an invite by username</p>
@@ -158,14 +171,14 @@ export default function ClubInvitations() {
                     onChange={(e) => setInviteUsername(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSendInvite()}
                     placeholder="Enter username..."
-                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-surface-highest/50 border border-white/[0.06]"
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-surface-highest/50 gold-border"
                   />
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={handleSendInvite}
                     disabled={sending || !inviteUsername.trim()}
-                    className="px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-primary text-black flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    className="gold-btn px-5 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                   >
                     {sending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -185,7 +198,7 @@ export default function ClubInvitations() {
                   <select
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as "member" | "moderator" | "admin")}
-                    className="flex-1 px-3 py-1.5 rounded-lg text-xs text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
+                    className="flex-1 px-3 py-1.5 rounded-lg text-xs text-white outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 appearance-none cursor-pointer bg-surface-highest/50 gold-border"
                   >
                     <option value="member" className="bg-surface-lowest">Member</option>
                     <option value="moderator" className="bg-surface-lowest">Moderator</option>
@@ -231,10 +244,10 @@ export default function ClubInvitations() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-amber-500/15"
+              className="vault-card overflow-hidden"
             >
               <div
-                className="flex items-center justify-between px-5 py-4 border-b border-b-white/[0.06]"
+                className="flex items-center justify-between px-5 py-4 border-b border-b-[#d4af37]/10"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
@@ -318,13 +331,13 @@ export default function ClubInvitations() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+              className="vault-card overflow-hidden"
             >
               <div
-                className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
+                className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10"
               >
-                <div className="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center">
-                  <Send className="w-5 h-5 text-purple-400" />
+                <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
+                  <Send className="w-5 h-5 text-[#d4af37]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold tracking-wider uppercase gold-text">
@@ -347,7 +360,7 @@ export default function ClubInvitations() {
                         key={inv.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg border border-white/[0.06]"
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg gold-border"
                       >
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_hsl(var(--primary)/0.15)]">
                           <span className="text-[0.625rem] font-bold text-white">
@@ -368,12 +381,9 @@ export default function ClubInvitations() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <div className="flex items-center gap-1.5">
-                            {statusIcon(inv.status)}
-                            <span className={`text-[0.5625rem] font-bold uppercase tracking-wider ${statusColor(inv.status)}`}>
-                              {inv.status}
-                            </span>
-                          </div>
+                          <span className={`text-[0.5625rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${statusBadge(inv.status)}`}>
+                            {inv.status}
+                          </span>
                           {inv.status === "pending" && (
                             <motion.button
                               whileHover={{ scale: 1.05 }}

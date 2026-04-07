@@ -242,7 +242,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
                   <motion.div
                     layoutId="sidebar-active"
                     className="absolute inset-0 rounded-lg bg-primary/10 border border-primary/20"
-                    style={{ boxShadow: "0 0 15px rgba(129,236,255,0.15), inset 0 0 10px rgba(129,236,255,0.08)" }}
+                    style={{ boxShadow: "0 0 15px rgba(212,175,55,0.15), inset 0 0 10px rgba(212,175,55,0.08)" }}
                     transition={{ type: "spring", stiffness: 350, damping: 30 }}
                   />
                 )}
@@ -381,10 +381,10 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
 
   return (
     <div className="min-h-screen bg-background text-white flex relative overflow-hidden">
-      {/* Background glow orbs */}
+      {/* Background glow orbs — warm gold ambiance */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute top-[-15%] left-[5%] w-[500px] h-[500px] bg-primary/[0.03] rounded-full blur-[150px]" />
-        <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] bg-purple-600/[0.02] rounded-full blur-[120px]" />
+        <div className="absolute top-[-15%] left-[5%] w-[500px] h-[500px] rounded-full blur-[150px]" style={{ background: "rgba(212,175,55,0.03)" }} />
+        <div className="absolute bottom-[-10%] right-[8%] w-[400px] h-[400px] rounded-full blur-[120px]" style={{ background: "rgba(154,123,44,0.02)" }} />
       </div>
 
 
@@ -400,15 +400,15 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
           <div
             className="absolute inset-0 border-r border-white/[0.06]"
             style={{
-              background: "rgba(10,10,12,0.85)",
+              background: "rgba(13,11,8,0.92)",
               backdropFilter: "blur(20px)",
-              borderTop: "2px solid rgba(212,175,55,0.2)",
+              borderTop: "2px solid rgba(212,175,55,0.25)",
             }}
           />
           <div
             className="absolute inset-y-0 right-0 w-px"
             style={{
-              background: "linear-gradient(to bottom, transparent, rgba(129,236,255,0.15) 20%, rgba(129,236,255,0.15) 80%, transparent)",
+              background: "linear-gradient(to bottom, transparent, rgba(212,175,55,0.20) 20%, rgba(212,175,55,0.20) 80%, transparent)",
             }}
           />
           {sidebarContent}
@@ -443,9 +443,9 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
               <div
                 className="absolute inset-0 border-r border-white/[0.06]"
                 style={{
-                  background: "rgba(10,10,12,0.95)",
+                  background: "rgba(13,11,8,0.97)",
                   backdropFilter: "blur(20px)",
-                  borderTop: "2px solid rgba(212,175,55,0.2)",
+                  borderTop: "2px solid rgba(212,175,55,0.25)",
                 }}
               />
               {sidebarContent}

@@ -255,11 +255,11 @@ export default function TournamentCreate() {
 
   /* ── Reusable gold input class ── */
   const goldInputClass =
-    "w-full bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/40 focus:shadow-[0_0_12px_rgba(212,175,55,0.15)] transition-all [color-scheme:dark]";
+    "w-full bg-[#0f0f14] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] focus:shadow-[0_0_12px_rgba(212,175,55,0.2)] transition-all [color-scheme:dark]";
   const goldSelectClass =
-    "w-full bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/40 focus:shadow-[0_0_12px_rgba(212,175,55,0.15)] transition-all";
+    "w-full bg-[#0f0f14] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#d4af37] focus:shadow-[0_0_12px_rgba(212,175,55,0.2)] transition-all";
   const goldLabelClass =
-    "text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5";
+    "text-xs uppercase tracking-wider text-gray-500 block mb-1.5";
 
   /* ── Toggle component ── */
   function GoldToggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -759,7 +759,7 @@ export default function TournamentCreate() {
         >
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400">Financial Breakdown</span>
+            <span className="text-[0.625rem] font-bold uppercase tracking-wider gold-text">Financial Breakdown</span>
           </div>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
@@ -872,7 +872,7 @@ export default function TournamentCreate() {
         >
           <div className="flex items-center gap-2 mb-3">
             <Scale className="w-4 h-4 text-amber-400" />
-            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400">
+            <span className="text-[0.625rem] font-bold uppercase tracking-wider gold-text">
               Rules Summary
             </span>
           </div>
@@ -914,14 +914,7 @@ export default function TournamentCreate() {
     const gameLabel = GAME_TYPES.find((g) => g.key === gameType)?.label ?? gameType;
 
     return (
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "linear-gradient(180deg, rgba(10,10,6,0.95) 0%, rgba(22,27,34,0.80) 100%)",
-          border: "1px solid rgba(201,168,76,0.20)",
-          boxShadow: "0 0 30px rgba(212,175,55,0.08)",
-        }}
-      >
+      <div className="vault-card overflow-hidden" style={{ boxShadow: "0 0 30px rgba(212,175,55,0.08)" }}>
         {/* Header */}
         <div
           className="px-5 py-4"
@@ -932,15 +925,7 @@ export default function TournamentCreate() {
         >
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-amber-400" />
-            <h3
-              className="text-xs font-bold uppercase tracking-[0.15em]"
-              style={{
-                background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 50%, #f3e2ad 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
+            <h3 className="text-xs font-bold uppercase tracking-[0.15em] gold-text">
               Tournament Summary
             </h3>
           </div>
@@ -978,15 +963,7 @@ export default function TournamentCreate() {
                 <Coins className="w-3 h-3 text-amber-400" />
                 Est. Prize Pool
               </span>
-              <span
-                className="text-sm font-bold"
-                style={{
-                  background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
+              <span className="text-sm font-bold gold-text">
                 {estPrizePool.toLocaleString()}
               </span>
             </div>
@@ -1038,11 +1015,7 @@ export default function TournamentCreate() {
             whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full py-3 rounded-xl text-sm font-bold uppercase tracking-wider text-black flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
-            style={{
-              background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)",
-              boxShadow: "0 0 20px 2px rgba(212,175,55,0.4)",
-            }}
+            className="w-full py-3 rounded-xl text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-all gold-btn shadow-[0_0_20px_2px_rgba(212,175,55,0.4)]"
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1079,35 +1052,18 @@ export default function TournamentCreate() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative mb-6 overflow-hidden rounded-xl p-5"
-          style={{
-            background: "linear-gradient(135deg, rgba(10,10,6,0.9) 0%, rgba(22,27,34,0.8) 100%)",
-            border: "1px solid rgba(212,175,55,0.15)",
-            boxShadow: "0 0 30px rgba(212,175,55,0.05)",
-          }}
+          className="relative mb-6 overflow-hidden rounded-xl p-5 vault-card"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
           <div className="relative z-10 flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, rgba(154,123,44,0.2) 0%, rgba(212,175,55,0.1) 100%)",
-                border: "1px solid rgba(212,175,55,0.25)",
-              }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center bg-yellow-500/15 gold-border"
             >
               <Trophy className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" />
             </div>
             <div>
-              <h2
-                className="text-lg font-black tracking-[0.12em] uppercase"
-                style={{
-                  background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 40%, #f3e2ad 60%, #d4af37 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
+              <h2 className="text-lg font-black tracking-[0.12em] uppercase gold-text">
                 Tournament Builder
               </h2>
               <p className="text-[0.625rem] text-gray-500 mt-0.5">
@@ -1126,11 +1082,7 @@ export default function TournamentCreate() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="flex items-center gap-1 mb-6 p-1 rounded-xl"
-              style={{
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.05)",
-              }}
+              className="flex items-center gap-1 mb-6 p-1 rounded-xl vault-card"
             >
               {TABS.map((tab, i) => {
                 const Icon = tab.icon;
@@ -1142,27 +1094,18 @@ export default function TournamentCreate() {
                     onClick={() => goToTab(tab.key)}
                     className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all flex-1 justify-center ${
                       isActive
-                        ? "bg-yellow-500/15 border-yellow-500/25 text-yellow-300"
+                        ? "text-[#d4af37] border border-[#d4af37]/40 bg-[#d4af37]/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]"
                         : isCompleted
-                          ? "text-amber-400 hover:text-amber-400"
-                          : "text-gray-500 hover:text-gray-300"
+                          ? "text-[#d4af37]/70 hover:text-[#d4af37] border border-transparent"
+                          : "text-gray-500 hover:text-gray-300 border border-transparent"
                     }`}
-                    style={
-                      isActive
-                        ? {
-                            background: "rgba(234,179,8,0.15)",
-                            border: "1px solid rgba(234,179,8,0.25)",
-                            boxShadow: "0 0 12px rgba(234,179,8,0.08)",
-                          }
-                        : { border: "1px solid transparent" }
-                    }
                   >
                     <span
                       className={`w-4 h-4 rounded-full flex items-center justify-center text-[0.5rem] font-black shrink-0 ${
                         isActive
-                          ? "bg-yellow-500/25 text-yellow-300"
+                          ? "bg-[#d4af37]/25 text-[#d4af37]"
                           : isCompleted
-                            ? "bg-amber-500/15 text-amber-400"
+                            ? "bg-[#d4af37]/15 text-[#d4af37]/70"
                             : "bg-white/5 text-gray-600"
                       }`}
                     >
@@ -1182,11 +1125,7 @@ export default function TournamentCreate() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(180deg, rgba(10,10,6,0.9) 0%, rgba(22,27,34,0.8) 100%)",
-                border: "1px solid rgba(212,175,55,0.1)",
-              }}
+              className="rounded-xl overflow-hidden vault-card"
             >
               <div className="p-6">
                 <AnimatePresence mode="wait" custom={tabDirection}>
@@ -1262,11 +1201,7 @@ export default function TournamentCreate() {
                     whileTap={{ scale: 0.98 }}
                     onClick={handleSubmit}
                     disabled={submitting}
-                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black disabled:opacity-50 transition-all"
-                    style={{
-                      background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)",
-                      boxShadow: "0 0 15px rgba(212,175,55,0.3)",
-                    }}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-[0.625rem] uppercase tracking-wider disabled:opacity-50 transition-all gold-btn shadow-[0_0_15px_rgba(212,175,55,0.3)]"
                   >
                     {submitting ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />

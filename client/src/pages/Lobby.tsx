@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useReducer } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -99,7 +99,7 @@ function TableCard({ table, onClick, featured, currentUserId, onDelete }: { tabl
       data-testid={`card-table-${table.id}`}
       className={cn(
         "group cursor-pointer rounded-md p-5 transition-all duration-300 relative overflow-hidden card-hover",
-        "hover:shadow-[0_0_25px_rgba(212,175,55,0.12)] hover:scale-[1.02]",
+        "hover:shadow-[0_0_25px_rgba(212,175,55,0.12)]",
         isPlaying && "border-l-2 border-l-secondary",
         isFull && "opacity-60"
       )}
@@ -697,64 +697,29 @@ export default function Lobby() {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  // --- Data state ---
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateTable, setShowCreateTable] = useState(false);
+  const [defaultPrivate, setDefaultPrivate] = useState(false);
+  const [activeFormat, setActiveFormat] = useState<GameFormat>("all");
+  const [activeStakeLevel, setActiveStakeLevel] = useState<StakeLevel>("all");
+  const [activeVariant, setActiveVariant] = useState<PokerVariant>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  // --- Filter/search state ---
-  interface FilterState {
-    activeFormat: GameFormat;
-    activeStakeLevel: StakeLevel;
-    activeVariant: PokerVariant;
-    searchQuery: string;
-  }
-  const [filters, setFilters] = useReducer(
-    (state: FilterState, action: Partial<FilterState>) => ({ ...state, ...action }),
-    { activeFormat: "all", activeStakeLevel: "all", activeVariant: "all", searchQuery: "" }
-  );
-
-  // --- UI state (modals, loading flags) ---
-  interface UIState {
-    showCreateTable: boolean;
-    defaultPrivate: boolean;
-    passwordModal: { tableId: string; tableName: string } | null;
-    passwordInput: string;
-    submittingPassword: boolean;
-    showAISettings: boolean;
-    joinCodeOpen: boolean;
-    joinCode: string;
-    joinCodeLoading: boolean;
-    joinCodeError: string;
-  }
-  const [ui, setUi] = useReducer(
-    (state: UIState, action: Partial<UIState>) => ({ ...state, ...action }),
-    {
-      showCreateTable: false,
-      defaultPrivate: false,
-      passwordModal: null,
-      passwordInput: "",
-      submittingPassword: false,
-      showAISettings: false,
-      joinCodeOpen: false,
-      joinCode: "",
-      joinCodeLoading: false,
-      joinCodeError: "",
-    }
-  );
-
-  // --- AI settings state ---
-  interface AIState {
-    aiKeyError: string;
-    aiKeyInput: string;
-    aiEnabled: boolean;
-    aiHasKey: boolean;
-    aiSaving: boolean;
-  }
-  const [ai, setAi] = useReducer(
-    (state: AIState, action: Partial<AIState>) => ({ ...state, ...action }),
-    { aiKeyError: "", aiKeyInput: "", aiEnabled: false, aiHasKey: false, aiSaving: false }
-  );
+  const [passwordModal, setPasswordModal] = useState<{ tableId: string; tableName: string } | null>(null);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [submittingPassword, setSubmittingPassword] = useState(false);
+  const [aiKeyError, setAiKeyError] = useState("");
+  const [showAISettings, setShowAISettings] = useState(false);
+  const [aiKeyInput, setAiKeyInput] = useState("");
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiHasKey, setAiHasKey] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [joinCodeOpen, setJoinCodeOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinCodeLoading, setJoinCodeLoading] = useState(false);
+  const [joinCodeError, setJoinCodeError] = useState("");
+  const [showModeSelection, setShowModeSelection] = useState(true);
   const tablesRef = useRef<HTMLDivElement>(null);
 
   // Kill any lingering game audio when returning to lobby
@@ -765,8 +730,8 @@ export default function Lobby() {
   const fetchTables = async () => {
     try {
       const params = new URLSearchParams();
-      if (filters.activeFormat !== "all") params.set("format", filters.activeFormat);
-      if (filters.activeVariant !== "all") params.set("variant", filters.activeVariant);
+      if (activeFormat !== "all") params.set("format", activeFormat);
+      if (activeVariant !== "all") params.set("variant", activeVariant);
       const qs = params.toString();
       const res = await fetch(`/api/tables${qs ? `?${qs}` : ""}`);
       if (res.ok) {
@@ -784,26 +749,26 @@ export default function Lobby() {
     const interval = setInterval(fetchTables, 5000);
     // Fetch AI settings
     fetch("/api/ai-settings").then(r => r.ok ? r.json() : null).then(data => {
-      if (data) { setAi({ aiEnabled: data.aiEnabled, aiHasKey: data.hasKey }); }
+      if (data) { setAiEnabled(data.aiEnabled); setAiHasKey(data.hasKey); }
     }).catch(() => {});
     return () => clearInterval(interval);
-  }, [filters.activeFormat, filters.activeVariant]);
+  }, [activeFormat, activeVariant]);
 
   // Search debounce (300ms)
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(filters.searchQuery), 300);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
-  }, [filters.searchQuery]);
+  }, [searchQuery]);
 
   const filteredTables = tables.filter(t => {
-    const matchesFormat = filters.activeFormat === "all" || (t.gameFormat || "cash") === filters.activeFormat;
+    const matchesFormat = activeFormat === "all" || (t.gameFormat || "cash") === activeFormat;
     const matchesSearch = !debouncedSearch || t.name.toLowerCase().includes(debouncedSearch.toLowerCase());
 
     // Stake level filter based on big blind
     let matchesStake = true;
-    if (filters.activeStakeLevel !== "all") {
+    if (activeStakeLevel !== "all") {
       const bb = t.bigBlind;
-      switch (filters.activeStakeLevel) {
+      switch (activeStakeLevel) {
         case "micro": matchesStake = bb <= 10; break;
         case "low": matchesStake = bb >= 11 && bb <= 50; break;
         case "mid": matchesStake = bb >= 51 && bb <= 200; break;
@@ -813,9 +778,9 @@ export default function Lobby() {
 
     // Variant filter based on pokerVariant field
     let matchesVariant = true;
-    if (filters.activeVariant !== "all") {
+    if (activeVariant !== "all") {
       const variant = (t.pokerVariant || "nlhe").toLowerCase();
-      matchesVariant = variant === filters.activeVariant;
+      matchesVariant = variant === activeVariant;
     }
 
     return matchesFormat && matchesSearch && matchesStake && matchesVariant;
@@ -842,21 +807,22 @@ export default function Lobby() {
 
   const handleTableClick = (table: TableInfo) => {
     if (table.isPrivate) {
-      setUi({ passwordModal: { tableId: table.id, tableName: table.name }, passwordInput: "" });
+      setPasswordModal({ tableId: table.id, tableName: table.name });
+      setPasswordInput("");
       return;
     }
     navigate(`/game/${table.id}`);
   };
 
   const handlePasswordSubmit = () => {
-    if (!ui.passwordModal || ui.submittingPassword) return;
-    setUi({ submittingPassword: true });
-    const pw = ui.passwordInput;
-    setUi({ passwordInput: "" });
+    if (!passwordModal || submittingPassword) return;
+    setSubmittingPassword(true);
+    const pw = passwordInput;
+    setPasswordInput("");
     // Pass password via navigation state — never stored in sessionStorage
-    navigate(`/game/${ui.passwordModal.tableId}?tp=${encodeURIComponent(pw)}`);
+    navigate(`/game/${passwordModal.tableId}?tp=${encodeURIComponent(pw)}`);
     // Reset after navigation in case user comes back
-    setTimeout(() => { setUi({ submittingPassword: false, passwordModal: null }); }, 500);
+    setTimeout(() => { setSubmittingPassword(false); setPasswordModal(null); }, 500);
   };
 
   const handleCreateTable = async (config: any) => {
@@ -868,7 +834,7 @@ export default function Lobby() {
       });
       if (res.ok) {
         const table = await res.json();
-        setUi({ showCreateTable: false });
+        setShowCreateTable(false);
         navigate(`/game/${table.id}`);
       } else {
         const err = await res.json().catch(() => ({ message: "Unknown error" }));
@@ -880,29 +846,121 @@ export default function Lobby() {
   };
 
   const handleJoinByCode = async () => {
-    if (ui.joinCode.length < 6) return;
-    setUi({ joinCodeLoading: true, joinCodeError: "" });
+    if (joinCode.length < 6) return;
+    setJoinCodeLoading(true);
+    setJoinCodeError("");
     try {
-      const res = await fetch(`/api/tables/invite/${encodeURIComponent(ui.joinCode)}`);
+      const res = await fetch(`/api/tables/invite/${encodeURIComponent(joinCode)}`);
       if (res.ok) {
         const data = await res.json();
-        setUi({ joinCodeOpen: false, joinCode: "" });
+        setJoinCodeOpen(false);
+        setJoinCode("");
         navigate(`/game/${data.tableId}`);
       } else {
         const err = await res.json().catch(() => ({ message: "Invalid code" }));
-        setUi({ joinCodeError: err.message || "Invalid invite code" });
+        setJoinCodeError(err.message || "Invalid invite code");
       }
     } catch {
-      setUi({ joinCodeError: "Network error. Please try again." });
+      setJoinCodeError("Network error. Please try again.");
     } finally {
-      setUi({ joinCodeLoading: false });
+      setJoinCodeLoading(false);
     }
   };
+
+  if (showModeSelection) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: "linear-gradient(180deg, #0d0b08 0%, #1a1510 100%)" }}>
+        {/* Back button */}
+        <button onClick={() => navigate("/profile")} className="self-start mb-6 px-4 py-2 rounded-lg text-gray-400 hover:text-white text-sm" style={{ border: "1px solid rgba(212,175,55,0.3)" }}>
+          &larr; Back to Dashboard
+        </button>
+
+        {/* Title */}
+        <h1 className="text-3xl md:text-4xl font-black italic uppercase tracking-wider mb-8" style={{ background: "linear-gradient(135deg, #d4af37, #f5e6a3, #b8960c, #d4af37)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          High Rollers Club &mdash; Game Mode Selection
+        </h1>
+
+        {/* 3 Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full">
+          {/* Private Table Card */}
+          <div className="rounded-xl overflow-hidden flex flex-col" style={{ background: "rgba(15,15,20,0.85)", border: "1px solid rgba(212,175,55,0.3)" }}>
+            <div className="h-40 bg-gradient-to-br from-amber-900/30 to-black flex items-center justify-center">
+              <img src="/images/generated/private-table.webp" alt="" className="w-full h-full object-cover opacity-60" />
+            </div>
+            <div className="p-5 flex-1 flex flex-col">
+              <h3 className="text-lg font-black uppercase tracking-wider" style={{ background: "linear-gradient(135deg, #f5e6a3, #d4af37, #c9a84c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Private Table</h3>
+              <p className="text-xs text-gray-400 mt-2 flex-1">Exclusive access. Custom blinds, invite-only for elite play. Set your stakes and play with invited guests.</p>
+              <button
+                onClick={() => { setShowModeSelection(false); setActiveFormat("cash"); }}
+                className="w-full py-3 mt-4 uppercase tracking-wider text-sm font-bold rounded-lg transition-all hover:shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+                style={{ background: "linear-gradient(135deg, rgba(154,123,44,0.4), rgba(212,175,55,0.2))", border: "1px solid rgba(212,175,55,0.5)", color: "#d4af37" }}
+              >
+                Create Private Table
+              </button>
+            </div>
+          </div>
+
+          {/* Public Game Card (locked) */}
+          <div className="rounded-xl overflow-hidden flex flex-col opacity-60" style={{ background: "rgba(15,15,20,0.85)", border: "1px solid rgba(212,175,55,0.2)" }}>
+            <div className="h-40 bg-gradient-to-br from-amber-900/20 to-black flex items-center justify-center">
+              <Lock className="w-16 h-16 text-amber-600/50" />
+            </div>
+            <div className="p-5 flex-1 flex flex-col text-center">
+              <p className="text-[0.625rem] text-amber-500/60 uppercase tracking-widest">Club Owner Sponsored</p>
+              <h3 className="text-lg font-black uppercase tracking-wider mt-1" style={{ background: "linear-gradient(135deg, #f5e6a3, #d4af37, #c9a84c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Public Game</h3>
+              <p className="text-xs text-gray-500 mt-2 flex-1">Join sponsored open games. Community play with exciting stakes.</p>
+              <button
+                disabled
+                className="w-full py-3 mt-4 uppercase tracking-wider text-sm font-bold rounded-lg opacity-50 cursor-not-allowed"
+                style={{ background: "linear-gradient(135deg, rgba(154,123,44,0.3), rgba(212,175,55,0.1))", border: "1px solid rgba(212,175,55,0.3)", color: "#d4af37" }}
+              >
+                Create Public Game (Locked)
+              </button>
+            </div>
+          </div>
+
+          {/* Tournament Card */}
+          <div className="rounded-xl overflow-hidden flex flex-col" style={{ background: "rgba(15,15,20,0.85)", border: "1px solid rgba(212,175,55,0.3)" }}>
+            <div className="h-40 bg-gradient-to-br from-amber-900/30 to-black flex items-center justify-center">
+              <Trophy className="w-16 h-16 text-amber-500/40" />
+            </div>
+            <div className="p-5 flex-1 flex flex-col">
+              <h3 className="text-lg font-black uppercase tracking-wider" style={{ background: "linear-gradient(135deg, #f5e6a3, #d4af37, #c9a84c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Tournament</h3>
+              <p className="text-xs text-gray-400 mt-2 flex-1">Compete against the best. Multi-table events, big prize pools. Climb the leaderboard to become a legend.</p>
+              <button
+                onClick={() => navigate("/tournaments")}
+                className="w-full py-3 mt-4 uppercase tracking-wider text-sm font-bold rounded-lg transition-all hover:shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+                style={{ background: "linear-gradient(135deg, rgba(154,123,44,0.4), rgba(212,175,55,0.2))", border: "1px solid rgba(212,175,55,0.5)", color: "#d4af37" }}
+              >
+                Join Tournament
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-12 flex gap-6 text-xs text-gray-600">
+          <a href="/terms" className="hover:text-gray-400">Terms</a>
+          <a href="/privacy" className="hover:text-gray-400">Privacy</a>
+          <a href="/support" className="hover:text-gray-400">Support</a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <DashboardLayout title="Games & Tournaments">
       <PageBackground image="/images/generated/lobby-bg.png" />
       <div className="px-6 md:px-8 pb-8 relative z-10">
+        {/* Back to Game Mode Selection */}
+        <button
+          onClick={() => setShowModeSelection(true)}
+          className="mb-4 px-4 py-2 rounded-lg text-gray-400 hover:text-white text-sm transition-colors"
+          style={{ border: "1px solid rgba(212,175,55,0.2)" }}
+        >
+          &larr; Game Modes
+        </button>
+
         {/* Hero Banner with welcome image */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1089,14 +1147,14 @@ export default function Lobby() {
           <div className="flex items-center gap-2">
             {user?.role === "admin" && (
               <NeonButton
-                variant={ai.aiEnabled ? "secondary" : "ghost"}
+                variant={aiEnabled ? "secondary" : "ghost"}
                 size="sm"
-                onClick={() => setUi({ showAISettings: !ui.showAISettings })}
+                onClick={() => setShowAISettings(!showAISettings)}
                 className="gap-1.5"
               >
                 <Brain className="w-3.5 h-3.5" />
                 AI BOTS
-                {ai.aiEnabled && <span className="w-1.5 h-1.5 rounded-full bg-secondary" />}
+                {aiEnabled && <span className="w-1.5 h-1.5 rounded-full bg-secondary" />}
               </NeonButton>
             )}
             <NeonButton
@@ -1112,7 +1170,7 @@ export default function Lobby() {
             <NeonButton
               variant="ghost"
               size="sm"
-              onClick={() => { setUi({ joinCodeOpen: true, joinCode: "", joinCodeError: "" }); }}
+              onClick={() => { setJoinCodeOpen(true); setJoinCode(""); setJoinCodeError(""); }}
               className="gap-1.5"
             >
               <Key className="w-3.5 h-3.5" />
@@ -1121,7 +1179,7 @@ export default function Lobby() {
 
             <NeonButton
               size="sm"
-              onClick={() => { setUi({ defaultPrivate: false, showCreateTable: true }); }}
+              onClick={() => { setDefaultPrivate(false); setShowCreateTable(true); }}
               className="gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -1132,7 +1190,7 @@ export default function Lobby() {
 
         {/* AI Settings Panel (admin only) */}
         <AnimatePresence>
-          {ui.showAISettings && user?.role === "admin" && (
+          {showAISettings && user?.role === "admin" && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
@@ -1144,52 +1202,54 @@ export default function Lobby() {
                 <div className="flex items-center gap-2 mb-3">
                   <Brain className="w-4 h-4 text-purple-400" />
                   <span className="text-xs font-bold uppercase tracking-wider text-purple-400">AI Bot Configuration</span>
-                  <span className={`ml-2 flex items-center gap-1 text-[0.5625rem] font-bold uppercase ${ai.aiEnabled ? "text-green-400" : "text-gray-500"}`}>
-                    {ai.aiEnabled ? <><CheckCircle className="w-3 h-3" /> Active</> : <><XCircle className="w-3 h-3" /> Inactive</>}
+                  <span className={`ml-2 flex items-center gap-1 text-[0.5625rem] font-bold uppercase ${aiEnabled ? "text-green-400" : "text-gray-500"}`}>
+                    {aiEnabled ? <><CheckCircle className="w-3 h-3" /> Active</> : <><XCircle className="w-3 h-3" /> Inactive</>}
                   </span>
                 </div>
                 <p className="text-[0.625rem] text-gray-500 mb-3">
                   Provide your Anthropic API key to enable Claude-powered AI bots with unique personalities.
                   Bots will use Claude Haiku for fast, intelligent decisions and in-character chat.
-                  {!ai.aiHasKey && " Without a key, bots use built-in heuristic logic."}
+                  {!aiHasKey && " Without a key, bots use built-in heuristic logic."}
                 </p>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
                     <input
                       type="password"
-                      value={ai.aiKeyInput}
+                      value={aiKeyInput}
                       onChange={(e) => {
-                        setAi({ aiKeyInput: e.target.value });
+                        setAiKeyInput(e.target.value);
                         const v = e.target.value.trim();
                         if (v && !v.startsWith("sk-ant-")) {
-                          setAi({ aiKeyError: "Key must start with \"sk-ant-\"" });
+                          setAiKeyError("Key must start with \"sk-ant-\"");
                         } else if (v && v.length < 20) {
-                          setAi({ aiKeyError: "Key is too short" });
+                          setAiKeyError("Key is too short");
                         } else {
-                          setAi({ aiKeyError: "" });
+                          setAiKeyError("");
                         }
                       }}
-                      placeholder={ai.aiHasKey ? "Key is set (enter new to replace)" : "sk-ant-..."}
-                      className={`w-full pl-9 pr-4 py-2 rounded-md text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-purple-500/30 bg-surface-highest/50 border ${ai.aiKeyError ? "border-red-500/50" : "border-white/[0.06]"}`}
+                      placeholder={aiHasKey ? "Key is set (enter new to replace)" : "sk-ant-..."}
+                      className={`w-full pl-9 pr-4 py-2 rounded-md text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-purple-500/30 bg-surface-highest/50 border ${aiKeyError ? "border-red-500/50" : "border-white/[0.06]"}`}
                     />
-                    {ai.aiKeyError && (
-                      <p className="absolute -bottom-4 left-0 text-[0.5625rem] text-red-400">{ai.aiKeyError}</p>
+                    {aiKeyError && (
+                      <p className="absolute -bottom-4 left-0 text-[0.5625rem] text-red-400">{aiKeyError}</p>
                     )}
                   </div>
                   <button
                     onClick={async () => {
-                      if (!ai.aiKeyInput.trim()) return;
-                      setAi({ aiSaving: true });
+                      if (!aiKeyInput.trim()) return;
+                      setAiSaving(true);
                       try {
                         const res = await fetch("/api/ai-settings", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ apiKey: ai.aiKeyInput.trim() }),
+                          body: JSON.stringify({ apiKey: aiKeyInput.trim() }),
                         });
                         const data = await res.json();
                         if (res.ok) {
-                          setAi({ aiEnabled: data.aiEnabled, aiHasKey: true, aiKeyInput: "" });
+                          setAiEnabled(data.aiEnabled);
+                          setAiHasKey(true);
+                          setAiKeyInput("");
                           toast({ title: "AI bots enabled", description: "Claude-powered bots are now active." });
                         } else {
                           toast({ title: "Error", description: data.error || "Failed to save", variant: "destructive" });
@@ -1197,27 +1257,28 @@ export default function Lobby() {
                       } catch {
                         toast({ title: "Error", description: "Network error", variant: "destructive" });
                       } finally {
-                        setAi({ aiSaving: false });
+                        setAiSaving(false);
                       }
                     }}
-                    disabled={ai.aiSaving || !ai.aiKeyInput.trim() || !!ai.aiKeyError}
+                    disabled={aiSaving || !aiKeyInput.trim() || !!aiKeyError}
                     className="px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-white bg-purple-600/60 border border-purple-500/30 hover:bg-purple-600/80 transition-all disabled:opacity-40"
                   >
-                    {ai.aiSaving ? "Saving..." : "Save Key"}
+                    {aiSaving ? "Saving..." : "Save Key"}
                   </button>
-                  {ai.aiHasKey && (
+                  {aiHasKey && (
                     <button
                       onClick={async () => {
-                        setAi({ aiSaving: true });
+                        setAiSaving(true);
                         try {
                           await fetch("/api/ai-settings", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ apiKey: null }),
                           });
-                          setAi({ aiEnabled: false, aiHasKey: false });
+                          setAiEnabled(false);
+                          setAiHasKey(false);
                           toast({ title: "AI bots disabled", description: "Bots will use heuristic logic." });
-                        } catch {} finally { setAi({ aiSaving: false }); }
+                        } catch {} finally { setAiSaving(false); }
                       }}
                       className="px-3 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all"
                     >
@@ -1235,8 +1296,8 @@ export default function Lobby() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            value={filters.searchQuery}
-            onChange={(e) => setFilters({ searchQuery: e.target.value })}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search tables..."
             className="w-full bg-surface-high/50 border border-white/[0.06] rounded-md pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-primary/30 transition-all"
           />
@@ -1246,7 +1307,7 @@ export default function Lobby() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {VARIANT_CARDS.map((variant, i) => {
             const Icon = variant.icon;
-            const isActive = filters.activeVariant === variant.key;
+            const isActive = activeVariant === variant.key;
             const variantCount = tables.filter(t => (t.pokerVariant || "nlhe").toLowerCase() === variant.key).length;
             return (
               <motion.div
@@ -1256,7 +1317,7 @@ export default function Lobby() {
                 transition={{ delay: i * 0.1, duration: 0.5 }}
               >
                 <div
-                  onClick={() => setFilters({ activeVariant: filters.activeVariant === variant.key ? "all" : variant.key })}
+                  onClick={() => setActiveVariant(activeVariant === variant.key ? "all" : variant.key)}
                   className={cn(
                     "group cursor-pointer relative overflow-hidden rounded-md transition-all duration-300 card-hover",
                     isActive
@@ -1306,16 +1367,16 @@ export default function Lobby() {
           <Search className="w-4 h-4 text-muted-foreground mr-1" />
           {FORMAT_TABS.map(tab => {
             const Icon = tab.icon;
-            const isActive = filters.activeFormat === tab.key;
+            const isActive = activeFormat === tab.key;
             return (
               <button
                 key={tab.key}
-                onClick={() => setFilters({ activeFormat: tab.key })}
+                onClick={() => setActiveFormat(tab.key)}
                 data-testid={`button-format-${tab.key}`}
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5",
                   isActive
-                    ? "bg-primary/15 text-primary border-b-2 border border-primary/30 shadow-[0_0_12px_rgba(212,175,55,0.2)]"
+                    ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_12px_rgba(129,236,255,0.15)]"
                     : "bg-surface-high/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
                 )}
               >
@@ -1326,11 +1387,11 @@ export default function Lobby() {
           })}
           <div className="w-px h-5 bg-white/10 mx-1" />
           {STAKE_TABS.map(stake => {
-            const isActive = filters.activeStakeLevel === stake.key;
+            const isActive = activeStakeLevel === stake.key;
             return (
               <button
                 key={stake.key}
-                onClick={() => setFilters({ activeStakeLevel: stake.key })}
+                onClick={() => setActiveStakeLevel(stake.key)}
                 data-testid={`button-stake-${stake.key}`}
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200",
@@ -1412,7 +1473,7 @@ export default function Lobby() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             whileHover={{ scale: 1.02 }}
-            onClick={() => { setUi({ defaultPrivate: true, showCreateTable: true }); }}
+            onClick={() => { setDefaultPrivate(true); setShowCreateTable(true); }}
             className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
           >
             <div className="flex items-center gap-3">
@@ -1459,19 +1520,8 @@ export default function Lobby() {
         {/* Table grid */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-xl bg-black/30 backdrop-blur-xl border border-white/10 p-5 animate-pulse">
-                <div className="flex justify-between mb-3">
-                  <div className="h-4 w-16 rounded-full bg-white/[0.06]" />
-                  <div className="h-4 w-10 rounded-full bg-white/[0.06]" />
-                </div>
-                <div className="h-6 w-40 rounded bg-white/[0.06] mb-3" />
-                <div className="h-4 w-28 rounded bg-white/[0.04] mb-4" />
-                <div className="flex justify-between">
-                  <div className="h-4 w-20 rounded bg-white/[0.04]" />
-                  <div className="h-4 w-20 rounded bg-white/[0.04]" />
-                </div>
-              </div>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-44 bg-surface-high/40 backdrop-blur-xl rounded-md animate-pulse" />
             ))}
           </div>
         ) : filteredTables.length === 0 ? (
@@ -1481,7 +1531,7 @@ export default function Lobby() {
               <Search className="w-7 h-7 text-primary/40" />
             </div>
             <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1" data-testid="text-empty-state">
-              {filters.activeFormat === "all" ? "No Tables Found" : `No ${filters.activeFormat.replace("_", " ")} Tables`}
+              {activeFormat === "all" ? "No Tables Found" : `No ${activeFormat.replace("_", " ")} Tables`}
             </h3>
             <p className="text-xs text-muted-foreground/60 max-w-xs">Try adjusting your filters or create a new table to get started.</p>
             <div className="flex items-center gap-3 mt-6">
@@ -1489,7 +1539,7 @@ export default function Lobby() {
                 <Bot className="w-4 h-4" />
                 Play vs Bots
               </NeonButton>
-              <NeonButton onClick={() => setUi({ showCreateTable: true })} data-testid="button-create-table-empty" className="gap-2">
+              <NeonButton onClick={() => setShowCreateTable(true)} data-testid="button-create-table-empty" className="gap-2">
                 <Plus className="w-4 h-4" />
                 Create Table
               </NeonButton>
@@ -1500,7 +1550,7 @@ export default function Lobby() {
             <div className="flex items-center gap-2 mb-3">
               <LayoutGrid className="w-3.5 h-3.5 text-muted-foreground" />
               {/* Fast-Fold Pool Browser */}
-              {filters.activeFormat === "fast_fold" && <FastFoldPoolBrowser />}
+              {activeFormat === "fast_fold" && <FastFoldPoolBrowser />}
 
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">All Tables</h3>
               <div className="flex-1 h-px bg-gradient-to-r from-white/[0.06] to-transparent" />
@@ -1526,18 +1576,18 @@ export default function Lobby() {
 
       {/* Create table modal */}
       <AnimatePresence>
-        {ui.showCreateTable && (
+        {showCreateTable && (
           <CreateTableModal
-            onClose={() => { setUi({ showCreateTable: false, defaultPrivate: false }); }}
+            onClose={() => { setShowCreateTable(false); setDefaultPrivate(false); }}
             onCreate={handleCreateTable}
-            defaultPrivate={ui.defaultPrivate}
+            defaultPrivate={defaultPrivate}
           />
         )}
       </AnimatePresence>
 
       {/* Private table password modal */}
       <AnimatePresence>
-        {ui.passwordModal && (
+        {passwordModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1546,7 +1596,7 @@ export default function Lobby() {
             role="dialog"
             aria-modal="true"
           >
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setUi({ passwordModal: null })} />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPasswordModal(null)} />
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -1557,24 +1607,24 @@ export default function Lobby() {
                 <Lock className="w-5 h-5 text-primary" />
                 <div>
                   <h3 className="text-sm font-display font-bold text-white">Private Table</h3>
-                  <p className="text-[0.625rem] text-muted-foreground">{ui.passwordModal.tableName}</p>
+                  <p className="text-[0.625rem] text-muted-foreground">{passwordModal.tableName}</p>
                 </div>
               </div>
               <input
                 type="password"
-                value={ui.passwordInput}
-                onChange={(e) => setUi({ passwordInput: e.target.value })}
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
                 placeholder="Enter table password..."
                 autoFocus
                 className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-4"
               />
               <div className="flex gap-2">
-                <NeonButton variant="ghost" onClick={() => setUi({ passwordModal: null })} className="flex-1" disabled={ui.submittingPassword}>
+                <NeonButton variant="ghost" onClick={() => setPasswordModal(null)} className="flex-1" disabled={submittingPassword}>
                   Cancel
                 </NeonButton>
-                <NeonButton onClick={handlePasswordSubmit} className="flex-1" disabled={ui.submittingPassword}>
-                  {ui.submittingPassword ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Joining...</> : "Join Table"}
+                <NeonButton onClick={handlePasswordSubmit} className="flex-1" disabled={submittingPassword}>
+                  {submittingPassword ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Joining...</> : "Join Table"}
                 </NeonButton>
               </div>
             </motion.div>
@@ -1584,7 +1634,7 @@ export default function Lobby() {
 
       {/* Join by Code modal */}
       <AnimatePresence>
-        {ui.joinCodeOpen && (
+        {joinCodeOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1593,7 +1643,7 @@ export default function Lobby() {
             role="dialog"
             aria-modal="true"
           >
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setUi({ joinCodeOpen: false })} />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setJoinCodeOpen(false)} />
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -1609,13 +1659,14 @@ export default function Lobby() {
               </div>
               <input
                 type="text"
-                value={ui.joinCode}
+                value={joinCode}
                 onChange={(e) => {
                   const val = e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8);
-                  setUi({ joinCode: val, joinCodeError: "" });
+                  setJoinCode(val);
+                  setJoinCodeError("");
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && ui.joinCode.length >= 6) handleJoinByCode();
+                  if (e.key === "Enter" && joinCode.length >= 6) handleJoinByCode();
                 }}
                 placeholder="e.g. ABC123"
                 autoFocus
@@ -1623,22 +1674,22 @@ export default function Lobby() {
                 className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-1 uppercase tracking-widest font-mono"
               />
               <div className="h-5 mb-3">
-                {ui.joinCodeError ? (
-                  <p className="text-[0.625rem] text-destructive">{ui.joinCodeError}</p>
-                ) : ui.joinCode.length > 0 && ui.joinCode.length < 6 ? (
-                  <p className="text-[0.625rem] text-muted-foreground">Minimum 6 characters ({6 - ui.joinCode.length} more needed)</p>
+                {joinCodeError ? (
+                  <p className="text-[0.625rem] text-destructive">{joinCodeError}</p>
+                ) : joinCode.length > 0 && joinCode.length < 6 ? (
+                  <p className="text-[0.625rem] text-muted-foreground">Minimum 6 characters ({6 - joinCode.length} more needed)</p>
                 ) : null}
               </div>
               <div className="flex gap-2">
-                <NeonButton variant="ghost" onClick={() => setUi({ joinCodeOpen: false })} className="flex-1" disabled={ui.joinCodeLoading}>
+                <NeonButton variant="ghost" onClick={() => setJoinCodeOpen(false)} className="flex-1" disabled={joinCodeLoading}>
                   Cancel
                 </NeonButton>
                 <NeonButton
                   onClick={handleJoinByCode}
                   className="flex-1"
-                  disabled={ui.joinCode.length < 6 || ui.joinCodeLoading}
+                  disabled={joinCode.length < 6 || joinCodeLoading}
                 >
-                  {ui.joinCodeLoading ? "Joining..." : "Join Table"}
+                  {joinCodeLoading ? "Joining..." : "Join Table"}
                 </NeonButton>
               </div>
             </motion.div>

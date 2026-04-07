@@ -12,9 +12,9 @@ interface BreakingNewsModalProps {
 }
 
 const PRIORITY_STYLES: Record<Priority, { border: string; icon: typeof Bell; iconColor: string; pulse: boolean }> = {
-  normal:    { border: "border-amber-500/50",  icon: Bell,          iconColor: "text-amber-400",  pulse: false },
-  important: { border: "border-amber-500/50", icon: AlertTriangle, iconColor: "text-amber-400", pulse: false },
-  urgent:    { border: "border-red-500/50",   icon: AlertTriangle, iconColor: "text-red-400",   pulse: true },
+  normal:    { border: "border-[#d4af37]/60",  icon: Bell,          iconColor: "text-[#d4af37]",  pulse: false },
+  important: { border: "border-[#d4af37]/70", icon: AlertTriangle, iconColor: "text-[#d4af37]", pulse: false },
+  urgent:    { border: "border-red-500/60",   icon: AlertTriangle, iconColor: "text-red-400",   pulse: true },
 };
 
 export function BreakingNewsModal({ title, message, priority = "normal", onClose }: BreakingNewsModalProps) {
@@ -68,7 +68,7 @@ export function BreakingNewsModal({ title, message, priority = "normal", onClose
             onMouseLeave={() => { setPaused(false); lastTickRef.current = Date.now(); }}
             onFocus={() => setPaused(true)}
             onBlur={() => { setPaused(false); lastTickRef.current = Date.now(); }}
-            className={`relative max-w-md w-full mx-4 rounded-xl bg-surface-low border-2 ${style.border} p-6 shadow-2xl ${
+            className={`relative max-w-md w-full mx-4 rounded-xl bg-surface-low border-2 ${style.border} p-6 shadow-[0_0_40px_rgba(212,175,55,0.15)] ${
               style.pulse ? "animate-pulse" : ""
             }`}
           >
@@ -87,7 +87,7 @@ export function BreakingNewsModal({ title, message, priority = "normal", onClose
               }`}>
                 <Icon className={`w-5 h-5 ${style.iconColor}`} />
               </div>
-              <h3 className="text-base font-display font-bold text-white tracking-tight">
+              <h3 className="text-base font-display font-bold gold-text tracking-tight">
                 {title}
               </h3>
             </div>
@@ -100,7 +100,7 @@ export function BreakingNewsModal({ title, message, priority = "normal", onClose
             {/* Dismiss button */}
             <button
               onClick={dismiss}
-              className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-white/10 text-white border border-white/10 hover:bg-white/15 transition-all"
+              className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/30 hover:bg-[#d4af37]/20 transition-all"
             >
               Dismiss
             </button>

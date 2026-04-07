@@ -23,7 +23,7 @@ export default function PremiumUpgrade() {
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#d4a843]/15 border border-[#d4a843]/25 mb-2">
           <Crown className="w-8 h-8 text-[#f0d478]" />
         </div>
-        <h1 className="text-2xl font-display font-bold text-white">
+        <h1 className="text-2xl font-display font-bold gold-text">
           Premium Has Been Upgraded
         </h1>
         <p className="text-sm text-gray-400 max-w-md mx-auto">
@@ -37,8 +37,7 @@ export default function PremiumUpgrade() {
         </div>
         <button
           onClick={() => setLocation("/tiers")}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider text-black transition-all hover:shadow-[0_0_20px_rgba(212,168,67,0.3)]"
-          style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 40%, #f3e2ad 60%, #d4af37 100%)" }}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider gold-btn transition-all hover:shadow-[0_0_20px_rgba(212,168,67,0.3)]"
         >
           <Crown className="w-4 h-4" />
           View Membership Tiers

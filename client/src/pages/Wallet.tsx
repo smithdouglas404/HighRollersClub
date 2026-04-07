@@ -1763,6 +1763,31 @@ export default function Wallet() {
           </div>
         </motion.div>
 
+        {/* ── Wallet Providers ──────────────────────────────────────── */}
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
+          <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-3 flex items-center gap-2">
+            <Link2 className="w-4 h-4" style={{ color: "#d4af37" }} /> Connected Wallets
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { name: "MetaMask", icon: "🦊", color: "text-orange-400", bg: "rgba(249,115,22,0.08)", border: "rgba(249,115,22,0.15)" },
+              { name: "Coinbase", icon: "🔵", color: "text-blue-400", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.15)" },
+              { name: "WalletConnect", icon: "🔗", color: "text-cyan-400", bg: "rgba(34,211,238,0.08)", border: "rgba(34,211,238,0.15)" },
+              { name: "Phantom", icon: "👻", color: "text-purple-400", bg: "rgba(168,85,247,0.08)", border: "rgba(168,85,247,0.15)" },
+            ].map((w) => (
+              <div key={w.name} className="vault-card p-4 flex flex-col items-center text-center hover:scale-[1.02] transition-transform cursor-pointer">
+                <span className="text-2xl mb-2">{w.icon}</span>
+                <p className={`text-sm font-bold ${w.color}`}>{w.name}</p>
+                <p className="text-[0.625rem] text-gray-600 mt-0.5">Not Connected</p>
+                <button className="gold-btn px-3 py-1 text-[0.625rem] mt-2">Connect</button>
+              </div>
+            ))}
+          </div>
+          <p className="text-[0.5625rem] text-gray-600 mt-2 flex items-center gap-1">
+            <Shield className="w-3 h-3" /> Your wallet keys never leave your device. We only verify ownership.
+          </p>
+        </motion.div>
+
         {/* ── Tier Limits & Usage ──────────────────────────────────── */}
         {(() => {
           const userTier = user?.tier || "free";

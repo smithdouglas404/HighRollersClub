@@ -59,10 +59,10 @@ function PasswordManagement() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-6"
+      className="vault-card p-6"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+        <h3 className="text-xs font-bold uppercase tracking-wider gold-text flex items-center gap-2">
           <Lock className="w-4 h-4 text-primary/70" />
           Password
         </h3>
@@ -141,30 +141,8 @@ function PasswordManagement() {
                     {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {newPassword.length > 0 && (
-                  <div className="mt-2">
-                    <div className="flex gap-1 mb-1">
-                      {[1, 2, 3, 4].map((level) => {
-                        const strength =
-                          (newPassword.length >= 6 ? 1 : 0) +
-                          (/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? 1 : 0) +
-                          (/\d/.test(newPassword) ? 1 : 0) +
-                          (/[^A-Za-z0-9]/.test(newPassword) ? 1 : 0);
-                        const colors = ["bg-red-500", "bg-orange-500", "bg-amber-500", "bg-green-500"];
-                        return (
-                          <div
-                            key={level}
-                            className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                              level <= strength ? colors[strength - 1] : "bg-white/[0.06]"
-                            }`}
-                          />
-                        );
-                      })}
-                    </div>
-                    {newPassword.length < 6 && (
-                      <p className="text-[0.5625rem] text-red-400">Password must be at least 6 characters</p>
-                    )}
-                  </div>
+                {newPassword.length > 0 && newPassword.length < 6 && (
+                  <p className="text-[0.5625rem] text-red-400 mt-1">Password must be at least 6 characters</p>
                 )}
               </div>
 
@@ -379,7 +357,7 @@ function TwoFactorAuth() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 }}
-      className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-6"
+      className="vault-card p-6"
     >
       <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
         <Smartphone className="w-4 h-4 text-purple-500/70" />
@@ -599,7 +577,7 @@ function ConnectedWallets() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-6"
+      className="vault-card p-6"
     >
       <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
         <Wallet className="w-4 h-4 text-primary/70" />
@@ -725,7 +703,7 @@ function LinkedSocialAccounts() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25 }}
-      className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-6"
+      className="vault-card p-6"
     >
       <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
         <Link2 className="w-4 h-4 text-green-500/70" />
@@ -927,25 +905,25 @@ export default function Security() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="px-4 md:px-8 mb-6"
+          className="mb-6"
         >
           <button
             onClick={() => navigate("/profile")}
-            className="flex items-center gap-1.5 text-[0.625rem] font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
+            className="flex items-center gap-1.5 text-[0.625rem] font-medium text-gray-500 hover:text-white transition-colors mb-4"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             Back to Profile
           </button>
 
-          <div className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-purple-500/15 border border-primary/20 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-primary" />
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}>
+              <Shield className="w-6 h-6" style={{ color: "#d4af37" }} />
             </div>
             <div>
-              <h2 className="text-lg font-display font-bold text-white tracking-tight">
-                Account Security
+              <h2 className="text-lg font-black uppercase tracking-wider gold-text">
+                Security Settings
               </h2>
-              <p className="text-[0.625rem] text-muted-foreground">
+              <p className="text-[0.625rem] text-gray-500">
                 Manage your account security, authentication methods, and connected services.
               </p>
             </div>
@@ -953,7 +931,7 @@ export default function Security() {
         </motion.div>
 
         {/* Sections */}
-        <div className="px-4 md:px-8 space-y-4">
+        <div className="space-y-4">
           <PasswordManagement />
           <TwoFactorAuth />
           <ConnectedWallets />

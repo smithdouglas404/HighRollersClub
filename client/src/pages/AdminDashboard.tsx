@@ -739,10 +739,12 @@ export default function AdminDashboard() {
                   { label: "Total Deposits", value: `$${(stats.totalDeposits / 100).toFixed(2)}`, colorClass: "text-primary" },
                   { label: "Withdrawals", value: `$${(stats.totalWithdrawals / 100).toFixed(2)}`, colorClass: "text-red-400" },
                 ].map((stat, i) => (
-                  <div key={i} className="glass rounded-xl p-4 text-center">
-                    <div className="text-xs text-gray-500 uppercase mb-1">{stat.label}</div>
-                    <div className={`text-xl font-bold font-mono ${stat.colorClass}`}>{stat.value}</div>
-                  </div>
+                  <GoldCard key={i}>
+                    <div className="p-4 text-center">
+                      <div className="text-xs text-gray-500 uppercase mb-1">{stat.label}</div>
+                      <div className={`text-xl font-bold font-mono ${stat.colorClass}`}>{stat.value}</div>
+                    </div>
+                  </GoldCard>
                 ))}
               </div>
             )}
@@ -758,10 +760,12 @@ export default function AdminDashboard() {
                     { label: "Net Revenue", value: (revenueSummary.netRevenue / 100).toFixed(2), colorClass: "text-green-400" },
                     { label: "Total Buyins", value: (revenueSummary.totalBuyins / 100).toFixed(2), colorClass: "text-blue-400" },
                   ].map((stat, i) => (
-                    <div key={i} className="glass rounded-xl p-4 text-center">
-                      <div className="text-xs text-gray-500 uppercase mb-1">{stat.label}</div>
-                      <div className={`text-xl font-bold font-mono ${stat.colorClass}`}>${stat.value}</div>
-                    </div>
+                    <GoldCard key={i}>
+                      <div className="p-4 text-center">
+                        <div className="text-xs text-gray-500 uppercase mb-1">{stat.label}</div>
+                        <div className={`text-xl font-bold font-mono ${stat.colorClass}`}>${stat.value}</div>
+                      </div>
+                    </GoldCard>
                   ))}
                 </div>
               </div>
@@ -967,12 +971,9 @@ export default function AdminDashboard() {
                   {w.txHash && <div className="text-[10px] text-purple-400 font-mono">Tx: {w.txHash.slice(0, 16)}...</div>}
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => handleWithdrawalAction(w.id, "approve")}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 text-xs font-bold hover:bg-green-500/30 transition-colors"
-                  >
+                  <GoldButton onClick={() => handleWithdrawalAction(w.id, "approve")}>
                     <CheckCircle className="w-3 h-3" /> Approve
-                  </button>
+                  </GoldButton>
                   <button
                     onClick={() => handleWithdrawalAction(w.id, "reject")}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
@@ -1165,14 +1166,9 @@ export default function AdminDashboard() {
                       )}
                     </div>
                   </div>
-                  <button
+                  <GoldButton
                     onClick={handleToggleSystemLock}
                     disabled={togglingLock}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
-                      systemStatus.locked
-                        ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                        : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                    } disabled:opacity-50`}
                   >
                     {togglingLock ? (
                       <RefreshCw className="w-3 h-3 animate-spin" />
@@ -1182,7 +1178,7 @@ export default function AdminDashboard() {
                       <Lock className="w-3 h-3" />
                     )}
                     {systemStatus.locked ? "Unlock System" : "Lock System"}
-                  </button>
+                  </GoldButton>
                 </div>
               </div>
             )}
@@ -1191,10 +1187,9 @@ export default function AdminDashboard() {
             <div className="glass rounded-xl p-6">
               <h3 className="text-sm font-bold text-white mb-4">Rakeback Processing</h3>
               <p className="text-xs text-gray-500 mb-4">Process 20% rakeback payouts for all players based on the last 7 days of rake contributions.</p>
-              <button
+              <GoldButton
                 onClick={handleProcessRakeback}
                 disabled={processingRakeback}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30 transition-colors disabled:opacity-50"
               >
                 {processingRakeback ? (
                   <RefreshCw className="w-3 h-3 animate-spin" />
@@ -1202,7 +1197,7 @@ export default function AdminDashboard() {
                   <DollarSign className="w-3 h-3" />
                 )}
                 {processingRakeback ? "Processing..." : "Process Rakeback"}
-              </button>
+              </GoldButton>
               {rakebackResult && (
                 <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
                   <div className="text-xs text-green-400 font-bold">

@@ -331,17 +331,12 @@ export default function AvatarWardrobe() {
                 {equipmentSlots.map((slot) => {
                   const SlotIcon = slot.icon;
                   return (
-                    <div
-                      key={slot.name}
-                      className={`rounded-lg p-2 border text-center transition-all ${
-                        slot.equipped
-                          ? "border-amber-500/30 bg-amber-500/5"
-                          : "border-white/[0.06] bg-white/[0.02]"
-                      }`}
-                    >
-                      <SlotIcon className={`w-4 h-4 mx-auto ${slot.equipped ? "text-amber-400" : "text-gray-600"}`} />
-                      <div className="text-[0.5rem] font-bold text-white mt-1">{slot.name}</div>
-                    </div>
+                    <GoldCard key={slot.name}>
+                      <div className="p-2 text-center">
+                        <SlotIcon className={`w-4 h-4 mx-auto ${slot.equipped ? "text-amber-400" : "text-gray-600"}`} />
+                        <div className="text-[0.5rem] font-bold text-white mt-1">{slot.name}</div>
+                      </div>
+                    </GoldCard>
                   );
                 })}
               </div>
@@ -391,12 +386,9 @@ export default function AvatarWardrobe() {
                         <p className="text-[0.6875rem] text-gray-400 mb-4">Full-body 3D render available -- shown in-game as your portrait card.</p>
                       )}
                       {selectedId !== equippedId ? (
-                        <button
-                          onClick={handleEquip}
-                          className="px-6 py-2.5 rounded-lg text-[0.6875rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-black hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
-                        >
+                        <GoldButton onClick={handleEquip}>
                           Equip This Avatar
-                        </button>
+                        </GoldButton>
                       ) : (
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[0.6875rem] font-bold text-green-400 bg-green-500/10 border border-green-500/20">
                           <Check className="w-3.5 h-3.5" /> Currently Equipped
@@ -578,13 +570,10 @@ export default function AvatarWardrobe() {
             transition={{ delay: 0.24 }}
             className="flex flex-wrap items-center gap-4"
           >
-            <button
-              onClick={handleSavePreset}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-[0.6875rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-black border border-amber-400/40 hover:opacity-90 transition-all shadow-[0_0_20px_rgba(212,175,55,0.25)]"
-            >
+            <GoldButton onClick={handleSavePreset}>
               {presetSaved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
               {presetSaved ? "Preset Saved!" : "Save Preset"}
-            </button>
+            </GoldButton>
             <button
               className="flex items-center gap-2 px-6 py-3 rounded-xl text-[0.6875rem] font-bold uppercase tracking-wider bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 text-black border border-yellow-400/40 hover:opacity-90 transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)]"
             >

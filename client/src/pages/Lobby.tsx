@@ -933,7 +933,7 @@ export default function Lobby() {
                 <p className="text-xs text-gray-400 mt-3 flex-1 leading-relaxed">Exclusive access. Custom blinds, invite-only for elite play. Set your stakes and play with invited guests.</p>
                 <button
                   onClick={() => { setShowModeSelection(false); setActiveFormat("cash"); }}
-                  className="w-full py-3.5 mt-5 uppercase tracking-wider text-sm font-black rounded-lg text-black transition-all hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
+                  className="w-full py-3.5 mt-5 uppercase tracking-wider text-sm font-black rounded-lg text-black transition-all hover:shadow-[0_0_30px_rgba(212,175,55,0.4)] active:scale-[0.98]"
                   style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
                 >
                   Create Private Table

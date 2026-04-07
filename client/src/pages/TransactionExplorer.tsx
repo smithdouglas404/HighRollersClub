@@ -411,9 +411,9 @@ export default function TransactionExplorer() {
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">Search and verify all platform activity</p>
           </div>
-          <button onClick={fetchData} disabled={loading} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-50 flex items-center gap-1">
+          <GoldButton onClick={fetchData} disabled={loading}>
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Refresh
-          </button>
+          </GoldButton>
         </div>
 
         {/* Tabs */}

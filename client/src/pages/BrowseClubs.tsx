@@ -216,17 +216,11 @@ export default function BrowseClubs() {
       );
     }
     return (
-      <motion.button
+      <GoldButton
         data-testid={`button-join-${club.id}`}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
         onClick={() => handleJoin(club.id, club.isPublic)}
         disabled={joiningId === club.id}
-        className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer ${
-          club.isPublic
-            ? "bg-primary/15 border border-primary/25 text-primary"
-            : "bg-amber-500/15 border border-amber-500/25 text-amber-500"
-        }`}
+        fullWidth
       >
         {joiningId === club.id ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -234,7 +228,7 @@ export default function BrowseClubs() {
           <UserPlus className="w-3.5 h-3.5" />
         )}
         {club.isPublic ? "Join Club" : "Request to Join"}
-      </motion.button>
+      </GoldButton>
     );
   };
 
@@ -339,8 +333,8 @@ export default function BrowseClubs() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.15 + i * 0.08 }}
                     whileHover={{ y: -3, scale: 1.01 }}
-                    className="relative rounded-xl overflow-hidden group bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
                   >
+                  <GoldCard>
                     {/* Name-based gradient banner */}
                     <div
                       className="relative h-20 rounded-t-xl"
@@ -395,6 +389,7 @@ export default function BrowseClubs() {
 
                       {renderActionButton(club)}
                     </div>
+                  </GoldCard>
                   </motion.div>
                 );
               })}

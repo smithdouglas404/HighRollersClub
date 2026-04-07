@@ -177,18 +177,15 @@ export default function Leagues() {
                 );
               })}
               <div className="flex-1" />
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <GoldButton
                 onClick={() => {
                   setCreateType(activeTab === "alliances" ? "alliance" : "league");
                   setShowCreate(true);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Create {activeTab === "alliances" ? "Alliance" : "Season"}
-              </motion.button>
+              </GoldButton>
             </div>
 
             {/* Alliances Tab */}
@@ -511,10 +508,10 @@ export default function Leagues() {
                   >
                     Cancel
                   </button>
-                  <button
+                  <GoldButton
                     onClick={handleCreate}
                     disabled={createLoading || !createName.trim() || (createType === "alliance" && !selectedClubId) || (createType === "league" && (!leagueStart || !leagueEnd))}
-                    className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                    className="flex-1"
                   >
                     {createLoading ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -522,7 +519,7 @@ export default function Leagues() {
                       <Check className="w-3.5 h-3.5" />
                     )}
                     Create
-                  </button>
+                  </GoldButton>
                 </div>
               </div>
             </motion.div>

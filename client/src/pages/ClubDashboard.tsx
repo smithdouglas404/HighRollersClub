@@ -635,16 +635,14 @@ export default function ClubDashboard() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <NeonButton
+                    <GoldButton
                       data-testid="button-create-table"
                       onClick={handleCreateTable}
                       disabled={creatingTable}
-                      size="sm"
-                      className="gap-2"
                     >
                       {creatingTable ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                       Create Table
-                    </NeonButton>
+                    </GoldButton>
                     <NeonButton
                       variant="secondary"
                       size="icon"
@@ -889,10 +887,10 @@ export default function ClubDashboard() {
                         <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
                           <Layers className="w-4 h-4 text-primary" /> Club Tables
                         </h3>
-                        <NeonButton size="sm" onClick={handleCreateTable} disabled={creatingTable} className="gap-1.5">
+                        <GoldButton onClick={handleCreateTable} disabled={creatingTable}>
                           {creatingTable ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                           Create Table
-                        </NeonButton>
+                        </GoldButton>
                       </div>
 
                       <div className="p-4">
@@ -1187,14 +1185,13 @@ export default function ClubDashboard() {
                           <Target className="w-4 h-4 text-purple-400" /> Club Challenges
                         </h3>
                         {isAdminOrOwner && (
-                          <button
+                          <GoldButton
                             onClick={handleGenerateChallenges}
                             disabled={generatingChallenges}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 border border-purple-500/25 text-purple-300 hover:bg-purple-500/25 transition-colors disabled:opacity-50"
                           >
                             {generatingChallenges ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                             Generate New
-                          </button>
+                          </GoldButton>
                         )}
                       </div>
                       {challengesLoading ? (
@@ -1575,16 +1572,13 @@ export default function ClubDashboard() {
                           <option value="member">Member</option>
                           <option value="admin">Admin</option>
                         </select>
-                        <NeonButton
-                          variant="gold"
-                          size="sm"
+                        <GoldButton
                           onClick={handleSendInvite}
                           disabled={sendingInvite || !inviteEmail.trim()}
-                          className="gap-1.5 whitespace-nowrap"
                         >
                           {sendingInvite ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                           Send Invite
-                        </NeonButton>
+                        </GoldButton>
                       </div>
                     </div>
 

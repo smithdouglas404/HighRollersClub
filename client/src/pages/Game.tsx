@@ -756,7 +756,7 @@ function GameTable({
                 onClick={() => setShowAdminControls(!showAdminControls)}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold transition-colors ${
                   showAdminControls || gamePaused
-                    ? "text-amber-400 bg-amber-500/15 border border-amber-500/30"
+                    ? "text-[#d4af37] bg-amber-500/15 border border-[#d4af37]/40 shadow-[0_0_8px_rgba(212,175,55,0.2)]"
                     : "text-amber-300/70 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20"
                 }`}
                 title="Admin Controls"

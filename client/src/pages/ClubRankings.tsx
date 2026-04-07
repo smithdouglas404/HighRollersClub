@@ -152,7 +152,7 @@ export default function ClubRankings() {
                     ? "border border-[#d4af37]/40 text-[#d4af37]"
                     : "bg-white/[0.03] text-muted-foreground border border-white/[0.06] hover:bg-white/[0.06] hover:text-foreground"
                 )}
-                style={active ? { background: "rgba(212,175,55,0.12)", boxShadow: "0 0 12px rgba(212,175,55,0.15)" } : undefined}
+                style={active ? { background: "rgba(212,175,55,0.12)", boxShadow: "0 0 12px rgba(212,175,55,0.15)", textShadow: "0 0 8px rgba(212,175,55,0.4)" } : undefined}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}

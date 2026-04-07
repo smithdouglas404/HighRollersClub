@@ -116,7 +116,7 @@ export default function Leaderboard() {
                 onClick={() => setMetric(tab.key)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
                   isActive
-                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/25 shadow-[0_0_10px_rgba(212,175,55,0.15)]"
+                    ? "bg-amber-500/20 text-[#d4af37] border border-amber-500/25 shadow-[0_0_10px_rgba(212,175,55,0.15)]"
                     : "text-gray-500 hover:text-gray-300 border border-transparent"
                 }`}
               >

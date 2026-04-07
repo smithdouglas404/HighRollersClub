@@ -1472,20 +1472,13 @@ export default function TableSetup() {
           </span>
 
           {isLast ? (
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+            <GoldButton
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50"
-              style={{
-                background: "linear-gradient(135deg, #d4af37, #66e5ff)",
-                boxShadow: "0 0 25px rgba(212,175,55,0.35)",
-              }}
             >
               <Rocket className="w-4 h-4" />
               {submitting ? "Launching..." : "Launch Table"}
-            </motion.button>
+            </GoldButton>
           ) : (
             <motion.button
               whileHover={{ scale: 1.03 }}

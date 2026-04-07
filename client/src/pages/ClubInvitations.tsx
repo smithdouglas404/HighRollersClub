@@ -161,12 +161,9 @@ export default function ClubInvitations() {
                     placeholder="Enter username..."
                     className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-surface-highest/50 border border-white/[0.06]"
                   />
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                  <GoldButton
                     onClick={handleSendInvite}
                     disabled={sending || !inviteUsername.trim()}
-                    className="px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-primary text-black flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                   >
                     {sending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -174,7 +171,7 @@ export default function ClubInvitations() {
                       <Send className="w-4 h-4" />
                     )}
                     Send
-                  </motion.button>
+                  </GoldButton>
                 </div>
 
                 {/* Role selection */}

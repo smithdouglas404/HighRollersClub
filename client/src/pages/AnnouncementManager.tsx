@@ -378,12 +378,9 @@ export default function AnnouncementManager() {
           )}
 
           {/* Broadcast Button */}
-          <button
+          <GoldButton
             onClick={handleBroadcast}
             disabled={sending || !title.trim() || !message.trim()}
-            className={`btn-neon flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all ${
-              priorityConf.bg
-            } ${priorityConf.color} hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed border`}
           >
             {sending ? (
               <div className="spinner spinner-sm" />
@@ -391,7 +388,7 @@ export default function AnnouncementManager() {
               <Send className="w-4 h-4" />
             )}
             {sending ? "Broadcasting..." : "Broadcast Now"}
-          </button>
+          </GoldButton>
         </motion.div>
 
         {/* Recent Announcements */}
@@ -436,8 +433,8 @@ export default function AnnouncementManager() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-4"
                 >
+                <GoldCard>
                   <div className="flex items-start gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${conf.bg}`}>
                       <Icon className={`w-3.5 h-3.5 ${conf.color}`} />
@@ -465,6 +462,7 @@ export default function AnnouncementManager() {
                       </div>
                     </div>
                   </div>
+                </GoldCard>
                 </motion.div>
               );
             })

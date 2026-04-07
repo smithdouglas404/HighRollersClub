@@ -1009,8 +1009,8 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
+              <GoldCard>
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-[#c9a84c]/80" />
@@ -1058,6 +1058,7 @@ export default function Analytics() {
                   </div>
                 )}
               </div>
+              </GoldCard>
             </motion.div>
 
             {/* Performance by Game Type */}
@@ -1065,8 +1066,8 @@ export default function Analytics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.17 }}
-              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
             >
+              <GoldCard>
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center gap-2">
                 <PieChart className="w-4 h-4 text-[#c9a84c]/80" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Performance by Game Type</h3>
@@ -1178,6 +1179,7 @@ export default function Analytics() {
                   </div>
                 )}
               </div>
+              </GoldCard>
             </motion.div>
 
             {/* Advanced Stats Grid */}

@@ -12,9 +12,6 @@ import {
   Layers, Zap, Eye
 } from "lucide-react";
 
-// Premium components used: GoldButton, GoldCard, SectionHeader
-const _premiumRef = { GoldButton, GoldCard, SectionHeader };
-
 /* ── Tier styling ── */
 const TIER_STYLES: Record<AvatarOption["tier"], { border: string; text: string; bg: string; glow: string; label: string }> = {
   legendary: { border: "border-amber-500/40", text: "text-amber-400", bg: "bg-amber-500/10", glow: "rgba(212,175,55,0.35)", label: "Legendary" },

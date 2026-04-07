@@ -31,9 +31,9 @@ const TABS: { key: MetricKey; label: string; icon: any; unit: string }[] = [
 ];
 
 const PODIUM_COLORS = {
-  1: { ring: "#d4af37", bg: "linear-gradient(135deg, rgba(212,175,55,0.25) 0%, rgba(154,123,44,0.12) 100%)", glow: "rgba(212,175,55,0.4)", label: "GOLD" },
-  2: { ring: "#94a3b8", bg: "linear-gradient(135deg, rgba(148,163,184,0.20) 0%, rgba(100,116,139,0.10) 100%)", glow: "rgba(148,163,184,0.3)", label: "SILVER" },
-  3: { ring: "#cd7f32", bg: "linear-gradient(135deg, rgba(205,127,50,0.20) 0%, rgba(160,100,40,0.10) 100%)", glow: "rgba(205,127,50,0.3)", label: "BRONZE" },
+  1: { ring: "#d4af37", bg: "linear-gradient(135deg, rgba(212,175,55,0.25) 0%, rgba(154,123,44,0.12) 100%)", glow: "rgba(212,175,55,0.5)", label: "GOLD", borderWidth: 2 },
+  2: { ring: "#94a3b8", bg: "linear-gradient(135deg, rgba(148,163,184,0.20) 0%, rgba(100,116,139,0.10) 100%)", glow: "rgba(148,163,184,0.35)", label: "SILVER", borderWidth: 2 },
+  3: { ring: "#cd7f32", bg: "linear-gradient(135deg, rgba(205,127,50,0.20) 0%, rgba(160,100,40,0.10) 100%)", glow: "rgba(205,127,50,0.35)", label: "BRONZE", borderWidth: 2 },
 } as const;
 
 function getRankStyle(rank: number) {
@@ -85,12 +85,7 @@ export default function Leaderboard() {
     <DashboardLayout title="Leaderboard">
       <div className="px-4 md:px-8 pb-8">
         {/* Header with gold chips accent */}
-        <div className="relative mb-6 overflow-hidden rounded-xl border border-primary/10 p-5"
-          style={{
-            background: "rgba(15,15,20,0.7)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-          }}
+        <div className="relative mb-6 overflow-hidden vault-card p-5"
         >
           <img
             src={goldChips}
@@ -179,11 +174,11 @@ export default function Leaderboard() {
                   >
                     {/* Card container */}
                     <div
-                      className="relative flex flex-col items-center rounded-2xl px-4 sm:px-6 pt-5 pb-4 border"
+                      className="relative flex flex-col items-center rounded-2xl px-4 sm:px-6 pt-5 pb-4"
                       style={{
                         background: colors.bg,
-                        borderColor: `${colors.ring}30`,
-                        boxShadow: `0 0 30px ${colors.glow}, 0 8px 32px rgba(0,0,0,0.4)`,
+                        border: `${colors.borderWidth}px solid ${colors.ring}50`,
+                        boxShadow: `0 0 40px ${colors.glow}, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 ${colors.ring}20`,
                         minWidth: isFirst ? 180 : 140,
                       }}
                     >
@@ -287,26 +282,21 @@ export default function Leaderboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: hasTop3 ? 0.5 : 0 }}
-          className="rounded-xl overflow-hidden border border-amber-500/10"
-          style={{
-            background: "rgba(15,15,20,0.7)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-          }}
+          className="vault-card overflow-hidden"
         >
           {/* Gold accent line at top */}
           <div className="h-px w-full bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
 
           {/* Table header */}
-          <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-3 border-b border-white/5">
-            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Rank</span>
-            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500"></span>
-            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Trend</span>
-            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">Player</span>
-            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">
+          <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-3 border-b border-[#d4af37]/15" style={{ background: "rgba(212,175,55,0.06)" }}>
+            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-[#d4af37]/70">Rank</span>
+            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-[#d4af37]/70"></span>
+            <span className="col-span-1 text-[0.5625rem] font-bold uppercase tracking-wider text-[#d4af37]/70">Trend</span>
+            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-[#d4af37]/70">Player</span>
+            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-[#d4af37]/70">
               {metric === "chips" ? "Chips" : metric === "wins" ? "Total Wins" : "Win Rate"}
             </span>
-            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 text-right">Username</span>
+            <span className="col-span-3 text-[0.5625rem] font-bold uppercase tracking-wider text-[#d4af37]/70 text-right">Username</span>
           </div>
 
           {loading ? (

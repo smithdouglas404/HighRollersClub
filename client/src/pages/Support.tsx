@@ -262,7 +262,7 @@ function ContactForm() {
       <button
         type="submit"
         disabled={!canSubmit}
-        className="flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-bold uppercase tracking-wider transition-all bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="gold-btn flex items-center gap-2 px-6 py-3 text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {sending ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -494,7 +494,7 @@ export default function Support() {
                     <button
                       type="submit"
                       disabled={!newSubject.trim() || !newMessage.trim() || submittingTicket}
-                      className="flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-bold uppercase tracking-wider transition-all bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="gold-btn flex items-center gap-2 px-6 py-3 text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {submittingTicket ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                       {submittingTicket ? "Submitting..." : "Submit Ticket"}

@@ -160,20 +160,20 @@ export default function Tiers() {
     <DashboardLayout title="Membership Tiers">
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-display font-black text-white mb-2">Membership Tiers</h1>
+          <h1 className="text-3xl font-display font-black gold-text mb-2">Membership Tiers</h1>
           <p className="text-gray-400 text-sm">Upgrade your membership to unlock real money play, higher limits, and exclusive benefits</p>
-          <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-            {(() => { const Icon = TIER_ICONS[currentTier] || Shield; return <Icon className="w-4 h-4 text-primary" />; })()}
-            <span className="text-sm font-bold text-primary uppercase tracking-wider">Current: {currentTier}</span>
+          <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full gold-border" style={{ background: "rgba(212,175,55,0.1)" }}>
+            {(() => { const Icon = TIER_ICONS[currentTier] || Shield; return <Icon className="w-4 h-4" style={{ color: "#d4af37" }} />; })()}
+            <span className="text-sm font-bold gold-text uppercase tracking-wider">Current: {currentTier}</span>
           </div>
 
           {/* Billing cycle toggle */}
-          <div className="mt-4 inline-flex items-center gap-1 p-1 rounded-lg bg-gray-800/50 border border-gray-700/50">
+          <div className="mt-4 inline-flex items-center gap-1 p-1 rounded-lg gold-border" style={{ background: "var(--vault-surface, rgba(15,15,20,0.7))" }}>
             <button
               onClick={() => setBillingCycle("monthly")}
               className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
                 billingCycle === "monthly"
-                  ? "bg-primary/20 text-primary border border-primary/30"
+                  ? "gold-btn"
                   : "text-gray-400 hover:text-gray-300"
               }`}
             >
@@ -183,7 +183,7 @@ export default function Tiers() {
               onClick={() => setBillingCycle("annual")}
               className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
                 billingCycle === "annual"
-                  ? "bg-primary/20 text-primary border border-primary/30"
+                  ? "gold-btn"
                   : "text-gray-400 hover:text-gray-300"
               }`}
             >

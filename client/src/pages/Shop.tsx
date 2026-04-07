@@ -428,13 +428,17 @@ function ShopItemCard({
   onToggleWishlist?: (itemId: string) => void;
   onPreview?: (item: ShopItem) => void;
 }) {
+  const earnableLevel = (item as any).earnableAtLevel;
+
   return (
     <motion.div
       whileHover={{ scale: 1.03, y: -4, boxShadow: `0 0 24px ${getRarityGlow(item.rarity)}` }}
-      className="rounded-xl overflow-hidden transition-all cursor-pointer group card-hover"
-      style={item.rarity?.toLowerCase() === "mythic"
-        ? { background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.5)", boxShadow: "0 0 16px rgba(212,175,55,0.4), 0 0 32px rgba(212,175,55,0.15)" }
-        : { background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(212,175,55,0.12)" }}
+      className="vault-card rounded-xl overflow-hidden transition-all cursor-pointer group"
+      style={{
+        boxShadow: item.rarity?.toLowerCase() === "mythic"
+          ? "0 0 16px rgba(212,175,55,0.4), 0 0 32px rgba(212,175,55,0.15)"
+          : undefined,
+      }}
       onClick={() => { onPreview?.(item); if (!owned) onPurchase(item); }}
       role="button"
       aria-label={owned ? `${item.name} - owned` : `Purchase ${item.name}`}
@@ -455,6 +459,13 @@ function ShopItemCard({
             Owned
           </div>
         )}
+        {/* Earnable at Level badge */}
+        {earnableLevel && !owned && (
+          <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider gold-border" style={{ background: "rgba(212,175,55,0.15)", color: "#d4af37" }}>
+            <Star className="w-2.5 h-2.5 inline mr-0.5" style={{ verticalAlign: "-1px" }} />
+            Earnable at Lv.{earnableLevel}
+          </div>
+        )}
         {/* Wishlist heart button */}
         {onToggleWishlist && (
           <button
@@ -462,7 +473,7 @@ function ShopItemCard({
               e.stopPropagation();
               onToggleWishlist(item.id);
             }}
-            className={`absolute ${owned ? "top-8 right-2 mt-1" : "top-2 right-2"} w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+            className={`absolute ${owned ? "top-8 right-2 mt-1" : earnableLevel ? "top-2 right-2" : "top-2 right-2"} w-7 h-7 rounded-full flex items-center justify-center transition-all ${
               wishlisted
                 ? "bg-pink-500/20 border border-pink-500/40 hover:bg-pink-500/30"
                 : "bg-black/40 border border-white/10 hover:bg-white/10 opacity-0 group-hover:opacity-100"
@@ -488,8 +499,13 @@ function ShopItemCard({
               <Check className="w-3 h-3" /> Purchased
             </span>
           ) : (
-            <span className="text-xs font-bold flex items-center gap-1" style={{ color: "#d4af37" }}>
-              <Coins className="w-3 h-3" /> {item.price.toLocaleString()}
+            <span className="text-xs font-bold gold-text flex items-center gap-1">
+              <Coins className="w-3 h-3" style={{ color: "#d4af37" }} /> {item.price.toLocaleString()}
+            </span>
+          )}
+          {!owned && (
+            <span className="text-[0.5625rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded gold-btn cursor-pointer">
+              Buy
             </span>
           )}
         </div>

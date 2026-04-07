@@ -759,7 +759,7 @@ export default function TournamentCreate() {
         >
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400">Financial Breakdown</span>
+            <span className="text-[0.625rem] font-bold uppercase tracking-wider gold-text">Financial Breakdown</span>
           </div>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
@@ -1103,9 +1103,9 @@ export default function TournamentCreate() {
                     <span
                       className={`w-4 h-4 rounded-full flex items-center justify-center text-[0.5rem] font-black shrink-0 ${
                         isActive
-                          ? "bg-yellow-500/25 text-yellow-300"
+                          ? "bg-[#d4af37]/25 text-[#d4af37]"
                           : isCompleted
-                            ? "bg-amber-500/15 text-amber-400"
+                            ? "bg-[#d4af37]/15 text-[#d4af37]/70"
                             : "bg-white/5 text-gray-600"
                       }`}
                     >
@@ -1201,11 +1201,7 @@ export default function TournamentCreate() {
                     whileTap={{ scale: 0.98 }}
                     onClick={handleSubmit}
                     disabled={submitting}
-                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider text-black disabled:opacity-50 transition-all"
-                    style={{
-                      background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)",
-                      boxShadow: "0 0 15px rgba(212,175,55,0.3)",
-                    }}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-[0.625rem] uppercase tracking-wider disabled:opacity-50 transition-all gold-btn shadow-[0_0_15px_rgba(212,175,55,0.3)]"
                   >
                     {submitting ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />

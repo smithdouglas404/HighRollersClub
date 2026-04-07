@@ -687,11 +687,7 @@ function StepPlayers({
 
       {/* Visual table preview */}
       <div
-        className="rounded-xl p-4"
-        style={{
-          background: "linear-gradient(135deg, rgba(20,31,40,0.6), rgba(16,24,36,0.85))",
-          border: "1px solid rgba(212,175,55,0.1)",
-        }}
+        className="vault-card p-4"
       >
         <div className="text-center text-[0.625rem] text-gray-500 uppercase tracking-wider font-bold mb-1">
           Table Preview
@@ -1270,10 +1266,7 @@ function StepReview({
       </SectionSubtitle>
 
       <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          border: "1px solid rgba(212,175,55,0.12)",
-        }}
+        className="vault-card overflow-hidden"
       >
         {rows.map((row, i) => (
           <div
@@ -1471,11 +1464,7 @@ export default function TableSetup() {
               whileTap={{ scale: 0.97 }}
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50"
-              style={{
-                background: "linear-gradient(135deg, #d4af37, #66e5ff)",
-                boxShadow: "0 0 25px rgba(212,175,55,0.35)",
-              }}
+              className="gold-btn flex items-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-[0_0_25px_rgba(212,175,55,0.35)]"
             >
               <Rocket className="w-4 h-4" />
               {submitting ? "Launching..." : "Launch Table"}
@@ -1485,11 +1474,7 @@ export default function TableSetup() {
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={goNext}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
-              style={{
-                background: "linear-gradient(135deg, #d4af37, #66e5ff)",
-                boxShadow: "0 0 20px rgba(212,175,55,0.25)",
-              }}
+              className="gold-btn flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider shadow-[0_0_20px_rgba(212,175,55,0.25)]"
             >
               Next
               <ChevronRight className="w-4 h-4" />

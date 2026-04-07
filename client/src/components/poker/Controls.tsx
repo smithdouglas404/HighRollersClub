@@ -459,14 +459,14 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                   `}
                   style={{
                     padding: "0.7rem 1.25rem",
-                    color: "#fff",
+                    color: foldConfirm ? "#fff" : "#fca5a5",
                     background: foldConfirm
                       ? "linear-gradient(180deg, #ef4444 0%, #dc2626 40%, #b91c1c 100%)"
-                      : "linear-gradient(180deg, #dc2626 0%, #c62828 30%, #991b1b 70%, #7f1d1d 100%)",
-                    border: foldConfirm ? "2px solid rgba(248,113,113,0.7)" : "1px solid rgba(239,68,68,0.25)",
+                      : "linear-gradient(180deg, rgba(127,29,29,0.4) 0%, rgba(99,20,20,0.5) 50%, rgba(69,10,10,0.6) 100%)",
+                    border: foldConfirm ? "2px solid rgba(248,113,113,0.7)" : "1px solid rgba(239,68,68,0.3)",
                     boxShadow: foldConfirm
                       ? "0 0 32px rgba(239,68,68,0.5), 0 6px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)"
-                      : "0 6px 20px rgba(0,0,0,0.5), 0 0 14px rgba(239,68,68,0.15), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
+                      : "0 6px 20px rgba(0,0,0,0.5), 0 0 10px rgba(239,68,68,0.1), inset 0 1px 0 rgba(255,255,255,0.06)",
                   }}
                 >
                   {foldConfirm && (

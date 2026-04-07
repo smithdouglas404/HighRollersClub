@@ -448,19 +448,11 @@ export default function AvatarWardrobe() {
                   );
                 })}
               </div>
-            </motion.div>
+            </GoldCard>
 
             {/* Armor Rating + Style Score */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="rounded-xl p-5 vault-card flex flex-col justify-between"
-            >
-              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
-                <Star className="w-4 h-4" style={{ color: "#d4af37" }} />
-                Quick Stats
-              </h3>
+            <GoldCard className="flex flex-col justify-between" padding="p-5" glow>
+              <SectionHeader icon={Star} title="Quick Stats" className="mb-4" />
               <div className="space-y-5 flex-1 flex flex-col justify-center">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -505,19 +497,11 @@ export default function AvatarWardrobe() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </GoldCard>
 
             {/* Recently Equipped */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.22 }}
-              className="rounded-xl p-5 vault-card flex flex-col"
-            >
-              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
-                <Clock className="w-4 h-4" style={{ color: "#d4af37" }} />
-                Recently Equipped
-              </h3>
+            <GoldCard className="flex flex-col" padding="p-5">
+              <SectionHeader icon={Clock} title="Recently Equipped" className="mb-4" />
               {recentlyEquipped.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center flex-1">
                   <Clock className="w-8 h-8 text-gray-600 mb-2" />
@@ -548,7 +532,7 @@ export default function AvatarWardrobe() {
                   })}
                 </div>
               )}
-            </motion.div>
+            </GoldCard>
           </div>
 
           {/* Action Buttons Row */}
@@ -558,19 +542,14 @@ export default function AvatarWardrobe() {
             transition={{ delay: 0.24 }}
             className="flex flex-wrap items-center gap-4"
           >
-            <button
-              onClick={handleSavePreset}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-[0.6875rem] font-bold uppercase tracking-wider gold-btn hover:opacity-90 transition-all"
-            >
+            <GoldButton onClick={handleSavePreset} className="flex items-center gap-2 text-[0.6875rem]">
               {presetSaved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
               {presetSaved ? "Preset Saved!" : "Save Preset"}
-            </button>
-            <button
-              className="flex items-center gap-2 px-8 py-4 rounded-xl text-sm font-black uppercase tracking-wider gold-btn hover:opacity-90 transition-all shadow-[0_0_30px_rgba(212,175,55,0.35)]"
-            >
+            </GoldButton>
+            <GoldButton className="flex items-center gap-2 text-sm shadow-[0_0_30px_rgba(212,175,55,0.35)]">
               <Zap className="w-5 h-5" />
               NANO BANANA RENDER
-            </button>
+            </GoldButton>
           </motion.div>
 
           {/* Avatar grid */}

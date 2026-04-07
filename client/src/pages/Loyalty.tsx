@@ -396,15 +396,12 @@ export default function Loyalty() {
                   const canClaim = isCurrent && !profile?.claimedToday;
 
                   return (
-                    <div
+                    <GoldCard
                       key={dayNum}
-                      className={`rounded-xl p-3 text-center transition-all ${
-                        isCurrent ? "ring-2 ring-primary/50" : ""
-                      }`}
-                      style={{
-                        background: isPast ? "rgba(52,211,153,0.08)" : isCurrent ? "rgba(212,175,55,0.1)" : "rgba(255,255,255,0.03)",
-                        border: `1px solid ${isPast ? "rgba(52,211,153,0.2)" : isCurrent ? "rgba(212,175,55,0.3)" : "rgba(255,255,255,0.05)"}`,
-                      }}
+                      className={`text-center ${isCurrent ? "" : ""}`}
+                      glow={isCurrent}
+                      hover
+                      padding="p-3"
                     >
                       <p className="text-[0.625rem] text-gray-500 uppercase font-bold mb-1">Day {dayNum}</p>
                       {isPast ? (
@@ -416,15 +413,16 @@ export default function Loyalty() {
                       <p className="text-[0.5625rem] text-gray-500">+{reward.hrp} HRP</p>
 
                       {canClaim && (
-                        <button
+                        <GoldButton
                           onClick={() => claimDailyMutation.mutate()}
                           disabled={claimDailyMutation.isPending}
-                          className="mt-1.5 w-full px-2 py-1 rounded text-[0.625rem] font-bold bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-all"
+                          fullWidth
+                          className="mt-1.5 !px-2 !py-1 !text-[0.625rem]"
                         >
                           {claimDailyMutation.isPending ? "..." : "Claim"}
-                        </button>
+                        </GoldButton>
                       )}
-                    </div>
+                    </GoldCard>
                   );
                 })}
               </div>

@@ -161,23 +161,9 @@ export default function ClubSettings() {
             </AnimatePresence>
 
             {/* Club Info Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="vault-card overflow-hidden"
-            >
-              <div
-                className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10"
-              >
-                <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-[#d4af37]" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
-                    General Settings
-                  </h3>
-                  <p className="text-[0.5625rem] text-gray-500">Edit your club details</p>
-                </div>
+            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
+              <div className="px-5 py-4 border-b border-b-[#d4af37]/10">
+                <SectionHeader icon={Settings} title="General Settings" subtitle="Edit your club details" />
               </div>
 
               <div className="p-5 space-y-5">
@@ -237,7 +223,8 @@ export default function ClubSettings() {
                   </div>
                   <button
                     onClick={() => setIsPublic(!isPublic)}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${isPublic ? "bg-primary" : "bg-white/10"}`}
+                    className="relative w-11 h-6 rounded-full transition-colors"
+                    style={{ background: isPublic ? "#d4af37" : "rgba(255,255,255,0.1)" }}
                   >
                     <motion.div
                       layout

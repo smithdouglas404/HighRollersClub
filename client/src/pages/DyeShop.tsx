@@ -5,6 +5,7 @@ import {
   Palette, Paintbrush, Check, Sparkles, Shield, Star,
   Clock, Wand2, Shirt, Sword, Crown
 } from "lucide-react";
+import { GoldButton, GoldCard, NumberTicker, SectionHeader, GoldDivider, SpotlightCard } from "@/components/premium/PremiumComponents";
 
 /* ── Color Palettes ── */
 const PRIMARY_SWATCHES = ["#c9a84c", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#e67e22", "#1abc9c", "#f1c40f"];
@@ -80,11 +81,10 @@ function ColorPickerRow({
             onClick={() => onChange(color)}
             className={`w-8 h-8 rounded-lg border-2 transition-all hover:scale-110 relative shrink-0 ${
               value === color
-                ? "shadow-[0_0_10px_rgba(212,175,55,0.35)]"
+                ? ""
                 : "border-transparent hover:border-white/20"
             }`}
-            style={value === color ? { borderColor: "#d4af37" } : undefined}
-            style={{ backgroundColor: color }}
+            style={value === color ? { borderColor: "#d4af37", boxShadow: "0 0 10px rgba(212,175,55,0.35)", backgroundColor: color } : { backgroundColor: color }}
           >
             {value === color && (
               <Check className="w-3 h-3 text-white absolute inset-0 m-auto drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />

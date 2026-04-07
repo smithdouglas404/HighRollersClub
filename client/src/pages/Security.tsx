@@ -59,10 +59,10 @@ function PasswordManagement() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-6"
+      className="vault-card p-6"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+        <h3 className="text-xs font-bold uppercase tracking-wider gold-text flex items-center gap-2">
           <Lock className="w-4 h-4 text-primary/70" />
           Password
         </h3>
@@ -357,7 +357,7 @@ function TwoFactorAuth() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 }}
-      className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-6"
+      className="vault-card p-6"
     >
       <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
         <Smartphone className="w-4 h-4 text-purple-500/70" />
@@ -577,7 +577,7 @@ function ConnectedWallets() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-6"
+      className="vault-card p-6"
     >
       <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
         <Wallet className="w-4 h-4 text-primary/70" />
@@ -703,7 +703,7 @@ function LinkedSocialAccounts() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25 }}
-      className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-6"
+      className="vault-card p-6"
     >
       <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
         <Link2 className="w-4 h-4 text-green-500/70" />

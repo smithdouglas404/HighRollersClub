@@ -31,7 +31,7 @@ function RecoveryCard({
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 + index * 0.1 }}
-      className={`bg-surface-high/50 backdrop-blur-xl border ${accentBorder} rounded-xl p-6`}
+      className={`vault-card p-6 ${accentBorder}`}
     >
       <div className="flex items-center gap-3 mb-4">
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${accentColor}`}>
@@ -511,7 +511,7 @@ export default function AccountRecovery() {
         <div className="absolute bottom-[-10%] right-[10%] w-[350px] h-[350px] bg-purple-600/[0.03] rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-lg mx-auto px-4 py-12">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 py-12">
         {/* Back to login link */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -532,19 +532,19 @@ export default function AccountRecovery() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-10"
         >
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/15 to-purple-500/15 border border-primary/20 flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-8 h-8 text-primary" />
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}>
+            <Shield className="w-8 h-8" style={{ color: "#d4af37" }} />
           </div>
-          <h1 className="text-2xl font-display font-bold tracking-tight mb-2">
+          <h1 className="text-2xl font-black italic uppercase tracking-wider gold-text mb-2">
             Account Recovery
           </h1>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          <p className="text-sm text-gray-500 max-w-sm mx-auto">
             Choose a recovery method below to regain access to your account.
           </p>
         </motion.div>
 
         {/* Recovery Methods */}
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <WalletRecovery />
           <EmailRecovery />
           <BackupCodeRecovery />

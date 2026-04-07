@@ -410,11 +410,149 @@ export default function Profile() {
     <DashboardLayout title="Profile">
       <PageBackground image="/images/generated/profile-bg.png" />
       <div className="relative z-10 pb-8 px-4 md:px-8">
+
+        {/* ═══════════════════════════════════════════════════════════════
+            3-COLUMN DASHBOARD (matches reference: setup_21)
+           ═══════════════════════════════════════════════════════════════ */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-lg md:text-xl font-black italic uppercase tracking-wider gold-text text-center mb-6">
+            Comprehensive Player Security Dashboard
+          </h1>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* ── Column 1: Profile & Edit ── */}
+            <div className="vault-card p-6 flex flex-col items-center text-center">
+              <h3 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Profile & Edit</h3>
+              <div className="relative mb-4">
+                <div className="w-32 h-32 rounded-full overflow-hidden" style={{ border: "3px solid #d4af37", boxShadow: "0 0 20px rgba(212,175,55,0.3)" }}>
+                  <MemberAvatar
+                    avatarId={user?.avatarId ?? null}
+                    displayName={user?.displayName || user?.username || "Player"}
+                    size="xl"
+                  />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-400 border-2 border-[#0d0b08] shadow-[0_0_8px_rgba(74,222,128,0.6)]" />
+              </div>
+              <h2 className="text-xl font-black gold-text">{user?.displayName || user?.username || "Player"}</h2>
+              <p className="text-xs text-gray-500 mt-1">@{user?.username}</p>
+              {(user as any)?.memberId && (
+                <p className="text-[0.625rem] text-gray-600 mt-0.5 font-mono">ID: {(user as any).memberId}</p>
+              )}
+              <div className="flex gap-2 mt-4">
+                <Link href="/avatar-wardrobe">
+                  <button className="gold-btn px-4 py-2 text-xs">Edit Avatar</button>
+                </Link>
+                <Link href="/lobby">
+                  <button className="gold-btn px-4 py-2 text-xs">Play Now</button>
+                </Link>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="w-full mt-4 space-y-2">
+                <div className="flex justify-between text-xs"><span className="text-gray-500">Hands Played</span><span className="font-bold" style={{ color: "#d4af37" }}>{stats?.handsPlayed?.toLocaleString() || 0}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-500">Win Rate</span><span className="font-bold" style={{ color: "#d4af37" }}>{winRate}%</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-500">Best Streak</span><span className="font-bold" style={{ color: "#d4af37" }}>{stats?.bestWinStreak || 0}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-500">Level</span><span className="font-bold" style={{ color: "#d4af37" }}>{playerLevel} — {playerTitle}</span></div>
+              </div>
+            </div>
+
+            {/* ── Column 2: Security & Privacy ── */}
+            <div className="vault-card p-6 flex flex-col">
+              <h3 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Security & Privacy</h3>
+
+              <Link href="/security">
+                <button className="w-full gold-btn py-3 text-sm mb-4">Password Reset</button>
+              </Link>
+
+              <div className="vault-card p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">Two-Factor Authentication (2FA)</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${(user as any)?.twoFactorEnabled ? "bg-green-500/15 text-green-400 border border-green-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
+                    {(user as any)?.twoFactorEnabled ? "ENABLED" : "DISABLED"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="vault-card p-4 mb-4">
+                <p className="text-xs text-gray-400 mb-3">Linked Social Accounts</p>
+                <div className="flex items-center gap-4 justify-center">
+                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center" title="Google">
+                    <span className="text-lg">G</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center" title="Facebook">
+                    <span className="text-lg">f</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="vault-card p-4 mt-auto">
+                <p className="text-xs font-bold uppercase tracking-wider gold-text mb-3">Preferences</p>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400">Email Notifications</span>
+                  <div className="w-10 h-5 rounded-full bg-green-500/30 border border-green-500/30 flex items-center px-0.5">
+                    <div className="w-4 h-4 rounded-full bg-green-400 ml-auto" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">Privacy Mode</span>
+                  <div className="w-10 h-5 rounded-full bg-white/10 border border-white/10 flex items-center px-0.5">
+                    <div className="w-4 h-4 rounded-full bg-gray-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Column 3: Financials & Wallets ── */}
+            <div className="vault-card p-6 flex flex-col">
+              <h3 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Financials & Wallets</h3>
+
+              <div className="vault-card p-4 mb-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-orange-500/15 flex items-center justify-center border border-orange-500/20">
+                  <Wallet className="w-5 h-5 text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">MetaMask</p>
+                  <p className="text-lg font-black text-white">{(user as any)?.walletAddress ? "Connected" : "Not Connected"}</p>
+                </div>
+              </div>
+
+              <div className="vault-card p-4 mb-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-500/15 flex items-center justify-center border border-blue-500/20">
+                  <Wallet className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Coinbase</p>
+                  <p className="text-lg font-black text-white">Not Connected</p>
+                </div>
+              </div>
+
+              <div className="vault-card p-4 mb-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}>
+                  <Coins className="w-5 h-5" style={{ color: "#d4af37" }} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Chips Balance</p>
+                  <p className="text-lg font-black gold-text">{(user?.chipBalance ?? 0).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <Link href="/wallet" className="mt-auto">
+                <button className="w-full gold-btn py-3 text-sm">Add New Wallet</button>
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            DETAILED STATS (below dashboard)
+           ═══════════════════════════════════════════════════════════════ */}
+
         {/* ── Hero Banner ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl mx-4 md:mx-8 mb-6"
+          transition={{ delay: 0.1 }}
+          className="relative overflow-hidden rounded-2xl mb-6"
           style={{ minHeight: 200 }}
         >
           <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(13,11,8,0.95) 0%, rgba(30,25,15,0.85) 50%, rgba(13,11,8,0.95) 100%)" }} />

@@ -1300,21 +1300,13 @@ export default function Analytics() {
                         </div>
                       )}
                     </div>
-                  </motion.div>
+                  </GoldCard>
                 </div>
 
                 {/* Recent Club Activity */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.55 }}
-                  className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
-                >
+                <GoldCard hover={false} padding="p-0" className="overflow-hidden">
                   <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#c9a84c]/80" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Recent Club Activity</h3>
-                    </div>
+                    <SectionHeader icon={Clock} title="Recent Club Activity" className="mb-0" />
                     {clubActivity.length > 0 && (
                       <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{clubActivity.length} items</span>
                     )}
@@ -1351,22 +1343,14 @@ export default function Analytics() {
                       <p className="text-xs text-muted-foreground/60 max-w-xs">Join a club to see recent activity here.</p>
                     </div>
                   )}
-                </motion.div>
+                </GoldCard>
               </>
             )}
 
             {/* ── Past AI Analyses ── */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.65 }}
-              className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] overflow-hidden"
-            >
+            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
               <div className="px-5 py-3.5 border-b border-[#c9a84c]/10 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-[#c9a84c]/80" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c9a84c]/70">Past AI Analyses</h3>
-                </div>
+                <SectionHeader icon={Brain} title="Past AI Analyses" className="mb-0" />
                 {analyses.length > 0 && (
                   <span className="text-[0.5625rem] text-gray-500 uppercase tracking-wider">{analyses.length} analyses</span>
                 )}

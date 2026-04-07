@@ -502,7 +502,7 @@ export default function TransactionExplorer() {
         </div>
 
         {/* Results */}
-        <div className="rounded-xl border border-white/10 bg-surface-high/30 overflow-hidden">
+        <GoldCard padding="p-0" className="overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -652,7 +652,7 @@ export default function TransactionExplorer() {
               )}
             </>
           )}
-        </div>
+        </GoldCard>
 
         {/* Pagination */}
         {totalPages > 1 && (

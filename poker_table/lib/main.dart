@@ -110,10 +110,10 @@ class HighRollersTable extends StatelessWidget {
 
                 return Stack(
                   children: [
-                    // The Center Table Graphic
-                    Center(child: _TableFelt(width: radiusX * 2.2, height: radiusY * 2.5)),
+                    // The table graphic comes from the background image
+                    // No overlay needed — image has the full room + table + chairs
 
-                    // Community Cards
+                    // Community Cards on the felt
                     Center(child: _CommunityArea()),
 
                     // 10 Seats distributed in a perspective oval
@@ -297,14 +297,17 @@ class _TableFelt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // When using the background image (which already has the table),
+    // this overlay is semi-transparent to blend with the room image.
+    // When no background image, falls back to solid felt.
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFF1B3022),
+        color: const Color(0xFF1B3022).withValues(alpha: 0.3),
         borderRadius: BorderRadius.all(Radius.elliptical(width, height)),
-        border: Border.all(color: const Color(0xFF3A2A1F), width: 12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 40)],
+        border: Border.all(color: const Color(0xFF3A2A1F).withValues(alpha: 0.4), width: 8),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 40)],
       ),
     );
   }
@@ -366,12 +369,21 @@ class _BackgroundLayer extends StatelessWidget {
   const _BackgroundLayer();
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment.center,
-          colors: [Color(0xFF1A2A20), Color(0xFF050505)],
-          radius: 1.2,
+    // Gemini Layer 1: "Static Layer (DecoratedBox) — high-res background asset
+    // for the overall room"
+    // Uses the cyberpunk poker room image as the full background
+    return Image.asset(
+      'assets/images/table_background.png',
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (_, __, ___) => Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.center,
+            colors: [Color(0xFF1A2A20), Color(0xFF050505)],
+            radius: 1.2,
+          ),
         ),
       ),
     );

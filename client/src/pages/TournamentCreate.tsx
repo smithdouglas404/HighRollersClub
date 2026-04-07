@@ -872,7 +872,7 @@ export default function TournamentCreate() {
         >
           <div className="flex items-center gap-2 mb-3">
             <Scale className="w-4 h-4 text-amber-400" />
-            <span className="text-[0.625rem] font-bold uppercase tracking-wider text-amber-400">
+            <span className="text-[0.625rem] font-bold uppercase tracking-wider gold-text">
               Rules Summary
             </span>
           </div>

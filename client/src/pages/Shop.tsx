@@ -228,10 +228,9 @@ function PurchaseModal({
               onClick={onConfirm}
               disabled={!canAfford || purchasing}
               aria-label={`Purchase ${item.name}`}
-              className={`flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 btn-gold ${
-                canAfford ? "text-black" : "bg-gray-600 text-gray-300"
+              className={`flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                canAfford ? "gold-btn" : "bg-gray-600 text-gray-300"
               }`}
-              style={canAfford ? { background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" } : undefined}
             >
               {purchasing ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1122,7 +1121,7 @@ export default function Shop() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="glass rounded-xl border border-white/5 overflow-hidden"
+              className="vault-card rounded-xl overflow-hidden"
             >
               <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
@@ -1188,13 +1187,13 @@ export default function Shop() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="glass rounded-xl p-4 border border-primary/15"
+              className="vault-card rounded-xl p-4"
             >
               <div className="flex items-center gap-2 mb-3">
-                <Coins className="w-4 h-4 text-primary" />
+                <Coins className="w-4 h-4" style={{ color: "#d4af37" }} />
                 <span className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Your Balance</span>
               </div>
-              <div className="text-2xl font-black tabular-nums" style={{ color: "#d4af37" }}>
+              <div className="text-2xl font-black tabular-nums gold-text">
                 {displayBalance.toLocaleString()}
               </div>
               <div className="text-[0.5625rem] text-gray-600 uppercase">chips</div>
@@ -1205,7 +1204,7 @@ export default function Shop() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
-              className="glass rounded-xl p-4 border border-green-500/15 overflow-hidden relative"
+              className="vault-card rounded-xl p-4 overflow-hidden relative"
             >
               <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/10 blur-3xl rounded-full" />
               <div className="relative">
@@ -1230,9 +1229,8 @@ export default function Shop() {
                   onClick={handleClaimDaily}
                   disabled={claiming || !canClaim}
                   className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2 ${
-                    !canClaim ? "bg-white/[0.05] text-gray-400" : "text-black btn-gold"
+                    !canClaim ? "bg-white/[0.05] text-gray-400" : "gold-btn"
                   }`}
-                  style={canClaim ? { background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" } : undefined}
                 >
                   {claiming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
                   {!canClaim ? "Already Claimed" : "Claim Daily Bonus"}
@@ -1260,19 +1258,19 @@ export default function Shop() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="glass rounded-xl p-4 border border-primary/15 overflow-hidden relative"
+                  className="vault-card rounded-xl p-4 overflow-hidden relative"
                 >
                   <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 blur-3xl rounded-full" />
                   <div className="relative">
-                    <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-primary mb-1">
+                    <div className="text-[0.5625rem] font-bold uppercase tracking-wider gold-text mb-1">
                       Limited-Time Offer:
                     </div>
                     <div className="text-sm font-black text-white uppercase tracking-wider mb-1">
                       Elite Player's Pass
                     </div>
                     <div className="text-[0.5625rem] text-gray-600 mb-3">
-                      <span className="text-primary/60 font-bold uppercase flex items-center gap-1">
-                        <Coins className="w-3 h-3" /> {elitePass?.price.toLocaleString() ?? "5,000"} Chips
+                      <span className="gold-text font-bold uppercase flex items-center gap-1">
+                        <Coins className="w-3 h-3" style={{ color: "#d4af37" }} /> {elitePass?.price.toLocaleString() ?? "5,000"} Chips
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mb-3">
@@ -1295,8 +1293,7 @@ export default function Shop() {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => elitePass && setSelectedItem(elitePass)}
                         disabled={!elitePass}
-                        className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-1.5 btn-gold"
-                        style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}
+                        className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-1.5 gold-btn"
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
                         Buy Now — {elitePass?.price.toLocaleString() ?? "5,000"} Chips
@@ -1312,8 +1309,7 @@ export default function Shop() {
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="glass rounded-xl border overflow-hidden relative"
-                style={{ borderColor: previewItem.rarity?.toLowerCase() === "mythic" ? "rgba(212,175,55,0.4)" : "rgba(255,255,255,0.08)" }}
+                className="vault-card rounded-xl overflow-hidden relative"
               >
                 <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Purchase Summary</h3>
@@ -1357,8 +1353,7 @@ export default function Shop() {
                       setPreviewItem(null);
                     }}
                     disabled={ownedItemIds.has(previewItem.id)}
-                    className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50 flex items-center justify-center gap-2"
-                    style={{ background: "linear-gradient(135deg, #9a7b2c 0%, #d4af37 50%, #f3e2ad 100%)" }}
+                    className="w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2 gold-btn"
                   >
                     <ShoppingCart className="w-3.5 h-3.5" />
                     {ownedItemIds.has(previewItem.id) ? "Already Owned" : "Complete Purchase"}

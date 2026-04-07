@@ -121,8 +121,8 @@ function ActiveMembersChart({ data }: { data: ActiveMembersTrend[] }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="activeGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.02" />
+          <stop offset="0%" stopColor="#d4af37" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#d4af37" stopOpacity="0.02" />
         </linearGradient>
       </defs>
 
@@ -140,12 +140,12 @@ function ActiveMembersChart({ data }: { data: ActiveMembersTrend[] }) {
       <path d={areaD} fill="url(#activeGrad)" />
 
       {/* Line */}
-      <path d={lineD} fill="none" stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={lineD} fill="none" stroke="#d4af37" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
       {/* Dots + labels */}
       {points.map((p, i) => (
         <g key={i}>
-          <circle cx={p.x} cy={p.y} r="3.5" fill="#22d3ee" stroke="#0f172a" strokeWidth="2" />
+          <circle cx={p.x} cy={p.y} r="3.5" fill="#d4af37" stroke="#0f172a" strokeWidth="2" />
           <text x={p.x} y={PAD + chartH + 16} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9">
             {data[i].date}
           </text>
@@ -232,11 +232,11 @@ function RetentionDonut({ data }: { data: RetentionSplit }) {
           transform={`rotate(-90 ${cx} ${cy})`}
           strokeLinecap="round"
         />
-        {/* New (cyan) */}
+        {/* New (lighter gold/amber) */}
         <circle
           cx={cx} cy={cy} r={r}
           fill="none"
-          stroke="#22d3ee"
+          stroke="#f0d060"
           strokeWidth={strokeW}
           strokeDasharray={`${newLen} ${circumference}`}
           strokeDashoffset={-retLen}
@@ -252,12 +252,12 @@ function RetentionDonut({ data }: { data: RetentionSplit }) {
       </svg>
       <div className="flex gap-6 text-xs">
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-[#22d3ee]" />
-          <span className="text-gray-400">New ({data.newPlayers})</span>
+          <span className="w-2.5 h-2.5 rounded-sm bg-[#f0d060]" />
+          <span className="text-gray-400">New ({Math.round(newPct * 100)}%)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-[#d4af37]" />
-          <span className="text-gray-400">Returning ({data.returningPlayers})</span>
+          <span className="text-gray-400">Returning ({Math.round(retPct * 100)}%)</span>
         </div>
       </div>
     </div>
@@ -304,7 +304,13 @@ export default function ClubMemberAnalytics() {
   const topStats = useMemo(() => {
     const totalGames = members.reduce((s, m) => s + m.gamesPlayed, 0);
     const totalWagered = members.reduce((s, m) => s + m.totalWagered, 0);
-    return { totalMembers: members.length, totalGames, totalWagered };
+    const activeToday = members.filter((m) => {
+      const diff = Date.now() - new Date(m.lastActive).getTime();
+      return diff < 86400000;
+    }).length;
+    // Avg session time placeholder
+    const avgSession = "24m";
+    return { totalMembers: members.length, totalGames, totalWagered, activeToday, avgSession };
   }, [members]);
 
   return (
@@ -315,55 +321,44 @@ export default function ClubMemberAnalytics() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-            <Users className="text-[#d4af37]" size={28} />
-            Club Member Analytics
-          </h1>
-          <p className="text-gray-400 mt-1">
-            {club?.name || "Your Club"} — member engagement and activity insights
+          <h1 className="text-2xl md:text-3xl font-bold gold-text">Club Member Analytics Dashboard</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Club Member Analytics Dashboard
           </p>
         </motion.div>
 
-        {/* Summary Cards */}
+        {/* ── Top Row: 4 Stat Cards ──────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: Users, label: "Total Members", value: fmt(topStats.totalMembers), color: "text-[#d4af37]" },
-            { icon: Gamepad2, label: "Total Games", value: fmt(topStats.totalGames), color: "text-cyan-400" },
-            { icon: DollarSign, label: "Total Wagered", value: `$${fmt(topStats.totalWagered)}`, color: "text-[#d4af37]" },
-            { icon: Activity, label: "Active Today", value: fmt(members.filter((m) => {
-              const diff = Date.now() - new Date(m.lastActive).getTime();
-              return diff < 86400000;
-            }).length), color: "text-green-400" },
+            { label: "Active Members", value: fmt(topStats.totalMembers), change: "+5 this week", up: true },
+            { label: "Table Volume", value: fmt(topStats.totalGames), change: "+12% vs last week", up: true },
+            { label: "New Members", value: fmt(topStats.activeToday), change: "This month", up: true },
+            { label: "Avg Session Time", value: topStats.avgSession, change: "+3m vs last month", up: true },
           ].map((card, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-xl p-5 flex flex-col gap-2"
+              className="vault-card p-5"
             >
-              <div className="flex items-center gap-2 text-gray-400 text-sm">
-                <card.icon size={16} className={card.color} />
-                {card.label}
-              </div>
-              <span className="text-2xl font-bold text-white">{card.value}</span>
+              <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">{card.label}</p>
+              <p className="text-2xl font-black text-white">{card.value}</p>
+              <p className="text-xs text-green-400 mt-1">&#8593; {card.change}</p>
             </motion.div>
           ))}
         </div>
 
-        {/* Charts Row */}
-        <div className="grid lg:grid-cols-2 gap-6">
+        {/* ── Charts Row ─────────────────────────────────────────── */}
+        <div className="grid lg:grid-cols-3 gap-6">
           {/* Active Members Trend */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-xl p-5"
+            className="vault-card p-5"
           >
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <TrendingUp size={16} className="text-cyan-400" />
-              Active Members
-            </h3>
+            <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Active Members</h2>
             <ActiveMembersChart data={trends} />
           </motion.div>
 
@@ -372,81 +367,84 @@ export default function ClubMemberAnalytics() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-xl p-5"
+            className="vault-card p-5"
           >
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <BarChart3 size={16} className="text-[#d4af37]" />
-              Total Table Volume
-            </h3>
+            <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4">Total Table Volume</h2>
             <VolumeBarChart data={volume} />
           </motion.div>
-        </div>
 
-        {/* Retention Donut + Member Table */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Donut */}
+          {/* Retention Donut */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-xl p-5 flex flex-col items-center justify-center"
+            className="vault-card p-5 flex flex-col items-center justify-center"
           >
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2 self-start">
-              <PieChartIcon size={16} className="text-cyan-400" />
-              New vs Returning Players
-            </h3>
+            <h2 className="text-sm font-bold uppercase tracking-wider gold-text mb-4 self-start">New vs Returning Players</h2>
             <RetentionDonut data={retention} />
           </motion.div>
+        </div>
 
-          {/* Member Activity Table */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="lg:col-span-2 bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden"
-          >
-            <div className="px-5 py-4 border-b border-white/5">
-              <h3 className="text-white font-semibold flex items-center gap-2">
-                <Activity size={16} className="text-[#d4af37]" />
-                Member Activity
-              </h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-gray-400 text-xs uppercase tracking-wider">
-                    <th className="text-left px-5 py-3">Player</th>
-                    <th className="text-left px-5 py-3">Last Active</th>
-                    <th className="text-right px-5 py-3">Games Played</th>
-                    <th className="text-right px-5 py-3">Total Wagered</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map((m, i) => (
-                    <tr key={m.id} className="border-t border-white/5 hover:bg-white/5 transition-colors">
-                      <td className="px-5 py-3">
+        {/* ── Member Activity Table ──────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="vault-card overflow-hidden"
+        >
+          <div className="px-5 py-4 border-b border-white/5">
+            <h2 className="text-sm font-bold uppercase tracking-wider gold-text">Member Activity</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-white/40 text-xs uppercase tracking-wider border-b border-white/5">
+                  <th className="text-left px-4 py-3">Username</th>
+                  <th className="text-left px-4 py-3">Last Active</th>
+                  <th className="text-left px-4 py-3">Hands</th>
+                  <th className="text-left px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((m) => {
+                  const diff = Date.now() - new Date(m.lastActive).getTime();
+                  const isOnline = diff < 3600000; // within 1hr
+                  const isRecent = diff < 86400000; // within 24hr
+
+                  return (
+                    <tr key={m.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                      <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#d4af37] to-amber-700 flex items-center justify-center text-xs font-bold text-gray-900 flex-shrink-0">
                             {m.username.charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-white font-medium">{m.username}</span>
+                          <span className="text-sm text-white font-medium">{m.username}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-gray-400">
-                        <span className="flex items-center gap-1.5">
-                          <Clock size={13} className="text-gray-600" />
-                          {timeAgo(m.lastActive)}
-                        </span>
+                      <td className="py-3 px-4 text-sm text-gray-400">{timeAgo(m.lastActive)}</td>
+                      <td className="py-3 px-4 text-sm font-bold" style={{ color: "#d4af37" }}>${fmt(m.totalWagered)}</td>
+                      <td className="py-3 px-4">
+                        {isOnline ? (
+                          <span className="text-xs px-2 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/20">
+                            Online
+                          </span>
+                        ) : isRecent ? (
+                          <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/15 text-yellow-400 border border-yellow-500/20">
+                            Recent
+                          </span>
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded bg-gray-500/15 text-gray-400 border border-gray-500/20">
+                            Offline
+                          </span>
+                        )}
                       </td>
-                      <td className="px-5 py-3 text-right text-gray-300 font-mono">{fmt(m.gamesPlayed)}</td>
-                      <td className="px-5 py-3 text-right text-[#d4af37] font-mono">${fmt(m.totalWagered)}</td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-        </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
       </div>
     </DashboardLayout>
   );

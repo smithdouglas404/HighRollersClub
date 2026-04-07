@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageBackground } from "@/components/shared/PageBackground";
-import { Trophy, Clock, Users, Flame, Plus, Gamepad2, Timer } from "lucide-react";
+import { Trophy, Clock, Users, Flame, Plus, Gamepad2, Timer, DollarSign, BarChart2, TrendingUp } from "lucide-react";
 
 interface Tournament {
   id: number;
@@ -139,7 +139,7 @@ export default function Tournaments() {
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative mb-8 overflow-hidden rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-yellow-500/20"
+          className="relative mb-8 overflow-hidden rounded-xl p-6 vault-card"
         >
           {/* Decorative gold glow */}
           <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-10 pointer-events-none bg-gradient-radial from-yellow-300 to-transparent" />
@@ -147,7 +147,7 @@ export default function Tournaments() {
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-yellow-500/15 border border-yellow-500/20"
+                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-[#d4af37]/15 gold-border"
               >
                 <Trophy className="w-6 h-6 text-yellow-300 drop-shadow-[0_0_8px_rgba(201,168,76,0.5)]" />
               </div>
@@ -167,13 +167,45 @@ export default function Tournaments() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider shrink-0 bg-gradient-to-r from-yellow-600 to-yellow-400 text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] uppercase tracking-wider shrink-0 gold-btn shadow-[0_0_20px_rgba(212,175,55,0.3)]"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Create Tournament
               </motion.button>
             </Link>
           </div>
+        </motion.div>
+
+        {/* ── Gold Stat Cards ─────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
+        >
+          {[
+            { icon: Trophy, label: "Active Tournaments", value: String(tournaments.filter(t => t.status === "registration" || t.status === "running" || t.status === "in_progress").length), color: "text-[#d4af37]" },
+            { icon: DollarSign, label: "Total Prize Pools", value: `$${tournaments.reduce((sum, t) => sum + calculatePrizePool(t), 0).toLocaleString()}`, color: "text-[#d4af37]" },
+            { icon: Users, label: "Registered Players", value: String(tournaments.reduce((sum, t) => sum + (t.registeredPlayers ?? 0), 0)), color: "text-[#d4af37]" },
+            { icon: TrendingUp, label: "Projected Revenue", value: `$${Math.round(tournaments.reduce((sum, t) => sum + calculatePrizePool(t) * 0.05, 0)).toLocaleString()}`, color: "text-[#d4af37]" },
+          ].map((stat, i) => {
+            const Icon = stat.icon;
+            return (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + i * 0.05 }}
+                className="vault-card p-4"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className={`w-4 h-4 ${stat.color}`} />
+                  <span className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500">{stat.label}</span>
+                </div>
+                <div className={`text-xl font-black tabular-nums gold-text`}>{stat.value}</div>
+              </motion.div>
+            );
+          })}
         </motion.div>
 
         {/* ── Status Filter Tabs ─────────────────────────────────── */}
@@ -184,7 +216,7 @@ export default function Tournaments() {
               onClick={() => setStatusFilter(status)}
               className={`px-4 py-1.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wider transition-all ${
                 statusFilter === status
-                  ? "bg-yellow-500/15 text-yellow-300 border border-yellow-500/30 shadow-[0_0_10px_rgba(212,175,55,0.15)]"
+                  ? "bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/40 shadow-[0_0_10px_rgba(212,175,55,0.2)]"
                   : "text-gray-500 border border-white/[0.06] hover:text-gray-300 hover:border-white/15"
               }`}
             >
@@ -286,13 +318,7 @@ export default function Tournaments() {
                   key={tournament.id}
                   variants={cardVariants}
                   whileHover={{ scale: 1.005, y: -2 }}
-                  className="rounded-xl overflow-hidden transition-all cursor-pointer card-hover"
-                  style={{
-                    background: "rgba(15,15,20,0.7)",
-                    backdropFilter: "blur(12px)",
-                    WebkitBackdropFilter: "blur(12px)",
-                    border: "1px solid rgba(212,175,55,0.12)",
-                  }}
+                  className="rounded-xl overflow-hidden transition-all cursor-pointer vault-card gold-border-hover"
                   onClick={() => navigate(`/tournaments/${tournament.id}`)}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5">

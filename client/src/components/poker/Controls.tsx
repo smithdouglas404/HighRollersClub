@@ -501,9 +501,9 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                   style={{
                     padding: "0.7rem 1.25rem",
                     color: "#fff",
-                    background: "linear-gradient(180deg, #16a34a 0%, #15803d 30%, #166534 70%, #14532d 100%)",
-                    border: "1px solid rgba(34,197,94,0.3)",
-                    boxShadow: "0 6px 20px rgba(0,0,0,0.5), 0 0 16px rgba(34,197,94,0.2), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
+                    background: "linear-gradient(180deg, #d4af37 0%, #b8941f 30%, #9a7b18 60%, #7a6210 100%)",
+                    border: "1px solid rgba(212,175,55,0.5)",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.5), 0 0 16px rgba(212,175,55,0.25), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -2px 0 rgba(0,0,0,0.2)",
                   }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent h-1/2" />
@@ -514,8 +514,8 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     </span>
                     {needsToCall && (
                       <span
-                        className="font-mono text-sm font-black text-emerald-200 mt-0.5"
-                        style={{ textShadow: "0 0 8px rgba(34,197,94,0.4)" }}
+                        className="font-mono text-sm font-black mt-0.5"
+                        style={{ color: "#fef3c7", textShadow: "0 0 8px rgba(212,175,55,0.4)" }}
                       >
                         ${callAmount.toLocaleString()}
                       </span>
@@ -546,13 +546,13 @@ export function PokerControls({ onAction, minBet, maxBet, callCost, pot = 0, pha
                     color: "#fff",
                     background: isAllIn
                       ? "linear-gradient(180deg, #f59e0b 0%, #d97706 30%, #b45309 60%, #92400e 100%)"
-                      : "linear-gradient(180deg, #eab308 0%, #ca8a04 30%, #a16207 70%, #854d0e 100%)",
+                      : "linear-gradient(180deg, #c9a227 0%, #a8871c 30%, #8b6f14 60%, #6e580f 100%)",
                     border: isAllIn
                       ? "2px solid rgba(251,191,36,0.5)"
-                      : "1px solid rgba(234,179,8,0.3)",
+                      : "1px solid rgba(201,162,39,0.4)",
                     boxShadow: isAllIn
                       ? "0 0 36px rgba(245,158,11,0.4), 0 6px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.15)"
-                      : "0 6px 20px rgba(0,0,0,0.5), 0 0 14px rgba(234,179,8,0.2), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.15)",
+                      : "0 6px 20px rgba(0,0,0,0.5), 0 0 14px rgba(201,162,39,0.2), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.15)",
                   }}
                 >
                   {isAllIn && (

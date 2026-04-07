@@ -22,6 +22,7 @@
   "notes": "removed framer motion dependency",
   "dependencies": {
     "@daily-co/daily-js": "^0.87.0",
+    "@google/generative-ai": "^0.24.1",
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",

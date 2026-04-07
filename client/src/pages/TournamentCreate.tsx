@@ -255,11 +255,11 @@ export default function TournamentCreate() {
 
   /* ── Reusable gold input class ── */
   const goldInputClass =
-    "w-full bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 focus:shadow-[0_0_12px_rgba(212,175,55,0.15)] transition-all [color-scheme:dark]";
+    "w-full bg-[#0f0f14] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] focus:shadow-[0_0_12px_rgba(212,175,55,0.2)] transition-all [color-scheme:dark]";
   const goldSelectClass =
-    "w-full bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50 focus:shadow-[0_0_12px_rgba(212,175,55,0.15)] transition-all";
+    "w-full bg-[#0f0f14] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#d4af37] focus:shadow-[0_0_12px_rgba(212,175,55,0.2)] transition-all";
   const goldLabelClass =
-    "text-[0.625rem] font-bold uppercase tracking-wider text-gray-500 block mb-1.5";
+    "text-xs uppercase tracking-wider text-gray-500 block mb-1.5";
 
   /* ── Toggle component ── */
   function GoldToggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -1126,11 +1126,7 @@ export default function TournamentCreate() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="flex items-center gap-1 mb-6 p-1 rounded-xl"
-              style={{
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.05)",
-              }}
+              className="flex items-center gap-1 mb-6 p-1 rounded-xl vault-card"
             >
               {TABS.map((tab, i) => {
                 const Icon = tab.icon;
@@ -1182,11 +1178,7 @@ export default function TournamentCreate() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "linear-gradient(180deg, rgba(10,10,6,0.9) 0%, rgba(22,27,34,0.8) 100%)",
-                border: "1px solid rgba(212,175,55,0.1)",
-              }}
+              className="rounded-xl overflow-hidden vault-card"
             >
               <div className="p-6">
                 <AnimatePresence mode="wait" custom={tabDirection}>

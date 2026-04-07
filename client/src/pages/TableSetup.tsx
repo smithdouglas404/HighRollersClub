@@ -274,7 +274,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-lg font-bold gold-text uppercase tracking-wider mb-1">
+    <h2 className="text-lg font-bold text-white uppercase tracking-wider mb-1">
       {children}
     </h2>
   );
@@ -513,7 +513,7 @@ function StepStakes({
               setConfig((prev) => ({ ...prev, name: e.target.value }))
             }
             placeholder="Auto-generated if empty..."
-            className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40"
+            className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40"
             style={{
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,255,255,0.1)",
@@ -534,7 +534,7 @@ function StepStakes({
               min={1}
               value={config.smallBlind}
               onChange={(e) => handleSBChange(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 tabular-nums"
+              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -552,7 +552,7 @@ function StepStakes({
               min={config.smallBlind * 2}
               value={config.bigBlind}
               onChange={(e) => handleBBChange(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 tabular-nums"
+              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -579,7 +579,7 @@ function StepStakes({
                   minBuyIn: Math.max(1, parseInt(e.target.value) || 0),
                 }))
               }
-              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 tabular-nums"
+              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -602,7 +602,7 @@ function StepStakes({
                   maxBuyIn: Math.max(1, parseInt(e.target.value) || 0),
                 }))
               }
-              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 tabular-nums"
+              className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
@@ -687,7 +687,11 @@ function StepPlayers({
 
       {/* Visual table preview */}
       <div
-        className="vault-card p-4"
+        className="rounded-xl p-4"
+        style={{
+          background: "linear-gradient(135deg, rgba(20,31,40,0.6), rgba(16,24,36,0.85))",
+          border: "1px solid rgba(212,175,55,0.1)",
+        }}
       >
         <div className="text-center text-[0.625rem] text-gray-500 uppercase tracking-wider font-bold mb-1">
           Table Preview
@@ -835,7 +839,7 @@ function StepRules({
               }))
             }
             placeholder="0"
-            className="w-full max-w-xs px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 tabular-nums"
+            className="w-full max-w-xs px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40 tabular-nums"
             style={{
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,255,255,0.1)",
@@ -1138,7 +1142,7 @@ function StepPrivacy({
                   setConfig((prev) => ({ ...prev, password: e.target.value }))
                 }
                 placeholder="Enter a password..."
-                className="w-full pl-10 pr-10 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40"
+                className="w-full pl-10 pr-10 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/40"
                 style={{
                   background: "rgba(255,255,255,0.05)",
                   border: "1px solid rgba(255,255,255,0.1)",
@@ -1266,7 +1270,10 @@ function StepReview({
       </SectionSubtitle>
 
       <div
-        className="vault-card overflow-hidden"
+        className="rounded-xl overflow-hidden"
+        style={{
+          border: "1px solid rgba(212,175,55,0.12)",
+        }}
       >
         {rows.map((row, i) => (
           <div
@@ -1414,7 +1421,12 @@ export default function TableSetup() {
 
         {/* Step content with animation */}
         <div
-          className="relative vault-card p-6 md:p-8 mb-6"
+          className="relative rounded-2xl p-6 md:p-8 mb-6"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(20,31,40,0.7), rgba(16,24,36,0.92))",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
         >
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
@@ -1464,7 +1476,11 @@ export default function TableSetup() {
               whileTap={{ scale: 0.97 }}
               onClick={handleSubmit}
               disabled={submitting}
-              className="gold-btn flex items-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-[0_0_25px_rgba(212,175,55,0.35)]"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black disabled:opacity-50"
+              style={{
+                background: "linear-gradient(135deg, #d4af37, #66e5ff)",
+                boxShadow: "0 0 25px rgba(212,175,55,0.35)",
+              }}
             >
               <Rocket className="w-4 h-4" />
               {submitting ? "Launching..." : "Launch Table"}
@@ -1474,7 +1490,11 @@ export default function TableSetup() {
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={goNext}
-              className="gold-btn flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-black"
+              style={{
+                background: "linear-gradient(135deg, #d4af37, #66e5ff)",
+                boxShadow: "0 0 20px rgba(212,175,55,0.25)",
+              }}
             >
               Next
               <ChevronRight className="w-4 h-4" />

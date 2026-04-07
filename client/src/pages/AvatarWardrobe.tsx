@@ -205,7 +205,7 @@ export default function AvatarWardrobe() {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="hidden lg:flex flex-col w-56 shrink-0 border-r gold-border bg-black/20 p-4 space-y-1"
+          className="hidden lg:flex flex-col w-56 shrink-0 border-r border-white/[0.06] bg-black/20 p-4 space-y-1"
         >
           <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-bold mb-3 px-3">Navigation</div>
           {SIDEBAR_TABS.map((tab) => {
@@ -280,7 +280,7 @@ export default function AvatarWardrobe() {
               </Link>
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider gold-btn hover:opacity-90 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider " style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)" }} data-x="text-black border border-amber-400/40 hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
               >
                 {saved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
                 {saved ? "Saved!" : "Save"}
@@ -295,7 +295,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 vault-card relative overflow-hidden"
+              className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=" relative overflow-hidden"
             >
               {/* Ambient glow */}
               <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-purple-500/5 pointer-events-none" />
@@ -334,7 +334,7 @@ export default function AvatarWardrobe() {
                       key={slot.name}
                       className={`rounded-lg p-2 border text-center transition-all ${
                         slot.equipped
-                          ? "gold-border bg-amber-500/10 shadow-[0_0_8px_rgba(212,175,55,0.15)]"
+                          ? "border-amber-500/30 bg-amber-500/5"
                           : "border-white/[0.06] bg-white/[0.02]"
                       }`}
                     >
@@ -351,7 +351,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="lg:col-span-2 rounded-xl p-6 vault-card"
+              className="lg:col-span-2 rounded-xl p-6 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=""
             >
               <AnimatePresence mode="wait">
                 {selected ? (
@@ -392,7 +392,7 @@ export default function AvatarWardrobe() {
                       {selectedId !== equippedId ? (
                         <button
                           onClick={handleEquip}
-                          className="px-6 py-2.5 rounded-lg text-[0.6875rem] font-bold uppercase tracking-wider gold-btn hover:opacity-90 transition-all"
+                          className="px-6 py-2.5 rounded-lg text-[0.6875rem] font-bold uppercase tracking-wider " style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)" }} data-x="text-black hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
                         >
                           Equip This Avatar
                         </button>
@@ -426,10 +426,10 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18 }}
-              className="lg:col-span-1 rounded-xl p-5 vault-card"
+              className="lg:col-span-1 rounded-xl p-5 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=""
             >
-              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
-                <Package className="w-4 h-4" style={{ color: "#d4af37" }} />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
+                <Package className="w-4 h-4 text-amber-400" />
                 Owned Items
                 <span className="text-[0.5625rem] text-gray-500 ml-auto">({OWNED_ITEMS.length})</span>
               </h3>
@@ -441,12 +441,12 @@ export default function AvatarWardrobe() {
                       key={item.id}
                       className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
                         item.equipped
-                          ? "gold-border bg-amber-500/5 shadow-[0_0_8px_rgba(212,175,55,0.1)]"
+                          ? `${tierStyle.border} bg-white/[0.03]`
                           : "border-white/[0.06] hover:bg-white/[0.03]"
                       }`}
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        item.equipped ? "bg-amber-500/15 gold-border" : "bg-white/5 border border-white/10"
+                        item.equipped ? "bg-amber-500/15 border border-amber-500/20" : "bg-white/5 border border-white/10"
                       }`}>
                         <Shield className={`w-4 h-4 ${item.equipped ? "text-amber-400" : "text-gray-500"}`} />
                       </div>
@@ -474,10 +474,10 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl p-5 vault-card flex flex-col justify-between"
+              className="rounded-xl p-5 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=" flex flex-col justify-between"
             >
-              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
-                <Star className="w-4 h-4" style={{ color: "#d4af37" }} />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-400" />
                 Quick Stats
               </h3>
               <div className="space-y-5 flex-1 flex flex-col justify-center">
@@ -497,15 +497,15 @@ export default function AvatarWardrobe() {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[0.6875rem] font-bold text-white flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" style={{ color: "#d4af37" }} /> Style Score</span>
-                    <span className="text-sm font-black" style={{ color: "#d4af37" }}>{styleScore}</span>
+                    <span className="text-[0.6875rem] font-bold text-white flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-purple-400" /> Style Score</span>
+                    <span className="text-sm font-black text-purple-400">{styleScore}</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${styleScore}%` }}
                       transition={{ delay: 0.4, duration: 0.8 }}
-                      className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400"
+                      className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-400"
                     />
                   </div>
                 </div>
@@ -531,10 +531,10 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.22 }}
-              className="rounded-xl p-5 vault-card flex flex-col"
+              className="rounded-xl p-5 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=" flex flex-col"
             >
-              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
-                <Clock className="w-4 h-4" style={{ color: "#d4af37" }} />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-400" />
                 Recently Equipped
               </h3>
               {recentlyEquipped.length === 0 ? (
@@ -553,7 +553,7 @@ export default function AvatarWardrobe() {
                         key={id}
                         onClick={() => { setSelectedId(id); setEquippedId(id); }}
                         className={`w-full flex items-center gap-3 p-2 rounded-lg border transition-all hover:bg-white/5 ${
-                          equippedId === id ? "gold-border bg-amber-500/5" : "border-white/[0.06]"
+                          equippedId === id ? style.border + " bg-white/[0.03]" : "border-white/[0.06]"
                         }`}
                       >
                         <img src={avatar.image} alt={avatar.name} className="w-10 h-10 rounded-lg object-cover" />
@@ -579,16 +579,16 @@ export default function AvatarWardrobe() {
           >
             <button
               onClick={handleSavePreset}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-[0.6875rem] font-bold uppercase tracking-wider gold-btn hover:opacity-90 transition-all"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-[0.6875rem] font-bold uppercase tracking-wider " style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)" }} data-x="text-black border border-amber-400/40 hover:opacity-90 transition-all shadow-[0_0_20px_rgba(212,175,55,0.25)]"
             >
               {presetSaved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
               {presetSaved ? "Preset Saved!" : "Save Preset"}
             </button>
             <button
-              className="flex items-center gap-2 px-8 py-4 rounded-xl text-sm font-black uppercase tracking-wider gold-btn hover:opacity-90 transition-all shadow-[0_0_30px_rgba(212,175,55,0.35)]"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-[0.6875rem] font-bold uppercase tracking-wider bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 text-black border border-yellow-400/40 hover:opacity-90 transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)]"
             >
-              <Zap className="w-5 h-5" />
-              NANO BANANA RENDER
+              <Zap className="w-4 h-4" />
+              Nano Banana Render
             </button>
           </motion.div>
 
@@ -597,7 +597,7 @@ export default function AvatarWardrobe() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="rounded-xl overflow-hidden vault-card"
+            className="rounded-xl overflow-hidden backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=""
           >
             {/* Filter bar */}
             <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between flex-wrap gap-3">

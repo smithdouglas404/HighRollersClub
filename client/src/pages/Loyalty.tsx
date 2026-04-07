@@ -8,6 +8,7 @@ import {
   Star, Trophy, Gift, Clock, Copy, Check, Loader2,
   ChevronRight, Lock, Sparkles, Medal, Crown, Gem,
   Calendar, Users, Target, Zap, Shield, Award,
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 } from "lucide-react";
 
 // ─── Loyalty Level Definitions (mirror server) ─────────────────────────────
@@ -121,7 +122,7 @@ export default function Loyalty() {
 
   return (
     <DashboardLayout title="Loyalty Program">
-      <PageBackground />
+      <PageBackground image="/images/generated/profile-bg.png" />
       <div className="relative z-10 pb-8 max-w-5xl mx-auto">
         {/* ── Hero Section ── */}
         <motion.div

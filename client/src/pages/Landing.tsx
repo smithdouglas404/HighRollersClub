@@ -284,6 +284,20 @@ export default function Landing() {
                       {playLoading === "practice" ? "Loading..." : "Practice Mode"}
                     </div>
                   </motion.button>
+
+                  <motion.a
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.85 }}
+                    href="/flutter-poker/"
+                    target="_blank"
+                    className="glass rounded-xl px-6 py-3.5 text-sm font-semibold text-green-400 hover:text-green-300 hover:bg-green-500/5 transition-all border border-green-500/20"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400 text-xs font-black">⚡</span>
+                      Flutter Table
+                    </div>
+                  </motion.a>
                 </motion.div>
 
                 <motion.div

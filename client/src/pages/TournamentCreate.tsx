@@ -914,14 +914,7 @@ export default function TournamentCreate() {
     const gameLabel = GAME_TYPES.find((g) => g.key === gameType)?.label ?? gameType;
 
     return (
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "linear-gradient(180deg, rgba(10,10,6,0.95) 0%, rgba(22,27,34,0.80) 100%)",
-          border: "1px solid rgba(201,168,76,0.20)",
-          boxShadow: "0 0 30px rgba(212,175,55,0.08)",
-        }}
-      >
+      <div className="vault-card overflow-hidden" style={{ boxShadow: "0 0 30px rgba(212,175,55,0.08)" }}>
         {/* Header */}
         <div
           className="px-5 py-4"
@@ -1079,35 +1072,18 @@ export default function TournamentCreate() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative mb-6 overflow-hidden rounded-xl p-5"
-          style={{
-            background: "linear-gradient(135deg, rgba(10,10,6,0.9) 0%, rgba(22,27,34,0.8) 100%)",
-            border: "1px solid rgba(212,175,55,0.15)",
-            boxShadow: "0 0 30px rgba(212,175,55,0.05)",
-          }}
+          className="relative mb-6 overflow-hidden rounded-xl p-5 vault-card"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
           <div className="relative z-10 flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, rgba(154,123,44,0.2) 0%, rgba(212,175,55,0.1) 100%)",
-                border: "1px solid rgba(212,175,55,0.25)",
-              }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center bg-yellow-500/15 gold-border"
             >
               <Trophy className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" />
             </div>
             <div>
-              <h2
-                className="text-lg font-black tracking-[0.12em] uppercase"
-                style={{
-                  background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 40%, #f3e2ad 60%, #d4af37 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
+              <h2 className="text-lg font-black tracking-[0.12em] uppercase gold-text">
                 Tournament Builder
               </h2>
               <p className="text-[0.625rem] text-gray-500 mt-0.5">

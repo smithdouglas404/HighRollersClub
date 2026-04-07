@@ -59,7 +59,7 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS, CARD_BACK_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, MicOff, Eye, EyeOff, Link2, Palette, Settings2, LogOut, MoreVertical, DoorOpen, UserCheck, UserX, Sliders, ChevronRight, DollarSign } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, MicOff, Eye, EyeOff, Link2, Palette, Settings, Settings2, LogOut, MoreVertical, DoorOpen, UserCheck, UserX, Sliders, ChevronRight, DollarSign } from "lucide-react";
 import { InGameAdminPanel, type InGameSettings } from "@/components/game/InGameAdminPanel";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";

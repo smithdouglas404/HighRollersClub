@@ -731,34 +731,11 @@ export default function ClubDashboard() {
 
               {/* ── Stats Overview Row ── */}
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-                {statsCards.map((stat, i) => {
-                  const Icon = stat.icon;
-                  return (
-                    <motion.div
-                      key={stat.label}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}
-                      className="stats-card rounded-md p-4 hover:border-amber-500/40 hover:shadow-[0_0_15px_rgba(212,175,55,0.1)] hover:scale-[1.02] transition-all duration-200 relative overflow-hidden"
-                      style={{
-                        background: "rgba(15,15,20,0.7)",
-                        backdropFilter: "blur(16px)",
-                        border: "1px solid rgba(212,175,55,0.12)",
-                      }}
-                    >
-                      {/* Gold top-line accent */}
-                      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #d4af37, transparent)" }} />
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className={cn("w-4 h-4", stat.color)} />
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{stat.label}</span>
-                      </div>
-                      <p className="font-display font-bold text-white text-lg">
-                        <AnimatedNumber value={stat.value} />
-                      </p>
-                    </motion.div>
-                  );
-                })}
+                {statsCards.map((stat) => (
+                  <div key={stat.label} data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <StatCard label={stat.label} value={stat.value} icon={stat.icon} />
+                  </div>
+                ))}
               </div>
 
               {/* ── Alliance Info Card ── */}
@@ -1012,9 +989,7 @@ export default function ClubDashboard() {
                   <div className="space-y-6">
                     {/* Quick Stats */}
                     <div>
-                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2 mb-3">
-                        <TrendingUp className="w-4 h-4 text-primary" /> Quick Stats
-                      </h3>
+                      <SectionHeader icon={TrendingUp} title="Quick Stats" />
                       <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                         {quickStatsLoading ? (
                           [0, 1, 2].map((i) => (
@@ -1069,12 +1044,12 @@ export default function ClubDashboard() {
                       </div>
                     </div>
 
+                    <GoldDivider />
+
                     {/* Recent Activity */}
                     <div className="space-y-4">
-                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-primary" /> Recent Activity
-                      </h3>
-                      <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <SectionHeader icon={Activity} title="Recent Activity" />
+                      <GoldCard hover={false} padding="p-0">
 
                       {clubActivity.length === 0 ? (
                         <div className="py-10 px-4 text-center">
@@ -1144,15 +1119,15 @@ export default function ClubDashboard() {
                           })}
                         </div>
                       )}
-                      </div>
+                      </GoldCard>
                     </div>
+
+                    <GoldDivider />
 
                     {/* Tournament Alerts */}
                     <div className="space-y-4">
-                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
-                        <Trophy className="w-4 h-4 text-amber-400" /> Tournament Alerts
-                      </h3>
-                      <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <SectionHeader icon={Trophy} title="Tournament Alerts" />
+                      <GoldCard hover={false} padding="p-0" className="divide-y divide-white/[0.04]">
                         {[
                           { id: 1, text: "Final Table starting in 5 min", time: "Just now", color: "text-red-400", bg: "bg-red-500/12 border-red-500/20", icon: Activity },
                           { id: 2, text: "New tournament registration open", time: "10 min ago", color: "text-green-400", bg: "bg-green-500/12 border-green-500/20", icon: Trophy },

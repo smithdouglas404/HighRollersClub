@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageBackground } from "@/components/shared/PageBackground";
 import { useAuth } from "@/lib/auth-context";
 import { useWallet } from "@/lib/wallet-context";
+import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   BarChart3, TrendingUp, Target, Gamepad2,
   Coins, Trophy, Loader2, Brain,
@@ -976,31 +977,14 @@ export default function Analytics() {
 
             {/* Top Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {statCards.map((card, i) => {
-                const Icon = card.icon;
-                return (
-                  <motion.div
-                    key={card.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] p-4 relative overflow-hidden"
-                  >
-                    <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${card.gradient} blur-3xl rounded-full opacity-30`} />
-                    <div className="relative">
-                      <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${card.gradient} border ${card.border} flex items-center justify-center mb-3`}>
-                        <Icon className={`w-5 h-5 ${card.textColor}`} />
-                      </div>
-                      <div className="text-2xl font-bold tracking-tight" style={{ color: "#d4af37" }}>
-                        {card.value}
-                      </div>
-                      <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider mt-0.5">
-                        {card.label}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+              {statCards.map((card) => (
+                <StatCard
+                  key={card.label}
+                  label={card.label}
+                  value={typeof card.value === "number" ? card.value : card.value}
+                  icon={card.icon}
+                />
+              ))}
             </div>
 
             {/* Winnings Over Time Chart */}

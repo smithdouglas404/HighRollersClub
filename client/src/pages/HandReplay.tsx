@@ -827,16 +827,11 @@ export default function HandReplay({ handId }: { handId: string }) {
                     );
                   })}
                 </div>
-              </motion.div>
+              </GoldCard>
 
               {/* Provably Fair Proof */}
               {hand.commitmentHash && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25 }}
-                  className="glass rounded-xl p-4 border border-green-500/10"
-                >
+                <GoldCard padding="p-4" glow>
                   <div className="flex items-center gap-2 mb-3">
                     <ShieldCheck className="w-4 h-4 text-green-400" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-green-400">
@@ -912,7 +907,7 @@ export default function HandReplay({ handId }: { handId: string }) {
                       HMAC-SHA256 Fisher-Yates + SHA-512 Entropy
                     </span>
                   </div>
-                </motion.div>
+                </GoldCard>
               )}
             </div>
           </div>

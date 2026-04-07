@@ -3,6 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShareReplayButton } from "@/components/poker/ShareReplayButton";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Play,
   Trophy,
@@ -220,15 +221,7 @@ function PhaseBlock({
   const newCards = getNewCardsForPhase(phase, communityCards);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: "rgba(15,23,30,0.6)",
-        border: "1px solid rgba(212,175,55,0.08)",
-      }}
-    >
+    <GoldCard padding="p-0" className="overflow-hidden">
       {/* Phase header */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -285,7 +278,7 @@ function PhaseBlock({
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </GoldCard>
   );
 }
 
@@ -553,7 +546,7 @@ export default function SharedReplay() {
             className="rounded-xl p-5"
             style={{
               background: "rgba(212,175,55,0.04)",
-              border: "1px solid rgba(212,175,55,0.12)",
+              border: "1px solid rgba(212,175,55,0.25)",
             }}
           >
             <div className="flex items-start gap-3">

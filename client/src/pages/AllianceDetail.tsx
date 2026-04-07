@@ -288,7 +288,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                 {alliance.clubs.map((club, ci) => (
                   <div
                     key={club.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-[#d4af37]/15 hover:border-[#d4af37]/30 hover:bg-[#d4af37]/[0.04] transition-colors"
                   >
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                       ci === 0 ? "bg-primary/15 border border-primary/20" : "bg-primary/10 border border-primary/15"
@@ -351,13 +351,13 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
-                  <button
+                  <GoldButton
                     onClick={handleJoin}
                     disabled={actionLoading || !selectedJoinClub}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black disabled:opacity-40"
+                    className="flex items-center gap-1.5 text-[0.625rem]"
                   >
                     <UserPlus className="w-3.5 h-3.5" /> Join
-                  </button>
+                  </GoldButton>
                 </div>
               </motion.div>
             )}

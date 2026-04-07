@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard } from "@/components/premium/PremiumComponents";
 import { Handshake, Loader2, ArrowRight, Check, XCircle, Plus, X, DollarSign } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
@@ -87,13 +88,13 @@ export default function Stakes() {
               <p className="text-xs text-gray-400">Back players in tournaments or get backed</p>
             </div>
           </div>
-          <button
+          <GoldButton
             onClick={() => setShowOfferModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+            className="flex items-center gap-2 text-sm"
           >
             <Plus className="w-4 h-4" />
             Offer Stake
-          </button>
+          </GoldButton>
         </div>
 
         {loading ? (
@@ -110,7 +111,7 @@ export default function Stakes() {
               ) : (
                 <div className="grid gap-3">
                   {backerStakes.map(s => (
-                    <div key={s.id} className="p-4 rounded-xl bg-surface-high/50 border border-white/[0.06]">
+                    <GoldCard key={s.id} padding="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-gray-400">Player: {s.playerName ?? s.playerId.slice(0, 8)}</span>
@@ -158,7 +159,7 @@ export default function Stakes() {
               ) : (
                 <div className="grid gap-3">
                   {playerStakes.map(s => (
-                    <div key={s.id} className="p-4 rounded-xl bg-surface-high/50 border border-white/[0.06]">
+                    <GoldCard key={s.id} padding="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-gray-400">Backer: {s.backerName ?? s.backerId.slice(0, 8)}</span>

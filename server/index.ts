@@ -18,24 +18,27 @@ logServiceMode();
 // Auto-push database schema if DATABASE_URL is set
 if (hasDatabase()) {
   // Run raw SQL to ensure all required columns/tables exist
-  // This is more reliable than drizzle-kit push which hangs on interactive prompts
+  // Each statement runs independently so one failure doesn't block the rest
   try {
     log("Syncing database schema...");
     const pool = getPool();
-    await pool.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_level text NOT NULL DEFAULT 'none';
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_points integer NOT NULL DEFAULT 0;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_level integer NOT NULL DEFAULT 1;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_streak_days integer NOT NULL DEFAULT 0;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_last_play_date text;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_multiplier integer NOT NULL DEFAULT 100;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_login_streak integer NOT NULL DEFAULT 0;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_reward_at timestamp;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by varchar;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code varchar;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS tier_plan text;
-      ALTER TABLE shop_items ADD COLUMN IF NOT EXISTS earnable_at_level integer;
-    `);
+    const stmts = [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_level text NOT NULL DEFAULT 'none'`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_points integer NOT NULL DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_level integer NOT NULL DEFAULT 1`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_streak_days integer NOT NULL DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_last_play_date text`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_multiplier numeric(3,1) NOT NULL DEFAULT 1.0`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_login_streak integer NOT NULL DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_reward_at timestamp`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by varchar`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code varchar`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS tier_plan text`,
+      `ALTER TABLE shop_items ADD COLUMN IF NOT EXISTS earnable_at_level integer`,
+    ];
+    for (const sql of stmts) {
+      await pool.query(sql).catch(e => log(`  schema skip: ${e.message}`));
+    }
     await pool.query(`
       CREATE TABLE IF NOT EXISTS loyalty_logs (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),

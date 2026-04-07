@@ -130,271 +130,171 @@ export default function ClubInvitations() {
             </button>
           </motion.div>
         ) : (
-          <div className="max-w-2xl mx-auto space-y-6">
-            {/* Invite By Username */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl overflow-hidden bg-[#1a1610]/80 backdrop-blur-xl border border-primary/15"
-            >
-              <div
-                className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
-              >
-                <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
-                  <UserPlus className="w-5 h-5 text-primary" />
-                </div>
+          <div className="max-w-5xl mx-auto space-y-8">
+            {/* Page Title */}
+            <div>
+              <h1 className="text-2xl font-black gold-text">Club Member Invite Flow</h1>
+              <p className="text-sm text-gray-500 mt-1">Recruiting and onboarding new members into the {club.name}.</p>
+            </div>
+
+            {/* 2-column: Invite Form + Welcome Card */}
+            <GoldCard glow>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left: Invite Form */}
                 <div>
-                  <h3 className="text-sm font-bold text-primary tracking-wider uppercase">
-                    Invite Player
-                  </h3>
-                  <p className="text-[0.5625rem] text-gray-500">Send an invite by username</p>
-                </div>
-              </div>
+                  <h3 className="text-lg font-black text-white mb-4">Invite New Member</h3>
 
-              <div className="p-5 space-y-3">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={inviteUsername}
-                    onChange={(e) => setInviteUsername(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSendInvite()}
-                    placeholder="Enter username..."
-                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-[#1a1610]/50 border border-white/[0.06]"
-                  />
-                  <GoldButton
-                    onClick={handleSendInvite}
-                    disabled={sending || !inviteUsername.trim()}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">
+                        Member Email or Wallet Address
+                      </label>
+                      <input
+                        type="text"
+                        value={inviteUsername}
+                        onChange={(e) => setInviteUsername(e.target.value)}
+                        placeholder="Member Email or Wallet Address"
+                        className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40 gold-border"
+                        style={{ background: "rgba(255,255,255,0.04)" }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-1.5 block">
+                        Assign Initial Credit Limit
+                      </label>
+                      <select
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value as any)}
+                        className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40 gold-border appearance-none cursor-pointer"
+                        style={{ background: "rgba(255,255,255,0.04)" }}
+                      >
+                        <option value="member" style={{ background: "#1a1a2e" }}>$10,000</option>
+                        <option value="moderator" style={{ background: "#1a1a2e" }}>$25,000</option>
+                        <option value="admin" style={{ background: "#1a1a2e" }}>$50,000</option>
+                      </select>
+                    </div>
+
+                    {/* Success/Error messages */}
+                    <AnimatePresence>
+                      {sendSuccess && (
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-green-400 flex items-center gap-1.5">
+                          <CheckCircle className="w-3.5 h-3.5" /> {sendSuccess}
+                        </motion.p>
+                      )}
+                      {sendError && (
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-red-400 flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5" /> {sendError}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+
+                    <GoldButton onClick={handleSendInvite} disabled={sending || !inviteUsername.trim()} fullWidth>
+                      {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Invitation"}
+                    </GoldButton>
+                  </div>
+                </div>
+
+                {/* Right: Welcome Card Preview */}
+                <div className="flex items-center justify-center">
+                  <div
+                    className="w-full max-w-[280px] rounded-xl p-6 text-center"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(15,12,8,0.9) 100%)",
+                      border: "1px solid rgba(212,175,55,0.3)",
+                      boxShadow: "0 0 30px rgba(212,175,55,0.1)",
+                    }}
                   >
-                    {sending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                    Send
-                  </GoldButton>
-                </div>
-
-                {/* Role selection */}
-                <div className="flex items-center gap-3">
-                  <ShieldCheck className="w-4 h-4 text-gray-500 shrink-0" />
-                  <label className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 shrink-0">
-                    Invite as
-                  </label>
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as "member" | "moderator" | "admin")}
-                    className="flex-1 px-3 py-1.5 rounded-lg text-xs text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-[#1a1610]/50 border border-white/[0.06]"
-                  >
-                    <option value="member" className="bg-surface-lowest">Member</option>
-                    <option value="moderator" className="bg-surface-lowest">Moderator</option>
-                    <option value="admin" className="bg-surface-lowest">Admin</option>
-                  </select>
-                </div>
-
-                <AnimatePresence>
-                  {sendSuccess && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      className="flex items-center gap-2 text-[0.625rem] text-green-400"
+                    <div
+                      className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center"
+                      style={{ background: "linear-gradient(135deg, rgba(212,175,55,0.2), rgba(154,123,44,0.1))", border: "2px solid rgba(212,175,55,0.4)" }}
                     >
-                      <CheckCircle className="w-3 h-3" />
-                      {sendSuccess}
-                    </motion.div>
-                  )}
-                  {sendError && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      className="flex items-center gap-2 text-[0.625rem] text-red-400"
-                    >
-                      <AlertTriangle className="w-3 h-3" />
-                      {sendError}
-                      <button
-                        onClick={() => setSendError("")}
-                        className="ml-auto p-0.5 hover:bg-white/5 rounded"
-                      >
-                        <X className="w-3 h-3 text-gray-500" />
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-
-            {/* Pending Requests (join requests from others) */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="rounded-xl overflow-hidden bg-[#1a1610]/80 backdrop-blur-xl border border-amber-500/15"
-            >
-              <div
-                className="flex items-center justify-between px-5 py-4 border-b border-b-white/[0.06]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
-                    <Inbox className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold tracking-wider uppercase gold-text">
-                      Pending Requests
-                    </h3>
-                    <p className="text-[0.5625rem] text-gray-500">Players wanting to join your club</p>
+                      <ShieldCheck className="w-8 h-8 text-[#d4af37]" />
+                    </div>
+                    <h4 className="text-sm font-black gold-text">High Rollers Welcome Card</h4>
+                    <p className="text-xs text-gray-400 mt-2">Welcome to the {club.name},</p>
+                    <p className="text-xs text-gray-500 mt-1 italic">Your Exclusive Access Awaits</p>
+                    <p className="text-[0.5625rem] text-gray-600 mt-3 font-mono">Club: {club.name}</p>
                   </div>
                 </div>
-                {pendingRequests.length > 0 && (
-                  <span
-                    className="text-[0.5625rem] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20"
-                  >
-                    {pendingRequests.length} pending
-                  </span>
-                )}
               </div>
+            </GoldCard>
 
-              <div className="p-5">
-                {pendingRequests.length === 0 ? (
-                  <div className="text-center py-6">
-                    <Mail className="w-8 h-8 text-gray-700 mx-auto mb-2" />
-                    <p className="text-[0.6875rem] text-gray-600">No pending requests</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {pendingRequests.map((inv) => (
-                      <motion.div
-                        key={inv.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-white/[0.02] border border-white/[0.06]"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_hsl(var(--primary)/0.15)]">
-                          <span className="text-[0.625rem] font-bold text-white">
-                            {inv.displayName.charAt(0).toUpperCase()}
+            {/* ── Pending Invitations Table ── */}
+            {sentInvitations.length > 0 && (
+            <GoldCard>
+              <h3 className="text-lg font-black text-white mb-4">Pending Invitations</h3>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr style={{ background: "rgba(212,175,55,0.06)" }}>
+                      <th className="text-left py-3 px-4 text-xs font-bold uppercase tracking-wider" style={{ color: "#d4af37" }}>Invitee</th>
+                      <th className="text-left py-3 px-4 text-xs font-bold uppercase tracking-wider" style={{ color: "#d4af37" }}>Status</th>
+                      <th className="text-left py-3 px-4 text-xs font-bold uppercase tracking-wider" style={{ color: "#d4af37" }}>Sent Date</th>
+                      <th className="text-left py-3 px-4 text-xs font-bold uppercase tracking-wider" style={{ color: "#d4af37" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sentInvitations.map((inv: any) => (
+                      <tr key={inv.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                        <td className="py-3 px-4 text-sm text-gray-300">{inv.userId}</td>
+                        <td className="py-3 px-4">
+                          <span className={`text-xs font-semibold flex items-center gap-1.5 ${statusColor(inv.status)}`}>
+                            {statusIcon(inv.status)} {inv.status}
                           </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold text-white truncate">
-                            {inv.displayName}
-                          </div>
-                          <div className="text-[0.5625rem] text-gray-500">@{inv.username}</div>
-                        </div>
-                        <div className="flex gap-1.5 shrink-0">
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => handleAction(inv.id, "accepted")}
-                            disabled={actionLoading[inv.id]}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 bg-primary/10 border border-primary/20"
-                          >
-                            {actionLoading[inv.id] ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-green-400" />
-                            ) : (
-                              <Check className="w-3.5 h-3.5 text-green-400" />
-                            )}
-                          </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => handleAction(inv.id, "declined")}
-                            disabled={actionLoading[inv.id]}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 bg-destructive/10 border border-destructive/20"
-                          >
-                            <X className="w-3.5 h-3.5 text-red-400" />
-                          </motion.button>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Sent Invitations */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="rounded-xl overflow-hidden bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06]"
-            >
-              <div
-                className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
-              >
-                <div className="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center">
-                  <Send className="w-5 h-5 text-purple-400" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold tracking-wider uppercase gold-text">
-                    Sent Invitations
-                  </h3>
-                  <p className="text-[0.5625rem] text-gray-500">Track your outgoing invites</p>
-                </div>
-              </div>
-
-              <div className="p-5">
-                {sentInvitations.length === 0 ? (
-                  <div className="text-center py-6">
-                    <Send className="w-8 h-8 text-gray-700 mx-auto mb-2" />
-                    <p className="text-[0.6875rem] text-gray-600">No invitations sent yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {sentInvitations.map((inv) => (
-                      <motion.div
-                        key={inv.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg border border-white/[0.06]"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-purple-500/30 flex items-center justify-center border border-white/10 shrink-0 shadow-[0_0_10px_hsl(var(--primary)/0.15)]">
-                          <span className="text-[0.625rem] font-bold text-white">
-                            {inv.displayName.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold text-white truncate">
-                            {inv.displayName}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[0.5625rem] text-gray-500">@{inv.username}</span>
-                            {(inv as any).role && (
-                              <span className="text-[0.5rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary">
-                                {(inv as any).role}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="flex items-center gap-1.5">
-                            {statusIcon(inv.status)}
-                            <span className={`text-[0.5625rem] font-bold uppercase tracking-wider ${statusColor(inv.status)}`}>
-                              {inv.status}
-                            </span>
-                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-500">{new Date(inv.createdAt).toLocaleDateString()}</td>
+                        <td className="py-3 px-4">
                           {inv.status === "pending" && (
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => handleResend(inv.username, inv.id)}
+                            <button
+                              onClick={() => handleResend(inv.userId, inv.id)}
                               disabled={resending[inv.id]}
-                              className="px-2.5 py-1 rounded-md text-[0.5625rem] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors disabled:opacity-50 bg-white/[0.04] border border-white/[0.08] text-gray-400 hover:text-white hover:border-primary/30"
+                              className="text-xs font-bold px-3 py-1 rounded-lg transition-all"
+                              style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)", color: "#d4af37" }}
                             >
-                              {resending[inv.id] ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <RefreshCw className="w-3 h-3" />
-                              )}
-                              Resend
-                            </motion.button>
+                              {resending[inv.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : "Resend"}
+                            </button>
                           )}
-                        </div>
-                      </motion.div>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                )}
+                  </tbody>
+                </table>
               </div>
-            </motion.div>
+            </GoldCard>
+            )}
+
+            {/* ── Pending Join Requests ── */}
+            {pendingRequests.length > 0 && (
+            <GoldCard>
+              <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
+                <Inbox className="w-5 h-5 text-[#d4af37]" />
+                Pending Join Requests <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(212,175,55,0.15)", color: "#d4af37" }}>{pendingRequests.length}</span>
+              </h3>
+              {pendingRequests.map((req: any) => (
+                <div key={req.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                  <span className="text-sm text-gray-300">{req.userId}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleAction(req.id, "accepted")}
+                      disabled={actionLoading[req.id]}
+                      className="text-xs font-bold px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 border border-green-500/20 hover:bg-green-500/25 transition-all"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleAction(req.id, "declined")}
+                      disabled={actionLoading[req.id]}
+                      className="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition-all"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </GoldCard>
+            )}
           </div>
         )}
       </div>

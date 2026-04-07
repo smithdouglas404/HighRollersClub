@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'bloc/game_bloc.dart';
 import 'widgets/poker_table.dart';
 
 void main() {
@@ -15,15 +13,8 @@ class PokerApp extends StatelessWidget {
     return MaterialApp(
       title: 'High Rollers Club - Poker',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0A0A0C),
-      ),
-      home: BlocProvider(
-        create: (_) => GameBloc(),
-        child: const Scaffold(
-          body: PokerTableWidget(),
-        ),
-      ),
+      theme: ThemeData.dark(),
+      home: const PokerTable(),
     );
   }
 }

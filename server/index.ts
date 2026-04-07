@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import path from "path";
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -11,30 +12,35 @@ import { scheduleDailyTournaments } from "./scheduler";
 import { csrfProtection } from "./middleware/csrf";
 import { hasDatabase, getPool } from "./db";
 import { SERVICE_MODE, logServiceMode } from "./service-mode";
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 logServiceMode();
 
 // Auto-push database schema if DATABASE_URL is set
 if (hasDatabase()) {
   // Run raw SQL to ensure all required columns/tables exist
-  // This is more reliable than drizzle-kit push which hangs on interactive prompts
+  // Each statement runs independently so one failure doesn't block the rest
   try {
     log("Syncing database schema...");
     const pool = getPool();
-    await pool.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_level text NOT NULL DEFAULT 'none';
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_points integer NOT NULL DEFAULT 0;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_level integer NOT NULL DEFAULT 1;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_streak_days integer NOT NULL DEFAULT 0;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_last_play_date text;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_multiplier integer NOT NULL DEFAULT 100;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_login_streak integer NOT NULL DEFAULT 0;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_reward_at timestamp;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by varchar;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code varchar;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS tier_plan text;
-      ALTER TABLE shop_items ADD COLUMN IF NOT EXISTS earnable_at_level integer;
-    `);
+    const stmts = [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_level text NOT NULL DEFAULT 'none'`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_points integer NOT NULL DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_level integer NOT NULL DEFAULT 1`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_streak_days integer NOT NULL DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_last_play_date text`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_multiplier numeric(3,1) NOT NULL DEFAULT 1.0`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_login_streak integer NOT NULL DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_reward_at timestamp`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by varchar`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code varchar`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS tier_plan text`,
+      `ALTER TABLE shop_items ADD COLUMN IF NOT EXISTS earnable_at_level integer`,
+    ];
+    for (const sql of stmts) {
+      await pool.query(sql).catch(e => log(`  schema skip: ${e.message}`));
+    }
     await pool.query(`
       CREATE TABLE IF NOT EXISTS loyalty_logs (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -86,12 +92,18 @@ if (hasDatabase()) {
 
 const app = express();
 
+// Disable CSP for Flutter poker route — Flutter CanvasKit needs blob: workers and inline scripts
+app.use('/flutter-poker', (req, res, next) => {
+  res.removeHeader('Content-Security-Policy');
+  next();
+});
+
 const isDev = process.env.NODE_ENV !== "production";
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.firebaseapp.com", "*.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "'wasm-unsafe-eval'", "*.firebaseapp.com", "*.googleapis.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
       fontSrc: ["'self'", "fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:", "*.googleapis.com", "*.didit.me"],
@@ -204,6 +216,9 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+
+  // Serve Flutter poker table at /flutter-poker
+  app.use('/flutter-poker', express.static(path.join(__dirname, '..', 'client', 'public', 'flutter-poker')));
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

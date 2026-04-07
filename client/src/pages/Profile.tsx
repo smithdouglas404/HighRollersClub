@@ -384,6 +384,7 @@ export default function Profile() {
   const [hoveredBadge, setHoveredBadge] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"profile" | "security" | "preferences">("profile");
   const [emailNotifications, setEmailNotifications] = useState(true);
+  const [showDetailedStats, setShowDetailedStats] = useState(false);
   const [privacyMode, setPrivacyMode] = useState(false);
 
   useEffect(() => {
@@ -545,9 +546,23 @@ export default function Profile() {
         </motion.div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            DETAILED STATS (below dashboard)
+            DETAILED STATS (collapsible below dashboard)
            ═══════════════════════════════════════════════════════════════ */}
 
+        {/* Toggle for detailed stats */}
+        <div className="flex justify-center mb-6">
+          <button
+            onClick={() => setShowDetailedStats(!showDetailedStats)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+            style={{ background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)", color: "#d4af37" }}
+          >
+            {showDetailedStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {showDetailedStats ? "Hide Detailed Stats" : "View Detailed Stats & History"}
+          </button>
+        </div>
+
+        {showDetailedStats && (
+        <>
         {/* ── Hero Banner ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -967,6 +982,8 @@ export default function Profile() {
             })}
           </motion.div>
         </div>
+        </>
+        )}
       </div>
     </DashboardLayout>
   );

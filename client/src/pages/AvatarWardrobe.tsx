@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { AVATAR_OPTIONS, type AvatarOption } from "@/components/poker/AvatarSelect";
 import { useAuth } from "@/lib/auth-context";
-import { GoldButton, GoldCard, SectionHeader } from "@/components/premium/PremiumComponents";
 import {
   User, Crown, Check, Save, ShoppingBag,
   Sparkles, Lock, ChevronRight, Shield, Sword,

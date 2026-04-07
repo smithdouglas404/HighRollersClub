@@ -71,6 +71,16 @@ class _PokerTableState extends State<PokerTable> with TickerProviderStateMixin {
   final List<String> _playerActions = List.filled(10, '');
   late AnimationController _dealController;
 
+  // Gemini: "Browsers are strict — ensure the user clicks 'Join Table' first
+  // to initialize the audio context."
+  bool _audioInitialized = false;
+  void _initAudioOnFirstClick() {
+    if (!_audioInitialized) {
+      _audioInitialized = true;
+      // SoundEngine().init() would go here when wired
+    }
+  }
+
   // Chip flight tracking
   final List<_ChipFlight> _chipFlights = [];
   int _chipFlightId = 0;
@@ -211,10 +221,20 @@ class _PokerTableState extends State<PokerTable> with TickerProviderStateMixin {
             final size = constraints.biggest;
             final centerX = size.width / 2;
             final centerY = size.height / 2;
-            final radiusX = size.width * 0.35;
-            final radiusY = size.height * 0.35;
 
-            return Stack(
+            // Gemini Responsive Breakpoints:
+            // "Web: Use the 10-seat ellipse.
+            //  Mobile: switch to a 'Vertical' table layout where the seats
+            //  are in two columns of five. Because you used LayoutBuilder,
+            //  you can just swap the radius math!"
+            final isMobile = size.width < 600;
+            final radiusX = isMobile ? size.width * 0.25 : size.width * 0.35;
+            final radiusY = isMobile ? size.height * 0.40 : size.height * 0.35;
+
+            // Gemini: "Ensure user clicks first to init audio context"
+            return GestureDetector(
+              onTap: _initAudioOnFirstClick,
+              child: Stack(
               children: [
                 // 1. The Physical Table Graphic
                 Center(
@@ -583,12 +603,21 @@ class _PokerTableState extends State<PokerTable> with TickerProviderStateMixin {
                   ),
 
                 // 7. Connection Status Indicator
+                // Gemini: "sequence_id — show 'Syncing...' spinner"
                 const Positioned(
                   top: 10, right: 10,
-                  child: Icon(Icons.wifi, color: Colors.greenAccent, size: 14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // TODO: wire to PokerSocketService.isSyncing for "Syncing..." spinner
+                      // TODO: wire to PokerSocketService.isConnected for green/red icon
+                      Icon(Icons.wifi, color: Colors.greenAccent, size: 14),
+                    ],
+                  ),
                 ),
               ],
-            );
+            ),
+            ); // close GestureDetector
           },
         ),
       ),

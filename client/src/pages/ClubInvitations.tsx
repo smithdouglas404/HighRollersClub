@@ -135,7 +135,7 @@ export default function ClubInvitations() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+              className="rounded-xl overflow-hidden bg-[#1a1610]/80 backdrop-blur-xl border border-primary/15"
             >
               <div
                 className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
@@ -159,7 +159,7 @@ export default function ClubInvitations() {
                     onChange={(e) => setInviteUsername(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSendInvite()}
                     placeholder="Enter username..."
-                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-surface-highest/50 border border-white/[0.06]"
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-primary/40 bg-[#1a1610]/50 border border-white/[0.06]"
                   />
                   <GoldButton
                     onClick={handleSendInvite}
@@ -183,7 +183,7 @@ export default function ClubInvitations() {
                   <select
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as "member" | "moderator" | "admin")}
-                    className="flex-1 px-3 py-1.5 rounded-lg text-xs text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
+                    className="flex-1 px-3 py-1.5 rounded-lg text-xs text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-[#1a1610]/50 border border-white/[0.06]"
                   >
                     <option value="member" className="bg-surface-lowest">Member</option>
                     <option value="moderator" className="bg-surface-lowest">Moderator</option>
@@ -229,7 +229,7 @@ export default function ClubInvitations() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-amber-500/15"
+              className="rounded-xl overflow-hidden bg-[#1a1610]/80 backdrop-blur-xl border border-amber-500/15"
             >
               <div
                 className="flex items-center justify-between px-5 py-4 border-b border-b-white/[0.06]"
@@ -316,7 +316,7 @@ export default function ClubInvitations() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+              className="rounded-xl overflow-hidden bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06]"
             >
               <div
                 className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"

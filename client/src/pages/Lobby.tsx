@@ -220,7 +220,7 @@ function LobbyBannerCarousel() {
 
   if (validBanners.length === 0) {
     return (
-      <div className="relative w-full h-[80px] mb-6 rounded-md overflow-hidden bg-surface-high/40 border border-white/[0.06]">
+      <div className="relative w-full h-[80px] mb-6 rounded-md overflow-hidden bg-[#1a1610]/40 border border-white/[0.06]">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <Flame className="w-5 h-5 text-primary/40 mx-auto mb-1" />
@@ -338,7 +338,7 @@ function ClubActivityFeed() {
 
   if (loading) {
     return (
-      <div className="mt-8 rounded-md p-4 bg-surface-high/30 backdrop-blur-xl border border-white/[0.06] animate-pulse h-32" />
+      <div className="mt-8 rounded-md p-4 bg-[#1a1610]/60 backdrop-blur-xl border border-white/[0.06] animate-pulse h-32" />
     );
   }
 
@@ -347,7 +347,7 @@ function ClubActivityFeed() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mt-8 rounded-md p-5 bg-surface-high/30 backdrop-blur-xl border border-white/[0.06]"
+        className="mt-8 rounded-md p-5 bg-[#1a1610]/60 backdrop-blur-xl border border-white/[0.06]"
       >
         <div className="flex items-center gap-2 mb-3">
           <Club className="w-4 h-4 text-primary" />
@@ -368,7 +368,7 @@ function ClubActivityFeed() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-8 rounded-md bg-surface-high/30 backdrop-blur-xl border border-white/[0.06] overflow-hidden"
+      className="mt-8 rounded-md bg-[#1a1610]/60 backdrop-blur-xl border border-white/[0.06] overflow-hidden"
     >
       {/* Header */}
       <button
@@ -547,7 +547,7 @@ function DailyChallenges() {
 
   if (loading) {
     return (
-      <div className="mb-6 rounded-md p-4 bg-surface-high/30 backdrop-blur-xl border border-white/[0.06] animate-pulse h-20" />
+      <div className="mb-6 rounded-md p-4 bg-[#1a1610]/60 backdrop-blur-xl border border-white/[0.06] animate-pulse h-20" />
     );
   }
 
@@ -575,7 +575,7 @@ function DailyChallenges() {
             <motion.div
               key={c.id}
               layout
-              className="shrink-0 w-56 rounded-lg bg-surface-high/40 backdrop-blur-xl border border-white/[0.06] p-3 hover:border-primary/20 transition-all"
+              className="shrink-0 w-56 rounded-lg bg-[#1a1610]/40 backdrop-blur-xl border border-white/[0.06] p-3 hover:border-primary/20 transition-all"
             >
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="text-base">{emoji}</span>
@@ -1263,7 +1263,7 @@ export default function Lobby() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden mb-4"
             >
-              <div className="rounded-md p-4 bg-surface-high/50 backdrop-blur-xl border border-purple-500/15">
+              <div className="rounded-md p-4 bg-[#1a1610]/80 backdrop-blur-xl border border-purple-500/15">
 
                 <div className="flex items-center gap-2 mb-3">
                   <Brain className="w-4 h-4 text-purple-400" />
@@ -1295,7 +1295,7 @@ export default function Lobby() {
                         }
                       }}
                       placeholder={aiHasKey ? "Key is set (enter new to replace)" : "sk-ant-..."}
-                      className={`w-full pl-9 pr-4 py-2 rounded-md text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-purple-500/30 bg-surface-highest/50 border ${aiKeyError ? "border-red-500/50" : "border-white/[0.06]"}`}
+                      className={`w-full pl-9 pr-4 py-2 rounded-md text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-purple-500/30 bg-[#1a1610]/50 border ${aiKeyError ? "border-red-500/50" : "border-white/[0.06]"}`}
                     />
                     {aiKeyError && (
                       <p className="absolute -bottom-4 left-0 text-[0.5625rem] text-red-400">{aiKeyError}</p>
@@ -1365,7 +1365,7 @@ export default function Lobby() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search tables..."
-            className="w-full bg-surface-high/50 border border-white/[0.06] rounded-md pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-primary/30 transition-all"
+            className="w-full bg-[#1a1610]/80 border border-white/[0.06] rounded-md pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-primary/30 transition-all"
           />
         </div>
 
@@ -1443,7 +1443,7 @@ export default function Lobby() {
                   "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5",
                   isActive
                     ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_12px_rgba(129,236,255,0.15)]"
-                    : "bg-surface-high/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
+                    : "bg-[#1a1610]/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
                 )}
               >
                 <Icon className="w-3 h-3" />
@@ -1463,7 +1463,7 @@ export default function Lobby() {
                   "px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200",
                   isActive
                     ? "bg-secondary/15 text-secondary border border-secondary/30 shadow-[0_0_12px_rgba(74,222,128,0.15)]"
-                    : "bg-surface-high/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
+                    : "bg-[#1a1610]/60 text-muted-foreground border border-white/[0.06] hover:text-foreground hover:bg-white/5"
                 )}
               >
                 {stake.label}
@@ -1486,7 +1486,7 @@ export default function Lobby() {
                 navigate("/game");
               }
             }}
-            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
+            className="bg-[#1a1610]/80 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -1521,7 +1521,7 @@ export default function Lobby() {
                 startingChips: 1500,
               });
             }}
-            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
+            className="bg-[#1a1610]/80 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -1540,7 +1540,7 @@ export default function Lobby() {
             transition={{ delay: 0.1 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => { setDefaultPrivate(true); setShowCreateTable(true); }}
-            className="bg-surface-high/50 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
+            className="bg-[#1a1610]/80 backdrop-blur-xl rounded-md p-4 border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all card-hover"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -1587,7 +1587,7 @@ export default function Lobby() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-44 bg-surface-high/40 backdrop-blur-xl rounded-md animate-pulse" />
+              <div key={i} className="h-44 bg-[#1a1610]/40 backdrop-blur-xl rounded-md animate-pulse" />
             ))}
           </div>
         ) : filteredTables.length === 0 ? (
@@ -1683,7 +1683,7 @@ export default function Lobby() {
                 onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
                 placeholder="Enter table password..."
                 autoFocus
-                className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-4"
+                className="w-full bg-[#1a1610]/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-4"
               />
               <div className="flex gap-2">
                 <NeonButton variant="ghost" onClick={() => setPasswordModal(null)} className="flex-1" disabled={submittingPassword}>
@@ -1714,7 +1714,7 @@ export default function Lobby() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-sm p-6 rounded-md bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+              className="relative w-full max-w-sm p-6 rounded-md bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06]"
             >
               <div className="flex items-center gap-3 mb-4">
                 <Key className="w-5 h-5 text-primary" />
@@ -1737,7 +1737,7 @@ export default function Lobby() {
                 placeholder="e.g. ABC123"
                 autoFocus
                 maxLength={8}
-                className="w-full bg-surface-highest/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-1 uppercase tracking-widest font-mono"
+                className="w-full bg-[#1a1610]/50 border border-white/[0.06] rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all mb-1 uppercase tracking-widest font-mono"
               />
               <div className="h-5 mb-3">
                 {joinCodeError ? (

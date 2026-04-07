@@ -133,7 +133,7 @@ function WalletRecovery() {
               value={address}
               onChange={(e) => { setAddress(e.target.value); setResult(null); }}
               placeholder="0x..."
-              className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-purple-500/30 transition-all"
+              className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-purple-500/30 transition-all"
               required
             />
           </div>
@@ -168,7 +168,7 @@ function WalletRecovery() {
                 value={signature}
                 onChange={(e) => { setSignature(e.target.value); setResult(null); }}
                 placeholder="Paste your signature here"
-                className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-purple-500/30 transition-all"
+                className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-purple-500/30 transition-all"
                 required
               />
             </div>
@@ -296,7 +296,7 @@ function EmailRecovery() {
               value={username}
               onChange={(e) => { setUsername(e.target.value); setResult(null); }}
               placeholder="your username or email"
-              className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all"
+              className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all"
               required
             />
           </div>
@@ -339,7 +339,7 @@ function EmailRecovery() {
               onChange={(e) => { setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); setResult(null); }}
               placeholder="123456"
               maxLength={6}
-              className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all tracking-[0.3em] text-center"
+              className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all tracking-[0.3em] text-center"
               required
             />
           </div>
@@ -445,7 +445,7 @@ function BackupCodeRecovery() {
             value={username}
             onChange={(e) => { setUsername(e.target.value); setResult(null); }}
             placeholder="your username"
-            className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-amber-500/30 transition-all"
+            className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-amber-500/30 transition-all"
             required
           />
         </div>
@@ -458,7 +458,7 @@ function BackupCodeRecovery() {
             value={code}
             onChange={(e) => { setCode(e.target.value); setResult(null); }}
             placeholder="XXXX-XXXX"
-            className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-amber-500/30 transition-all tracking-wider"
+            className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-amber-500/30 transition-all tracking-wider"
             required
           />
         </div>

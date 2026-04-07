@@ -1018,7 +1018,7 @@ function WithdrawPanel() {
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <DialogContent className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] max-w-md">
+        <DialogContent className="bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06] max-w-md">
           <DialogHeader>
             <DialogTitle className="text-primary font-display tracking-wider text-base">Confirm Withdrawal</DialogTitle>
           </DialogHeader>
@@ -1278,7 +1278,7 @@ function SessionHistory() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03 }}
-            className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl px-4 py-3"
+            className="bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06] rounded-xl px-4 py-3"
           >
             <div className="flex items-center gap-3">
               {/* Icon */}
@@ -1531,7 +1531,7 @@ function ConnectedWalletsSection() {
                       animate={{ opacity: 1, y: 0 }}
                       className={`rounded-xl border p-4 transition-all duration-300 ${
                         isConnected
-                          ? `bg-surface-high/50 backdrop-blur-xl ${provider.borderColor}`
+                          ? `bg-[#1a1610]/80 backdrop-blur-xl ${provider.borderColor}`
                           : "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]"
                       }`}
                       style={isConnected ? { boxShadow: `0 0 16px rgba(${provider.glowRgb}, 0.08)` } : undefined}

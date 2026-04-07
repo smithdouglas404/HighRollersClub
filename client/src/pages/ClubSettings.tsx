@@ -194,7 +194,7 @@ export default function ClubSettings() {
                     required
                     minLength={2}
                     maxLength={50}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-surface-highest/50 gold-border"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-[#1a1610]/50 gold-border"
                     placeholder="Enter club name..."
                   />
                 </div>
@@ -210,7 +210,7 @@ export default function ClubSettings() {
                     onChange={(e) => setDescription(e.target.value)}
                     maxLength={300}
                     rows={3}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none resize-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-surface-highest/50 gold-border"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none resize-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-[#1a1610]/50 gold-border"
                     placeholder="Describe your club..."
                   />
                   <div className="text-right text-[0.5625rem] text-gray-600">{description.length}/300</div>
@@ -292,7 +292,7 @@ export default function ClubSettings() {
                     id="settings-timezone"
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-[#1a1610]/50 border border-white/[0.06]"
                   >
                     <option value="UTC" className="bg-surface-lowest">UTC (Coordinated Universal Time)</option>
                     <option value="America/New_York" className="bg-surface-lowest">EST (Eastern Standard Time)</option>
@@ -315,7 +315,7 @@ export default function ClubSettings() {
                     id="settings-language"
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-[#1a1610]/50 border border-white/[0.06]"
                   >
                     <option value="en" className="bg-surface-lowest">English</option>
                     <option value="es" className="bg-surface-lowest">Spanish</option>
@@ -375,7 +375,7 @@ export default function ClubSettings() {
                     min={0}
                     value={maxBuyIn}
                     onChange={(e) => setMaxBuyIn(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-surface-highest/50 gold-border"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-[#1a1610]/50 gold-border"
                     placeholder="1000"
                   />
                 </div>
@@ -390,7 +390,7 @@ export default function ClubSettings() {
                     min={0}
                     value={defaultCreditLimit}
                     onChange={(e) => setDefaultCreditLimit(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-surface-highest/50 gold-border"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-[#1a1610]/50 gold-border"
                     placeholder="500"
                   />
                 </div>

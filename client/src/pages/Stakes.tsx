@@ -110,7 +110,7 @@ export default function Stakes() {
               ) : (
                 <div className="grid gap-3">
                   {backerStakes.map(s => (
-                    <div key={s.id} className="p-4 rounded-xl bg-surface-high/50 border border-white/[0.06]">
+                    <div key={s.id} className="p-4 rounded-xl bg-[#1a1610]/80 border border-white/[0.06]">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-gray-400">Player: {s.playerName ?? s.playerId.slice(0, 8)}</span>
@@ -157,7 +157,7 @@ export default function Stakes() {
               ) : (
                 <div className="grid gap-3">
                   {playerStakes.map(s => (
-                    <div key={s.id} className="p-4 rounded-xl bg-surface-high/50 border border-white/[0.06]">
+                    <div key={s.id} className="p-4 rounded-xl bg-[#1a1610]/80 border border-white/[0.06]">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-gray-400">Backer: {s.backerName ?? s.backerId.slice(0, 8)}</span>

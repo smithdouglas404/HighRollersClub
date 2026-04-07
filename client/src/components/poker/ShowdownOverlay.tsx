@@ -5,6 +5,7 @@ import { Player } from "@/lib/poker-types";
 import { Card } from "./Card";
 import { useEffect, useRef } from "react";
 import { useSoundEngine } from "@/lib/sound-context";
+import confetti from "canvas-confetti";
 
 interface ShowdownOverlayProps {
   visible: boolean;
@@ -173,6 +174,19 @@ export function ShowdownOverlay({ visible, results, players, pot, onDismiss, aut
     }
     return () => { if (dismissRef.current) clearTimeout(dismissRef.current); };
   }, [visible, onDismiss, autoDismissMs]);
+
+  // Fire canvas-confetti on showdown
+  useEffect(() => {
+    if (visible && winners.length > 0) {
+      // Gold confetti burst
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#d4af37", "#f3e2ad", "#8a6914", "#ffffff", "#c9a227"] });
+      // Second burst delayed
+      setTimeout(() => {
+        confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 }, colors: ["#d4af37", "#f3e2ad"] });
+        confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 }, colors: ["#d4af37", "#f3e2ad"] });
+      }, 300);
+    }
+  }, [visible, winners.length]);
 
   // Play showdown sequence: phase reveal → fanfare → chip slide → win celebration
   useEffect(() => {

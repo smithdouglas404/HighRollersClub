@@ -219,7 +219,7 @@ export default function BlockchainDashboard() {
 
         {/* System Status Bar */}
         {stats && (
-          <div className="rounded-lg border border-white/10 bg-surface-high/20 px-4 py-3 flex items-center gap-6 flex-wrap text-xs">
+          <div className="rounded-lg border border-white/10 bg-[#1a1610]/40 px-4 py-3 flex items-center gap-6 flex-wrap text-xs">
             <div className="flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5 text-gray-500" />
               <span className="text-gray-400">Chain:</span>
@@ -679,7 +679,7 @@ export default function BlockchainDashboard() {
               </div>
 
               {/* Live stats */}
-              <div className="rounded-xl border border-white/10 bg-surface-high/30 p-5 space-y-3">
+              <div className="rounded-xl border border-white/10 bg-[#1a1610]/60 p-5 space-y-3">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2"><Activity className="w-4 h-4 text-cyan-400" /> Live Encryption Status</h3>
                 {stats?.encryption ? (
                   <div className="space-y-2">
@@ -707,7 +707,7 @@ export default function BlockchainDashboard() {
         {tab === "overview" && stats && (
           <div className="space-y-4">
             {/* Visual pipeline */}
-            <div className="rounded-xl border border-white/10 bg-surface-high/20 p-5">
+            <div className="rounded-xl border border-white/10 bg-[#1a1610]/40 p-5">
               <h3 className="text-sm font-bold text-white mb-4">Blockchain Integrity Pipeline</h3>
               <div className="flex items-center gap-2 overflow-x-auto pb-2">
                 {[
@@ -734,17 +734,17 @@ export default function BlockchainDashboard() {
 
             {/* Quick links */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <button onClick={() => setTab("kyc")} className="rounded-xl border border-white/10 bg-surface-high/20 p-4 text-left hover:bg-white/[0.03] transition-colors">
+              <button onClick={() => setTab("kyc")} className="rounded-xl border border-white/10 bg-[#1a1610]/40 p-4 text-left hover:bg-white/[0.03] transition-colors">
                 <Fingerprint className="w-6 h-6 text-green-400 mb-2" />
                 <div className="text-sm font-bold text-white">KYC Certification</div>
                 <div className="text-xs text-gray-500 mt-1">{stats.kycOnChain} members with on-chain identity hashes</div>
               </button>
-              <button onClick={() => setTab("hands")} className="rounded-xl border border-white/10 bg-surface-high/20 p-4 text-left hover:bg-white/[0.03] transition-colors">
+              <button onClick={() => setTab("hands")} className="rounded-xl border border-white/10 bg-[#1a1610]/40 p-4 text-left hover:bg-white/[0.03] transition-colors">
                 <Gamepad2 className="w-6 h-6 text-blue-400 mb-2" />
                 <div className="text-sm font-bold text-white">Hand Verification</div>
                 <div className="text-xs text-gray-500 mt-1">{stats.handsOnChain} hands with on-chain proof</div>
               </button>
-              <button onClick={() => setTab("encryption")} className="rounded-xl border border-white/10 bg-surface-high/20 p-4 text-left hover:bg-white/[0.03] transition-colors">
+              <button onClick={() => setTab("encryption")} className="rounded-xl border border-white/10 bg-[#1a1610]/40 p-4 text-left hover:bg-white/[0.03] transition-colors">
                 <Key className="w-6 h-6 text-purple-400 mb-2" />
                 <div className="text-sm font-bold text-white">Encryption Audit</div>
                 <div className="text-xs text-gray-500 mt-1">{stats.encryption?.totalAnchored || 0} session keys committed to chain</div>

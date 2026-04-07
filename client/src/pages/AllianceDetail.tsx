@@ -286,7 +286,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+              className="rounded-xl overflow-hidden bg-[#1a1610]/80 backdrop-blur-xl border border-primary/15"
             >
               <div className="px-5 py-3 border-b border-white/[0.04]">
                 <h2 className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400">Member Clubs</h2>
@@ -344,7 +344,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+                className="rounded-xl p-5 bg-[#1a1610]/80 backdrop-blur-xl border border-primary/15"
               >
                 <h2 className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-3">Join This Alliance</h2>
                 <div className="flex items-center gap-3">
@@ -374,7 +374,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-red-500/10"
+                className="rounded-xl p-5 bg-[#1a1610]/80 backdrop-blur-xl border border-red-500/10"
               >
                 <h2 className="text-[0.625rem] font-bold uppercase tracking-wider text-gray-400 mb-3">Danger Zone</h2>
                 {confirmDelete ? (

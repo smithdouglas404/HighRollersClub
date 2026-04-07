@@ -435,7 +435,7 @@ export default function ClubDashboard() {
                       value={newClubName}
                       onChange={(e) => setNewClubName(e.target.value)}
                       placeholder=" "
-                      className="peer w-full px-4 pt-5 pb-2 rounded-md text-sm text-foreground outline-none transition-all focus:border-primary/30 bg-surface-highest/50 border border-white/[0.06]"
+                      className="peer w-full px-4 pt-5 pb-2 rounded-md text-sm text-foreground outline-none transition-all focus:border-primary/30 bg-[#1a1610]/50 border border-white/[0.06]"
                     />
                     <label className="absolute left-4 top-2 text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 pointer-events-none transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-xs peer-placeholder-shown:font-normal peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal peer-focus:top-2 peer-focus:text-[0.5625rem] peer-focus:font-bold peer-focus:uppercase peer-focus:tracking-wider peer-focus:text-primary">
                       Club Name
@@ -557,7 +557,7 @@ export default function ClubDashboard() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => navigate("/clubs/browse")}
-                  className="w-full mt-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2 bg-surface-high/30 border border-white/[0.06]"
+                  className="w-full mt-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2 bg-[#1a1610]/60 border border-white/[0.06]"
                 >
                   <Search className="w-4 h-4" />
                   Browse Clubs
@@ -917,7 +917,7 @@ export default function ClubDashboard() {
                                   initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   transition={{ delay: i * 0.06 }}
-                                  className="rounded-md overflow-hidden border border-white/[0.06] hover:border-primary/20 transition-all group bg-surface-high/30"
+                                  className="rounded-md overflow-hidden border border-white/[0.06] hover:border-primary/20 transition-all group bg-[#1a1610]/60"
                                 >
                                   {/* Mini table felt preview */}
                                   <div className="relative h-14 bg-gradient-to-b from-emerald-900/30 to-emerald-950/20 flex items-center justify-center overflow-hidden">
@@ -1466,7 +1466,7 @@ export default function ClubDashboard() {
 
                 {/* Pending Join Requests */}
                 {pendingInvitations.length > 0 && (
-                  <div className="mt-6 bg-surface-high/50 backdrop-blur-xl rounded-md border border-white/[0.06] p-4">
+                  <div className="mt-6 bg-[#1a1610]/80 backdrop-blur-xl rounded-md border border-white/[0.06] p-4">
                     <h3 className="font-display font-bold text-white text-sm mb-3">
                       Pending Requests ({pendingInvitations.length})
                     </h3>

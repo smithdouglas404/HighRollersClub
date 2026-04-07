@@ -239,7 +239,7 @@ export default function AnnouncementManager() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 space-y-5"
+          className="bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 space-y-5"
         >
           <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <Megaphone className="w-4 h-4 text-primary" />
@@ -339,7 +339,7 @@ export default function AnnouncementManager() {
                     className={`relative flex flex-col items-center text-center gap-2 px-4 py-4 rounded-xl border transition-all duration-200 cursor-pointer ${
                       isSelected
                         ? "border-primary bg-primary/10 shadow-[0_0_16px_rgba(234,179,8,0.15)]"
-                        : "border-white/[0.06] bg-surface-high/30 hover:border-white/[0.12] hover:bg-white/[0.03]"
+                        : "border-white/[0.06] bg-[#1a1610]/60 hover:border-white/[0.12] hover:bg-white/[0.03]"
                     }`}
                   >
                     <div

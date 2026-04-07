@@ -218,7 +218,7 @@ export default function Leagues() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.05 }}
                           onClick={() => navigate(`/alliances/${alliance.id}`)}
-                          className="rounded-xl overflow-hidden cursor-pointer hover:border-primary/20 transition-all bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+                          className="rounded-xl overflow-hidden cursor-pointer hover:border-primary/20 transition-all bg-[#1a1610]/80 backdrop-blur-xl border border-primary/15"
                         >
                           <div className="p-5">
                             <div className="flex items-start gap-3 mb-4">
@@ -311,7 +311,7 @@ export default function Leagues() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
                         onClick={() => navigate(`/leagues/${season.id}`)}
-                        className="rounded-xl overflow-hidden cursor-pointer hover:border-primary/20 transition-all bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+                        className="rounded-xl overflow-hidden cursor-pointer hover:border-primary/20 transition-all bg-[#1a1610]/80 backdrop-blur-xl border border-primary/15"
                       >
                         {/* Season Header */}
                         <div className="px-5 py-4 border-b border-white/[0.04] flex items-center justify-between">
@@ -404,7 +404,7 @@ export default function Leagues() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-md rounded-2xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+              className="relative w-full max-w-md rounded-2xl overflow-hidden bg-[#1a1610]/80 backdrop-blur-xl border border-primary/15"
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
                 <div className="flex items-center gap-3">

@@ -100,7 +100,7 @@ function PasswordManagement() {
                     type={showCurrent ? "text" : "password"}
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all pr-10"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all pr-10"
                     placeholder="Enter current password"
                   />
                   <button
@@ -123,7 +123,7 @@ function PasswordManagement() {
                     type={showNew ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all pr-10"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all pr-10"
                     placeholder="Minimum 6 characters"
                   />
                   <button
@@ -148,7 +148,7 @@ function PasswordManagement() {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all"
+                  className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all"
                   placeholder="Re-enter new password"
                 />
                 {confirmPassword.length > 0 && !passwordsMatch && (
@@ -459,7 +459,7 @@ function TwoFactorAuth() {
                       value={codeDigits[i]}
                       onChange={(e) => handleCodeChange(i, e.target.value)}
                       onKeyDown={(e) => handleCodeKeyDown(i, e)}
-                      className="w-9 h-11 text-center rounded-lg bg-surface-highest/50 border border-white/[0.06] text-lg font-bold text-white focus:outline-none focus:border-primary/40 transition-all"
+                      className="w-9 h-11 text-center rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-lg font-bold text-white focus:outline-none focus:border-primary/40 transition-all"
                       disabled={verifyLoading}
                     />
                   ))}
@@ -587,7 +587,7 @@ function ConnectedWallets() {
             value={walletAddress}
             onChange={(e) => { setWalletAddress(e.target.value); setFeedback(null); }}
             placeholder="0x..."
-            className="w-full px-3 py-2.5 rounded-lg bg-surface-highest/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all"
+            className="w-full px-3 py-2.5 rounded-lg bg-[#1a1610]/50 border border-white/[0.06] text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-all"
           />
         </div>
 
@@ -792,7 +792,7 @@ function ApiKeysSection() {
           onChange={e => setNewKeyName(e.target.value)}
           placeholder="Key name (e.g., My App)"
           maxLength={50}
-          className="flex-1 px-3 py-2 rounded-lg text-xs bg-surface-highest/50 border border-white/[0.06] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/30"
+          className="flex-1 px-3 py-2 rounded-lg text-xs bg-[#1a1610]/50 border border-white/[0.06] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/30"
         />
         <GoldButton
           onClick={handleGenerate}

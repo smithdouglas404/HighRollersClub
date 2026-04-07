@@ -249,7 +249,7 @@ export default function BrowseClubs() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search clubs by name or description..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-500 outline-none transition-all focus:ring-2 focus:ring-primary/30 bg-surface-highest/50 border border-white/[0.06]"
+                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-500 outline-none transition-all focus:ring-2 focus:ring-primary/30 bg-[#1a1610]/50 border border-white/[0.06]"
               />
             </div>
 
@@ -430,7 +430,7 @@ export default function BrowseClubs() {
                       exit={{ opacity: 0, scale: 0.95 }}
                       layout
                       whileHover={{ y: -3, scale: 1.01 }}
-                      className="rounded-xl overflow-hidden transition-shadow group bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+                      className="rounded-xl overflow-hidden transition-shadow group bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06]"
                     >
                       {/* Gradient banner — color derived from club name */}
                       <div className="relative h-20 rounded-t-xl" style={{ background: getClubBannerGradient(club.name) }}>

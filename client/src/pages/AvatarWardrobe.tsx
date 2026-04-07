@@ -68,8 +68,8 @@ function AvatarCard({
         isSelected
           ? `${style.border} ring-2 ring-amber-400/30`
           : isEquipped
-          ? `${style.border} bg-surface-highest/60`
-          : "border-white/[0.06] bg-surface-high/40 hover:border-white/15"
+          ? `${style.border} bg-[#1a1610]/60`
+          : "border-white/[0.06] bg-[#1a1610]/40 hover:border-white/15"
       }`}
       style={{
         boxShadow: isSelected ? `0 0 24px ${style.glow}` : undefined,
@@ -296,7 +296,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] relative overflow-hidden"
+              className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06] relative overflow-hidden"
             >
               {/* Ambient glow */}
               <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-purple-500/5 pointer-events-none" />
@@ -347,7 +347,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="lg:col-span-2 rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+              className="lg:col-span-2 rounded-xl p-6 bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06]"
             >
               <AnimatePresence mode="wait">
                 {selected ? (
@@ -419,7 +419,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18 }}
-              className="lg:col-span-1 rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+              className="lg:col-span-1 rounded-xl p-5 bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06]"
             >
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
                 <Package className="w-4 h-4 text-amber-400" />
@@ -467,7 +467,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] flex flex-col justify-between"
+              className="rounded-xl p-5 bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06] flex flex-col justify-between"
             >
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
                 <Star className="w-4 h-4 text-amber-400" />
@@ -524,7 +524,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.22 }}
-              className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] flex flex-col"
+              className="rounded-xl p-5 bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06] flex flex-col"
             >
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-amber-400" />
@@ -587,7 +587,7 @@ export default function AvatarWardrobe() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+            className="rounded-xl overflow-hidden bg-[#1a1610]/80 backdrop-blur-xl border border-white/[0.06]"
           >
             {/* Filter bar */}
             <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between flex-wrap gap-3">

@@ -121,7 +121,7 @@ function DepositLimitsSection({ settings, onSave }: { settings: RGSettings; onSa
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : null}
         {saving ? "Saving..." : saved ? "Saved" : "Save Limits"}
       </button>
-    </div>
+    </GoldCard>
   );
 }
 
@@ -176,7 +176,7 @@ function SessionTimeLimitSection({ settings, onSave }: { settings: RGSettings; o
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : null}
         {saving ? "Saving..." : saved ? "Saved" : "Save Limit"}
       </button>
-    </div>
+    </GoldCard>
   );
 }
 
@@ -223,7 +223,7 @@ function LossLimitSection({ settings, onSave }: { settings: RGSettings; onSave: 
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : null}
         {saving ? "Saving..." : saved ? "Saved" : "Save Limit"}
       </button>
-    </div>
+    </GoldCard>
   );
 }
 
@@ -355,7 +355,7 @@ function CoolOffSection({ settings, onCoolOff }: { settings: RGSettings; onCoolO
           {saving ? "Activating..." : "Take a 24h Break"}
         </button>
       )}
-    </div>
+    </GoldCard>
   );
 }
 

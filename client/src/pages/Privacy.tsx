@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { ShieldCheck } from "lucide-react";
 
 const LAST_UPDATED = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
@@ -13,7 +14,7 @@ function Section({ number, title, children }: SectionProps) {
   return (
     <section className="mb-10">
       <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-3">
-        <span className="shrink-0 w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-sm font-mono text-emerald-400">
+        <span className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-mono" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)", color: "#d4af37" }}>
           {number}
         </span>
         {title}
@@ -31,8 +32,8 @@ export default function Privacy() {
       <div className="max-w-3xl mx-auto px-4 py-10">
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6 text-emerald-400" />
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}>
+              <ShieldCheck className="w-6 h-6" style={{ color: "#d4af37" }} />
             </div>
             <div>
               <h1 className="text-2xl font-display font-black text-white">Privacy Policy</h1>
@@ -46,7 +47,7 @@ export default function Privacy() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-8">
+        <GoldCard padding="p-6 md:p-8">
           <Section number={1} title="Information We Collect">
             <p>We collect the following categories of information:</p>
 
@@ -183,10 +184,10 @@ export default function Privacy() {
           <Section number={9} title="Contact Us">
             <p>
               If you have questions, concerns, or requests regarding this Privacy Policy or our data practices,
-              please reach out through our <a href="/support" className="text-primary hover:underline">support page</a>.
+              please reach out through our <a href="/support" className="hover:underline" style={{ color: "#d4af37" }}>support page</a>.
             </p>
           </Section>
-        </div>
+        </GoldCard>
 
         <div className="mt-8 text-center text-xs text-gray-600">
           This policy applies to all users of the High Rollers Club platform worldwide.

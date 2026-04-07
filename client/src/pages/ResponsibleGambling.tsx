@@ -86,7 +86,7 @@ function DepositLimitsSection({ settings, onSave }: { settings: RGSettings; onSa
             value={daily}
             onChange={e => setDaily(e.target.value)}
             placeholder="0 (no limit)"
-            className="w-full px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40"
           />
         </div>
         <div>
@@ -97,7 +97,7 @@ function DepositLimitsSection({ settings, onSave }: { settings: RGSettings; onSa
             value={weekly}
             onChange={e => setWeekly(e.target.value)}
             placeholder="0 (no limit)"
-            className="w-full px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40"
           />
         </div>
         <div>
@@ -108,7 +108,7 @@ function DepositLimitsSection({ settings, onSave }: { settings: RGSettings; onSa
             value={monthly}
             onChange={e => setMonthly(e.target.value)}
             placeholder="0 (no limit)"
-            className="w-full px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40"
           />
         </div>
       </div>
@@ -160,7 +160,7 @@ function SessionTimeLimitSection({ settings, onSave }: { settings: RGSettings; o
         <select
           value={value}
           onChange={e => setValue(e.target.value)}
-          className="px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          className="px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40"
         >
           {options.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -211,7 +211,7 @@ function LossLimitSection({ settings, onSave }: { settings: RGSettings; onSave: 
           value={value}
           onChange={e => setValue(e.target.value)}
           placeholder="0 (no limit)"
-          className="w-full max-w-xs px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full max-w-xs px-3 py-2 rounded-md bg-surface-lowest border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40"
         />
       </div>
       <button

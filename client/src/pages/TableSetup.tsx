@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
-import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   ChevronLeft,
   ChevronRight,
@@ -1415,14 +1414,7 @@ export default function TableSetup() {
 
         {/* Step content with animation */}
         <div
-          className="relative mb-6"
-          style={{
-            background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)",
-            border: "1px solid rgba(212,175,55,0.2)",
-            borderRadius: "0.75rem",
-            padding: "1.5rem 2rem",
-            backdropFilter: "blur(20px)",
-          }
+          className="relative vault-card p-6 md:p-8 mb-6"
         >
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
@@ -1467,22 +1459,26 @@ export default function TableSetup() {
           </span>
 
           {isLast ? (
-            <GoldButton
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex items-center gap-2 text-xs shadow-[0_0_25px_rgba(212,175,55,0.35)]"
+              className="gold-btn flex items-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-[0_0_25px_rgba(212,175,55,0.35)]"
             >
               <Rocket className="w-4 h-4" />
               {submitting ? "Launching..." : "Launch Table"}
-            </GoldButton>
+            </motion.button>
           ) : (
-            <GoldButton
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={goNext}
-              className="flex items-center gap-2 text-xs shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+              className="gold-btn flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider shadow-[0_0_20px_rgba(212,175,55,0.25)]"
             >
               Next
               <ChevronRight className="w-4 h-4" />
-            </GoldButton>
+            </motion.button>
           )}
         </div>
       </div>

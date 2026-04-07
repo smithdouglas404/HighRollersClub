@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { Link } from "wouter";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { Crown, Lock, Star, Shield } from "lucide-react";
 
 const SEAT_POSITIONS = [
@@ -188,12 +189,7 @@ function AdminControls() {
 
 function WaitingListSidebar() {
   return (
-    <div
-      className="w-64 rounded-xl border border-amber-500/20 p-4 flex-shrink-0"
-      style={{
-        background: "linear-gradient(180deg, rgba(15,15,30,0.95), rgba(10,10,25,0.98))",
-      }}
-    >
+    <GoldCard className="w-64 flex-shrink-0" padding="p-4" glow>
       <h3 className="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2">
         <Crown className="h-4 w-4" />
         WAITING LIST
@@ -220,7 +216,7 @@ function WaitingListSidebar() {
           </div>
         ))}
       </div>
-    </div>
+    </GoldCard>
   );
 }
 

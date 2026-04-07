@@ -268,7 +268,7 @@ function ContactForm() {
       <GoldButton
         disabled={!canSubmit}
         className="flex items-center gap-2 px-6 py-3 text-sm"
-        onClick={(e: any) => { if (canSubmit) handleSubmit(e); }}
+        onClick={() => { if (canSubmit) handleSubmit({ preventDefault: () => {} } as any); }}
       >
         {sending ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -507,7 +507,7 @@ export default function Support() {
                     <GoldButton
                       disabled={!newSubject.trim() || !newMessage.trim() || submittingTicket}
                       className="flex items-center gap-2 px-6 py-3 text-sm"
-                      onClick={(e: any) => { e.preventDefault(); handleCreateTicket(e); }}
+                      onClick={() => { handleCreateTicket({ preventDefault: () => {} } as any); }}
                     >
                       {submittingTicket ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                       {submittingTicket ? "Submitting..." : "Submit Ticket"}

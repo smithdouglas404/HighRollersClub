@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { Crown, ArrowRight, Loader2 } from "lucide-react";
 
 /**
@@ -35,14 +36,14 @@ export default function PremiumUpgrade() {
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Redirecting to Membership Tiers...</span>
         </div>
-        <button
+        <GoldButton
           onClick={() => setLocation("/tiers")}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider gold-btn transition-all hover:shadow-[0_0_20px_rgba(212,168,67,0.3)]"
+          className="inline-flex items-center gap-2"
         >
           <Crown className="w-4 h-4" />
           View Membership Tiers
           <ArrowRight className="w-4 h-4" />
-        </button>
+        </GoldButton>
       </div>
     </DashboardLayout>
   );

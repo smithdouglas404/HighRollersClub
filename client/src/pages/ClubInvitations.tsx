@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Mail, Send, UserPlus, Check, X, Loader2,
   Clock, CheckCircle, XCircle, AlertTriangle, Users, Inbox, RefreshCw, ShieldCheck,
@@ -147,8 +148,9 @@ export default function ClubInvitations() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="vault-card overflow-hidden"
+              className=""
             >
+            <GoldCard padding="p-0" className="overflow-hidden">
               <div
                 className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
               >
@@ -173,12 +175,10 @@ export default function ClubInvitations() {
                     placeholder="Enter username..."
                     className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-600 outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/50 focus:border-[#d4af37]/40 bg-surface-highest/50 gold-border"
                   />
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                  <GoldButton
                     onClick={handleSendInvite}
                     disabled={sending || !inviteUsername.trim()}
-                    className="gold-btn px-5 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    className="flex items-center gap-2 text-xs shrink-0"
                   >
                     {sending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -186,7 +186,7 @@ export default function ClubInvitations() {
                       <Send className="w-4 h-4" />
                     )}
                     Send
-                  </motion.button>
+                  </GoldButton>
                 </div>
 
                 {/* Role selection */}
@@ -237,6 +237,7 @@ export default function ClubInvitations() {
                   )}
                 </AnimatePresence>
               </div>
+            </GoldCard>
             </motion.div>
 
             {/* Pending Requests (join requests from others) */}
@@ -244,8 +245,9 @@ export default function ClubInvitations() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="vault-card overflow-hidden"
+              className=""
             >
+            <GoldCard padding="p-0" className="overflow-hidden">
               <div
                 className="flex items-center justify-between px-5 py-4 border-b border-b-[#d4af37]/10"
               >
@@ -324,6 +326,7 @@ export default function ClubInvitations() {
                   </div>
                 )}
               </div>
+            </GoldCard>
             </motion.div>
 
             {/* Sent Invitations */}
@@ -331,8 +334,9 @@ export default function ClubInvitations() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="vault-card overflow-hidden"
+              className=""
             >
+            <GoldCard padding="p-0" className="overflow-hidden">
               <div
                 className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10"
               >
@@ -406,6 +410,7 @@ export default function ClubInvitations() {
                   </div>
                 )}
               </div>
+            </GoldCard>
             </motion.div>
           </div>
         )}

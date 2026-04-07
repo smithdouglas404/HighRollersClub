@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { Swords, Clock, Zap, Trophy, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
@@ -95,13 +96,13 @@ export default function ClubWars() {
             </div>
           </div>
           {user?.role === "admin" && (
-            <button
+            <GoldButton
               onClick={requestMatchmaking}
               disabled={matchmaking}
-              className="px-4 py-2 rounded-lg bg-primary/20 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/30 transition-colors disabled:opacity-50"
+              className="text-xs"
             >
               {matchmaking ? <Loader2 className="w-4 h-4 animate-spin" /> : "Request Matchmaking"}
-            </button>
+            </GoldButton>
           )}
         </div>
 
@@ -127,7 +128,7 @@ export default function ClubWars() {
               ) : (
                 <div className="grid gap-3">
                   {upcoming.map(w => (
-                    <div key={w.id} className="p-4 rounded-xl bg-surface-high/50 border border-white/[0.06]">
+                    <GoldCard key={w.id} padding="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-bold text-white">{w.club1Name}</span>
@@ -141,7 +142,7 @@ export default function ClubWars() {
                         <span>vs</span>
                         <span>ELO: {w.club2Elo ?? 1200}</span>
                       </div>
-                    </div>
+                    </GoldCard>
                   ))}
                 </div>
               )}
@@ -157,7 +158,7 @@ export default function ClubWars() {
               ) : (
                 <div className="grid gap-3">
                   {active.map(w => (
-                    <div key={w.id} className="p-4 rounded-xl bg-surface-high/50 border border-green-500/20">
+                    <GoldCard key={w.id} padding="p-4" glow>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold text-white">{w.club1Name}</span>
                         <div className="flex items-center gap-2">
@@ -167,7 +168,7 @@ export default function ClubWars() {
                         </div>
                         <span className="text-sm font-bold text-white">{w.club2Name}</span>
                       </div>
-                    </div>
+                    </GoldCard>
                   ))}
                 </div>
               )}
@@ -183,7 +184,7 @@ export default function ClubWars() {
               ) : (
                 <div className="grid gap-3">
                   {completed.map(w => (
-                    <div key={w.id} className="p-4 rounded-xl bg-surface-high/50 border border-white/[0.06]">
+                    <GoldCard key={w.id} padding="p-4">
                       <div className="flex items-center justify-between">
                         <span className={`text-sm font-bold ${w.winnerId === w.club1Id ? "text-green-400" : "text-gray-400"}`}>
                           {w.club1Name}
@@ -204,7 +205,7 @@ export default function ClubWars() {
                           </span>
                         </div>
                       )}
-                    </div>
+                    </GoldCard>
                   ))}
                 </div>
               )}

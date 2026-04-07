@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { ScrollText } from "lucide-react";
 
 const LAST_UPDATED = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
@@ -13,7 +14,7 @@ function Section({ number, title, children }: SectionProps) {
   return (
     <section className="mb-10">
       <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-3">
-        <span className="shrink-0 w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-mono text-primary">
+        <span className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-mono" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)", color: "#d4af37" }}>
           {number}
         </span>
         {title}
@@ -31,8 +32,8 @@ export default function Terms() {
       <div className="max-w-3xl mx-auto px-4 py-10">
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <ScrollText className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}>
+              <ScrollText className="w-6 h-6" style={{ color: "#d4af37" }} />
             </div>
             <div>
               <h1 className="text-2xl font-display font-black text-white">Terms of Service</h1>
@@ -46,7 +47,7 @@ export default function Terms() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-8">
+        <GoldCard padding="p-6 md:p-8">
           <Section number={1} title="Acceptance of Terms">
             <p>
               By creating an account, accessing, or using any part of the High Rollers Club platform ("Service"),
@@ -188,11 +189,11 @@ export default function Terms() {
               full force and effect.
             </p>
           </Section>
-        </div>
+        </GoldCard>
 
         <div className="mt-8 text-center text-xs text-gray-600">
           If you have questions about these Terms, please contact us at{" "}
-          <a href="/support" className="text-primary hover:underline">our support page</a>.
+          <a href="/support" className="hover:underline" style={{ color: "#d4af37" }}>our support page</a>.
         </div>
       </div>
     </DashboardLayout>

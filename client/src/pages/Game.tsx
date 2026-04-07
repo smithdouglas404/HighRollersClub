@@ -7,6 +7,7 @@ import { ImageTable } from "../components/poker/ImageTable";
 import { PokerSceneCanvas } from "../scene/canvas/PokerSceneCanvas";
 import { useWebSocketBridge } from "../hooks/useWebSocketBridge";
 import { RANK_FRAMES } from "@/lib/game-constants";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 
 // 3D table preference — persisted in localStorage, fallback to true
 function get3DPreference(): boolean {

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Crown, Star, Shield, Zap, Trophy, Gift, ChevronRight,
   Flame, Target, Lock, Award, Gem, Diamond, Loader2,
@@ -266,9 +267,9 @@ export default function LoyaltyDashboard() {
           transition={{ delay: 0.1 }}
           className="rounded-xl p-5"
           style={{
-            background: "rgba(15,15,20,0.8)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(212,175,55,0.12)",
+            background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(212,175,55,0.2)",
           }}
         >
           <div className="flex items-center gap-2 mb-4">
@@ -316,8 +317,8 @@ export default function LoyaltyDashboard() {
           transition={{ delay: 0.2 }}
           className="rounded-xl p-5"
           style={{
-            background: "rgba(15,15,20,0.8)",
-            backdropFilter: "blur(12px)",
+            background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)",
+            backdropFilter: "blur(20px)",
             border: "1px solid rgba(212,175,55,0.12)",
           }}
         >
@@ -360,8 +361,8 @@ export default function LoyaltyDashboard() {
           transition={{ delay: 0.3 }}
           className="rounded-xl p-5"
           style={{
-            background: "rgba(15,15,20,0.8)",
-            backdropFilter: "blur(12px)",
+            background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)",
+            backdropFilter: "blur(20px)",
             border: "1px solid rgba(212,175,55,0.12)",
           }}
         >
@@ -441,8 +442,8 @@ export default function LoyaltyDashboard() {
           transition={{ delay: 0.4 }}
           className="rounded-xl p-5"
           style={{
-            background: "rgba(15,15,20,0.8)",
-            backdropFilter: "blur(12px)",
+            background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)",
+            backdropFilter: "blur(20px)",
             border: "1px solid rgba(212,175,55,0.12)",
           }}
         >

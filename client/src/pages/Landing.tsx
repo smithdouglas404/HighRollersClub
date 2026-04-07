@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Users, Trophy, Zap, Play, ChevronRight, Eye, Gamepad2, Crown, Swords, Loader2 } from "lucide-react";
+import { GoldButton, NumberTicker } from "@/components/premium/PremiumComponents";
 
 import lionLogo from "@assets/generated_images/lion_crest_gold_emblem.webp";
 import casinoBg from "@assets/generated_images/cyberpunk_casino_bg_wide.webp";
@@ -227,7 +228,14 @@ export default function Landing() {
                   <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-black leading-[0.95] tracking-tight">
                     <span className="block text-white">The Future</span>
                     <span className="block text-white">of Online</span>
-                    <span className="block text-transparent bg-clip-text gradient-primary neon-text-glow">
+                    <span
+                      className="block"
+                      style={{
+                        background: "linear-gradient(180deg, #f0d060 0%, #d4af37 50%, #9a7b2c 100%)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                      }}
+                    >
                       Poker
                     </span>
                   </h1>

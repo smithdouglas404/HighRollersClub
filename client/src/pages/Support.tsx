@@ -7,6 +7,7 @@ import {
   Loader2, CheckCircle, AlertCircle, Plus, ArrowLeft, Clock,
   Ticket, ChevronRight
 } from "lucide-react";
+import { GoldButton, GoldCard, SectionHeader } from "@/components/premium/PremiumComponents";
 
 interface SupportTicket {
   id: string;

@@ -1497,7 +1497,7 @@ export default function Analytics() {
                   })}
                 </div>
               )}
-            </motion.div>
+            </GoldCard>
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   ShieldCheck, Lock, Hash, Eye, CheckCircle, RefreshCw,
   ArrowRight, Server, Shuffle, FileCheck, UserCheck,
@@ -322,18 +323,13 @@ export default function ProvablyFairPage() {
           </p>
         </motion.div>
 
-        <GlassCard className="max-w-3xl mx-auto">
+        <GoldCard className="max-w-3xl mx-auto" glow>
           {/* Generate button */}
           <div className="flex justify-center mb-6">
-            <button
+            <GoldButton
               onClick={handleGenerate}
               disabled={generating}
-              className="flex items-center gap-2.5 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
-              style={{
-                background: "linear-gradient(135deg, #d4af37 0%, #b8962e 100%)",
-                color: "#0a0c14",
-                boxShadow: "0 4px 20px rgba(212,175,55,0.3)",
-              }}
+              className="flex items-center gap-2.5"
             >
               {generating ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -341,7 +337,7 @@ export default function ProvablyFairPage() {
                 <Shuffle className="w-4 h-4" />
               )}
               Generate a Shuffle
-            </button>
+            </GoldButton>
           </div>
 
           <AnimatePresence mode="wait">

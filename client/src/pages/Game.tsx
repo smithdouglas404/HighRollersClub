@@ -9,12 +9,21 @@ import { useWebSocketBridge } from "../hooks/useWebSocketBridge";
 import { RANK_FRAMES } from "@/lib/game-constants";
 import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 
-// 3D table preference — persisted in localStorage, fallback to true
+// Table renderer preference — "flutter" | "3d" | "2d"
+type TableRenderer = "flutter" | "3d" | "2d";
+function getTableRenderer(): TableRenderer {
+  if (typeof window === "undefined") return "2d";
+  const stored = localStorage.getItem("poker_table_renderer");
+  if (stored === "flutter" || stored === "3d" || stored === "2d") return stored;
+  return "2d"; // Default: 2D table
+}
+function setTableRenderer(val: TableRenderer) {
+  localStorage.setItem("poker_table_renderer", val);
+}
+
+// Legacy 3D preference (maps to new system)
 function get3DPreference(): boolean {
-  if (typeof window === "undefined") return false;
-  const stored = localStorage.getItem("poker_use_3d_table");
-  if (stored === "true") return true;
-  return false; // Default: 2D table (the working, polished one)
+  return getTableRenderer() === "3d";
 }
 function set3DPreference(val: boolean) {
   localStorage.setItem("poker_use_3d_table", String(val));
@@ -1264,7 +1273,16 @@ function GameTable({
                 className="relative w-full poker-table-container"
                 style={{ aspectRatio: "16 / 9", maxHeight: screen.tableMaxHeight, maxWidth: screen.isUltrawide ? "min(90%, 180vh)" : "min(95%, 140vh)" }}
               >
-                {use3D ? (
+                {/* Flutter immersive poker table */}
+                {getTableRenderer() === "flutter" ? (
+                  <iframe
+                    src="/flutter-poker/index.html"
+                    className="absolute inset-0 w-full h-full z-[1] rounded-xl"
+                    style={{ border: "none", background: "transparent" }}
+                    allow="autoplay"
+                    title="Poker Table"
+                  />
+                ) : use3D ? (
                   <PokerSceneCanvas
                     activeSeat={players.findIndex(p => p.id === gameState.currentTurnPlayerId)}
                     winnerSeat={showdown?.results?.find((r: any) => r.isWinner) ? players.findIndex(p => p.id === showdown.results.find((r: any) => r.isWinner)?.playerId) : undefined}
@@ -1288,7 +1306,7 @@ function GameTable({
                     showBurnCard={dealing.showBurnCard}
                     dealPhase={gameState.phase}
                     handNumber={(gameState as any).handNumber}
-                    blinds={formatInfo?.smallBlind && formatInfo?.bigBlind ? { small: formatInfo.smallBlind, big: formatInfo.bigBlind } : undefined}
+                    blinds={formatInfo?.smallBlind && formatInfo?.bigBlind ? { small: formatInfo!.smallBlind!, big: formatInfo!.bigBlind! } : undefined}
                   />
                 )}
 

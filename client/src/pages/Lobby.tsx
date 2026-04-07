@@ -734,12 +734,15 @@ export default function Lobby() {
       if (activeFormat !== "all") params.set("format", activeFormat);
       if (activeVariant !== "all") params.set("variant", activeVariant);
       const qs = params.toString();
-      const res = await fetch(`/api/tables${qs ? `?${qs}` : ""}`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(`/api/tables${qs ? `?${qs}` : ""}`, { signal: controller.signal });
+      clearTimeout(timeout);
       if (res.ok) {
         setTables(await res.json());
       }
     } catch {
-      toast({ title: "Connection error", description: "Failed to load tables.", variant: "destructive" });
+      // Silently handle — tables will just show empty state
     } finally {
       setLoading(false);
     }

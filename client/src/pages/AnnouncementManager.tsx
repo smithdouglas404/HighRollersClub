@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Shield, Megaphone, Send, AlertTriangle, Info, Bell,
   Users, Radio, Clock, ChevronDown, Layers, Monitor, MessageSquare
@@ -24,8 +23,8 @@ interface Announcement {
 }
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; icon: typeof Info; bg: string }> = {
-  normal: { label: "Normal", color: "text-gray-400", icon: Info, bg: "bg-gray-500/15 border-gray-500/25" },
-  important: { label: "Important", color: "text-[#d4af37]", icon: Bell, bg: "bg-[#d4af37]/15 border-[#d4af37]/25" },
+  normal: { label: "Normal", color: "text-primary", icon: Info, bg: "bg-primary/15 border-primary/25" },
+  important: { label: "Important", color: "text-amber-400", icon: Bell, bg: "bg-amber-500/15 border-amber-500/25" },
   urgent: { label: "Urgent", color: "text-red-400", icon: AlertTriangle, bg: "bg-red-500/15 border-red-500/25" },
 };
 
@@ -225,11 +224,11 @@ export default function AnnouncementManager() {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-3"
         >
-          <div className="w-10 h-10 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-[#d4af37]" />
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-display font-bold gold-text tracking-wider">Announcement Manager</h1>
+            <h1 className="text-xl font-display font-bold text-white tracking-wider">Announcement Manager</h1>
             <p className="text-xs text-muted-foreground">Broadcast messages to club members</p>
           </div>
         </motion.div>
@@ -239,10 +238,12 @@ export default function AnnouncementManager() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="space-y-5"
+          className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 space-y-5"
         >
-        <GoldCard>
-          <SectionHeader icon={Megaphone} title="Create Announcement" />
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <Megaphone className="w-4 h-4 text-primary" />
+            Create Announcement
+          </h2>
 
           {/* Title */}
           <div>
@@ -259,7 +260,7 @@ export default function AnnouncementManager() {
           {/* Message */}
           <div>
             <label className="label-luxury">Message</label>
-            <div className="flex items-center gap-1 px-2 py-1.5 rounded-t-lg gold-border !border-b-0 !rounded-b-none" style={{ background: "rgba(212,175,55,0.03)" }}>
+            <div className="flex items-center gap-1 px-2 py-1.5 rounded-t-lg" style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <button type="button" className="px-2 py-1 rounded text-xs font-bold text-white/50 hover:text-white hover:bg-white/10 transition-colors" onClick={() => wrapSelection("**")}>B</button>
               <button type="button" className="px-2 py-1 rounded text-xs italic text-white/50 hover:text-white hover:bg-white/10 transition-colors" onClick={() => wrapSelection("*")}>I</button>
               <button type="button" className="px-2 py-1 rounded text-xs underline text-white/50 hover:text-white hover:bg-white/10 transition-colors" onClick={() => wrapSelection("__")}>U</button>
@@ -376,10 +377,12 @@ export default function AnnouncementManager() {
           )}
 
           {/* Broadcast Button */}
-          <GoldButton
+          <button
             onClick={handleBroadcast}
             disabled={sending || !title.trim() || !message.trim()}
-            className="flex items-center gap-2"
+            className={`btn-neon flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all ${
+              priorityConf.bg
+            } ${priorityConf.color} hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed border`}
           >
             {sending ? (
               <div className="spinner spinner-sm" />
@@ -387,8 +390,7 @@ export default function AnnouncementManager() {
               <Send className="w-4 h-4" />
             )}
             {sending ? "Broadcasting..." : "Broadcast Now"}
-          </GoldButton>
-        </GoldCard>
+          </button>
         </motion.div>
 
         {/* Recent Announcements */}
@@ -398,7 +400,10 @@ export default function AnnouncementManager() {
           transition={{ delay: 0.2 }}
           className="space-y-3"
         >
-          <SectionHeader icon={Clock} title="Recent Announcements" />
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            Recent Announcements
+          </h2>
 
           {fetchLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -430,9 +435,8 @@ export default function AnnouncementManager() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  className=""
+                  className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-xl p-4"
                 >
-                <GoldCard padding="p-4">
                   <div className="flex items-start gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${conf.bg}`}>
                       <Icon className={`w-3.5 h-3.5 ${conf.color}`} />
@@ -460,7 +464,6 @@ export default function AnnouncementManager() {
                       </div>
                     </div>
                   </div>
-                </GoldCard>
                 </motion.div>
               );
             })

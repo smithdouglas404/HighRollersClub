@@ -60,7 +60,7 @@ import { soundEngine } from "@/lib/sound-engine";
 import { GameUIProvider, useGameUI, FELT_PRESETS, CARD_BACK_PRESETS } from "@/lib/game-ui-context";
 import { useOpponentStats, type OpponentHudStats } from "@/lib/useOpponentStats";
 import type { VerificationStatus, FormatInfo } from "@/lib/multiplayer-engine";
-import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, MicOff, Eye, EyeOff, Link2, Palette, Settings, Settings2, LogOut, MoreVertical, DoorOpen, UserCheck, UserX, Sliders, ChevronRight, DollarSign } from "lucide-react";
+import { ShieldCheck, Volume2, VolumeX, Trophy, ArrowLeft, Bot, Wifi, WifiOff, Users, AlertTriangle, Minimize2, Maximize2, BarChart2, Music, Play, Pause, X, Plus, Wallet, Mic, MicOff, Eye, EyeOff, Link2, Palette, Settings2, LogOut, MoreVertical, DoorOpen, UserCheck, UserX, Sliders, ChevronRight, DollarSign } from "lucide-react";
 import { InGameAdminPanel, type InGameSettings } from "@/components/game/InGameAdminPanel";
 import { WalletBar } from "@/components/wallet/WalletBar";
 import { BlindLevelIndicator } from "@/components/game/BlindLevelIndicator";
@@ -754,25 +754,19 @@ function GameTable({
             <div className="relative">
               <button
                 onClick={() => setShowAdminControls(!showAdminControls)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all"
-                style={{
-                  background: showAdminControls || gamePaused
-                    ? "linear-gradient(180deg, rgba(212,175,55,0.2) 0%, rgba(139,105,20,0.15) 100%)"
-                    : "linear-gradient(180deg, rgba(30,30,40,0.9) 0%, rgba(20,20,28,0.95) 100%)",
-                  border: showAdminControls || gamePaused
-                    ? "1px solid rgba(212,175,55,0.4)"
-                    : "1px solid rgba(255,255,255,0.1)",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.4), 0 0 8px rgba(212,175,55,0.1)",
-                }}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-[0.625rem] font-bold transition-colors ${
+                  showAdminControls || gamePaused
+                    ? "text-amber-400 bg-amber-500/15 border border-amber-500/30"
+                    : "text-amber-300/70 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20"
+                }`}
                 title="Admin Controls"
                 data-testid="button-admin-controls"
               >
-                <Settings className="w-4 h-4" style={{ color: "#d4af37" }} />
-                <span style={{ color: "#d4af37", textShadow: "0 0 8px rgba(212,175,55,0.3)" }}>Admin Control</span>
-                {gamePaused && <span className="ml-1 w-2 h-2 rounded-full bg-red-400 animate-pulse" />}
+                <Sliders className="w-3 h-3" />
+                ADMIN
+                {gamePaused && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />}
                 {waitingPlayers && waitingPlayers.length > 0 && (
-                  <span className="ml-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[0.55rem] text-white font-bold"
-                    style={{ background: "linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" }}>
+                  <span className="ml-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-primary text-[0.5rem] text-white font-bold">
                     {waitingPlayers.length}
                   </span>
                 )}
@@ -781,12 +775,12 @@ function GameTable({
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowAdminControls(false)} />
                   <div
-                    className="absolute right-0 top-full mt-2 z-50 min-w-[200px] rounded-lg overflow-hidden p-2 space-y-1"
+                    className="absolute right-0 top-full mt-1.5 z-50 w-56 rounded-lg overflow-hidden"
                     style={{
-                      background: "linear-gradient(180deg, rgba(20,20,30,0.97) 0%, rgba(12,12,18,0.98) 100%)",
-                      border: "1px solid rgba(212,175,55,0.2)",
-                      backdropFilter: "blur(20px)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 16px rgba(212,175,55,0.08)",
+                      background: "rgba(15,23,35,0.97)",
+                      border: "1px solid rgba(245,158,11,0.2)",
+                      backdropFilter: "blur(16px)",
+                      boxShadow: "0 0 20px rgba(245,158,11,0.05)",
                     }}
                   >
                     {/* Pause / Resume Game */}
@@ -799,17 +793,22 @@ function GameTable({
                         }
                         setShowAdminControls(false);
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded text-left text-sm text-gray-300 hover:bg-white/5 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
                       data-testid="button-pause-resume"
                     >
                       {gamePaused ? (
                         <Play className="w-4 h-4 text-green-400" />
                       ) : (
-                        <Pause className="w-4 h-4" style={{ color: "#d4af37" }} />
+                        <Pause className="w-4 h-4 text-amber-400" />
                       )}
-                      <span className={gamePaused ? "text-green-400 font-semibold" : ""}>
-                        {gamePaused ? "Resume Game" : "Pause Game"}
-                      </span>
+                      <div className="flex-1">
+                        <div className={`text-xs font-bold ${gamePaused ? "text-green-400" : "text-amber-300"}`}>
+                          {gamePaused ? "Resume Game" : "Pause Game"}
+                        </div>
+                        <div className="text-[0.6rem] text-gray-500">
+                          {gamePaused ? "Continue dealing hands" : "Pause after current hand"}
+                        </div>
+                      </div>
                     </button>
 
                     {/* Manage Table */}
@@ -821,11 +820,15 @@ function GameTable({
                         setShowManageTable(true);
                         setShowAdminControls(false);
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded text-left text-sm text-gray-300 hover:bg-white/5 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors border-b border-white/5"
                       data-testid="button-manage-table"
                     >
-                      <Settings2 className="w-4 h-4" style={{ color: "#d4af37" }} />
-                      <span>Manage Table</span>
+                      <Settings2 className="w-4 h-4 text-primary" />
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-primary">Manage Table</div>
+                        <div className="text-[0.6rem] text-gray-500">Blinds, wallet limit, stakes</div>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
                     </button>
 
                     {/* Approve Players */}
@@ -834,14 +837,21 @@ function GameTable({
                         setShowWaitingList(true);
                         setShowAdminControls(false);
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded text-left text-sm text-gray-300 hover:bg-white/5 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition-colors"
                       data-testid="button-approve-players"
                     >
-                      <UserCheck className="w-4 h-4" style={{ color: "#d4af37" }} />
-                      <span>Approve New Players</span>
+                      <UserCheck className="w-4 h-4 text-purple-400" />
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-purple-300">Approve Players</div>
+                        <div className="text-[0.6rem] text-gray-500">
+                          {waitingPlayers && waitingPlayers.length > 0
+                            ? `${waitingPlayers.length} player${waitingPlayers.length > 1 ? "s" : ""} waiting`
+                            : "No players waiting"
+                          }
+                        </div>
+                      </div>
                       {waitingPlayers && waitingPlayers.length > 0 && (
-                        <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[0.6rem] text-white font-bold"
-                          style={{ background: "linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" }}>
+                        <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-purple-500/30 text-[0.6rem] text-purple-300 font-bold border border-purple-500/30">
                           {waitingPlayers.length}
                         </span>
                       )}

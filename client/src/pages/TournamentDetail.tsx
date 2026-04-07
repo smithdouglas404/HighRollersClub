@@ -159,7 +159,7 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-yellow-500/15 border border-yellow-500/20">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-[#d4af37]/15 gold-border">
                     <Trophy className="w-6 h-6 text-yellow-300 drop-shadow-[0_0_8px_rgba(201,168,76,0.5)]" />
                   </div>
                   <div>
@@ -185,8 +185,8 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                     <div className="text-[0.5625rem] font-bold uppercase tracking-wider text-gray-500 mb-0.5">
                       Prize Pool
                     </div>
-                    <div className="text-3xl font-black tabular-nums gold-text">
-                      {data.prizePool.toLocaleString()}
+                    <div className="text-4xl font-black tabular-nums gold-text drop-shadow-[0_0_20px_rgba(212,175,55,0.3)]">
+                      ${data.prizePool.toLocaleString()}
                     </div>
                   </div>
                 )}
@@ -232,7 +232,7 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 + i * 0.05 }}
-                    className="rounded-xl p-4 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+                    className="rounded-xl p-4 vault-card"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Icon className={`w-4 h-4 ${stat.color}`} />

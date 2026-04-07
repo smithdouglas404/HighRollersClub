@@ -392,7 +392,7 @@ export default function AvatarWardrobe() {
                       {selectedId !== equippedId ? (
                         <button
                           onClick={handleEquip}
-                          className="px-6 py-2.5 rounded-lg text-[0.6875rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-black hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+                          className="px-6 py-2.5 rounded-lg text-[0.6875rem] font-bold uppercase tracking-wider gold-btn hover:opacity-90 transition-all"
                         >
                           Equip This Avatar
                         </button>
@@ -426,10 +426,10 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18 }}
-              className="lg:col-span-1 rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+              className="lg:col-span-1 rounded-xl p-5 vault-card"
             >
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
-                <Package className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
+                <Package className="w-4 h-4" style={{ color: "#d4af37" }} />
                 Owned Items
                 <span className="text-[0.5625rem] text-gray-500 ml-auto">({OWNED_ITEMS.length})</span>
               </h3>
@@ -441,12 +441,12 @@ export default function AvatarWardrobe() {
                       key={item.id}
                       className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
                         item.equipped
-                          ? `${tierStyle.border} bg-white/[0.03]`
+                          ? "gold-border bg-amber-500/5 shadow-[0_0_8px_rgba(212,175,55,0.1)]"
                           : "border-white/[0.06] hover:bg-white/[0.03]"
                       }`}
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        item.equipped ? "bg-amber-500/15 border border-amber-500/20" : "bg-white/5 border border-white/10"
+                        item.equipped ? "bg-amber-500/15 gold-border" : "bg-white/5 border border-white/10"
                       }`}>
                         <Shield className={`w-4 h-4 ${item.equipped ? "text-amber-400" : "text-gray-500"}`} />
                       </div>

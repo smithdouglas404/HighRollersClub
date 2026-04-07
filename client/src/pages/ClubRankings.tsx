@@ -309,22 +309,14 @@ export default function ClubRankings() {
                       />
 
                       {/* Rank */}
-                      <span className="relative">
-                        {club.rank <= 3 ? (
-                          <span
-                            className="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-black"
-                            style={{
-                              background: club.rank === 1 ? "rgba(212,175,55,0.2)" : club.rank === 2 ? "rgba(148,163,184,0.2)" : "rgba(205,127,50,0.2)",
-                              color: club.rank === 1 ? "#d4af37" : club.rank === 2 ? "#94a3b8" : "#cd7f32",
-                              border: `1px solid ${club.rank === 1 ? "rgba(212,175,55,0.4)" : club.rank === 2 ? "rgba(148,163,184,0.4)" : "rgba(205,127,50,0.4)"}`,
-                              boxShadow: `0 0 8px ${club.rank === 1 ? "rgba(212,175,55,0.3)" : club.rank === 2 ? "rgba(148,163,184,0.2)" : "rgba(205,127,50,0.2)"}`,
-                            }}
-                          >
-                            {club.rank}
-                          </span>
-                        ) : (
-                          <span className="font-display font-bold text-muted-foreground">{club.rank}</span>
-                        )}
+                      <span className={cn(
+                        "font-display font-bold relative",
+                        club.rank === 1 && "text-amber-400",
+                        club.rank === 2 && "text-gray-300",
+                        club.rank === 3 && "text-orange-400",
+                        club.rank > 3 && "text-muted-foreground"
+                      )}>
+                        {club.rank}
                       </span>
 
                       {/* Club Name */}

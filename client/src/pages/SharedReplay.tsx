@@ -590,10 +590,20 @@ export default function SharedReplay() {
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 pb-8">
-          <GoldButton onClick={() => navigate(`/hand-replay/${handId}`)} className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigate(`/hand-replay/${handId}`)}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all"
+            style={{
+              background: "linear-gradient(135deg, #d4af37 0%, #b8962e 100%)",
+              color: "#000",
+              boxShadow: "0 0 25px rgba(212,175,55,0.2)",
+            }}
+          >
             <ExternalLink className="w-4 h-4" />
             Watch Full Replay
-          </GoldButton>
+          </motion.button>
 
           <motion.button
             whileHover={{ scale: 1.03 }}

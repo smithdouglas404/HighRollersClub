@@ -481,9 +481,10 @@ function BackupCodeRecovery() {
           </div>
         )}
 
-        <GoldButton
+        <button
+          type="submit"
           disabled={verifying || !code.trim() || !username.trim()}
-          className="flex items-center gap-2 px-5 py-2.5 text-[0.625rem]"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25 hover:bg-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {verifying ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -491,7 +492,7 @@ function BackupCodeRecovery() {
             <KeyRound className="w-3.5 h-3.5" />
           )}
           {verifying ? "Verifying..." : "Verify Code"}
-        </GoldButton>
+        </button>
       </form>
     </RecoveryCard>
   );
@@ -501,8 +502,14 @@ function BackupCodeRecovery() {
 
 export default function AccountRecovery() {
   return (
-    <VaultBackground>
-      <div className="max-w-4xl mx-auto px-4 py-12">
+    <div className="min-h-screen bg-background text-white relative overflow-hidden">
+      {/* Background glow orbs */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute top-[-10%] left-[15%] w-[400px] h-[400px] bg-primary/[0.04] rounded-full blur-[150px]" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[350px] h-[350px] bg-purple-600/[0.03] rounded-full blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto px-4 py-12">
         {/* Back to login link */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -526,14 +533,7 @@ export default function AccountRecovery() {
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)" }}>
             <Shield className="w-8 h-8" style={{ color: "#d4af37" }} />
           </div>
-          <h1
-            className="text-2xl font-black italic uppercase tracking-wider mb-2"
-            style={{
-              background: "linear-gradient(180deg, #f0d060 0%, #d4af37 50%, #9a7b2c 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
+          <h1 className="text-2xl font-black italic uppercase tracking-wider gold-text mb-2">
             Account Recovery
           </h1>
           <p className="text-sm text-gray-500 max-w-sm mx-auto">
@@ -559,6 +559,6 @@ export default function AccountRecovery() {
           <span className="text-primary/70">support@highrollers.club</span>
         </motion.p>
       </div>
-    </VaultBackground>
+    </div>
   );
 }

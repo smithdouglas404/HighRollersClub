@@ -502,7 +502,7 @@ export default function TransactionExplorer() {
         </div>
 
         {/* Results */}
-        <GoldCard padding="p-0" className="overflow-hidden">
+        <div className="rounded-xl border border-white/10 bg-surface-high/30 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -530,7 +530,7 @@ export default function TransactionExplorer() {
                           <p className="text-[10px] text-gray-500 truncate">{tx.description || tx.id}</p>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <div className={`text-sm font-bold ${tx.amount >= 0 ? "text-[#d4af37]" : "text-red-400"}`}>
+                          <div className={`text-sm font-bold ${tx.amount >= 0 ? "text-green-400" : "text-red-400"}`}>
                             {tx.amount >= 0 ? "+" : ""}{formatChips(tx.amount)}
                           </div>
                           <div className="text-[10px] text-gray-600">{new Date(tx.created_at).toLocaleDateString()}</div>
@@ -652,7 +652,7 @@ export default function TransactionExplorer() {
               )}
             </>
           )}
-        </GoldCard>
+        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (

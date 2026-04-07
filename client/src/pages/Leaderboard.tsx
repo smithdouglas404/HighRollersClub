@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { GoldCard, NumberTicker, SectionHeader } from "@/components/premium/PremiumComponents";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { Trophy, Coins, Target, TrendingUp, Loader2, Medal, Crown, Clock, Minus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -38,7 +37,7 @@ const PODIUM_COLORS = {
 } as const;
 
 function getRankStyle(rank: number) {
-  if (rank === 1) return "text-[#d4af37] bg-[#d4af37]/15 border-[#d4af37]/40 shadow-[0_0_8px_rgba(212,175,55,0.3)]";
+  if (rank === 1) return "text-amber-400 bg-amber-500/15 border-amber-500/30";
   if (rank === 2) return "text-gray-300 bg-gray-400/10 border-gray-400/20";
   if (rank === 3) return "text-orange-400 bg-orange-500/10 border-orange-500/20";
   return "text-gray-500 bg-white/5 border-white/5";

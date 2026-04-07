@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { GoldButton, GoldCard } from "@/components/premium/PremiumComponents";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { useClub } from "@/lib/club-context";
@@ -212,10 +211,14 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
         ) : (
           <div className="space-y-6">
             {/* Header */}
-            <GoldCard glow padding="p-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-primary/15"
+            >
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-[#d4af37]/20 border border-[#d4af37]/20 flex items-center justify-center shrink-0">
-                  <Swords className="w-7 h-7 text-[#d4af37]" />
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-primary/20 border border-primary/20 flex items-center justify-center shrink-0">
+                  <Swords className="w-7 h-7 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   {editing ? (
@@ -272,7 +275,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                   {alliance.clubs.length >= 2 ? "Active" : "Forming"}
                 </span>
               </div>
-            </GoldCard>
+            </motion.div>
 
             {/* Member Clubs */}
             <motion.div
@@ -288,7 +291,7 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                 {alliance.clubs.map((club, ci) => (
                   <div
                     key={club.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-[#d4af37]/15 hover:border-[#d4af37]/30 hover:bg-[#d4af37]/[0.04] transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] transition-colors"
                   >
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                       ci === 0 ? "bg-primary/15 border border-primary/20" : "bg-primary/10 border border-primary/15"
@@ -351,13 +354,13 @@ export default function AllianceDetail({ allianceId }: { allianceId: string }) {
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
-                  <GoldButton
+                  <button
                     onClick={handleJoin}
                     disabled={actionLoading || !selectedJoinClub}
-                    className="flex items-center gap-1.5 text-[0.625rem]"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black disabled:opacity-40"
                   >
                     <UserPlus className="w-3.5 h-3.5" /> Join
-                  </GoldButton>
+                  </button>
                 </div>
               </motion.div>
             )}

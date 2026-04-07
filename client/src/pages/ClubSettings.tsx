@@ -161,9 +161,23 @@ export default function ClubSettings() {
             </AnimatePresence>
 
             {/* Club Info Section */}
-            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
-              <div className="px-5 py-4 border-b border-b-[#d4af37]/10">
-                <SectionHeader icon={Settings} title="General Settings" subtitle="Edit your club details" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="vault-card overflow-hidden"
+            >
+              <div
+                className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10"
+              >
+                <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-[#d4af37]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
+                    General Settings
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">Edit your club details</p>
+                </div>
               </div>
 
               <div className="p-5 space-y-5">
@@ -223,8 +237,7 @@ export default function ClubSettings() {
                   </div>
                   <button
                     onClick={() => setIsPublic(!isPublic)}
-                    className="relative w-11 h-6 rounded-full transition-colors"
-                    style={{ background: isPublic ? "#d4af37" : "rgba(255,255,255,0.1)" }}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${isPublic ? "bg-primary" : "bg-white/10"}`}
                   >
                     <motion.div
                       layout
@@ -236,11 +249,12 @@ export default function ClubSettings() {
                 </div>
 
                 {/* Save Button */}
-                <GoldButton
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
                   onClick={handleSave}
                   disabled={saving || !name.trim()}
-                  fullWidth
-                  className="flex items-center justify-center gap-2"
+                  className="w-full py-3 gold-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -248,16 +262,27 @@ export default function ClubSettings() {
                     <Save className="w-4 h-4" />
                   )}
                   Save Changes
-                </GoldButton>
+                </motion.button>
               </div>
-            </GoldCard>
-
-            <GoldDivider />
+            </motion.div>
 
             {/* S11: Timezone & Language */}
-            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
-              <div className="px-5 py-4 border-b border-b-[#d4af37]/10">
-                <SectionHeader icon={Languages} title="Timezone & Language" subtitle="Regional preferences for your club" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="vault-card overflow-hidden"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10">
+                <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
+                  <Languages className="w-5 h-5 text-[#d4af37]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
+                    Timezone & Language
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">Regional preferences for your club</p>
+                </div>
               </div>
 
               <div className="p-5 space-y-5">
@@ -269,7 +294,7 @@ export default function ClubSettings() {
                     id="settings-timezone"
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40 focus:border-[#d4af37]/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
                   >
                     <option value="UTC" className="bg-surface-lowest">UTC (Coordinated Universal Time)</option>
                     <option value="America/New_York" className="bg-surface-lowest">EST (Eastern Standard Time)</option>
@@ -292,7 +317,7 @@ export default function ClubSettings() {
                     id="settings-language"
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40 focus:border-[#d4af37]/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-surface-highest/50 border border-white/[0.06]"
                   >
                     <option value="en" className="bg-surface-lowest">English</option>
                     <option value="es" className="bg-surface-lowest">Spanish</option>
@@ -301,12 +326,25 @@ export default function ClubSettings() {
                   </select>
                 </div>
               </div>
-            </GoldCard>
+            </motion.div>
 
             {/* S12: Financial Defaults */}
-            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
-              <div className="px-5 py-4 border-b border-b-[#d4af37]/10">
-                <SectionHeader icon={DollarSign} title="Financial Defaults" subtitle="Default financial settings for tables" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="vault-card overflow-hidden"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10">
+                <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-[#d4af37]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
+                    Financial Defaults
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">Default financial settings for tables</p>
+                </div>
               </div>
 
               <div className="p-5 space-y-5">
@@ -359,12 +397,25 @@ export default function ClubSettings() {
                   />
                 </div>
               </div>
-            </GoldCard>
+            </motion.div>
 
             {/* S13: Security */}
-            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
-              <div className="px-5 py-4 border-b border-b-[#d4af37]/10">
-                <SectionHeader icon={ShieldCheck} title="Security" subtitle="Club-wide security policies" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="vault-card overflow-hidden"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10">
+                <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5 text-[#d4af37]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
+                    Security
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">Club-wide security policies</p>
+                </div>
               </div>
 
               <div className="p-5 space-y-4">
@@ -379,8 +430,7 @@ export default function ClubSettings() {
                   </div>
                   <button
                     onClick={() => setRequire2FA(!require2FA)}
-                    className="relative w-11 h-6 rounded-full transition-colors"
-                    style={{ background: require2FA ? "#d4af37" : "rgba(255,255,255,0.1)" }}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${require2FA ? "bg-primary" : "bg-white/10"}`}
                   >
                     <motion.div
                       layout
@@ -402,8 +452,7 @@ export default function ClubSettings() {
                   </div>
                   <button
                     onClick={() => setAdminApproval(!adminApproval)}
-                    className="relative w-11 h-6 rounded-full transition-colors"
-                    style={{ background: adminApproval ? "#d4af37" : "rgba(255,255,255,0.1)" }}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${adminApproval ? "bg-primary" : "bg-white/10"}`}
                   >
                     <motion.div
                       layout
@@ -425,8 +474,7 @@ export default function ClubSettings() {
                   </div>
                   <button
                     onClick={() => setAntiCollusion(!antiCollusion)}
-                    className="relative w-11 h-6 rounded-full transition-colors"
-                    style={{ background: antiCollusion ? "#d4af37" : "rgba(255,255,255,0.1)" }}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${antiCollusion ? "bg-primary" : "bg-white/10"}`}
                   >
                     <motion.div
                       layout
@@ -437,12 +485,25 @@ export default function ClubSettings() {
                   </button>
                 </div>
               </div>
-            </GoldCard>
+            </motion.div>
 
             {/* S14: Branding */}
-            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
-              <div className="px-5 py-4 border-b border-b-[#d4af37]/10">
-                <SectionHeader icon={Palette} title="Branding" subtitle="Customize your club's visual identity" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12 }}
+              className="vault-card overflow-hidden"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10">
+                <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
+                  <Palette className="w-5 h-5 text-[#d4af37]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
+                    Branding
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">Customize your club's visual identity</p>
+                </div>
               </div>
 
               <div className="p-5 space-y-4">
@@ -494,12 +555,24 @@ export default function ClubSettings() {
                   </span>
                 </div>
               </div>
-            </GoldCard>
+            </motion.div>
 
             {/* S15: Integration & API */}
-            <GoldCard hover={false} padding="p-0" className="overflow-hidden">
-              <div className="px-5 py-4 border-b border-b-[#d4af37]/10">
-                <SectionHeader icon={Link2} title="Integration & API" subtitle="External wallet and API connections" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="vault-card overflow-hidden"
+            >
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10">
+                <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
+                  <Link2 className="w-5 h-5 text-[#d4af37]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
+                    Integration & API
+                  </h3>
+                  <p className="text-[0.5625rem] text-gray-500">External wallet and API connections</p>
+                </div>
               </div>
 
               <div className="p-5 space-y-4">
@@ -533,13 +606,28 @@ export default function ClubSettings() {
                   API keys grant full access to club management endpoints. Keep them secure and rotate regularly.
                 </p>
               </div>
-            </GoldCard>
+            </motion.div>
 
             {/* Ownership Transfer Section (Owner only) */}
             {isOwner && (
-              <GoldCard hover={false} padding="p-0" className="overflow-hidden">
-                <div className="px-5 py-4 border-b border-b-[#d4af37]/10">
-                  <SectionHeader icon={Crown} title="Transfer Ownership" subtitle="Hand the club over to another member" />
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="vault-card overflow-hidden"
+              >
+                <div
+                  className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-[#d4af37]" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
+                      Transfer Ownership
+                    </h3>
+                    <p className="text-[0.5625rem] text-gray-500">Hand the club over to another member</p>
+                  </div>
                 </div>
 
                 <div className="p-5 space-y-4">
@@ -559,7 +647,7 @@ export default function ClubSettings() {
                       id="settings-new-owner"
                       value={transferTarget}
                       onChange={(e) => setTransferTarget(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-[#d4af37]/40 focus:border-[#d4af37]/40 appearance-none cursor-pointer bg-white/[0.03] border border-white/[0.06]"
+                      className="w-full px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-all focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer bg-white/[0.03] border border-white/[0.06]"
                     >
                       <option value="" className="bg-surface-lowest">
                         Select a member...
@@ -583,14 +671,29 @@ export default function ClubSettings() {
                     Transfer Ownership
                   </motion.button>
                 </div>
-              </GoldCard>
+              </motion.div>
             )}
 
             {/* Danger Zone (Owner only) */}
             {isOwner && (
-              <GoldCard hover={false} padding="p-0" className="overflow-hidden !border-red-500/20">
-                <div className="px-5 py-4 border-b border-b-white/[0.06]">
-                  <SectionHeader icon={Trash2} title="Danger Zone" subtitle="Irreversible actions" />
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="vault-card overflow-hidden !border-red-500/20"
+              >
+                <div
+                  className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-red-500/15 border border-red-500/20 flex items-center justify-center">
+                    <Trash2 className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                      Danger Zone
+                    </h3>
+                    <p className="text-[0.5625rem] text-gray-500">Irreversible actions</p>
+                  </div>
                 </div>
 
                 <div className="p-5">
@@ -653,7 +756,7 @@ export default function ClubSettings() {
                     )}
                   </AnimatePresence>
                 </div>
-              </GoldCard>
+              </motion.div>
             )}
           </div>
         )}

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { GoldButton, GoldCard } from "@/components/premium/PremiumComponents";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -160,15 +159,15 @@ export default function Leagues() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${
                       isActive
-                        ? "bg-[#d4af37]/15 text-[#d4af37] border-[#d4af37]/40 shadow-[0_0_10px_rgba(212,175,55,0.2)]"
+                        ? "bg-primary/20 text-primary border-primary/30"
                         : "text-gray-500 hover:text-gray-300 border-white/5 hover:border-white/10 bg-white/[0.02]"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? "text-[#d4af37]" : "text-gray-600"}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-gray-600"}`} />
                     {tab.label}
                     {tab.count > 0 && (
                       <span className={`text-[0.5625rem] px-1.5 py-0.5 rounded-full ${
-                        isActive ? "bg-[#d4af37]/20 text-[#d4af37]" : "bg-white/5 text-gray-500"
+                        isActive ? "bg-primary/20 text-primary" : "bg-white/5 text-gray-500"
                       }`}>
                         {tab.count}
                       </span>
@@ -177,16 +176,18 @@ export default function Leagues() {
                 );
               })}
               <div className="flex-1" />
-              <GoldButton
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   setCreateType(activeTab === "alliances" ? "alliance" : "league");
                   setShowCreate(true);
                 }}
-                className="flex items-center gap-1.5 text-[0.625rem]"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Create {activeTab === "alliances" ? "Alliance" : "Season"}
-              </GoldButton>
+              </motion.button>
             </div>
 
             {/* Alliances Tab */}
@@ -213,13 +214,14 @@ export default function Leagues() {
                       const allianceClubs = (alliance.clubIds as string[]).map(id => clubMap.get(id)).filter(Boolean) as ClubData[];
                       const totalMembers = allianceClubs.reduce((sum, c) => sum + (c.memberCount || 0), 0);
                       return (
-                        <GoldCard
+                        <motion.div
                           key={alliance.id}
-                          className="overflow-hidden cursor-pointer"
-                          glow
-                          padding="p-0"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                          onClick={() => navigate(`/alliances/${alliance.id}`)}
+                          className="rounded-xl overflow-hidden cursor-pointer hover:border-primary/20 transition-all bg-surface-high/50 backdrop-blur-xl border border-primary/15"
                         >
-                        <div onClick={() => navigate(`/alliances/${alliance.id}`)}>
                           <div className="p-5">
                             <div className="flex items-start gap-3 mb-4">
                               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-primary/20 border border-primary/20 flex items-center justify-center shrink-0">
@@ -274,8 +276,7 @@ export default function Leagues() {
                               </span>
                             </div>
                           </div>
-                        </div>
-                        </GoldCard>
+                        </motion.div>
                       );
                     })}
                   </div>
@@ -306,12 +307,14 @@ export default function Leagues() {
                     const status = getSeasonStatus(season);
                     const standings = (season.standings as any[] || []).sort((a: any, b: any) => b.points - a.points);
                     return (
-                      <GoldCard
+                      <motion.div
                         key={season.id}
-                        className="overflow-hidden cursor-pointer"
-                        padding="p-0"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        onClick={() => navigate(`/leagues/${season.id}`)}
+                        className="rounded-xl overflow-hidden cursor-pointer hover:border-primary/20 transition-all bg-surface-high/50 backdrop-blur-xl border border-primary/15"
                       >
-                      <div onClick={() => navigate(`/leagues/${season.id}`)}>
                         {/* Season Header */}
                         <div className="px-5 py-4 border-b border-white/[0.04] flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -379,8 +382,7 @@ export default function Leagues() {
                             <p className="text-[0.6875rem] text-gray-600">No standings yet — games will populate rankings</p>
                           </div>
                         )}
-                      </div>
-                      </GoldCard>
+                      </motion.div>
                     );
                   })
                 )}
@@ -508,11 +510,10 @@ export default function Leagues() {
                   >
                     Cancel
                   </button>
-                  <GoldButton
+                  <button
                     onClick={handleCreate}
                     disabled={createLoading || !createName.trim() || (createType === "alliance" && !selectedClubId) || (createType === "league" && (!leagueStart || !leagueEnd))}
-                    fullWidth
-                    className="flex-1 py-2.5 text-[0.625rem] flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-primary text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
                     {createLoading ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -520,7 +521,7 @@ export default function Leagues() {
                       <Check className="w-3.5 h-3.5" />
                     )}
                     Create
-                  </GoldButton>
+                  </button>
                 </div>
               </div>
             </motion.div>

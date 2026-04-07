@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { GoldButton, GoldCard } from "@/components/premium/PremiumComponents";
 import { Handshake, Loader2, ArrowRight, Check, XCircle, Plus, X, DollarSign } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
@@ -88,13 +87,13 @@ export default function Stakes() {
               <p className="text-xs text-gray-400">Back players in tournaments or get backed</p>
             </div>
           </div>
-          <GoldButton
+          <button
             onClick={() => setShowOfferModal(true)}
-            className="flex items-center gap-2 text-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Offer Stake
-          </GoldButton>
+          </button>
         </div>
 
         {loading ? (
@@ -111,7 +110,7 @@ export default function Stakes() {
               ) : (
                 <div className="grid gap-3">
                   {backerStakes.map(s => (
-                    <GoldCard key={s.id} padding="p-4">
+                    <div key={s.id} className="p-4 rounded-xl bg-surface-high/50 border border-white/[0.06]">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-gray-400">Player: {s.playerName ?? s.playerId.slice(0, 8)}</span>
@@ -123,18 +122,18 @@ export default function Stakes() {
                         </span>
                       </div>
                       <div className="mt-2 flex gap-6 text-[0.625rem] text-gray-400">
-                        <span>Stake: <span className="text-[#d4af37] font-bold">{s.stakePercent}%</span></span>
-                        <span>Buy-in Share: <span className="text-[#d4af37] font-bold">{s.buyInShare.toLocaleString()}</span> chips</span>
-                        {s.payout != null && <span>Payout: <span className="text-[#d4af37] font-bold">{s.payout.toLocaleString()}</span> chips</span>}
+                        <span>Stake: {s.stakePercent}%</span>
+                        <span>Buy-in Share: {s.buyInShare.toLocaleString()} chips</span>
+                        {s.payout != null && <span>Payout: {s.payout.toLocaleString()} chips</span>}
                       </div>
                       <div className="mt-3 flex gap-2">
                         {(s.status === "accepted" || s.status === "active") && s.tournamentStatus === "complete" && (
-                          <GoldButton
+                          <button
                             onClick={() => { setShowSettleModal(s.id); setSettleAmount(""); }}
-                            className="flex items-center gap-1 px-3 py-1 text-[0.625rem]"
+                            className="flex items-center gap-1 px-3 py-1 rounded-lg bg-green-500/20 text-green-400 text-[0.625rem] hover:bg-green-500/30"
                           >
                             <DollarSign className="w-3 h-3" /> Settle
-                          </GoldButton>
+                          </button>
                         )}
                         {(s.status === "pending" || s.status === "accepted") && (
                           <button
@@ -145,7 +144,7 @@ export default function Stakes() {
                           </button>
                         )}
                       </div>
-                    </GoldCard>
+                    </div>
                   ))}
                 </div>
               )}
@@ -159,7 +158,7 @@ export default function Stakes() {
               ) : (
                 <div className="grid gap-3">
                   {playerStakes.map(s => (
-                    <GoldCard key={s.id} padding="p-4">
+                    <div key={s.id} className="p-4 rounded-xl bg-surface-high/50 border border-white/[0.06]">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-gray-400">Backer: {s.backerName ?? s.backerId.slice(0, 8)}</span>
@@ -171,19 +170,19 @@ export default function Stakes() {
                         </span>
                       </div>
                       <div className="mt-2 flex gap-6 text-[0.625rem] text-gray-400">
-                        <span>Stake: <span className="text-[#d4af37] font-bold">{s.stakePercent}%</span></span>
-                        <span>Buy-in Share: <span className="text-[#d4af37] font-bold">{s.buyInShare.toLocaleString()}</span> chips</span>
-                        {s.payout != null && <span>Payout: <span className="text-[#d4af37] font-bold">{s.payout.toLocaleString()}</span> chips</span>}
+                        <span>Stake: {s.stakePercent}%</span>
+                        <span>Buy-in Share: {s.buyInShare.toLocaleString()} chips</span>
+                        {s.payout != null && <span>Payout: {s.payout.toLocaleString()} chips</span>}
                       </div>
                       <div className="mt-3 flex gap-2">
                         {s.status === "pending" && (
                           <>
-                            <GoldButton
+                            <button
                               onClick={() => handleAction(s.id, "accept")}
-                              className="flex items-center gap-1 px-3 py-1 text-[0.625rem]"
+                              className="flex items-center gap-1 px-3 py-1 rounded-lg bg-green-500/20 text-green-400 text-[0.625rem] hover:bg-green-500/30"
                             >
                               <Check className="w-3 h-3" /> Accept
-                            </GoldButton>
+                            </button>
                             <button
                               onClick={() => handleAction(s.id, "cancel")}
                               className="flex items-center gap-1 px-3 py-1 rounded-lg bg-red-500/20 text-red-400 text-[0.625rem] hover:bg-red-500/30"
@@ -201,7 +200,7 @@ export default function Stakes() {
                           </button>
                         )}
                       </div>
-                    </GoldCard>
+                    </div>
                   ))}
                 </div>
               )}
@@ -236,14 +235,13 @@ export default function Stakes() {
                 placeholder="Enter total payout amount"
               />
             </div>
-            <GoldButton
+            <button
               onClick={() => handleSettle(showSettleModal)}
               disabled={!settleAmount || parseInt(settleAmount) < 0}
-              fullWidth
-              className="text-sm"
+              className="w-full py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Confirm Settlement
-            </GoldButton>
+            </button>
           </div>
         </div>
       )}
@@ -385,15 +383,14 @@ function OfferStakeModal({ onClose, onCreated }: { onClose: () => void; onCreate
           <p className="text-xs text-red-400">{error}</p>
         )}
 
-        <GoldButton
+        <button
           onClick={handleSubmit}
           disabled={!selectedTournament || !playerUsername.trim() || submitting}
-          fullWidth
-          className="flex items-center justify-center gap-2 text-sm"
+          className="w-full py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Handshake className="w-4 h-4" />}
           Confirm Offer
-        </GoldButton>
+        </button>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import {
   Palette, Paintbrush, Check, Sparkles, Shield, Star,
   Clock, Wand2, Shirt, Sword, Crown
 } from "lucide-react";
+import { GoldButton, GoldCard, NumberTicker, SectionHeader, GoldDivider, SpotlightCard } from "@/components/premium/PremiumComponents";
 
 /* ── Color Palettes ── */
 const PRIMARY_SWATCHES = ["#c9a84c", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#e67e22", "#1abc9c", "#f1c40f"];
@@ -80,10 +81,10 @@ function ColorPickerRow({
             onClick={() => onChange(color)}
             className={`w-8 h-8 rounded-lg border-2 transition-all hover:scale-110 relative shrink-0 ${
               value === color
-                ? "border-white shadow-[0_0_10px_rgba(255,255,255,0.25)]"
+                ? ""
                 : "border-transparent hover:border-white/20"
             }`}
-            style={{ backgroundColor: color }}
+            style={value === color ? { borderColor: "#d4af37", boxShadow: "0 0 10px rgba(212,175,55,0.35)", backgroundColor: color } : { backgroundColor: color }}
           >
             {value === color && (
               <Check className="w-3 h-3 text-white absolute inset-0 m-auto drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
@@ -187,21 +188,21 @@ export default function DyeShop() {
         {/* Main 3-Column Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_260px] gap-6">
           {/* ── Left Panel: Avatar Preview ── */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10 flex flex-col items-center"
+          <GoldCard
+            className="flex flex-col items-center"
+            glow
+            padding="p-5"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4">Live Preview</h3>
+            <SectionHeader title="Live Preview" icon={Palette} />
 
             {/* Avatar Preview with live colors */}
             <motion.div
               key={`${primary}-${secondary}-${accent}`}
               initial={{ scale: 0.97, opacity: 0.8 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-48 h-60 rounded-2xl overflow-hidden border-2 border-amber-500/30 mb-4 relative"
+              className="w-48 h-60 rounded-2xl overflow-hidden border-2 mb-4 relative"
               style={{
+                borderColor: "#d4af37",
                 backgroundColor: secondary,
                 boxShadow: `0 0 30px ${primary}33, 0 8px 32px rgba(0,0,0,0.5)`,
               }}
@@ -250,7 +251,7 @@ export default function DyeShop() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </GoldCard>
 
           {/* ── Center Panel: Dye Customization ── */}
           <motion.div
@@ -260,36 +261,33 @@ export default function DyeShop() {
             className="space-y-5"
           >
             {/* Color Pickers */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-5 flex items-center gap-2">
-                <Paintbrush className="w-4 h-4 text-amber-400" />
-                Dye Customization
-              </h3>
+            <GoldCard padding="p-5">
+              <SectionHeader title="Dye Customization" icon={Paintbrush} />
               <div className="space-y-5">
                 <ColorPickerRow label="Primary" swatches={PRIMARY_SWATCHES} value={primary} onChange={setPrimary} />
                 <ColorPickerRow label="Secondary" swatches={SECONDARY_SWATCHES} value={secondary} onChange={setSecondary} />
                 <ColorPickerRow label="Accent" swatches={ACCENT_SWATCHES} value={accent} onChange={setAccent} />
               </div>
-            </div>
+            </GoldCard>
 
             {/* Dye Packs Grid */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Dye Packs</h3>
-              </div>
+            <GoldCard padding="p-5">
+              <SectionHeader title="Dye Packs" icon={Sparkles} />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {DYE_PACKS.map((pack) => {
                   const isActive = primary === pack.primary && secondary === pack.secondary && accent === pack.accent;
                   return (
-                    <button
+                    <GoldCard
                       key={pack.name}
+                      className={`flex flex-col items-center gap-2 text-center cursor-pointer ${isActive ? "" : ""}`}
+                      glow={isActive}
+                      hover
+                      padding="p-3"
+                    >
+                    <button
                       onClick={() => handlePackSelect(pack)}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all text-center ${
-                        isActive
-                          ? "border-amber-500/40 bg-amber-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]"
-                          : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10"
-                      }`}
+                      className="flex flex-col items-center gap-2 w-full"
+                      style={isActive ? { } : undefined}
                     >
                       {/* Color dots */}
                       <div className="flex gap-1">
@@ -302,42 +300,39 @@ export default function DyeShop() {
                         <Check className="w-3 h-3 text-amber-400" />
                       )}
                     </button>
+                    </GoldCard>
                   );
                 })}
               </div>
-            </div>
+            </GoldCard>
 
             {/* Bottom Action Buttons */}
             <div className="flex gap-3">
+              {applied ? (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 bg-green-500/20 text-green-400 border border-green-500/30"
+                >
+                  <Check className="w-4 h-4" />
+                  Dye Applied!
+                </motion.button>
+              ) : (
+                <GoldButton
+                  onClick={handleApply}
+                  className="flex-1 !py-3 !rounded-xl !text-sm flex items-center justify-center gap-2"
+                >
+                  <Paintbrush className="w-4 h-4" />
+                  Apply Dye
+                </GoldButton>
+              )}
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={handleApply}
-                className={`flex-1 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                  applied
-                    ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                    : "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black border border-amber-400/40 shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.45)]"
-                }`}
-              >
-                {applied ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    Dye Applied!
-                  </>
-                ) : (
-                  <>
-                    <Paintbrush className="w-4 h-4" />
-                    Apply Dye
-                  </>
-                )}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/25 hover:bg-purple-500/20 transition-all flex items-center gap-2"
+                className="px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wider gold-btn transition-all flex items-center gap-2 shadow-[0_0_25px_rgba(212,175,55,0.3)]"
               >
                 <Wand2 className="w-4 h-4" />
-                Nano Banana Render
+                NANO BANANA RENDER
               </motion.button>
             </div>
           </motion.div>
@@ -350,11 +345,8 @@ export default function DyeShop() {
             className="space-y-5"
           >
             {/* Quick Stats */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-400" />
-                Quick Stats
-              </h3>
+            <GoldCard padding="p-5" glow>
+              <SectionHeader title="Quick Stats" icon={Star} />
 
               {/* Style Score Ring */}
               <StyleScoreRing score={styleScore} />
@@ -377,23 +369,20 @@ export default function DyeShop() {
                   />
                 </div>
               </div>
-            </div>
+            </GoldCard>
 
             {/* Recently Equipped */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-amber-400" />
-                Recently Equipped
-              </h3>
+            <GoldCard padding="p-5">
+              <SectionHeader title="Recently Equipped" icon={Clock} />
               <div className="space-y-2">
                 {RECENT_ITEMS.map((item) => {
                   const ItemIcon = item.icon;
                   return (
                     <div
                       key={item.name}
-                      className="flex items-center gap-3 p-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all"
+                      className="flex items-center gap-3 p-2.5 rounded-lg gold-border bg-white/[0.02] hover:bg-white/[0.04] transition-all"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 gold-border flex items-center justify-center">
                         <ItemIcon className={`w-4 h-4 ${TIER_COLORS[item.tier]}`} />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -406,7 +395,7 @@ export default function DyeShop() {
                   );
                 })}
               </div>
-            </div>
+            </GoldCard>
           </motion.div>
         </div>
       </div>

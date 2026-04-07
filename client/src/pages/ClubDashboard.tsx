@@ -22,7 +22,6 @@ import { ClubTournaments } from "@/components/club/ClubTournaments";
 import { ClubChatSidebar } from "@/components/shared/ClubChatSidebar";
 import { ClubLeaderboard } from "@/components/club/ClubLeaderboard";
 import { cn } from "@/lib/utils";
-import { GoldButton, GoldCard, NumberTicker, StatCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { NeonButton } from "@/components/ui/neon";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -635,14 +634,16 @@ export default function ClubDashboard() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <GoldButton
+                    <NeonButton
+                      data-testid="button-create-table"
                       onClick={handleCreateTable}
                       disabled={creatingTable}
-                      className="gap-2 !px-4 !py-2 text-xs"
+                      size="sm"
+                      className="gap-2"
                     >
                       {creatingTable ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                       Create Table
-                    </GoldButton>
+                    </NeonButton>
                     <NeonButton
                       variant="secondary"
                       size="icon"
@@ -729,11 +730,34 @@ export default function ClubDashboard() {
 
               {/* ── Stats Overview Row ── */}
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-                {statsCards.map((stat) => (
-                  <div key={stat.label} data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                    <StatCard label={stat.label} value={stat.value} icon={stat.icon} />
-                  </div>
-                ))}
+                {statsCards.map((stat, i) => {
+                  const Icon = stat.icon;
+                  return (
+                    <motion.div
+                      key={stat.label}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}
+                      className="stats-card rounded-md p-4 hover:border-amber-500/40 hover:shadow-[0_0_15px_rgba(212,175,55,0.1)] hover:scale-[1.02] transition-all duration-200 relative overflow-hidden"
+                      style={{
+                        background: "rgba(15,15,20,0.7)",
+                        backdropFilter: "blur(16px)",
+                        border: "1px solid rgba(212,175,55,0.12)",
+                      }}
+                    >
+                      {/* Gold top-line accent */}
+                      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #d4af37, transparent)" }} />
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon className={cn("w-4 h-4", stat.color)} />
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{stat.label}</span>
+                      </div>
+                      <p className="font-display font-bold text-white text-lg">
+                        <AnimatedNumber value={stat.value} />
+                      </p>
+                    </motion.div>
+                  );
+                })}
               </div>
 
               {/* ── Alliance Info Card ── */}
@@ -987,7 +1011,9 @@ export default function ClubDashboard() {
                   <div className="space-y-6">
                     {/* Quick Stats */}
                     <div>
-                      <SectionHeader icon={TrendingUp} title="Quick Stats" />
+                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2 mb-3">
+                        <TrendingUp className="w-4 h-4 text-primary" /> Quick Stats
+                      </h3>
                       <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                         {quickStatsLoading ? (
                           [0, 1, 2].map((i) => (
@@ -1042,12 +1068,12 @@ export default function ClubDashboard() {
                       </div>
                     </div>
 
-                    <GoldDivider />
-
                     {/* Recent Activity */}
                     <div className="space-y-4">
-                      <SectionHeader icon={Activity} title="Recent Activity" />
-                      <GoldCard hover={false} padding="p-0">
+                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-primary" /> Recent Activity
+                      </h3>
+                      <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
 
                       {clubActivity.length === 0 ? (
                         <div className="py-10 px-4 text-center">
@@ -1117,15 +1143,15 @@ export default function ClubDashboard() {
                           })}
                         </div>
                       )}
-                      </GoldCard>
+                      </div>
                     </div>
-
-                    <GoldDivider />
 
                     {/* Tournament Alerts */}
                     <div className="space-y-4">
-                      <SectionHeader icon={Trophy} title="Tournament Alerts" />
-                      <GoldCard hover={false} padding="p-0" className="divide-y divide-white/[0.04]">
+                      <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-400" /> Tournament Alerts
+                      </h3>
+                      <div className="rounded-md divide-y divide-white/[0.04]" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
                         {[
                           { id: 1, text: "Final Table starting in 5 min", time: "Just now", color: "text-red-400", bg: "bg-red-500/12 border-red-500/20", icon: Activity },
                           { id: 2, text: "New tournament registration open", time: "10 min ago", color: "text-green-400", bg: "bg-green-500/12 border-green-500/20", icon: Trophy },
@@ -1150,24 +1176,24 @@ export default function ClubDashboard() {
                             </motion.div>
                           );
                         })}
-                      </GoldCard>
+                      </div>
                     </div>
-
-                    <GoldDivider />
 
                     {/* Club Challenges */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <SectionHeader icon={Target} title="Club Challenges" />
+                        <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+                          <Target className="w-4 h-4 text-purple-400" /> Club Challenges
+                        </h3>
                         {isAdminOrOwner && (
-                          <GoldButton
+                          <button
                             onClick={handleGenerateChallenges}
                             disabled={generatingChallenges}
-                            className="!px-3 !py-1.5 text-[10px]"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 border border-purple-500/25 text-purple-300 hover:bg-purple-500/25 transition-colors disabled:opacity-50"
                           >
                             {generatingChallenges ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                             Generate New
-                          </GoldButton>
+                          </button>
                         )}
                       </div>
                       {challengesLoading ? (
@@ -1268,17 +1294,29 @@ export default function ClubDashboard() {
               {activeTab === "financials" && club && (
                 <div className="space-y-6">
                   {/* Stats row */}
-                  <SectionHeader icon={TrendingUp} title="Financials Overview" />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <StatCard label="Member Count" value={club.memberCount ?? members.length} icon={Users} />
-                    <StatCard label="Total Chips" value={totalChips} icon={Coins} />
+                    <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Users className="w-4 h-4 text-amber-500" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Count</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{club.memberCount ?? members.length}</p>
+                    </div>
+                    <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Coins className="w-4 h-4 text-amber-500" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Chips</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{totalChips.toLocaleString()}</p>
+                    </div>
                   </div>
 
-                  <GoldDivider />
-
                   {/* Chart */}
-                  <GoldCard glow>
-                    <SectionHeader icon={Activity} title="Daily Active Players (30 Days)" />
+                  <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-amber-500" />
+                      Daily Active Players (30 Days)
+                    </h3>
                     {chartLoading ? (
                       <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-5 h-5 animate-spin text-primary" />
@@ -1299,7 +1337,7 @@ export default function ClubDashboard() {
                         </LineChart>
                       </ResponsiveContainer>
                     )}
-                  </GoldCard>
+                  </div>
                 </div>
               )}
 
@@ -1712,8 +1750,11 @@ export default function ClubDashboard() {
                   </div>
 
                   {/* Chart */}
-                  <GoldCard glow>
-                    <SectionHeader icon={Activity} title="Daily Active Players (30 Days)" />
+                  <div className="rounded-md p-4" style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-amber-500" />
+                      Daily Active Players (30 Days)
+                    </h3>
                     {chartLoading ? (
                       <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-5 h-5 animate-spin text-primary" />
@@ -1734,7 +1775,7 @@ export default function ClubDashboard() {
                         </LineChart>
                       </ResponsiveContainer>
                     )}
-                  </GoldCard>
+                  </div>
                 </div>
               )}
 

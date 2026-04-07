@@ -530,7 +530,7 @@ export default function TransactionExplorer() {
                           <p className="text-[10px] text-gray-500 truncate">{tx.description || tx.id}</p>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <div className={`text-sm font-bold ${tx.amount >= 0 ? "text-green-400" : "text-red-400"}`}>
+                          <div className={`text-sm font-bold ${tx.amount >= 0 ? "text-[#d4af37]" : "text-red-400"}`}>
                             {tx.amount >= 0 ? "+" : ""}{formatChips(tx.amount)}
                           </div>
                           <div className="text-[10px] text-gray-600">{new Date(tx.created_at).toLocaleDateString()}</div>

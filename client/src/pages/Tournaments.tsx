@@ -336,13 +336,25 @@ export default function Tournaments() {
 
                         {/* Registration status badge */}
                         {isRegOpen && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" style={{ boxShadow: "0 0 8px rgba(16,185,129,0.15)" }}>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30" style={{ boxShadow: "0 0 8px rgba(212,175,55,0.2)" }}>
                             <Flame className="w-3 h-3" />
-                            REG OPEN
+                            Registering
                           </span>
                         )}
 
-                        {!isRegOpen && tournament.status && (
+                        {!isRegOpen && (tournament.status === "running" || tournament.status === "in_progress") && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                            Running
+                          </span>
+                        )}
+
+                        {!isRegOpen && (tournament.status === "completed" || tournament.status === "finished") && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/[0.06]">
+                            Complete
+                          </span>
+                        )}
+
+                        {!isRegOpen && tournament.status && !["running", "in_progress", "completed", "finished"].includes(tournament.status) && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.5rem] font-bold uppercase tracking-wider bg-white/5 text-gray-400 border border-white/[0.06]">
                             {tournament.status.replace(/_/g, " ")}
                           </span>
@@ -405,8 +417,8 @@ export default function Tournaments() {
                         }}
                         className={`px-5 py-2 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider ${
                           isRegOpen
-                            ? "bg-gradient-to-r from-yellow-600 to-yellow-400 text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]"
-                            : "bg-yellow-500/20 text-yellow-300"
+                            ? "gold-btn shadow-[0_0_20px_rgba(212,175,55,0.3)]"
+                            : "bg-[#d4af37]/20 text-[#d4af37]"
                         }`}
                       >
                         Register

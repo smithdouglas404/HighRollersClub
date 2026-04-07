@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Trophy, Users, Layers, Coins, ArrowLeft, Loader2, Clock, RefreshCw, BarChart2,
+  Trophy, Users, Layers, Coins, ArrowLeft, Loader2, Clock, RefreshCw, BarChart2, Crown, Medal,
 } from "lucide-react";
 import { TournamentAnalytics } from "@/components/tournament/TournamentAnalytics";
 
@@ -155,7 +155,7 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
             <motion.div
               initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-yellow-500/20"
+              className="rounded-xl p-6 vault-card"
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">

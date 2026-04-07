@@ -532,10 +532,9 @@ function InventoryItemCard({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`rounded-xl overflow-hidden transition-all ${
-        isEquipped ? "" : ""
+      className={`vault-card rounded-xl overflow-hidden transition-all ${
+        isEquipped ? "ring-1 ring-amber-500/30" : ""
       }`}
-      style={{ background: "rgba(15,15,20,0.7)", backdropFilter: "blur(12px)", border: isEquipped ? "1px solid rgba(212,175,55,0.3)" : "1px solid rgba(212,175,55,0.12)" }}
     >
       <div className="aspect-square relative overflow-hidden">
         <ItemImage item={item} />

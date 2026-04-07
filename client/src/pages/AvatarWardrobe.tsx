@@ -205,7 +205,7 @@ export default function AvatarWardrobe() {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="hidden lg:flex flex-col w-56 shrink-0 border-r border-white/[0.06] bg-black/20 p-4 space-y-1"
+          className="hidden lg:flex flex-col w-56 shrink-0 border-r gold-border bg-black/20 p-4 space-y-1"
         >
           <div className="text-[0.5625rem] text-gray-500 uppercase tracking-wider font-bold mb-3 px-3">Navigation</div>
           {SIDEBAR_TABS.map((tab) => {
@@ -295,7 +295,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] relative overflow-hidden"
+              className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 vault-card relative overflow-hidden"
             >
               {/* Ambient glow */}
               <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-purple-500/5 pointer-events-none" />
@@ -334,7 +334,7 @@ export default function AvatarWardrobe() {
                       key={slot.name}
                       className={`rounded-lg p-2 border text-center transition-all ${
                         slot.equipped
-                          ? "border-amber-500/30 bg-amber-500/5"
+                          ? "gold-border bg-amber-500/10 shadow-[0_0_8px_rgba(212,175,55,0.15)]"
                           : "border-white/[0.06] bg-white/[0.02]"
                       }`}
                     >
@@ -351,7 +351,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="lg:col-span-2 rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+              className="lg:col-span-2 rounded-xl p-6 vault-card"
             >
               <AnimatePresence mode="wait">
                 {selected ? (

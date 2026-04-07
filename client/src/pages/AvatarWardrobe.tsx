@@ -280,7 +280,7 @@ export default function AvatarWardrobe() {
               </Link>
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider " style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)" }} data-x="text-black border border-amber-400/40 hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[0.625rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-black border border-amber-400/40 hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
               >
                 {saved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
                 {saved ? "Saved!" : "Save"}
@@ -295,7 +295,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=" relative overflow-hidden"
+              className="lg:col-span-1 flex flex-col items-center justify-center rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] relative overflow-hidden"
             >
               {/* Ambient glow */}
               <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-purple-500/5 pointer-events-none" />
@@ -351,7 +351,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="lg:col-span-2 rounded-xl p-6 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=""
+              className="lg:col-span-2 rounded-xl p-6 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
             >
               <AnimatePresence mode="wait">
                 {selected ? (
@@ -392,7 +392,7 @@ export default function AvatarWardrobe() {
                       {selectedId !== equippedId ? (
                         <button
                           onClick={handleEquip}
-                          className="px-6 py-2.5 rounded-lg text-[0.6875rem] font-bold uppercase tracking-wider " style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)" }} data-x="text-black hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+                          className="px-6 py-2.5 rounded-lg text-[0.6875rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-black hover:opacity-90 transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
                         >
                           Equip This Avatar
                         </button>
@@ -426,7 +426,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18 }}
-              className="lg:col-span-1 rounded-xl p-5 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=""
+              className="lg:col-span-1 rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
             >
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
                 <Package className="w-4 h-4 text-amber-400" />
@@ -474,7 +474,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl p-5 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=" flex flex-col justify-between"
+              className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] flex flex-col justify-between"
             >
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
                 <Star className="w-4 h-4 text-amber-400" />
@@ -531,7 +531,7 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.22 }}
-              className="rounded-xl p-5 backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=" flex flex-col"
+              className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] flex flex-col"
             >
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-amber-400" />
@@ -579,7 +579,7 @@ export default function AvatarWardrobe() {
           >
             <button
               onClick={handleSavePreset}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-[0.6875rem] font-bold uppercase tracking-wider " style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)" }} data-x="text-black border border-amber-400/40 hover:opacity-90 transition-all shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-[0.6875rem] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-500 text-black border border-amber-400/40 hover:opacity-90 transition-all shadow-[0_0_20px_rgba(212,175,55,0.25)]"
             >
               {presetSaved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
               {presetSaved ? "Preset Saved!" : "Save Preset"}
@@ -597,7 +597,7 @@ export default function AvatarWardrobe() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="rounded-xl overflow-hidden backdrop-blur-xl" style={{ background: "linear-gradient(145deg, rgba(20,17,12,0.9) 0%, rgba(15,12,8,0.95) 100%)", border: "1px solid rgba(212,175,55,0.2)" }} data-vault="true" className=""
+            className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
           >
             {/* Filter bar */}
             <div className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between flex-wrap gap-3">

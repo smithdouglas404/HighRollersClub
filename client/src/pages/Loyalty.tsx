@@ -8,7 +8,6 @@ import {
   Star, Trophy, Gift, Clock, Copy, Check, Loader2,
   ChevronRight, Lock, Sparkles, Medal, Crown, Gem,
   Calendar, Users, Target, Zap, Shield, Award,
-import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 } from "lucide-react";
 import { GoldButton, GoldCard, NumberTicker, SectionHeader, GoldDivider, SpotlightCard } from "@/components/premium/PremiumComponents";
 

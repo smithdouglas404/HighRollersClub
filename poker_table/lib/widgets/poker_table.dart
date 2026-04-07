@@ -11,8 +11,29 @@ import 'community_cards.dart';
 import 'pot_display.dart';
 import 'effects/winner_particles.dart';
 
-/// Avatar images — the 10 characters sitting at the table
-const _avatarAssets = [
+/// Gemini's 6-Layer Cyberpunk Poker Table Architecture
+///
+/// Layer 1: Background room (static image + shader code lines)
+/// Layer 2: Table + 10 seats (Matrix4 perspective ellipse)
+/// Layer 3: Full-body 3D avatars sitting in chairs
+/// Layer 4: Player name badges with avatar thumbnails + stacks
+/// Layer 5: Community cards, pot, current bet
+/// Layer 6: Action buttons, admin menu, hand strength
+
+const _avatarFullBody = [
+  'assets/images/avatar-full-1.png',
+  'assets/images/avatar-full-2.png',
+  'assets/images/avatar-full-3.png',
+  'assets/images/avatar-full-4.png',
+  'assets/images/avatar-full-5.png',
+  'assets/images/avatar-full-6.png',
+  'assets/images/avatar-full-7.png',
+  'assets/images/avatar-full-8.png',
+  'assets/images/avatar-full-1.png', // wrap for seats 9-10
+  'assets/images/avatar-full-2.png',
+];
+
+const _avatarThumbs = [
   'assets/avatars/avatar_neon_viper.webp',
   'assets/avatars/avatar_chrome_siren.webp',
   'assets/avatars/avatar_gold_phantom.webp',
@@ -26,34 +47,16 @@ const _avatarAssets = [
 ];
 
 const _playerNames = [
-  'NeonViper', 'ChromeSiren', 'GoldPhantom', 'ShadowKing', 'RedWolf',
-  'IceQueen', 'TechMonk', 'CyberPunk', 'SteelGhost', 'NeonFox',
+  'CyberDeck', 'Vortek', 'CyberDeck', 'Mystic', 'SilverHand',
+  'Pond', 'MISTIC1', 'Mystic75', 'PosRire', 'Mystic',
 ];
 
-/// Seat ring colors per player
-const _seatGlowColors = [
-  Color(0xFFD4AF37), // gold (hero)
-  Color(0xFFB44DFF), // purple
-  Color(0xFFFFD700), // bright gold
-  Color(0xFFD4AF37), // gold
-  Color(0xFFFF3366), // red
-  Color(0xFF67E8F9), // cyan
-  Color(0xFFD4AF37), // gold
-  Color(0xFFFF69B4), // pink
-  Color(0xFF8ECAE6), // blue
-  Color(0xFFFF8C00), // orange
+const _playerStacks = [
+  1250000, 2500000, 1290000, 1800000, 1920000,
+  3400000, 1500000, 1500000, 1400000, 1800000,
 ];
 
-/// Gemini's "Center-Out" coordinate system with ALL effects wired in:
-/// - PokerCard 3D flip on community cards
-/// - CardDealer flying cards from deck to seats
-/// - ChipFlightWidget AnimatedPositioned from seat to pot
-/// - WinnerParticles golden burst on winner
-/// - AllInFireOverlay Flame VFX on all-in players
-/// - BettingSlider when it's hero's turn
 class PokerTable extends StatefulWidget {
-  final int totalSeats = 10;
-
   const PokerTable({super.key});
 
   @override
@@ -61,459 +64,143 @@ class PokerTable extends StatefulWidget {
 }
 
 class _PokerTableState extends State<PokerTable> with TickerProviderStateMixin {
-  // Demo state for simulation
-  int _activeSeat = 0;
+  static const int totalSeats = 10;
+  int _activeSeat = 4;
   int? _winnerSeat;
-  int _pot = 0;
-  bool _dealing = false;
-  List<PlayingCard>? _communityCards;
-  List<List<PlayingCard>> _playerCards = List.generate(10, (_) => []);
-  final List<String> _playerActions = List.filled(10, '');
-  late AnimationController _dealController;
-
-  // Gemini: "Browsers are strict — ensure the user clicks 'Join Table' first
-  // to initialize the audio context."
-  bool _audioInitialized = false;
-  void _initAudioOnFirstClick() {
-    if (!_audioInitialized) {
-      _audioInitialized = true;
-      // SoundEngine().init() would go here when wired
-    }
-  }
-
-  // Chip flight tracking
-  final List<_ChipFlight> _chipFlights = [];
-  int _chipFlightId = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _dealController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    // Start a demo hand after a brief delay
-    Future.delayed(const Duration(seconds: 1), _dealNewHand);
-  }
-
-  @override
-  void dispose() {
-    _dealController.dispose();
-    super.dispose();
-  }
-
-  void _dealNewHand() {
-    final deck = PlayingCard.fullDeck()..shuffle();
-    var ci = 0;
-
-    setState(() {
-      _winnerSeat = null;
-      _pot = 1500;
-      _communityCards = null;
-      _playerActions.fillRange(0, 10, '');
-      _playerCards = List.generate(10, (_) => [deck[ci++], deck[ci++]]);
-      _dealing = true;
-      _activeSeat = 0;
-    });
-
-    // Deal flop after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      setState(() {
-        _communityCards = [
-          deck[ci++].copyWith(faceUp: true),
-          deck[ci++].copyWith(faceUp: true),
-          deck[ci++].copyWith(faceUp: true),
-        ];
-        _pot = 4500;
-        _dealing = false;
-      });
-
-      // Simulate some actions
-      _simulateActions(ci, deck);
-    });
-  }
-
-  void _simulateActions(int ci, List<PlayingCard> deck) {
-    var delay = 800;
-    // Some folds
-    for (final seat in [2, 5, 8]) {
-      Future.delayed(Duration(milliseconds: delay), () {
-        if (!mounted) return;
-        setState(() {
-          _playerActions[seat] = 'fold';
-          _activeSeat = (seat + 1) % 10;
-        });
-      });
-      delay += 600;
-    }
-
-    // Turn
-    Future.delayed(Duration(milliseconds: delay), () {
-      if (!mounted) return;
-      setState(() {
-        _communityCards = [..._communityCards!, deck[ci].copyWith(faceUp: true)];
-        _pot = 8000;
-      });
-    });
-    delay += 1500;
-
-    // Some bets with chip flights
-    for (final seat in [0, 1, 3, 4, 6, 7, 9]) {
-      if ([2, 5, 8].contains(seat)) continue;
-      Future.delayed(Duration(milliseconds: delay), () {
-        if (!mounted) return;
-        _launchChipFlight(seat);
-        setState(() {
-          _pot += 2000;
-          _activeSeat = (seat + 1) % 10;
-        });
-      });
-      delay += 500;
-    }
-
-    // River
-    Future.delayed(Duration(milliseconds: delay), () {
-      if (!mounted) return;
-      setState(() {
-        _communityCards = [..._communityCards!, deck[ci + 1].copyWith(faceUp: true)];
-        _pot = 18000;
-      });
-    });
-    delay += 2000;
-
-    // Winner
-    Future.delayed(Duration(milliseconds: delay), () {
-      if (!mounted) return;
-      setState(() {
-        _winnerSeat = 3;
-        _activeSeat = -1;
-      });
-    });
-    delay += 5000;
-
-    // Next hand
-    Future.delayed(Duration(milliseconds: delay), () {
-      if (mounted) _dealNewHand();
-    });
-  }
-
-  void _launchChipFlight(int fromSeat) {
-    setState(() {
-      _chipFlights.add(_ChipFlight(id: _chipFlightId++, seatIndex: fromSeat));
-    });
-    // Remove after animation completes
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        setState(() {
-          _chipFlights.removeWhere((f) => f.seatIndex == fromSeat);
-        });
-      }
-    });
-  }
+  bool _showAdminMenu = false;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => GameBloc(),
       child: Scaffold(
-        backgroundColor: const Color(0xFF1A3626), // Classic felt green
+        backgroundColor: Colors.black,
         body: LayoutBuilder(
           builder: (context, constraints) {
-            // Gemini: "Calculate center and radius based on screen size"
             final size = constraints.biggest;
             final centerX = size.width / 2;
             final centerY = size.height / 2;
 
-            // Gemini Responsive Breakpoints:
-            // "Web: Use the 10-seat ellipse.
-            //  Mobile: switch to a 'Vertical' table layout where the seats
-            //  are in two columns of five. Because you used LayoutBuilder,
-            //  you can just swap the radius math!"
-            final isMobile = size.width < 600;
-            final radiusX = isMobile ? size.width * 0.25 : size.width * 0.35;
-            final radiusY = isMobile ? size.height * 0.40 : size.height * 0.35;
+            // Gemini Layer 2: "Define an oval radius that accounts for
+            // perspective distortion — shorter Y creates perspective tilt"
+            final radiusX = size.width * 0.45;
+            final radiusY = size.height * 0.35;
 
-            // Gemini: "Ensure user clicks first to init audio context"
-            return GestureDetector(
-              onTap: _initAudioOnFirstClick,
-              child: Stack(
+            // Seat dimensions
+            const seatWidth = 80.0;
+            const seatHeight = 80.0;
+
+            return Stack(
+              fit: StackFit.expand,
               children: [
-                // 1. The Physical Table Graphic
-                Center(
-                  child: Container(
-                    width: radiusX * 2.2,
-                    height: radiusY * 2.0,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2C5E41),
-                      borderRadius: BorderRadius.all(Radius.elliptical(radiusX * 2, radiusY * 2)),
-                      border: Border.all(color: const Color(0xFF5D4037), width: 15),
-                      boxShadow: const [BoxShadow(blurRadius: 20, color: Colors.black54)],
+                // ═══════════════════════════════════════════════
+                // LAYER 1: Background Room
+                // Gemini: "Static Layer (DecoratedBox) — high-res background"
+                // ═══════════════════════════════════════════════
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/table_background.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      decoration: const BoxDecoration(
+                        gradient: RadialGradient(
+                          center: Alignment(0, -0.3),
+                          radius: 1.2,
+                          colors: [
+                            Color(0xFF1A2E1A), // dark green room
+                            Color(0xFF0D1A0D),
+                            Color(0xFF050A05),
+                            Color(0xFF020402),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
 
-                // 2. Pot + Community Cards — using CommunityCardsWidget with AnimatedSwitcher
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Pot display with animated count
-                      PotDisplay(pot: _pot),
-                      const SizedBox(height: 10),
-                      // Community cards — AnimatedSwitcher 3D flip
-                      if (_communityCards != null && _communityCards!.isNotEmpty)
-                        CommunityCardsWidget(cards: _communityCards!)
-                      else
-                        // Empty card slots
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: List.generate(5, (index) => _buildCommunityCardSlot()),
-                        ),
-                    ],
+                // Gemini: "Shader Layer — green vertical code lines on walls"
+                // CustomPainter for scrolling matrix-style code
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _MatrixCodePainter(),
                   ),
                 ),
 
-                // 3. Dynamic Player Positioning — Gemini's EXACT ellipse math
-                ...List.generate(widget.totalSeats, (index) {
-                  double angle = (index * (2 * math.pi / widget.totalSeats)) + (math.pi / 2);
-                  double x = centerX + radiusX * math.cos(angle) - 40;
-                  double y = centerY + radiusY * math.sin(angle) - 50;
-
-                  final isFolded = _playerActions[index] == 'fold';
-                  final isWinner = _winnerSeat == index;
-                  final isActive = _activeSeat == index;
-                  final hasCards = _playerCards[index].isNotEmpty;
-
-                  // Gemini: AnimatedPositioned — smooth slide
-                  return AnimatedPositioned(
-                    duration: const Duration(milliseconds: 500),
-                    left: x,
-                    top: y,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 400),
-                      opacity: isFolded ? 0.4 : 1.0,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                // ═══════════════════════════════════════════════
+                // LAYER 2: The Table Felt (Perspective Ellipse)
+                // Gemini: "Matrix4 projection for 3D perspective"
+                // ═══════════════════════════════════════════════
+                Center(
+                  child: Transform(
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.001) // perspective
+                      ..rotateX(0.15), // slight tilt for 3D feel
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: radiusX * 1.8,
+                      height: radiusY * 1.6,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.all(
+                          Radius.elliptical(radiusX * 1.5, radiusY * 1.5),
+                        ),
+                        gradient: const RadialGradient(
+                          center: Alignment(0, -0.2),
+                          radius: 0.9,
+                          colors: [
+                            Color(0xFF1A3A2A),
+                            Color(0xFF0F2A1C),
+                            Color(0xFF0A1F15),
+                            Color(0xFF071A10),
+                          ],
+                        ),
+                        border: Border.all(color: const Color(0xFF2A1A0A), width: 12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.8),
+                            blurRadius: 40,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
                         children: [
-                          // Winner particles — CustomPainter burst
-                          if (isWinner)
-                            const SizedBox(
-                              width: 160, height: 80,
-                              child: WinnerParticles(),
-                            ),
-
-                          // ── Full portrait avatar sitting at the table ──
-                          // Stitch-poker style: avatar image fills a tall card,
-                          // gradient overlay at bottom, cards overlap, name bar below
-                          Container(
-                            width: 120,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isWinner
-                                    ? PokerTheme.goldBright
-                                    : isActive
-                                        ? _seatGlowColors[index % _seatGlowColors.length]
-                                        : _seatGlowColors[index % _seatGlowColors.length].withValues(alpha: 0.4),
-                                width: isWinner ? 3 : isActive ? 2.5 : 2,
+                          // Inner gold ring
+                          Center(
+                            child: Container(
+                              width: radiusX * 1.6,
+                              height: radiusY * 1.4,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.all(
+                                  Radius.elliptical(radiusX * 1.5, radiusY * 1.5),
+                                ),
+                                border: Border.all(
+                                  color: PokerTheme.gold.withValues(alpha: 0.2),
+                                  width: 2,
+                                ),
                               ),
-                              boxShadow: isActive
-                                  ? [BoxShadow(color: _seatGlowColors[index % _seatGlowColors.length].withValues(alpha: 0.7), blurRadius: 20, spreadRadius: 3)]
-                                  : isWinner
-                                      ? [BoxShadow(color: PokerTheme.goldBright.withValues(alpha: 0.8), blurRadius: 25, spreadRadius: 5)]
-                                      : [BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 12)],
                             ),
+                          ),
+                          // HIGH ROLLERS CLUB logo
+                          const Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Avatar portrait — the character sitting at the table
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                                  child: SizedBox(
-                                    width: 120,
-                                    height: 110,
-                                    child: Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        // Avatar image
-                                        ColorFiltered(
-                                          colorFilter: isFolded
-                                              ? const ColorFilter.matrix(<double>[
-                                                  0.2126, 0.7152, 0.0722, 0, 0,
-                                                  0.2126, 0.7152, 0.0722, 0, 0,
-                                                  0.2126, 0.7152, 0.0722, 0, 0,
-                                                  0, 0, 0, 1, 0,
-                                                ])
-                                              : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
-                                          child: Image.asset(
-                                            _avatarAssets[index % _avatarAssets.length],
-                                            fit: BoxFit.cover,
-                                            alignment: const Alignment(0, -0.6),
-                                            errorBuilder: (_, __, ___) => Container(
-                                              color: Colors.grey.shade800,
-                                              child: Center(
-                                                child: Text(
-                                                  _playerNames[index][0],
-                                                  style: const TextStyle(color: Colors.white54, fontSize: 32, fontWeight: FontWeight.w900),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        // Gradient overlay — cinematic bottom fade
-                                        Positioned(
-                                          bottom: 0, left: 0, right: 0, height: 60,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                begin: Alignment.topCenter,
-                                                end: Alignment.bottomCenter,
-                                                colors: [
-                                                  Colors.transparent,
-                                                  Colors.black.withValues(alpha: 0.7),
-                                                  Colors.black.withValues(alpha: 0.95),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        // Top glow edge
-                                        Positioned(
-                                          top: 0, left: 0, right: 0, height: 3,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  Colors.transparent,
-                                                  _seatGlowColors[index % _seatGlowColors.length],
-                                                  Colors.transparent,
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        // FOLD badge overlay
-                                        if (isFolded)
-                                          Center(
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.red.withValues(alpha: 0.7),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: const Text('FOLD', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                                            ),
-                                          ),
-
-                                        // WINNER badge overlay
-                                        if (isWinner)
-                                          Positioned(
-                                            bottom: 8, left: 0, right: 0,
-                                            child: Center(
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                                decoration: BoxDecoration(
-                                                  color: PokerTheme.gold.withValues(alpha: 0.3),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                  border: Border.all(color: PokerTheme.goldBright),
-                                                ),
-                                                child: const Text('WINNER', style: TextStyle(color: PokerTheme.goldBright, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                                              ),
-                                            ),
-                                          ),
-
-                                        // Face-down hole cards overlapping bottom of portrait
-                                        if (hasCards && !isFolded && index != 0 && _winnerSeat == null)
-                                          Positioned(
-                                            bottom: -6, left: 0, right: 0,
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Transform.rotate(
-                                                  angle: -0.15,
-                                                  child: Container(
-                                                    width: 28, height: 40,
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.blue.shade900,
-                                                      borderRadius: BorderRadius.circular(3),
-                                                      border: Border.all(color: Colors.white, width: 1.5),
-                                                    ),
-                                                    child: const Center(child: Icon(Icons.star, color: Colors.white24, size: 12)),
-                                                  ),
-                                                ),
-                                                Transform.rotate(
-                                                  angle: 0.15,
-                                                  child: Container(
-                                                    width: 28, height: 40,
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.blue.shade900,
-                                                      borderRadius: BorderRadius.circular(3),
-                                                      border: Border.all(color: Colors.white, width: 1.5),
-                                                    ),
-                                                    child: const Center(child: Icon(Icons.star, color: Colors.white24, size: 12)),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-
-                                        // Hero face-up cards OR showdown revealed cards
-                                        if (hasCards && !isFolded && (index == 0 || _winnerSeat != null))
-                                          Positioned(
-                                            bottom: -6, left: 0, right: 0,
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                for (var ci = 0; ci < _playerCards[index].length; ci++)
-                                                  Transform.rotate(
-                                                    angle: ci == 0 ? -0.15 : 0.15,
-                                                    child: Transform.scale(
-                                                      scale: 0.55,
-                                                      child: PokerCard(
-                                                        rank: _playerCards[index][ci].rankLabel,
-                                                        suit: _playerCards[index][ci].suitSymbol,
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                      ],
-                                    ),
+                                Text(
+                                  'HIGH ROLLERS',
+                                  style: TextStyle(
+                                    color: Color(0x18D4AF37),
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 8,
                                   ),
                                 ),
-
-                                // Name + chip count bar
-                                Container(
-                                  width: 120,
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xF00A0A0C),
-                                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        _playerNames[index % _playerNames.length],
-                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        '\$${(15000 + index * 2000 - (_pot ~/ 10)).clamp(0, 99999)}',
-                                        style: const TextStyle(color: PokerTheme.goldBright, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                                      ),
-                                      // Bottom gold accent
-                                      Container(
-                                        margin: const EdgeInsets.only(top: 2),
-                                        height: 2,
-                                        decoration: const BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [Colors.transparent, PokerTheme.gold, PokerTheme.goldBright, PokerTheme.gold, Colors.transparent],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                Text(
+                                  'CLUB',
+                                  style: TextStyle(
+                                    color: Color(0x10D4AF37),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 12,
                                   ),
                                 ),
                               ],
@@ -522,124 +209,455 @@ class _PokerTableState extends State<PokerTable> with TickerProviderStateMixin {
                         ],
                       ),
                     ),
+                  ),
+                ),
+
+                // ═══════════════════════════════════════════════
+                // LAYER 3: Full-Body 3D Avatars Sitting at Table
+                // Gemini: "Full 3D high-fidelity avatars (cyborgs, robots)"
+                // ═══════════════════════════════════════════════
+                ...List.generate(totalSeats, (index) {
+                  // Gemini: "Polar Coordinate system"
+                  double angle = (index * (2 * math.pi / totalSeats)) - (math.pi / 2);
+                  // Push avatars outside the table edge
+                  double avatarRx = radiusX * 1.05;
+                  double avatarRy = radiusY * 1.15;
+                  double x = avatarRx * math.cos(angle) + centerX;
+                  double y = avatarRy * math.sin(angle) + centerY;
+
+                  // Perspective scale — farther seats are smaller
+                  final normalY = (y - (centerY - radiusY)) / (radiusY * 2);
+                  final perspScale = 0.6 + (normalY.clamp(0, 1) * 0.5);
+                  final avatarH = 180.0 * perspScale;
+                  final avatarW = 140.0 * perspScale;
+
+                  return AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    left: x - avatarW / 2,
+                    top: y - avatarH * 0.8,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 400),
+                      opacity: 1.0,
+                      child: SizedBox(
+                        width: avatarW,
+                        height: avatarH,
+                        child: Image.asset(
+                          _avatarFullBody[index % _avatarFullBody.length],
+                          fit: BoxFit.contain,
+                          alignment: Alignment.bottomCenter,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
                   );
                 }),
 
-                // 4. Chip flights — AnimatedPositioned from seat to pot center
-                for (final flight in _chipFlights)
-                  () {
-                    double angle = (flight.seatIndex * (2 * math.pi / widget.totalSeats)) + (math.pi / 2);
-                    double fromX = centerX + radiusX * math.cos(angle);
-                    double fromY = centerY + radiusY * math.sin(angle);
-                    return ChipFlightWidget(
-                      key: ValueKey('chip_${flight.id}'),
-                      fromX: fromX,
-                      fromY: fromY,
-                      toX: centerX,
-                      toY: centerY - 30,
-                    );
-                  }(),
+                // ═══════════════════════════════════════════════
+                // LAYER 4: Player Name Badges + Avatar Thumbnails
+                // Gemini: "Text widgets for readability + dark metal
+                // BoxDecoration with green border gradient"
+                // ═══════════════════════════════════════════════
+                ...List.generate(totalSeats, (index) {
+                  double angle = (index * (2 * math.pi / totalSeats)) - (math.pi / 2);
+                  double badgeRx = radiusX * 1.05;
+                  double badgeRy = radiusY * 1.15;
+                  double x = badgeRx * math.cos(angle) + centerX;
+                  double y = badgeRy * math.sin(angle) + centerY;
 
-                // 5. CardDealer flying cards — during dealing phase
-                if (_dealing)
-                  for (var i = 0; i < widget.totalSeats; i++)
-                    TweenAnimationBuilder<double>(
-                      key: ValueKey('deal_$i'),
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: Duration(milliseconds: 400 + i * 100),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, value, child) {
-                        double angle = (i * (2 * math.pi / widget.totalSeats)) + (math.pi / 2);
-                        double endX = centerX + radiusX * math.cos(angle) - 20;
-                        double endY = centerY + radiusY * math.sin(angle) + 30;
-                        final pos = Offset.lerp(Offset(centerX - 20, centerY - 20), Offset(endX, endY), value)!;
-                        return Positioned(
-                          left: pos.dx,
-                          top: pos.dy,
-                          child: Transform.rotate(
-                            angle: value * 2 * 3.1415, // Gemini: "Spins twice while flying"
-                            child: Opacity(
-                              opacity: (1 - value * 0.5).clamp(0, 1),
-                              child: Container(
-                                width: 35, height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.blue,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.white, width: 2),
-                                ),
-                                child: const Icon(Icons.star, color: Colors.white30, size: 16),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+                  final normalY = (y - (centerY - radiusY)) / (radiusY * 2);
+                  final perspScale = 0.7 + (normalY.clamp(0, 1) * 0.4);
+                  final isActive = _activeSeat == index;
+                  final isWinner = _winnerSeat == index;
+
+                  return AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    left: x - 70 * perspScale,
+                    top: y + 10,
+                    child: Transform.scale(
+                      scale: perspScale,
+                      child: _buildPlayerBadge(index, isActive, isWinner),
                     ),
+                  );
+                }),
 
-                // 6. Betting Overlay — shows when hero's turn
-                if (_activeSeat == 0)
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 50),
-                      child: BettingSlider(
-                        minBet: 20,
-                        maxStack: 1000,
-                        onBetConfirmed: (amount) {
-                          if (amount == 0) {
-                            setState(() {
-                              _playerActions[0] = 'fold';
-                              _activeSeat = 1;
-                            });
-                          } else {
-                            _launchChipFlight(0);
-                            setState(() {
-                              _pot += amount.toInt();
-                              _activeSeat = 1;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-
-                // 7. Connection Status Indicator
-                // Gemini: "sequence_id — show 'Syncing...' spinner"
-                const Positioned(
-                  top: 10, right: 10,
+                // ═══════════════════════════════════════════════
+                // LAYER 5: Community Cards + Pot + Current Bet
+                // ═══════════════════════════════════════════════
+                // Community cards on the table
+                Positioned(
+                  left: centerX - 140,
+                  top: centerY - 20,
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // TODO: wire to PokerSocketService.isSyncing for "Syncing..." spinner
-                      // TODO: wire to PokerSocketService.isConnected for green/red icon
-                      Icon(Icons.wifi, color: Colors.greenAccent, size: 14),
+                      // 5 card slots
+                      for (var i = 0; i < 5; i++)
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          width: 46,
+                          height: 66,
+                          decoration: BoxDecoration(
+                            color: i < 3 ? Colors.white : Colors.black26,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: i < 3 ? Colors.grey.shade300 : Colors.white10,
+                              width: 1,
+                            ),
+                            boxShadow: i < 3 ? [
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 6, offset: const Offset(0, 3)),
+                            ] : null,
+                          ),
+                          child: i < 3
+                              ? Center(
+                                  child: Text(
+                                    ['A\u2660', 'K\u2665', '10\u2663'][i],
+                                    style: TextStyle(
+                                      color: i == 1 ? Colors.red.shade700 : Colors.grey.shade900,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
                     ],
                   ),
                 ),
+
+                // Chip stacks on table (visual prop)
+                Positioned(
+                  left: centerX - 30,
+                  top: centerY - 60,
+                  child: _buildChipStacks(),
+                ),
+
+                // Current bet badge
+                Positioned(
+                  left: centerX + 80,
+                  top: centerY - 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xDD0A0A0C),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: PokerTheme.gold.withValues(alpha: 0.4)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('CURRENT BET  ', style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text('\$5,000', style: TextStyle(color: PokerTheme.goldBright, fontSize: 13, fontWeight: FontWeight.w900)),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ═══════════════════════════════════════════════
+                // LAYER 6: UI — Action Buttons, Admin, Hand Strength
+                // Gemini: "Standard Material buttons with custom BoxDecoration
+                // dark metal texture and green border gradient"
+                // ═══════════════════════════════════════════════
+
+                // HIGH ROLLERS CLUB logo top center
+                Positioned(
+                  top: 20,
+                  left: 0, right: 0,
+                  child: Center(
+                    child: Text(
+                      'HIGH ROLLERS\nCLUB',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: PokerTheme.gold.withValues(alpha: 0.8),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 3,
+                        height: 1.2,
+                        shadows: [Shadow(color: PokerTheme.gold.withValues(alpha: 0.3), blurRadius: 10)],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Action buttons — FOLD / CALL / RAISE
+                Positioned(
+                  bottom: 20,
+                  left: centerX - 200,
+                  child: Row(
+                    children: [
+                      _buildActionButton('FOLD', const Color(0xFF1A1A1A), Colors.white70),
+                      const SizedBox(width: 12),
+                      _buildActionButton('CALL 60', const Color(0xFF1A1A1A), Colors.white70),
+                      const SizedBox(width: 12),
+                      _buildActionButton('RAISE', const Color(0xFF1A1A1A), Colors.white70),
+                    ],
+                  ),
+                ),
+
+                // Current Hand Strength (bottom right)
+                Positioned(
+                  bottom: 20,
+                  right: 20,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xDD0A0A0C),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: PokerTheme.gold.withValues(alpha: 0.3)),
+                        ),
+                        child: const Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('Current Hand Strength', style: TextStyle(color: Colors.white54, fontSize: 10)),
+                            Text('FLUSH DRAW', style: TextStyle(color: PokerTheme.goldBright, fontSize: 14, fontWeight: FontWeight.w900)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Sit Out / Away toggle
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xDD0A0A0C),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Sit Out / Away', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                            SizedBox(width: 8),
+                            Icon(Icons.toggle_off, color: Colors.white30, size: 20),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Admin Control menu (top right)
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      GestureDetector(
+                        onTap: () => setState(() => _showAdminMenu = !_showAdminMenu),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xDD0A0A0C),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Admin Control', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                              SizedBox(width: 8),
+                              Icon(Icons.settings, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (_showAdminMenu) ...[
+                        const SizedBox(height: 4),
+                        _buildAdminMenuItem('Pause Game', Icons.pause),
+                        _buildAdminMenuItem('Manage Table', Icons.table_bar),
+                        _buildAdminMenuItem('Approve New Players', Icons.person_add),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // Connection indicator
+                const Positioned(
+                  top: 10, right: 10,
+                  child: Icon(Icons.wifi, color: Colors.greenAccent, size: 14),
+                ),
               ],
-            ),
-            ); // close GestureDetector
+            );
           },
         ),
       ),
     );
   }
 
-  Widget _buildCommunityCardSlot() {
+  /// Gemini Layer 4: Player name badge with avatar thumbnail
+  /// "Dark metal texture asset and green border gradient"
+  Widget _buildPlayerBadge(int index, bool isActive, bool isWinner) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: 40,
-      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.black26,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.white10),
+        color: const Color(0xE60A0A0C),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isActive
+              ? PokerTheme.cyan
+              : isWinner
+                  ? PokerTheme.goldBright
+                  : Colors.white.withValues(alpha: 0.15),
+          width: isActive || isWinner ? 2 : 1,
+        ),
+        boxShadow: isActive
+            ? [BoxShadow(color: PokerTheme.cyan.withValues(alpha: 0.4), blurRadius: 12)]
+            : isWinner
+                ? [BoxShadow(color: PokerTheme.gold.withValues(alpha: 0.5), blurRadius: 15)]
+                : [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8)],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Avatar thumbnail
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                _avatarThumbs[index % _avatarThumbs.length],
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey.shade800,
+                  child: const Icon(Icons.person, color: Colors.white38, size: 18),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Name + stack
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _playerNames[index % _playerNames.length],
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '\$${_formatStack(_playerStacks[index % _playerStacks.length])}',
+                style: const TextStyle(color: PokerTheme.goldBright, fontSize: 10, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatStack(int amount) {
+    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)},000';
+    return amount.toString();
+  }
+
+  /// Gemini Layer 6: Action buttons
+  /// "Standard Material buttons with custom BoxDecoration —
+  /// dark metal texture and green border gradient"
+  Widget _buildActionButton(String label, Color bg, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8, offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminMenuItem(String label, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Container(
+        width: 180,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xE60A0A0C),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            const Spacer(),
+            Icon(icon, color: Colors.white38, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChipStacks() {
+    return SizedBox(
+      width: 60,
+      height: 40,
+      child: Stack(
+        children: [
+          for (var i = 0; i < 5; i++)
+            Positioned(
+              bottom: i * 4.0,
+              left: i * 2.0,
+              child: Container(
+                width: 28,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: i % 2 == 0 ? PokerTheme.goldBright : const Color(0xFF111827),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: i % 2 == 0 ? const Color(0xFFB8860B) : const Color(0xFF374151),
+                    width: 1,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _ChipFlight {
-  final int id;
-  final int seatIndex;
-  const _ChipFlight({required this.id, required this.seatIndex});
+/// Gemini Layer 1: "Shader Layer — green vertical code lines on walls"
+/// "Custom GLSL/SPIR-V shader makes scrolling code lines animate with zero CPU cost"
+/// Using CustomPainter as the shader fallback for web compatibility
+class _MatrixCodePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF00FF41).withValues(alpha: 0.03)
+      ..strokeWidth = 1;
+
+    // Vertical lines simulating the matrix code effect on walls
+    final rng = math.Random(42); // Fixed seed for consistency
+    for (var x = 0.0; x < size.width; x += 20 + rng.nextDouble() * 30) {
+      if (x > size.width * 0.2 && x < size.width * 0.8) continue; // Skip table area
+      for (var y = 0.0; y < size.height; y += 8 + rng.nextDouble() * 12) {
+        final alpha = 0.02 + rng.nextDouble() * 0.04;
+        paint.color = Color(0xFF00FF41).withValues(alpha: alpha);
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, 2, 4 + rng.nextDouble() * 6),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

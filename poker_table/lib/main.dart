@@ -1,284 +1,274 @@
-// Gemini's EXACT "Complete Flutter High Rollers Engine"
-// with full-body avatars wired into the seats
-
 import 'dart:math' as math;
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-// --- 1. STATE MANAGEMENT (BLoC) ---
+void main() => runApp(const CyberPokerApp());
+
+class CyberPokerApp extends StatelessWidget {
+  const CyberPokerApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(),
+      home: const PokerTableScreen(),
+    );
+  }
+}
+
+// --- STATE MANAGEMENT (BLoC) ---
 
 class GameState {
   final int activeSeat;
   final List<double> stacks;
   final List<String> communityCards;
   final List<double> currentBets;
+  final int? winnerSeat;
+  final String phase; // preflop, flop, turn, river, showdown
 
   GameState({
     required this.activeSeat,
     required this.stacks,
     required this.communityCards,
     required this.currentBets,
+    this.winnerSeat,
+    this.phase = 'preflop',
   });
 
   factory GameState.initial() => GameState(
     activeSeat: 0,
-    stacks: List.generate(10, (index) => 1500000.0),
-    communityCards: ['As', 'Ks', 'Qh'],
-    currentBets: List.generate(10, (index) => 0.0),
+    stacks: List.generate(10, (i) => 1500000.0 + i * 200000),
+    communityCards: [],
+    currentBets: List.filled(10, 0.0),
   );
 }
 
 abstract class GameEvent {}
 class UpdateTurn extends GameEvent { final int seat; UpdateTurn(this.seat); }
+class DealFlop extends GameEvent {}
+class DealTurn extends GameEvent {}
+class DealRiver extends GameEvent {}
+class DeclareWinner extends GameEvent { final int seat; DeclareWinner(this.seat); }
+class ResetHand extends GameEvent {}
 class SocketMessageReceived extends GameEvent { final Map<String, dynamic> data; SocketMessageReceived(this.data); }
 
 class GameBloc extends Bloc<GameEvent, GameState> {
   GameBloc() : super(GameState.initial()) {
     on<UpdateTurn>((event, emit) => emit(GameState(
-      activeSeat: event.seat,
-      stacks: state.stacks,
-      communityCards: state.communityCards,
-      currentBets: state.currentBets,
+      activeSeat: event.seat, stacks: state.stacks,
+      communityCards: state.communityCards, currentBets: state.currentBets,
+      phase: state.phase,
     )));
-    on<SocketMessageReceived>((event, emit) {
-      // Parse server JSON for bets and cards
-      if (event.data.containsKey('stacks')) {
-        emit(GameState(
-          activeSeat: state.activeSeat,
-          stacks: List<double>.from(event.data['stacks']),
-          communityCards: state.communityCards,
-          currentBets: state.currentBets,
-        ));
-      }
-    });
+    on<DealFlop>((event, emit) => emit(GameState(
+      activeSeat: state.activeSeat, stacks: state.stacks,
+      communityCards: ['A♠', 'K♥', '10♣'], currentBets: state.currentBets,
+      phase: 'flop',
+    )));
+    on<DealTurn>((event, emit) => emit(GameState(
+      activeSeat: state.activeSeat, stacks: state.stacks,
+      communityCards: [...state.communityCards, 'J♦'], currentBets: state.currentBets,
+      phase: 'turn',
+    )));
+    on<DealRiver>((event, emit) => emit(GameState(
+      activeSeat: state.activeSeat, stacks: state.stacks,
+      communityCards: [...state.communityCards, '7♠'], currentBets: state.currentBets,
+      phase: 'river',
+    )));
+    on<DeclareWinner>((event, emit) => emit(GameState(
+      activeSeat: -1, stacks: state.stacks,
+      communityCards: state.communityCards, currentBets: state.currentBets,
+      winnerSeat: event.seat, phase: 'showdown',
+    )));
+    on<ResetHand>((event, emit) => emit(GameState.initial()));
   }
 }
 
-// --- AVATAR AND PLAYER DATA ---
+// --- THE POKER TABLE SCREEN ---
 
-const _avatarAssets = [
-  'assets/images/avatar-full-1.png',
-  'assets/images/avatar-full-2.png',
-  'assets/images/avatar-full-3.png',
-  'assets/images/avatar-full-4.png',
-  'assets/images/avatar-full-5.png',
-  'assets/images/avatar-full-6.png',
-  'assets/images/avatar-full-7.png',
-  'assets/images/avatar-full-8.png',
-  'assets/images/avatar-full-1.png',
-  'assets/images/avatar-full-2.png',
-];
+class PokerTableScreen extends StatefulWidget {
+  const PokerTableScreen({super.key});
 
-const _playerNames = [
-  'CyberDeck', 'Vortek', 'Mystic', 'SilverHand', 'PosRire',
-  'Pond', 'MISTIC1', 'Mystic75', 'NeonViper', 'ShadowKng',
-];
+  @override
+  State<PokerTableScreen> createState() => _PokerTableScreenState();
+}
 
-// --- 2. THE POKER TABLE UI ---
+class _PokerTableScreenState extends State<PokerTableScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Auto-run game simulation
+    _runSimulation();
+  }
 
-void main() => runApp(MaterialApp(
-  home: HighRollersTable(),
-  theme: ThemeData.dark(),
-  debugShowCheckedModeBanner: false,
-));
+  void _runSimulation() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+    context.read<GameBloc>().add(DealFlop());
 
-class HighRollersTable extends StatelessWidget {
-  const HighRollersTable({super.key});
+    // Cycle turns
+    for (var i = 0; i < 10; i++) {
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) return;
+      context.read<GameBloc>().add(UpdateTurn(i));
+    }
+
+    await Future.delayed(const Duration(seconds: 1));
+    if (!mounted) return;
+    context.read<GameBloc>().add(DealTurn());
+
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+    context.read<GameBloc>().add(DealRiver());
+
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+    context.read<GameBloc>().add(DeclareWinner(3));
+
+    await Future.delayed(const Duration(seconds: 4));
+    if (!mounted) return;
+    context.read<GameBloc>().add(ResetHand());
+    _runSimulation();
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => GameBloc(),
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0A0F0D),
-        body: Stack(
-          children: [
-            // Background Shader/Image Layer
-            const Positioned.fill(child: _BackgroundLayer()),
+      create: (_) => GameBloc(),
+      child: Builder(builder: (context) {
+        // Start simulation after BlocProvider is available
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _runSimulation();
+        });
 
-            // The Table Layout Builder
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final size = constraints.biggest;
-                // PERSPECTIVE MATH: Narrower Y radius creates the tilted table look
-                final radiusX = size.width * 0.42;
-                final radiusY = size.height * 0.28;
-                final center = Offset(size.width / 2, size.height / 2);
+        return Scaffold(
+          backgroundColor: const Color(0xFF050A05),
+          body: Stack(
+            children: [
+              // 1. BACKGROUND LAYER (Ambient Neon Room)
+              const Positioned.fill(child: _CyberBackground()),
 
-                return Stack(
-                  children: [
-                    // The table graphic comes from the background image
-                    // No overlay needed — image has the full room + table + chairs
+              // 2. THE GAME BOARD (10-Player Perspective)
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final size = constraints.biggest;
+                  final radiusX = size.width * 0.40;
+                  final radiusY = size.height * 0.28;
+                  final center = Offset(size.width / 2, size.height / 2 - 20);
 
-                    // Community Cards on the felt
-                    Center(child: _CommunityArea()),
+                  return Stack(
+                    children: [
+                      // The Table Surface
+                      Center(child: _TableSurface(width: radiusX * 2.2, height: radiusY * 2.4)),
 
-                    // 10 Seats distributed in a perspective oval
-                    ...List.generate(10, (index) {
-                      // Adjust angle so Seat 0 is at bottom center
-                      double angle = (index * (2 * math.pi / 10)) + (math.pi / 2);
-                      double x = center.dx + radiusX * math.cos(angle) - 60;
-                      double y = center.dy + radiusY * math.sin(angle) - 80;
+                      // Community Cards & Pot — now BLoC-driven
+                      Center(child: _CommunityCenterArea()),
 
-                      return AnimatedPositioned(
-                        duration: const Duration(milliseconds: 500),
-                        left: x,
-                        top: y,
-                        child: PlayerSeatWidget(index: index),
-                      );
-                    }),
-                  ],
-                );
-              },
-            ),
+                      // 10 Seats
+                      ...List.generate(10, (index) {
+                        double angle = (index * (2 * math.pi / 10)) + (math.pi / 2);
+                        double x = center.dx + radiusX * math.cos(angle) - 60;
+                        double y = center.dy + radiusY * math.sin(angle) - 80;
 
-            // HIGH ROLLERS CLUB logo
-            Positioned(
-              top: 16,
-              left: 0, right: 0,
-              child: Center(
-                child: Text(
-                  'HIGH ROLLERS\nCLUB',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.orbitron(
-                    color: const Color(0xCCD4AF37),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 4,
-                    height: 1.2,
-                  ),
-                ),
+                        bool isUser = index == 0;
+                        return AnimatedPositioned(
+                          duration: const Duration(milliseconds: 500),
+                          left: x,
+                          top: y,
+                          child: _PlayerSeat(
+                            index: index,
+                            isUser: isUser,
+                            name: _dummyNames[index],
+                          ),
+                        );
+                      }),
+                    ],
+                  );
+                },
               ),
-            ),
 
-            // Bottom Action Bar
-            const Align(
-              alignment: Alignment.bottomCenter,
-              child: _ActionBar(),
-            ),
-          ],
-        ),
-      ),
+              // 3. UI OVERLAYS
+              const Positioned(top: 20, right: 20, child: _AdminPanel()),
+              const Positioned(bottom: 120, right: 40, child: _HandStrengthIndicator()),
+              const Align(alignment: Alignment.bottomCenter, child: _BottomActionBar()),
+            ],
+          ),
+        );
+      }),
     );
   }
 }
 
-// --- 3. THE CYBERPUNK PLAYER COMPONENT ---
-// Gemini's EXACT PlayerSeatWidget with full-body avatar images
+// --- PLAYER COMPONENT with BLoC ---
 
-class PlayerSeatWidget extends StatelessWidget {
+class _PlayerSeat extends StatelessWidget {
   final int index;
-  const PlayerSeatWidget({super.key, required this.index});
+  final bool isUser;
+  final String name;
+
+  const _PlayerSeat({required this.index, required this.isUser, required this.name});
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GameBloc, GameState>(
       builder: (context, state) {
         bool isActive = state.activeSeat == index;
+        bool isWinner = state.winnerSeat == index;
 
-        return SizedBox(
-          width: 120,
-          height: 200,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // 1. THE TURN GLOW (Only shows when it's their turn)
-              // Gemini: "When your WebSocket says it's 'CyberDeck's' turn,
-              // the BLoC updates activeSeat. isCurrentTurn flips to true,
-              // and the Green Glow triggers instantly."
-              if (isActive)
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.greenAccent.withValues(alpha: 0.5),
-                        blurRadius: 30,
-                        spreadRadius: 10,
-                      ),
-                    ],
-                  ),
-                ),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Winner particles
+            if (isWinner)
+              const Icon(Icons.emoji_events, color: Colors.yellowAccent, size: 24)
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 500.ms),
 
-              // 2. THE AVATAR (The Cyborg/Robot) — full-body image
-              // Gemini: "Full 3D high-fidelity avatars (cyborgs, robots)"
-              Positioned(
-                top: 0,
-                child: Image.asset(
-                  _avatarAssets[index % _avatarAssets.length],
-                  height: 120,
+            // Avatar with shimmer + turn glow
+            Container(
+              height: isUser ? 100 : 70,
+              width: 80,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/avatar-full-${(index % 8) + 1}.png'),
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 120,
-                    width: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.black54,
-                      boxShadow: isActive
-                          ? [BoxShadow(color: Colors.greenAccent.withValues(alpha: 0.6), blurRadius: 20, spreadRadius: 5)]
-                          : [],
-                    ),
-                    child: const Icon(Icons.psychology, color: Colors.greenAccent, size: 40),
-                  ),
                 ),
+                boxShadow: isActive ? [
+                  BoxShadow(color: Colors.greenAccent.withValues(alpha: 0.6), blurRadius: 20, spreadRadius: 5),
+                ] : isWinner ? [
+                  BoxShadow(color: Colors.yellowAccent.withValues(alpha: 0.7), blurRadius: 25, spreadRadius: 8),
+                ] : [],
               ),
+            ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 3.seconds, color: Colors.greenAccent.withValues(alpha: 0.2)),
 
-              // 3. THE INFO BOX (Cyberpunk Glass Style)
-              // Gemini: "dark metal texture and green border gradient"
-              Positioned(
-                bottom: 10,
-                child: _buildInfoBox(state, isActive),
+            // Glassmorphism Info Box — BLoC-driven stack
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: isWinner ? Colors.yellowAccent : isActive ? Colors.greenAccent : Colors.white24,
+                  width: 1.5,
+                ),
+                boxShadow: isActive ? [const BoxShadow(color: Colors.greenAccent, blurRadius: 8)]
+                    : isWinner ? [const BoxShadow(color: Colors.yellowAccent, blurRadius: 10)] : [],
               ),
-            ],
-          ),
+              child: Column(
+                children: [
+                  Text(name, style: GoogleFonts.rajdhani(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text(
+                    "\$${_formatStack(state.stacks[index].toInt())}",
+                    style: GoogleFonts.shareTechMono(fontSize: 12, color: isWinner ? Colors.yellowAccent : Colors.greenAccent),
+                  ),
+                ],
+              ),
+            ),
+          ],
         );
       },
-    );
-  }
-
-  Widget _buildInfoBox(GameState state, bool isActive) {
-    return Container(
-      width: 110,
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      decoration: BoxDecoration(
-        // Dark semi-transparent background
-        color: Colors.black.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isActive ? Colors.greenAccent : Colors.white24,
-          width: 1.5,
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Gemini: "Use Rajdhani font for cyberpunk feel"
-          Text(
-            _playerNames[index % _playerNames.length].toUpperCase(),
-            style: GoogleFonts.rajdhani(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const SizedBox(height: 2),
-          // Gemini: "Use ShareTechMono for money — monospace feels more cyber"
-          Text(
-            "\$${_formatStack(state.stacks[index].toInt())}",
-            style: GoogleFonts.shareTechMono(
-              color: Colors.greenAccent,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -289,103 +279,225 @@ class PlayerSeatWidget extends StatelessWidget {
   }
 }
 
-// --- 4. SUB-WIDGETS (VISUALS) ---
+// --- UI ELEMENTS ---
 
-class _TableFelt extends StatelessWidget {
+class _TableSurface extends StatelessWidget {
   final double width, height;
-  const _TableFelt({required this.width, required this.height});
+  const _TableSurface({required this.width, required this.height});
 
   @override
   Widget build(BuildContext context) {
-    // When using the background image (which already has the table),
-    // this overlay is semi-transparent to blend with the room image.
-    // When no background image, falls back to solid felt.
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFF1B3022).withValues(alpha: 0.3),
+        color: const Color(0xFF132318),
         borderRadius: BorderRadius.all(Radius.elliptical(width, height)),
-        border: Border.all(color: const Color(0xFF3A2A1F).withValues(alpha: 0.4), width: 8),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 40)],
+        border: Border.all(color: const Color(0xFF4A3A2F), width: 10),
+        boxShadow: [
+          BoxShadow(color: Colors.greenAccent.withValues(alpha: 0.05), blurRadius: 100, spreadRadius: 20),
+          const BoxShadow(color: Colors.black, blurRadius: 40, offset: Offset(0, 20)),
+        ],
       ),
     );
   }
 }
 
-class _CommunityArea extends StatelessWidget {
-  const _CommunityArea();
+class _CommunityCenterArea extends StatelessWidget {
+  const _CommunityCenterArea();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (i) => Container(
-        width: 45, height: 65,
-        margin: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.black38,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: i < 3 ? const Center(child: Text("?", style: TextStyle(color: Colors.greenAccent))) : null,
-      )),
+    return BlocBuilder<GameBloc, GameState>(
+      builder: (context, state) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("HIGH ROLLERS CLUB", style: GoogleFonts.orbitron(letterSpacing: 4, color: Colors.white24, fontSize: 14, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 20),
+            // Community cards — animated entrance
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(5, (index) {
+                final hasCard = index < state.communityCards.length;
+                return hasCard
+                    ? _AnimatedCard(label: state.communityCards[index], delay: index * 150)
+                    : _Card(isFlipped: false);
+              }),
+            ),
+            if (state.winnerSeat != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  '${_dummyNames[state.winnerSeat!]} WINS!',
+                  style: GoogleFonts.orbitron(color: Colors.yellowAccent, fontSize: 16, fontWeight: FontWeight.bold),
+                ).animate().fadeIn(duration: 500.ms).scale(),
+              ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _ActionBar extends StatelessWidget {
-  const _ActionBar();
+// Card with 3D flip entrance animation
+class _AnimatedCard extends StatelessWidget {
+  final String label;
+  final int delay;
+  const _AnimatedCard({required this.label, required this.delay});
+
+  @override
+  Widget build(BuildContext context) {
+    final isRed = label.contains('♥') || label.contains('♦');
+    return Container(
+      width: 50, height: 75,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 6, offset: const Offset(0, 3))],
+      ),
+      child: Center(
+        child: Text(label, style: TextStyle(color: isRed ? Colors.red.shade700 : Colors.black, fontSize: 16, fontWeight: FontWeight.w900)),
+      ),
+    ).animate(delay: Duration(milliseconds: delay))
+        .flipV(duration: 400.ms, curve: Curves.easeOut)
+        .fadeIn(duration: 300.ms);
+  }
+}
+
+class _Card extends StatelessWidget {
+  final bool isFlipped;
+  const _Card({super.key, required this.isFlipped});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 80,
-      color: Colors.black87,
+      width: 50, height: 75,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: isFlipped ? Colors.white : Colors.black45,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: isFlipped ? const Center(child: Icon(Icons.style, color: Colors.black)) : null,
+    );
+  }
+}
+
+class _BottomActionBar extends StatelessWidget {
+  const _BottomActionBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 90,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)]),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _pokerButton("FOLD", Colors.redAccent),
-          _pokerButton("CALL", Colors.blueAccent),
-          _pokerButton("RAISE", Colors.greenAccent),
+          _cyberButton("FOLD", Colors.white30),
+          const SizedBox(width: 15),
+          _cyberButton("CALL 60", Colors.greenAccent),
+          const SizedBox(width: 15),
+          _cyberButton("RAISE", Colors.greenAccent),
         ],
       ),
     );
   }
 
-  Widget _pokerButton(String label, Color color) {
+  Widget _cyberButton(String text, Color color) {
     return Container(
-      width: 100, height: 40,
+      width: 120, height: 45,
       decoration: BoxDecoration(
-        border: Border.all(color: color),
+        color: Colors.black54,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color, width: 2),
       ),
-      child: Center(child: Text(label, style: GoogleFonts.orbitron(fontSize: 12, color: color))),
+      child: Center(child: Text(text, style: GoogleFonts.orbitron(color: color, fontWeight: FontWeight.bold, fontSize: 13))),
     );
   }
 }
 
-class _BackgroundLayer extends StatelessWidget {
-  const _BackgroundLayer();
+class _HandStrengthIndicator extends StatelessWidget {
+  const _HandStrengthIndicator();
+
   @override
   Widget build(BuildContext context) {
-    // Gemini Layer 1: "Static Layer (DecoratedBox) — high-res background asset
-    // for the overall room"
-    // Uses the cyberpunk poker room image as the full background
-    return Image.asset(
-      'assets/images/table_background.png',
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      errorBuilder: (_, __, ___) => Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.center,
-            colors: [Color(0xFF1A2A20), Color(0xFF050505)],
-            radius: 1.2,
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black87,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.yellowAccent.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        children: [
+          Text("Current Hand Strength", style: GoogleFonts.rajdhani(fontSize: 10, color: Colors.white54)),
+          Text("FLUSH DRAW", style: GoogleFonts.orbitron(fontSize: 16, color: Colors.yellowAccent, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
 }
+
+class _AdminPanel extends StatelessWidget {
+  const _AdminPanel();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 180, padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _adminItem("Admin Control", isHeader: true),
+          _adminItem("Pause Game"),
+          _adminItem("Manage Table"),
+          _adminItem("Approve New Players"),
+        ],
+      ),
+    );
+  }
+
+  Widget _adminItem(String text, {bool isHeader = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(text, style: TextStyle(color: isHeader ? Colors.yellowAccent : Colors.white70, fontSize: 12)),
+    );
+  }
+}
+
+class _CyberBackground extends StatelessWidget {
+  const _CyberBackground();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(center: Alignment.center, radius: 1.5, colors: [Color(0xFF0A2213), Color(0xFF020502)]),
+      ),
+      child: Opacity(opacity: 0.1, child: CustomPaint(painter: _GridPainter())),
+    );
+  }
+}
+
+class _GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    var paint = Paint()..color = Colors.greenAccent..strokeWidth = 0.5;
+    for (var i = 0; i < size.width; i += 40) {
+      canvas.drawLine(Offset(i.toDouble(), 0), Offset(i.toDouble(), size.height), paint);
+    }
+    for (var i = 0; i < size.height; i += 40) {
+      canvas.drawLine(Offset(0, i.toDouble()), Offset(size.width, i.toDouble()), paint);
+    }
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+const _dummyNames = ["PosRire", "Vortek", "CyberDeck", "Mystic", "SilverHand", "Pond", "MISTIC1", "Mystic75", "Mystic", "User"];

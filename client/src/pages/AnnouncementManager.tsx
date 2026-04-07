@@ -23,8 +23,8 @@ interface Announcement {
 }
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; icon: typeof Info; bg: string }> = {
-  normal: { label: "Normal", color: "text-primary", icon: Info, bg: "bg-primary/15 border-primary/25" },
-  important: { label: "Important", color: "text-amber-400", icon: Bell, bg: "bg-amber-500/15 border-amber-500/25" },
+  normal: { label: "Normal", color: "text-gray-400", icon: Info, bg: "bg-gray-500/15 border-gray-500/25" },
+  important: { label: "Important", color: "text-[#d4af37]", icon: Bell, bg: "bg-[#d4af37]/15 border-[#d4af37]/25" },
   urgent: { label: "Urgent", color: "text-red-400", icon: AlertTriangle, bg: "bg-red-500/15 border-red-500/25" },
 };
 
@@ -224,11 +224,11 @@ export default function AnnouncementManager() {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-3"
         >
-          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-primary" />
+          <div className="w-10 h-10 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-[#d4af37]" />
           </div>
           <div>
-            <h1 className="text-xl font-display font-bold text-white tracking-wider">Announcement Manager</h1>
+            <h1 className="text-xl font-display font-bold gold-text tracking-wider">Announcement Manager</h1>
             <p className="text-xs text-muted-foreground">Broadcast messages to club members</p>
           </div>
         </motion.div>
@@ -238,7 +238,7 @@ export default function AnnouncementManager() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 space-y-5"
+          className="vault-card p-6 space-y-5"
         >
           <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <Megaphone className="w-4 h-4 text-primary" />

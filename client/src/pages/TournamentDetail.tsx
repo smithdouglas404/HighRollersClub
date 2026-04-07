@@ -257,10 +257,10 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
+                className="rounded-xl overflow-hidden vault-card"
               >
                 <div className="px-5 py-3.5 border-b border-white/[0.04]">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  <h3 className="text-xs font-bold uppercase tracking-wider gold-text">
                     Active Tables
                   </h3>
                 </div>

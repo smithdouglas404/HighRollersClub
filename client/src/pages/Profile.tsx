@@ -381,6 +381,9 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [hoveredBadge, setHoveredBadge] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"profile" | "security" | "preferences">("profile");
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [privacyMode, setPrivacyMode] = useState(false);
 
   useEffect(() => {
     fetch("/api/stats/me")

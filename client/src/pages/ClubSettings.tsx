@@ -613,16 +613,16 @@ export default function ClubSettings() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-amber-500/15"
+                className="vault-card overflow-hidden"
               >
                 <div
-                  className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"
+                  className="flex items-center gap-3 px-5 py-4 border-b border-b-[#d4af37]/10"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center">
-                    <Crown className="w-5 h-5 text-primary" />
+                  <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/20 flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-[#d4af37]" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                    <h3 className="text-sm font-bold gold-text tracking-wider uppercase">
                       Transfer Ownership
                     </h3>
                     <p className="text-[0.5625rem] text-gray-500">Hand the club over to another member</p>
@@ -679,7 +679,7 @@ export default function ClubSettings() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-destructive/15"
+                className="vault-card overflow-hidden !border-red-500/20"
               >
                 <div
                   className="flex items-center gap-3 px-5 py-4 border-b border-b-white/[0.06]"

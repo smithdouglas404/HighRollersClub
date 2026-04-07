@@ -474,10 +474,10 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] flex flex-col justify-between"
+              className="rounded-xl p-5 vault-card flex flex-col justify-between"
             >
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
+                <Star className="w-4 h-4" style={{ color: "#d4af37" }} />
                 Quick Stats
               </h3>
               <div className="space-y-5 flex-1 flex flex-col justify-center">
@@ -497,15 +497,15 @@ export default function AvatarWardrobe() {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[0.6875rem] font-bold text-white flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-purple-400" /> Style Score</span>
-                    <span className="text-sm font-black text-purple-400">{styleScore}</span>
+                    <span className="text-[0.6875rem] font-bold text-white flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" style={{ color: "#d4af37" }} /> Style Score</span>
+                    <span className="text-sm font-black" style={{ color: "#d4af37" }}>{styleScore}</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${styleScore}%` }}
                       transition={{ delay: 0.4, duration: 0.8 }}
-                      className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-400"
+                      className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400"
                     />
                   </div>
                 </div>
@@ -531,10 +531,10 @@ export default function AvatarWardrobe() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.22 }}
-              className="rounded-xl p-5 bg-surface-high/50 backdrop-blur-xl border border-white/[0.06] flex flex-col"
+              className="rounded-xl p-5 vault-card flex flex-col"
             >
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
+                <Clock className="w-4 h-4" style={{ color: "#d4af37" }} />
                 Recently Equipped
               </h3>
               {recentlyEquipped.length === 0 ? (
@@ -553,7 +553,7 @@ export default function AvatarWardrobe() {
                         key={id}
                         onClick={() => { setSelectedId(id); setEquippedId(id); }}
                         className={`w-full flex items-center gap-3 p-2 rounded-lg border transition-all hover:bg-white/5 ${
-                          equippedId === id ? style.border + " bg-white/[0.03]" : "border-white/[0.06]"
+                          equippedId === id ? "gold-border bg-amber-500/5" : "border-white/[0.06]"
                         }`}
                       >
                         <img src={avatar.image} alt={avatar.name} className="w-10 h-10 rounded-lg object-cover" />

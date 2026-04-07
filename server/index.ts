@@ -12,6 +12,8 @@ import { scheduleDailyTournaments } from "./scheduler";
 import { csrfProtection } from "./middleware/csrf";
 import { hasDatabase, getPool } from "./db";
 import { SERVICE_MODE, logServiceMode } from "./service-mode";
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 logServiceMode();
 

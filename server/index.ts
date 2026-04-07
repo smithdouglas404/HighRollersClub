@@ -92,6 +92,12 @@ if (hasDatabase()) {
 
 const app = express();
 
+// Disable CSP for Flutter poker route — Flutter CanvasKit needs blob: workers and inline scripts
+app.use('/flutter-poker', (req, res, next) => {
+  res.removeHeader('Content-Security-Policy');
+  next();
+});
+
 const isDev = process.env.NODE_ENV !== "production";
 app.use(helmet({
   contentSecurityPolicy: {

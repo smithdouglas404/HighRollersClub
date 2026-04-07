@@ -148,6 +148,16 @@
         setTimeout(function() { splash.remove(); }, 600);
       }
     });
+    // Timeout: if Flutter hasn't loaded in 15s, show error
+    setTimeout(function() {
+      var splash = document.getElementById('loading-splash');
+      if (splash) {
+        var text = splash.querySelector('.loading-text');
+        if (text) text.textContent = 'Flutter engine failed to load. Try refreshing or use Chrome.';
+        var spinner = splash.querySelector('.loading-spinner');
+        if (spinner) spinner.style.borderTopColor = '#ef4444';
+      }
+    }, 15000);
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

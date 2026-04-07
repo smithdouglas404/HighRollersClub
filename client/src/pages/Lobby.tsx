@@ -869,80 +869,145 @@ export default function Lobby() {
 
   if (showModeSelection) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: "linear-gradient(180deg, #0d0b08 0%, #1a1510 100%)" }}>
-        {/* Back button */}
-        <button onClick={() => navigate("/profile")} className="self-start mb-6 px-4 py-2 rounded-lg text-gray-400 hover:text-white text-sm" style={{ border: "1px solid rgba(212,175,55,0.3)" }}>
-          &larr; Back to Dashboard
-        </button>
-
-        {/* Title */}
-        <h1 className="text-3xl md:text-4xl font-black italic uppercase tracking-wider mb-8" style={{ background: "linear-gradient(135deg, #d4af37, #f5e6a3, #b8960c, #d4af37)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-          High Rollers Club &mdash; Game Mode Selection
-        </h1>
-
-        {/* 3 Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full">
-          {/* Private Table Card */}
-          <div className="rounded-xl overflow-hidden flex flex-col" style={{ background: "rgba(15,15,20,0.85)", border: "1px solid rgba(212,175,55,0.3)" }}>
-            <div className="h-40 bg-gradient-to-br from-amber-900/30 to-black flex items-center justify-center">
-              <img src="/images/generated/private-table.webp" alt="" className="w-full h-full object-cover opacity-60" />
-            </div>
-            <div className="p-5 flex-1 flex flex-col">
-              <h3 className="text-lg font-black uppercase tracking-wider" style={{ background: "linear-gradient(135deg, #f5e6a3, #d4af37, #c9a84c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Private Table</h3>
-              <p className="text-xs text-gray-400 mt-2 flex-1">Exclusive access. Custom blinds, invite-only for elite play. Set your stakes and play with invited guests.</p>
-              <button
-                onClick={() => { setShowModeSelection(false); setActiveFormat("cash"); }}
-                className="w-full py-3 mt-4 uppercase tracking-wider text-sm font-bold rounded-lg transition-all hover:shadow-[0_0_20px_rgba(212,175,55,0.25)]"
-                style={{ background: "linear-gradient(135deg, rgba(154,123,44,0.4), rgba(212,175,55,0.2))", border: "1px solid rgba(212,175,55,0.5)", color: "#d4af37" }}
-              >
-                Create Private Table
-              </button>
-            </div>
-          </div>
-
-          {/* Public Game Card (locked) */}
-          <div className="rounded-xl overflow-hidden flex flex-col opacity-60" style={{ background: "rgba(15,15,20,0.85)", border: "1px solid rgba(212,175,55,0.2)" }}>
-            <div className="h-40 bg-gradient-to-br from-amber-900/20 to-black flex items-center justify-center">
-              <Lock className="w-16 h-16 text-amber-600/50" />
-            </div>
-            <div className="p-5 flex-1 flex flex-col text-center">
-              <p className="text-[0.625rem] text-amber-500/60 uppercase tracking-widest">Club Owner Sponsored</p>
-              <h3 className="text-lg font-black uppercase tracking-wider mt-1" style={{ background: "linear-gradient(135deg, #f5e6a3, #d4af37, #c9a84c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Public Game</h3>
-              <p className="text-xs text-gray-500 mt-2 flex-1">Join sponsored open games. Community play with exciting stakes.</p>
-              <button
-                disabled
-                className="w-full py-3 mt-4 uppercase tracking-wider text-sm font-bold rounded-lg opacity-50 cursor-not-allowed"
-                style={{ background: "linear-gradient(135deg, rgba(154,123,44,0.3), rgba(212,175,55,0.1))", border: "1px solid rgba(212,175,55,0.3)", color: "#d4af37" }}
-              >
-                Create Public Game (Locked)
-              </button>
-            </div>
-          </div>
-
-          {/* Tournament Card */}
-          <div className="rounded-xl overflow-hidden flex flex-col" style={{ background: "rgba(15,15,20,0.85)", border: "1px solid rgba(212,175,55,0.3)" }}>
-            <div className="h-40 bg-gradient-to-br from-amber-900/30 to-black flex items-center justify-center">
-              <Trophy className="w-16 h-16 text-amber-500/40" />
-            </div>
-            <div className="p-5 flex-1 flex flex-col">
-              <h3 className="text-lg font-black uppercase tracking-wider" style={{ background: "linear-gradient(135deg, #f5e6a3, #d4af37, #c9a84c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Tournament</h3>
-              <p className="text-xs text-gray-400 mt-2 flex-1">Compete against the best. Multi-table events, big prize pools. Climb the leaderboard to become a legend.</p>
-              <button
-                onClick={() => navigate("/tournaments")}
-                className="w-full py-3 mt-4 uppercase tracking-wider text-sm font-bold rounded-lg transition-all hover:shadow-[0_0_20px_rgba(212,175,55,0.25)]"
-                style={{ background: "linear-gradient(135deg, rgba(154,123,44,0.4), rgba(212,175,55,0.2))", border: "1px solid rgba(212,175,55,0.5)", color: "#d4af37" }}
-              >
-                Join Tournament
-              </button>
-            </div>
-          </div>
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 relative overflow-hidden" style={{ background: "#0d0b08" }}>
+        {/* Golden bokeh background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-[-10%] right-[15%] w-[500px] h-[500px] rounded-full blur-[150px]" style={{ background: "rgba(212,175,55,0.05)" }} />
+          <div className="absolute bottom-[-5%] left-[10%] w-[400px] h-[400px] rounded-full blur-[120px]" style={{ background: "rgba(180,140,30,0.04)" }} />
+          <div className="absolute top-[20%] left-[40%] w-[600px] h-[300px] rounded-full blur-[180px]" style={{ background: "rgba(212,175,55,0.03)" }} />
+          {/* Subtle grid */}
+          <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "linear-gradient(rgba(212,175,55,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(212,175,55,0.4) 1px, transparent 1px)", backgroundSize: "80px 80px" }} />
         </div>
 
-        {/* Footer */}
-        <div className="mt-12 flex gap-6 text-xs text-gray-600">
-          <a href="/terms" className="hover:text-gray-400">Terms</a>
-          <a href="/privacy" className="hover:text-gray-400">Privacy</a>
-          <a href="/support" className="hover:text-gray-400">Support</a>
+        <div className="relative z-10 w-full max-w-5xl">
+          {/* Back button */}
+          <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => navigate("/profile")}
+            className="mb-8 px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-white transition-all"
+            style={{ border: "1px solid rgba(212,175,55,0.25)", background: "rgba(212,175,55,0.05)" }}
+          >
+            &larr; Back to Dashboard
+          </motion.button>
+
+          {/* Title */}
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-3xl md:text-5xl font-black italic uppercase tracking-wider text-center mb-10"
+            style={{
+              background: "linear-gradient(135deg, #f3e2ad 0%, #d4af37 30%, #8a6914 60%, #d4af37 80%, #f3e2ad 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              textShadow: "0 0 40px rgba(212,175,55,0.3)",
+            }}
+          >
+            High Rollers Club &mdash; Game Mode Selection
+          </motion.h1>
+
+          {/* 3 Cards with 3D tilt */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Private Table */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="rounded-xl overflow-hidden flex flex-col cursor-pointer group"
+              style={{
+                background: "linear-gradient(145deg, rgba(25,20,12,0.95) 0%, rgba(15,12,8,0.98) 100%)",
+                border: "1px solid rgba(212,175,55,0.3)",
+                boxShadow: "0 4px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,55,0.1)",
+                transition: "all 0.4s",
+              }}
+              whileHover={{ y: -8, scale: 1.02 }}
+            >
+              <div className="h-44 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0d0b08]" style={{ zIndex: 1 }} />
+                <img src="/images/generated/private-table.webp" alt="" className="w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-105 transition-all duration-500" />
+              </div>
+              <div className="p-6 flex-1 flex flex-col">
+                <h3 className="text-xl font-black uppercase tracking-wider gold-text">Private Table</h3>
+                <p className="text-xs text-gray-400 mt-3 flex-1 leading-relaxed">Exclusive access. Custom blinds, invite-only for elite play. Set your stakes and play with invited guests.</p>
+                <button
+                  onClick={() => { setShowModeSelection(false); setActiveFormat("cash"); }}
+                  className="w-full py-3.5 mt-5 uppercase tracking-wider text-sm font-black rounded-lg text-black transition-all hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
+                  style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
+                >
+                  Create Private Table
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Public Game (locked) */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="rounded-xl overflow-hidden flex flex-col opacity-50"
+              style={{
+                background: "linear-gradient(145deg, rgba(25,20,12,0.95) 0%, rgba(15,12,8,0.98) 100%)",
+                border: "1px solid rgba(212,175,55,0.15)",
+                boxShadow: "0 4px 30px rgba(0,0,0,0.5)",
+              }}
+            >
+              <div className="h-44 flex items-center justify-center relative" style={{ background: "linear-gradient(180deg, rgba(212,175,55,0.03) 0%, transparent 100%)" }}>
+                <Lock className="w-20 h-20 text-amber-700/40" />
+                <p className="absolute top-3 left-0 right-0 text-center text-[0.6rem] uppercase tracking-widest text-amber-600/50 font-bold">Club Owner Sponsored</p>
+              </div>
+              <div className="p-6 flex-1 flex flex-col text-center">
+                <h3 className="text-xl font-black uppercase tracking-wider gold-text">Public Game</h3>
+                <p className="text-xs text-gray-500 mt-3 flex-1 leading-relaxed">Join sponsored open games. Community play with exciting stakes.</p>
+                <button disabled className="w-full py-3.5 mt-5 uppercase tracking-wider text-sm font-bold rounded-lg cursor-not-allowed opacity-40" style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.2)", color: "rgba(212,175,55,0.5)" }}>
+                  Create Public Game (Locked)
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Tournament */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="rounded-xl overflow-hidden flex flex-col cursor-pointer group"
+              style={{
+                background: "linear-gradient(145deg, rgba(25,20,12,0.95) 0%, rgba(15,12,8,0.98) 100%)",
+                border: "1px solid rgba(212,175,55,0.3)",
+                boxShadow: "0 4px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,55,0.1)",
+                transition: "all 0.4s",
+              }}
+              whileHover={{ y: -8, scale: 1.02 }}
+            >
+              <div className="h-44 relative overflow-hidden flex items-center justify-center" style={{ background: "linear-gradient(180deg, rgba(212,175,55,0.05) 0%, transparent 100%)" }}>
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0d0b08]" style={{ zIndex: 1 }} />
+                <Trophy className="w-20 h-20 text-amber-500/30 relative z-0 group-hover:scale-110 transition-transform duration-500" />
+              </div>
+              <div className="p-6 flex-1 flex flex-col">
+                <h3 className="text-xl font-black uppercase tracking-wider gold-text">Tournament</h3>
+                <p className="text-xs text-gray-400 mt-3 flex-1 leading-relaxed">Compete against the best. Multi-table events, big prize pools. Climb the leaderboard to become a legend.</p>
+                <button
+                  onClick={() => navigate("/tournaments")}
+                  className="w-full py-3.5 mt-5 uppercase tracking-wider text-sm font-black rounded-lg text-black transition-all hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
+                  style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
+                >
+                  Join Tournament
+                </button>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Footer */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="mt-14 flex gap-8 text-xs text-gray-600 justify-center"
+          >
+            <a href="/terms" className="hover:text-gray-400 transition-colors">About Us</a>
+            <a href="/terms" className="hover:text-gray-400 transition-colors">Terms</a>
+            <a href="/privacy" className="hover:text-gray-400 transition-colors">Privacy</a>
+          </motion.div>
         </div>
       </div>
     );

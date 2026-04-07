@@ -139,7 +139,7 @@ export default function ClubCreate() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
 
             {/* Section 1: Club Identity (top-left) */}
-            <div className="vault-card p-5">
+            <GoldCard>
               <h2 className="text-xs font-black uppercase tracking-[0.15em] gold-text mb-5 flex items-center gap-2">
                 <span
                   className="w-6 h-6 rounded-full flex items-center justify-center text-[0.625rem] font-black text-black shrink-0"
@@ -181,10 +181,10 @@ export default function ClubCreate() {
                   />
                 </div>
               </div>
-            </div>
+            </GoldCard>
 
             {/* Section 3: Membership Settings (top-right) */}
-            <div className="vault-card p-5">
+            <GoldCard>
               <h2 className="text-xs font-black uppercase tracking-[0.15em] gold-text mb-5 flex items-center gap-2">
                 <span
                   className="w-6 h-6 rounded-full flex items-center justify-center text-[0.625rem] font-black text-black shrink-0"
@@ -237,10 +237,10 @@ export default function ClubCreate() {
                   </button>
                 </div>
               </div>
-            </div>
+            </GoldCard>
 
             {/* Section 2: Branding (bottom-left) */}
-            <div className="vault-card p-5">
+            <GoldCard>
               <h2 className="text-xs font-black uppercase tracking-[0.15em] gold-text mb-5 flex items-center gap-2">
                 <span
                   className="w-6 h-6 rounded-full flex items-center justify-center text-[0.625rem] font-black text-black shrink-0"
@@ -324,10 +324,10 @@ export default function ClubCreate() {
                   </div>
                 </div>
               </div>
-            </div>
+            </GoldCard>
 
             {/* Section 4: Initial Financials (bottom-right) */}
-            <div className="vault-card p-5">
+            <GoldCard>
               <h2 className="text-xs font-black uppercase tracking-[0.15em] gold-text mb-5 flex items-center gap-2">
                 <span
                   className="w-6 h-6 rounded-full flex items-center justify-center text-[0.625rem] font-black text-black shrink-0"
@@ -353,20 +353,14 @@ export default function ClubCreate() {
                   style={{ background: "rgba(255,255,255,0.04)" }}
                 />
               </div>
-            </div>
+            </GoldCard>
           </div>
 
           {/* Full-width CREATE CLUB button */}
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
+          <GoldButton
             onClick={handleSubmit}
             disabled={submitting || !clubName.trim()}
-            className="w-full py-4 rounded-xl text-base font-black uppercase tracking-[0.2em] text-black flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer gold-btn"
-            style={{
-              boxShadow: "0 0 40px rgba(212,175,55,0.3), 0 4px 15px rgba(0,0,0,0.3)",
-              fontSize: "1.1rem",
-            }}
+            fullWidth
           >
             {submitting ? (
               <motion.div
@@ -377,7 +371,7 @@ export default function ClubCreate() {
             ) : (
               "Create Club"
             )}
-          </motion.button>
+          </GoldButton>
         </div>
       </div>
 

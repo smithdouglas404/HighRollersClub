@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import path from "path";
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -55,7 +56,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.firebaseapp.com", "*.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "'wasm-unsafe-eval'", "*.firebaseapp.com", "*.googleapis.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
       fontSrc: ["'self'", "fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:", "*.googleapis.com", "*.didit.me"],
@@ -168,6 +169,9 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+
+  // Serve Flutter poker table at /flutter-poker
+  app.use('/flutter-poker', express.static(path.join(__dirname, '..', 'client', 'public', 'flutter-poker')));
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

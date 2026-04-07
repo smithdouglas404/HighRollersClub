@@ -1,5 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import { Book, Key, Shield, Zap, Code, Copy } from "lucide-react";
 import { useState } from "react";
 
@@ -11,13 +12,13 @@ function CodeBlock({ code }: { code: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <div className="relative rounded-lg bg-black/60 border border-white/[0.06] p-4 font-mono text-xs text-green-300 overflow-x-auto">
-      <button
+    <div className="relative rounded-lg bg-black/60 border p-4 font-mono text-xs text-green-300 overflow-x-auto" style={{ borderColor: "rgba(212,175,55,0.2)" }}>
+      <GoldButton
         onClick={handleCopy}
-        className="absolute top-2 right-2 p-1.5 rounded-md bg-white/5 hover:bg-white/10 transition-colors"
+        className="absolute top-2 right-2 !p-1.5 !rounded-md"
       >
-        <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-      </button>
+        <Copy className="w-3.5 h-3.5" />
+      </GoldButton>
       <pre className="whitespace-pre-wrap">{code}</pre>
       {copied && <span className="absolute top-2 right-10 text-[10px] text-primary">Copied!</span>}
     </div>
@@ -48,7 +49,9 @@ export default function ApiDocs() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="rounded-lg bg-surface-high/30 border border-white/[0.06] p-5"
+            className=""
+          >
+          <GoldCard padding="p-5"
           >
             <div className="flex items-center gap-2 mb-3">
               <Key className="w-4 h-4 text-primary" />
@@ -61,6 +64,7 @@ export default function ApiDocs() {
             </p>
             <CodeBlock code={`curl -H "X-API-Key: sk_your_key_here" \\
   https://your-domain.com/api/v1/stats/USER_ID`} />
+          </GoldCard>
           </motion.div>
 
           {/* Endpoint */}
@@ -68,7 +72,9 @@ export default function ApiDocs() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="rounded-lg bg-surface-high/30 border border-white/[0.06] p-5"
+            className=""
+          >
+          <GoldCard padding="p-5"
           >
             <div className="flex items-center gap-2 mb-3">
               <Code className="w-4 h-4 text-primary" />
@@ -100,6 +106,7 @@ export default function ApiDocs() {
   "sngWins": 5,
   "headsUpWins": 12
 }`} />
+          </GoldCard>
           </motion.div>
 
           {/* Rate Limits */}
@@ -107,7 +114,9 @@ export default function ApiDocs() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="rounded-lg bg-surface-high/30 border border-white/[0.06] p-5"
+            className=""
+          >
+          <GoldCard padding="p-5"
           >
             <div className="flex items-center gap-2 mb-3">
               <Shield className="w-4 h-4 text-primary" />
@@ -129,6 +138,7 @@ export default function ApiDocs() {
                 <p className="text-[10px] text-muted-foreground">Keys are never stored in plain text</p>
               </div>
             </div>
+          </GoldCard>
           </motion.div>
         </div>
       </div>

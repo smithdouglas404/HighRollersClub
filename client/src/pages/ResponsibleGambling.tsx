@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/lib/auth-context";
+import { GoldButton, GoldCard, SectionHeader, GoldDivider } from "@/components/premium/PremiumComponents";
 import {
   Shield, Clock, AlertTriangle, Ban, Coffee,
   Loader2, CheckCircle, DollarSign, TrendingDown
@@ -68,7 +69,7 @@ function DepositLimitsSection({ settings, onSave }: { settings: RGSettings; onSa
   };
 
   return (
-    <div className="rounded-lg border border-white/10 bg-surface-low p-5">
+    <GoldCard padding="p-5">
       <div className="flex items-center gap-2 mb-3">
         <DollarSign className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-semibold text-white">Deposit Limits</h3>
@@ -114,7 +115,8 @@ function DepositLimitsSection({ settings, onSave }: { settings: RGSettings; onSa
       <button
         onClick={handleSave}
         disabled={saving}
-        className="px-4 py-2 rounded-md bg-primary text-black font-medium text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+        className="flex items-center gap-2 relative overflow-hidden font-black uppercase tracking-wider text-black px-4 py-2 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
+        style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)" }}
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : null}
         {saving ? "Saving..." : saved ? "Saved" : "Save Limits"}
@@ -146,7 +148,7 @@ function SessionTimeLimitSection({ settings, onSave }: { settings: RGSettings; o
   };
 
   return (
-    <div className="rounded-lg border border-white/10 bg-surface-low p-5">
+    <GoldCard padding="p-5">
       <div className="flex items-center gap-2 mb-3">
         <Clock className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-semibold text-white">Session Time Limit</h3>
@@ -168,7 +170,8 @@ function SessionTimeLimitSection({ settings, onSave }: { settings: RGSettings; o
       <button
         onClick={handleSave}
         disabled={saving}
-        className="px-4 py-2 rounded-md bg-primary text-black font-medium text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+        className="flex items-center gap-2 relative overflow-hidden font-black uppercase tracking-wider text-black px-4 py-2 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
+        style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)" }}
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : null}
         {saving ? "Saving..." : saved ? "Saved" : "Save Limit"}
@@ -192,7 +195,7 @@ function LossLimitSection({ settings, onSave }: { settings: RGSettings; onSave: 
   };
 
   return (
-    <div className="rounded-lg border border-white/10 bg-surface-low p-5">
+    <GoldCard padding="p-5">
       <div className="flex items-center gap-2 mb-3">
         <TrendingDown className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-semibold text-white">Loss Limit</h3>
@@ -214,7 +217,8 @@ function LossLimitSection({ settings, onSave }: { settings: RGSettings; onSave: 
       <button
         onClick={handleSave}
         disabled={saving}
-        className="px-4 py-2 rounded-md bg-primary text-black font-medium text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+        className="flex items-center gap-2 relative overflow-hidden font-black uppercase tracking-wider text-black px-4 py-2 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
+        style={{ background: "linear-gradient(135deg, #8a6914 0%, #c9a227 20%, #f3e2ad 50%, #d4af37 80%, #8a6914 100%)" }}
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : null}
         {saving ? "Saving..." : saved ? "Saved" : "Save Limit"}
@@ -329,7 +333,7 @@ function CoolOffSection({ settings, onCoolOff }: { settings: RGSettings; onCoolO
   };
 
   return (
-    <div className="rounded-lg border border-white/10 bg-surface-low p-5">
+    <GoldCard padding="p-5">
       <div className="flex items-center gap-2 mb-3">
         <Coffee className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-semibold text-white">Cool-Off Period</h3>

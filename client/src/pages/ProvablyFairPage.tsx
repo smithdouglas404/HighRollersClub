@@ -375,8 +375,8 @@ export default function ProvablyFairPage() {
                   <div
                     className="rounded-lg px-4 py-3 text-xs font-mono break-all"
                     style={{
-                      background: "rgba(212,175,55,0.05)",
-                      border: "1px solid rgba(212,175,55,0.15)",
+                      background: "rgba(212,175,55,0.08)",
+                      border: "1px solid rgba(212,175,55,0.25)",
                       color: "#d4af37",
                     }}
                   >
@@ -405,15 +405,10 @@ export default function ProvablyFairPage() {
 
                 {/* Verify button + result */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2">
-                  <button
+                  <GoldButton
                     onClick={handleVerify}
                     disabled={demo.verifying}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
-                    style={{
-                      background: "rgba(34,197,94,0.12)",
-                      border: "1px solid rgba(34,197,94,0.25)",
-                      color: "#4ade80",
-                    }}
+                    className="flex items-center gap-2"
                   >
                     {demo.verifying ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
@@ -421,7 +416,7 @@ export default function ProvablyFairPage() {
                       <CheckCircle className="w-4 h-4" />
                     )}
                     Verify Shuffle
-                  </button>
+                  </GoldButton>
 
                   <AnimatePresence>
                     {demo.verified === true && (
@@ -462,7 +457,7 @@ export default function ProvablyFairPage() {
               </motion.div>
             )}
           </AnimatePresence>
-        </GlassCard>
+        </GoldCard>
       </section>
 
       {/* ============================================================ */}

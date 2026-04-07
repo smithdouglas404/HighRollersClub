@@ -10,6 +10,13 @@
       "breakpoints": true
     },
     {
+      "idx": 1,
+      "version": "7",
+      "when": 1775439140000,
+      "tag": "0001_add_loyalty_streak_days",
+      "breakpoints": true
+    },
+    {
       "idx": 2,
       "version": "7",
       "when": 1775439140369,

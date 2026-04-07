@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageBackground } from "@/components/shared/PageBackground";
-import { Trophy, Clock, Users, Flame, Plus, Gamepad2, Timer, DollarSign, BarChart2, TrendingUp } from "lucide-react";
+import { Trophy, Clock, Users, Flame, Plus, Gamepad2, Timer, DollarSign, TrendingUp } from "lucide-react";
 
 interface Tournament {
   id: number;

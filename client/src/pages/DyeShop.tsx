@@ -80,9 +80,10 @@ function ColorPickerRow({
             onClick={() => onChange(color)}
             className={`w-8 h-8 rounded-lg border-2 transition-all hover:scale-110 relative shrink-0 ${
               value === color
-                ? "border-white shadow-[0_0_10px_rgba(255,255,255,0.25)]"
+                ? "shadow-[0_0_10px_rgba(212,175,55,0.35)]"
                 : "border-transparent hover:border-white/20"
             }`}
+            style={value === color ? { borderColor: "#d4af37" } : undefined}
             style={{ backgroundColor: color }}
           >
             {value === color && (
@@ -191,16 +192,17 @@ export default function DyeShop() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10 flex flex-col items-center"
+            className="vault-card rounded-xl p-5 flex flex-col items-center"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4">Live Preview</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4">Live Preview</h3>
 
             {/* Avatar Preview with live colors */}
             <motion.div
               key={`${primary}-${secondary}-${accent}`}
               initial={{ scale: 0.97, opacity: 0.8 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-48 h-60 rounded-2xl overflow-hidden border-2 border-amber-500/30 mb-4 relative"
+              className="w-48 h-60 rounded-2xl overflow-hidden border-2 mb-4 relative gold-border"
+              style={{ borderWidth: "2px" }}
               style={{
                 backgroundColor: secondary,
                 boxShadow: `0 0 30px ${primary}33, 0 8px 32px rgba(0,0,0,0.5)`,
@@ -260,9 +262,9 @@ export default function DyeShop() {
             className="space-y-5"
           >
             {/* Color Pickers */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-5 flex items-center gap-2">
-                <Paintbrush className="w-4 h-4 text-amber-400" />
+            <div className="vault-card rounded-xl p-5">
+              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-5 flex items-center gap-2">
+                <Paintbrush className="w-4 h-4" style={{ color: "#d4af37" }} />
                 Dye Customization
               </h3>
               <div className="space-y-5">
@@ -273,10 +275,10 @@ export default function DyeShop() {
             </div>
 
             {/* Dye Packs Grid */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
+            <div className="vault-card rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Dye Packs</h3>
+                <Sparkles className="w-4 h-4" style={{ color: "#d4af37" }} />
+                <h3 className="text-xs font-bold uppercase tracking-wider gold-text">Dye Packs</h3>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {DYE_PACKS.map((pack) => {
@@ -287,7 +289,7 @@ export default function DyeShop() {
                       onClick={() => handlePackSelect(pack)}
                       className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all text-center ${
                         isActive
-                          ? "border-amber-500/40 bg-amber-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]"
+                          ? "gold-border bg-amber-500/10 shadow-[0_0_12px_rgba(212,175,55,0.2)]"
                           : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10"
                       }`}
                     >
@@ -316,7 +318,7 @@ export default function DyeShop() {
                 className={`flex-1 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
                   applied
                     ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                    : "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black border border-amber-400/40 shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.45)]"
+                    : "gold-btn"
                 }`}
               >
                 {applied ? (
@@ -334,10 +336,10 @@ export default function DyeShop() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/25 hover:bg-purple-500/20 transition-all flex items-center gap-2"
+                className="px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wider gold-btn transition-all flex items-center gap-2 shadow-[0_0_25px_rgba(212,175,55,0.3)]"
               >
                 <Wand2 className="w-4 h-4" />
-                Nano Banana Render
+                NANO BANANA RENDER
               </motion.button>
             </div>
           </motion.div>
@@ -350,9 +352,9 @@ export default function DyeShop() {
             className="space-y-5"
           >
             {/* Quick Stats */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-400" />
+            <div className="vault-card rounded-xl p-5">
+              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
+                <Star className="w-4 h-4" style={{ color: "#d4af37" }} />
                 Quick Stats
               </h3>
 
@@ -380,9 +382,9 @@ export default function DyeShop() {
             </div>
 
             {/* Recently Equipped */}
-            <div className="rounded-xl p-5 bg-gray-900/50 backdrop-blur-xl border border-white/10">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400/70 mb-4 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-amber-400" />
+            <div className="vault-card rounded-xl p-5">
+              <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-4 flex items-center gap-2">
+                <Clock className="w-4 h-4" style={{ color: "#d4af37" }} />
                 Recently Equipped
               </h3>
               <div className="space-y-2">
@@ -391,9 +393,9 @@ export default function DyeShop() {
                   return (
                     <div
                       key={item.name}
-                      className="flex items-center gap-3 p-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all"
+                      className="flex items-center gap-3 p-2.5 rounded-lg gold-border bg-white/[0.02] hover:bg-white/[0.04] transition-all"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 gold-border flex items-center justify-center">
                         <ItemIcon className={`w-4 h-4 ${TIER_COLORS[item.tier]}`} />
                       </div>
                       <div className="flex-1 min-w-0">

@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Trophy, Users, Layers, Coins, ArrowLeft, Loader2, Clock, RefreshCw, BarChart2, Crown, Medal,
+  Trophy, Users, Layers, Coins, ArrowLeft, Loader2, Clock, RefreshCw, BarChart2, Crown,
 } from "lucide-react";
 import { TournamentAnalytics } from "@/components/tournament/TournamentAnalytics";
 
@@ -35,11 +35,11 @@ interface TournamentStatus {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  registration: { label: "Registration Open", color: "text-emerald-400" },
-  registering: { label: "Registration Open", color: "text-emerald-400" },
-  pending: { label: "Pending", color: "text-yellow-400" },
-  in_progress: { label: "In Progress", color: "text-primary" },
-  running: { label: "Running", color: "text-primary" },
+  registration: { label: "Registration Open", color: "text-[#d4af37]" },
+  registering: { label: "Registration Open", color: "text-[#d4af37]" },
+  pending: { label: "Pending", color: "text-[#d4af37]" },
+  in_progress: { label: "In Progress", color: "text-emerald-400" },
+  running: { label: "Running", color: "text-emerald-400" },
   complete: { label: "Complete", color: "text-gray-400" },
   completed: { label: "Complete", color: "text-gray-400" },
   cancelled: { label: "Cancelled", color: "text-red-400" },
@@ -294,57 +294,128 @@ export default function TournamentDetail({ tournamentId }: { tournamentId: strin
               </motion.div>
             )}
 
-            {/* Standings */}
-            {data.standings.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="rounded-xl overflow-hidden bg-surface-high/50 backdrop-blur-xl border border-white/[0.06]"
-              >
-                <div className="px-5 py-3.5 border-b border-white/[0.04]">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
-                    Standings
-                  </h3>
-                </div>
-                <div className="divide-y divide-white/[0.04]">
-                  {data.standings.map((entry, i) => (
-                    <div
-                      key={entry.playerId}
-                      className={`flex items-center justify-between px-5 py-3 ${
-                        entry.eliminated ? "opacity-50" : ""
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`text-sm font-black tabular-nums w-6 text-center ${
-                          i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-500" : "text-gray-500"
-                        }`}>
-                          {entry.rank ?? i + 1}
-                        </span>
-                        <div>
-                          <div className="text-xs font-bold text-white">
-                            {entry.displayName || `Player ${entry.playerId.slice(0, 6)}`}
-                          </div>
-                          {entry.eliminated && (
-                            <span className="text-[0.5rem] font-bold uppercase text-red-400/60">Eliminated</span>
-                          )}
-                        </div>
+            {/* Standings with Podium */}
+            {data.standings.length > 0 && (() => {
+              const top3 = data.standings.slice(0, 3);
+              const rest = data.standings.slice(3);
+              const podiumColors = [
+                { border: "border-[#d4af37]", bg: "bg-[#d4af37]/10", text: "text-[#d4af37]", shadow: "shadow-[0_0_20px_rgba(212,175,55,0.3)]", label: "1st", size: "w-20 h-20" },
+                { border: "border-gray-300", bg: "bg-gray-300/10", text: "text-gray-300", shadow: "shadow-[0_0_15px_rgba(192,192,192,0.2)]", label: "2nd", size: "w-16 h-16" },
+                { border: "border-amber-600", bg: "bg-amber-600/10", text: "text-amber-600", shadow: "shadow-[0_0_15px_rgba(180,120,60,0.2)]", label: "3rd", size: "w-16 h-16" },
+              ];
+              // Display order: 2nd, 1st, 3rd
+              const podiumOrder = top3.length >= 3 ? [1, 0, 2] : top3.length === 2 ? [1, 0] : [0];
+
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="space-y-4"
+                >
+                  {/* Podium */}
+                  <div className="vault-card p-6 overflow-hidden">
+                    <h3 className="text-xs font-bold uppercase tracking-wider gold-text mb-6 text-center">
+                      Tournament Leaderboard
+                    </h3>
+
+                    {/* Podium display */}
+                    <div className="flex items-end justify-center gap-4 md:gap-8 mb-6">
+                      {podiumOrder.map((idx) => {
+                        if (idx >= top3.length) return null;
+                        const entry = top3[idx];
+                        const colors = podiumColors[idx];
+                        const isFirst = idx === 0;
+                        return (
+                          <motion.div
+                            key={entry.playerId}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5 + idx * 0.1 }}
+                            className="flex flex-col items-center"
+                          >
+                            {isFirst && (
+                              <Crown className="w-6 h-6 text-[#d4af37] mb-1 drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]" />
+                            )}
+                            {/* Avatar circle */}
+                            <div className={`${colors.size} rounded-full ${colors.border} border-2 ${colors.bg} ${colors.shadow} flex items-center justify-center mb-2`}>
+                              <span className={`text-lg font-black ${colors.text}`}>
+                                {(entry.displayName || entry.playerId)[0]?.toUpperCase()}
+                              </span>
+                            </div>
+                            {/* Rank badge */}
+                            <span className={`text-[0.5rem] font-black uppercase tracking-wider ${colors.text} mb-1`}>
+                              {colors.label}
+                            </span>
+                            {/* Name */}
+                            <span className="text-xs font-bold text-white truncate max-w-[80px] text-center">
+                              {entry.displayName || `Player ${entry.playerId.slice(0, 6)}`}
+                            </span>
+                            {/* Chips */}
+                            <span className={`text-[0.625rem] font-bold tabular-nums ${colors.text} mt-0.5`}>
+                              {entry.chips.toLocaleString()}
+                            </span>
+                            <span className="text-[0.5rem] text-gray-600">chips</span>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Remaining standings table */}
+                  {rest.length > 0 && (
+                    <div className="vault-card overflow-hidden">
+                      <div className="px-5 py-3.5 border-b border-white/[0.04]">
+                        <h3 className="text-xs font-bold uppercase tracking-wider gold-text">
+                          Standings
+                        </h3>
                       </div>
-                      <div className="text-sm font-bold tabular-nums text-white">
-                        {entry.chips.toLocaleString()}
+                      {/* Table header */}
+                      <div className="grid grid-cols-[3rem_1fr_auto] gap-4 px-5 py-2 border-b border-white/[0.04]">
+                        <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600">Rank</span>
+                        <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600">Player</span>
+                        <span className="text-[0.5rem] font-bold uppercase tracking-wider text-gray-600 text-right">Chips</span>
+                      </div>
+                      <div className="divide-y divide-white/[0.04]">
+                        {rest.map((entry, i) => {
+                          const rank = (entry.rank ?? i + 4);
+                          return (
+                            <div
+                              key={entry.playerId}
+                              className={`grid grid-cols-[3rem_1fr_auto] gap-4 px-5 py-3 ${
+                                entry.eliminated ? "opacity-50" : "hover:bg-white/[0.02]"
+                              } transition-colors`}
+                            >
+                              <span className="text-sm font-black tabular-nums text-gray-500">
+                                {rank}
+                              </span>
+                              <div>
+                                <div className="text-xs font-bold text-white">
+                                  {entry.displayName || `Player ${entry.playerId.slice(0, 6)}`}
+                                </div>
+                                {entry.eliminated && (
+                                  <span className="text-[0.5rem] font-bold uppercase text-red-400/60">Eliminated</span>
+                                )}
+                              </div>
+                              <div className="text-sm font-bold tabular-nums text-white text-right">
+                                {entry.chips.toLocaleString()}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
+                  )}
+                </motion.div>
+              );
+            })()}
           </div>
         )}
         {/* Tournament Analytics Section */}
         {tournamentId && (
           <div className="mt-6">
-            <h2 className="text-lg font-display font-black text-white mb-4 flex items-center gap-2">
-              <BarChart2 className="w-5 h-5 text-primary" /> Prize Pool & Analytics
+            <h2 className="text-lg font-display font-black mb-4 flex items-center gap-2 gold-text">
+              <BarChart2 className="w-5 h-5 text-[#d4af37]" /> Prize Pool & Analytics
             </h2>
             <TournamentAnalytics tournamentId={tournamentId} />
           </div>

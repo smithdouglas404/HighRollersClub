@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install && npx vite build"
+buildCommand = "vite build"
 
 [deploy]
 startCommand = "npx tsx server/index.ts"

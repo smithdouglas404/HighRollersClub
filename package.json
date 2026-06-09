@@ -6,7 +6,7 @@
   "scripts": {
     "dev:client": "vite dev --port 5000",
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts server/game-server.ts server/payment-worker.ts server/jobs-worker.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "npm ci && vite build && esbuild server/index.ts server/game-server.ts server/payment-worker.ts server/jobs-worker.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "start:api": "SERVICE_MODE=api NODE_ENV=production node dist/index.js",
     "start:game": "SERVICE_MODE=game NODE_ENV=production node dist/game-server.js",

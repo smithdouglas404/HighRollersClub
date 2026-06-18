@@ -355,16 +355,16 @@ class TableManager {
 
       // ─── Award Loyalty Points (HRP) for hand participation ──────────────
       try {
-        const { processHandRewards, checkAchievements } = require("../loyalty-engine");
-        const isTournament = tableRow.gameFormat === "tournament" || tableRow.gameFormat === "sng";
-        const winnerIdSet = new Set(summary.winners.map(w => w.playerId));
-        for (const p of summary.players) {
-          if (!p.id.startsWith("bot-")) {
-            processHandRewards(p.id, isTournament, winnerIdSet.has(p.id)).catch(() => {});
-            // Check achievements after stats update
-            checkAchievements(p.id).catch(() => {});
+        import("../loyalty-engine").then(({ processHandRewards, checkAchievements }) => {
+          const isTournament = tableRow.gameFormat === "tournament" || tableRow.gameFormat === "sng";
+          const winnerIdSet = new Set(summary.winners.map(w => w.playerId));
+          for (const p of summary.players) {
+            if (!p.id.startsWith("bot-")) {
+              processHandRewards(p.id, isTournament, winnerIdSet.has(p.id)).catch(() => {});
+              checkAchievements(p.id).catch(() => {});
+            }
           }
-        }
+        }).catch(() => {});
       } catch {
         // Loyalty engine not yet available — skip silently
       }
@@ -471,64 +471,6 @@ class TableManager {
           if (!p.id.startsWith("bot-")) {
             storage.incrementPlayerStat(p.id, "tournamentHands", 1).catch(() => {});
           }
-        }
-      }
-
-      // ─── Award High Roller Points (HRP) ─────────────────────────────────
-      {
-        const { HRP_EARN_RATES } = require("../loyalty-config");
-        const isTournament = gameFormat === "tournament" || gameFormat === "sng" || gameFormat === "lottery_sng";
-        const humanPlayers = summary.players.filter(p => !p.id.startsWith("bot-"));
-        const humanWinnerIds = new Set(summary.winners.filter(w => !w.playerId.startsWith("bot-")).map(w => w.playerId));
-
-        for (const p of humanPlayers) {
-          // Base HRP: 1 per hand played, +1 extra for tournament hands (total 2)
-          let baseHrp = HRP_EARN_RATES.handPlayed;
-          if (isTournament) {
-            baseHrp += HRP_EARN_RATES.tournamentHand - HRP_EARN_RATES.handPlayed; // +1 extra
-          }
-          // Pot winner bonus: +2 HRP
-          if (humanWinnerIds.has(p.id)) {
-            baseHrp += HRP_EARN_RATES.potWon;
-          }
-
-          // Get player's subscription tier for multiplier
-          storage.getUser(p.id).then(user => {
-            if (!user) return;
-            const tier = user.tier || "free";
-            const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-
-            // Award base HRP for the hand
-            storage.awardLoyaltyPoints(p.id, baseHrp, humanWinnerIds.has(p.id) ? "potWon" : (isTournament ? "tournamentHand" : "handPlayed"), tier).catch(() => {});
-
-            // Check grinder bonus: 100 hands in a day
-            storage.getPlayerStats(p.id).then(stats => {
-              if (!stats) return;
-              // Use handsPlayed modulo to detect crossing the 100-hand threshold today
-              // Simple heuristic: award once when handsPlayed crosses a 100 boundary
-              if (stats.handsPlayed > 0 && stats.handsPlayed % 100 === 0) {
-                storage.awardLoyaltyPoints(p.id, HRP_EARN_RATES.grinderBonus, "grinderBonus", tier).catch(() => {});
-              }
-            }).catch(() => {});
-
-            // Check and update play streak
-            const lastPlayDate = user.loyaltyLastPlayDate;
-            if (lastPlayDate !== today) {
-              // New day of play — update streak
-              const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-              const newStreak = (lastPlayDate === yesterday) ? user.loyaltyStreakDays + 1 : 1;
-
-              storage.updateUser(p.id, {
-                loyaltyLastPlayDate: today,
-                loyaltyStreakDays: newStreak,
-              }).catch(() => {});
-
-              // Award streak bonus at 7 consecutive days, then every 7 after
-              if (newStreak > 0 && newStreak % 7 === 0) {
-                storage.awardLoyaltyPoints(p.id, HRP_EARN_RATES.streakBonus, "streakBonus", tier).catch(() => {});
-              }
-            }
-          }).catch(() => {});
         }
       }
 
@@ -837,14 +779,14 @@ class TableManager {
         } as any);
 
         // After 3-second reveal delay, start the game
-        setTimeout(async () => {
+        setTimeout(() => {
           broadcastToTable(tableId, {
             type: "lottery_result",
             multiplier,
             prizePool,
           } as any);
 
-          await lifecycle.start();
+          lifecycle.start();
           engine.startBlindSchedule();
 
           broadcastToTable(tableId, {
@@ -931,7 +873,7 @@ class TableManager {
 
       // Auto-start when full
       if (lifecycle.canStart()) {
-        await lifecycle.start();
+        lifecycle.start();
         engine.startBlindSchedule();
         broadcastToTable(tableId, {
           type: "tournament_status",
@@ -1863,7 +1805,7 @@ class TableManager {
     for (let i = 0; i < botsToAdd.length; i++) {
       if (i > 0) cumulativeDelay += 1500 + Math.random() * 2500;
       const delay = cumulativeDelay;
-      const addBot = async (b: typeof botsToAdd[0]) => {
+      const addBot = (b: typeof botsToAdd[0]) => {
         const inst = this.tables.get(tableId);
         if (!inst) return; // table may have been deleted
 
@@ -1888,7 +1830,7 @@ class TableManager {
 
         // SNG/Lottery auto-start when full
         if ((config.gameFormat === "sng" || config.gameFormat === "lottery_sng") && inst.lifecycle && inst.lifecycle.canStart()) {
-          await inst.lifecycle.start();
+          inst.lifecycle.start();
           inst.engine.startBlindSchedule();
           broadcastToTable(tableId, {
             type: "tournament_status",

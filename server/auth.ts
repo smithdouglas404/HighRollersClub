@@ -95,7 +95,7 @@ export function setupAuth(app: Express) {
       if (!s) {
         console.warn("[SECURITY] SESSION_SECRET not set — generating ephemeral secret (sessions lost on restart)");
       }
-      return s || require("crypto").randomBytes(32).toString("hex");
+      return s || randomBytes(32).toString("hex");
     })(),
     resave: false,
     saveUninitialized: false,
